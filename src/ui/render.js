@@ -92,8 +92,13 @@ export function renderShelf(state) {
   cabinet.innerHTML = '';
   const rows = state.slots.length / 6;
   for (let r = 0; r < rows; r++) {
+    // A row with nothing on it collapses to a thin bare shelf (CSS .row-empty)
+    // instead of leaving a full-height void. It keeps all six slot elements, so
+    // it stays a valid drop target and slot indices stay positional.
+    const rowEmpty = state.slots.slice(r * 6, r * 6 + 6).every(id => !id);
+    const bareShelf = r === 0 && rowEmpty && !state.pets.length;
     const row = document.createElement('div');
-    row.className = 'shelf-row';
+    row.className = 'shelf-row' + (rowEmpty && !bareShelf ? ' row-empty' : '');
     const slots = document.createElement('div');
     slots.className = 'slots';
     for (let c = 0; c < 6; c++) {
@@ -112,7 +117,9 @@ export function renderShelf(state) {
       }
       slots.appendChild(slot);
     }
-    if (r === 0 && !state.pets.length) {
+    // Guarded by rowEmpty (via bareShelf) so props sitting on row 0 with no pets
+    // yet are no longer wiped out by the empty-shelf message.
+    if (bareShelf) {
       slots.innerHTML = '';
       const msg = document.createElement('div');
       msg.className = 'empty-shelf';

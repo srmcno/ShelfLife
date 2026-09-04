@@ -4764,3 +4764,430 @@ another way):
   whether the minor fanfare lands as funny rather than sour, and whether Daniel at 0.88
   pitch reads as dry rather than sleepy are ear judgements. The numbers above say the
   synthesis is correct and safe, not that it is pleasant.
+
+### Phase 2B: visual overhaul
+
+Scope: `css/style.css` (owner for this pass) plus a surgical layout addition in
+`src/ui/render.js`. No renamed ids or classes; everything additive.
+
+**1. Theme-aware button contrast (the reported bug).**
+`.btn` hardcoded `background:var(--ink-2)` — a fixed dark purple — with
+`color:var(--bone)`. The three pale rooms override `--bone` to a *dark* colour,
+so the label and the button were the same value. Measured before/after (sRGB
+relative luminance, WCAG 2 formula):
+
+| room | old `.btn` | new `.btn` |
+|---|---|---|
+| Aubergine | 13.11 | 9.21 |
+| Mortuary Mint | **1.15** | 8.26 |
+| Haunted Nursery | **1.04** | 8.73 |
+| Blacklight Basement | 12.02 | 9.76 |
+| Bone Parlor | **1.02** | 8.75 |
+| Midnight | 12.55 | 8.77 |
+
+Fix: a set of derived tokens on `:root` — `--btn-bg`, `--btn-bg-hi`,
+`--btn-edge`, `--bone-soft`, `--ok-ink`, `--warn-ink`, `--danger-ink`,
+`--tint-ok/warn/danger`, `--hair` — built with `color-mix()` from the four
+variables the rooms actually swap (`--bone`, `--bone-dim`, `--surface`,
+`--line`). Every token is declared twice, plain fallback first, so a browser
+without `color-mix` still lands on a legible pair.
+
+Two tokens use relative colour syntax to pick a side automatically:
+- `--accent-ink` (label on a `--pink` fill) flips to near-white below 55% HSL
+  lightness and near-black above it. All six ACCENTS now pass: bubblegum 8.66,
+  mint 10.45, amber 9.51, blood 4.52, violet 6.50, acid 11.80. Previously the
+  fixed `#2A0E1C` gave 3.2 on Blood.
+- `--bone-soft` (secondary copy sitting on the *room*, not on a panel)
+  desaturates `--bone` and steps its lightness *away* from mid-grey, so it dims
+  on the dark rooms and darkens on the pale ones. `--bone-dim` on Mortuary
+  Mint's mid-tone room was 2.35:1; it is now 5.79:1.
+
+Other fixed-colour bugs found in the same audit and fixed the same way:
+`.bio` was `--paper` (1.02:1 on Bone Parlor — invisible), `.traits strong` and
+`.prop-card.locked small` were raw `--amber` (1.48–1.54:1 on the pale rooms),
+`.btn-danger` / feuding nameplates were raw `--blood` (2.39:1 on Aubergine),
+and `.hint`/`.empty-shelf`/`.notes-empty`/`footer`/`.pip.zzz` were hardcoded
+`#6C5A7A`/`#8A7A98`/`#7A6A8A`.
+
+Status-bar semantics moved off text colour entirely: `.status .good/.mid/.bad`
+are now tinted pills with a coloured bead, text at `--bone-soft`. Mint text on
+Bone Parlor was 1.12:1; the pill is 12.26:1.
+
+**Verification:** a scripted audit walks all six rooms and all six trims,
+reading computed colours out of the live document and computing WCAG ratios for
+19 text/background pairs — 114 room checks + 6 trim checks, all ≥ 4.50 (worst:
+4.73 nameplate on Mortuary Mint, 4.52 primary-button label on Blood trim).
+Screenshots of all six rooms read back at 1280×900 and at 375×812.
+
+**2. Creature size and planting.** `--pet-h` is now the single sizing knob
+(124px desktop → 70px at 375px). The sprite box is
+`width:min(100%,var(--pet-h));aspect-ratio:1` so a creature is as big as the
+shelf allows and can never spill onto a neighbour at narrow widths. Nameplate
+and pips moved out of the flex column and are absolutely positioned *below the
+plank* (`top:calc(100% + var(--plank-h) + …)`), which is what had been pushing
+every creature up off the shelf. Each piece gets an elliptical contact shadow
+pinned to the plank line; the plank itself gained a lit top lip, a front face
+and a cast shadow.
+
+**3. Stamp scale — NOT fixed here, needs `src/art/sprite.js`.** Verified by
+comparing the SVGs in `art/stamps.js` against the original prototype's canvas
+draw calls (`~/Documents/shelf-life.html` line 1022+): the SVG coordinate space
+is **12 units per canvas `s`**, e.g. `eyes` draws `ellipse(x−0.55s, y, 0.42s,
+0.5s)` and the SVG is `cx="-6.6" rx="5.04" ry="6"` — 6.6/0.55 = 5.04/0.42 =
+6/0.5 = 12. The viewBox is `-30 -30 60 60`, so the box spans 60/12 = **5s**.
+The correct factor is therefore **`stamp.size * 5`**, not 2 (and not 2.6 — 2.6
+is the *ink* extent inside the box, which a factor of 5 produces). Stamps
+currently render at 40% of their intended size. It must change in **both**
+places at once or the studio stops being WYSIWYG:
+- `src/art/sprite.js:84` — `const wPct = (stamp.size * 2 / CANVAS_SIZE) * 100;`
+- `src/art/studio.js:103` — `const wh = (s.size * 2 / CANVAS_SIZE * 100) + '%';`
+
+**4. Empty shelf rows.** `renderShelf` now marks a row with no occupants
+`.row-empty`, which collapses it to a 56px bare shelf instead of a ~200px void.
+All six slot elements stay in the DOM, so slot indices stay positional and the
+row is still a drop target. Also fixed: the bare-shelf message used to run
+whenever `state.pets.length === 0`, wiping out any props already sitting in row
+0; it is now guarded on the row actually being empty.
+
+**5. Look and feel.** Notes read as pinned paper — pushpin and its cast shadow
+via `::before`/`::after`, ruled lines under the Caveat text, per-note rotation,
+signature on a hairline, all on a panelled "board" that matches the cabinet.
+Sheets got rounded corners, a backdrop blur, a ruled header and safe-area
+padding. Typography moved onto a small scale (`--fs-micro/-small/-base`,
+`--sp`, `--shell`, `--radius`).
+
+**6. Mobile.** The shelf deliberately keeps **six columns at every width** —
+the previous `@media (max-width:640px)` re-flow to three columns put half of
+each row above no plank at all, and it lied about who stands next to whom,
+which is the game's core mechanic. Instead the creatures shrink and, below
+520px, the cabinet and notes board bleed to the screen edges to reclaim the
+body padding. Every button/chip/option clears 44px (`@media (pointer:coarse)`
+raises the small variants). Verified at 375×812: `document.scrollWidth === 375`,
+no element extends past the viewport, toolbar down from five rows to four so
+the shelf is visible without scrolling.
+
+**Tests:** `node --test test/*.test.mjs` — 122 pass, 0 fail.
+
+**Known-unfixed / handed off:**
+- Stamp scale factor above (needs the two art files).
+- A creature drawn small and high in the 640×640 studio canvas still floats
+  above the plank: the body image is bottom-aligned as a *box*, but its
+  transparent margin is the user's own. Would need pixel-bounds cropping at
+  save time.
+
+### Phase 2F: autonomous behaviour and prop interaction
+
+**Owner:** `src/engine/behavior.js` (new), surgical edits to `src/engine/loop.js` and
+`src/main.js`, `test/behavior.test.mjs` (new).
+
+The gap this closes: pets moved only inside `autonomy()`, only on a "Check the shelf"
+click, and only for two arbitrary reasons (a furious or `wanderer` pet swapped with a
+random neighbour; a `thief` stole food). Props did nothing but a passive decay aura and
+flavour text. `engine/behavior.js` replaces that with a motive layer and an anatomy layer.
+
+**Motive — one number, one decision.** `slotScore(state, pet, index, now, slots)` values a
+slot for a pet: prop affinity for each neighbouring prop (x`PROP_WEIGHT`, cut to 35% if
+another pet has claimed it), a `needPull` term so a starving pet is drawn to the bowl
+whatever it thinks of bowls, `pairScore` for each neighbouring pet (feud -5 and deeper per
+feud-arc level, a truce +1, a mutual bond up to +1.5, -1.5 while `grudgeStage >= 2`), and
+`socialPull(pet) x` the number of non-enemy neighbours, which is positive for clingy types
+and negative for hermits. `decideMove()` compares the current slot plus `inertiaOf(pet)`
+against every slot the body can reach and returns a move only when the best beats it by
+`MOVE_THRESHOLD`. It is fully deterministic — the randomness in this module is in the
+wording, never the decision — so a pet that reaches a good spot stays there and the shelf
+settles instead of churning. `moveReason()` then names the motive (`prop-love`,
+`prop-need`, `prop-hate`, `flee`, `ally`, `solitude`, `company`, `storm`, `restless`) and
+the note says it out loud: *"Has relocated toward the Black Candle. Says it was always
+going to end up here."*
+
+**Personality data lives here, not in content.** `TRAIT_PROP_AFFINITY` (trait id ->
+prop kind -> -3..+3), `SOCIAL_PULL` and `ROOTEDNESS` are defined in `behavior.js` because
+`src/content/*` is owned by another task. Every lookup is guarded by `TRAIT_BY_ID` /
+`PROPS` membership: a trait id or prop kind that content no longer has contributes zero
+and is never an error, so the two files can be rewritten independently in either order.
+Adding affinities for new props (`mat`, `clock`, `phone`, `birdcage`, `urn` were folded in
+this way) is a one-line edit here and needs no content change.
+
+**Anatomy contract — `capabilitiesOf(pet)`.** Behaviour asks what a body can do, never
+what it looks like:
+
+```
+anatomyOf(pet)  reads, in order: pet.art.anatomy | pet.art.creature.anatomy | pet.anatomy
+                merges over DEFAULT_ANATOMY (two stubby legs, no arms/wings) so every
+                freehand-drawn pet on an existing save keeps working
+capabilitiesOf(pet) -> { anatomy, walk, range, stride, climb, reach, fly, ooze, sneak, hang, tail }
+```
+
+`src/art/creatures.js` already emits exactly the block this reads (`hasLegs/legCount/
+legStyle`, `hasArms/armCount/armReach`, `hasWings`, `hasTail`, `hasTentacles`,
+`isLimbless`, `heightClass`, `gait`, `can{...}`). **Integration is one line**: store the
+generated creature at `pet.art.creature` (or its anatomy at `pet.art.anatomy`) when a pet
+is created, and behaviour picks it up with no further change. Where the generator states a
+capability outright (`can.climb`, `can.hang`, `can.sneak`, `can.glide`, `can.scuttle`,
+`gait === 'ooze'`) that wins; otherwise it is inferred from the limbs.
+
+What anatomy buys, mechanically:
+- **legs** — `range` along the row: 2 slots for ordinary legs, 5 for many/spindly/bird
+  legs (`stride`, which the note mentions: *"Covered the distance far too quickly. Too many
+  legs."*). Spindly and many-legged bodies also get a shorter `moveCooldownFor()`.
+- **arms** — `climb`: a vertical move between shelf rows (`index +/- 6`), the only thing in
+  the game that crosses rows under its own power, plus a climb-relocate to an empty slot on
+  an adjacent shelf. Also `reach` (act on a prop or rob a pet two slots away, over the top
+  of a neighbour, who is named in the note) and `hang` (mischief off the shelf edge).
+- **wings** — `fly` to any free slot anywhere, cheaply.
+- **no limbs** — `ooze`: one slot at a time, +2 inertia, double cooldown, and its own
+  mischief (rolling into a neighbouring prop and swapping places with it).
+- **sneak** — a sneaky body moving at night (or a nocturnal one) gets a note that reveals
+  the move after the fact instead of narrating it: *"It is not where you left it. It is
+  beside the Black Candle now. Nobody saw it move."*
+
+**Prop interaction, beyond the aura.** `useProp()` restores the need the prop is for
+(`PROP_USE`; the mirror and the fern are deliberately negative — pets go back anyway),
+counts uses, and empties a bowl or a ball of yarn after `DEPLETE_AT` uses, refilling
+`REFILL_MS` later. `claimAndHoard()` lets a pet with affinity >= `CLAIM_AFFINITY` claim a
+prop — after which neighbours who try it are turned away and take a grudge — and, when
+there is an empty slot on the pet's far side, physically **drags the prop round to its own
+side**, which removes the existing decay aura from the dispossessed neighbour without
+touching `tick.js`. `contestProp()` resolves two rivals beside one prop into a winner, a
+grudge for the loser, and a deepened `state.feudArcs` entry, wiring prop greed into the
+existing feud system. `usedRecently()` (a 45-minute per-pet-per-prop cooldown) stops one
+pet narrating the same bowl every pass. Claims lapse after `CLAIM_MS` or the moment the
+claimant stops being adjacent.
+
+**Cadence.** `runBehavior(state, now, opts)` is one pass: at most 2 moves (ranked by how
+badly each pet wants it), at most 2 prop interactions, at most one contest, one theft, and
+one aversion-or-mischief beat. It self-limits to `PASS_INTERVAL_MS` unless `{ force: true }`.
+`checkShelf()` forces a pass (replacing the old `autonomy()` body, which now delegates so
+existing callers and tests keep working); `main.js`'s 30s interval calls it unforced, so
+behaviour advances while the tab is open without the player clicking; and boot calls
+`catchUpBehavior()`, which runs up to `MAX_CATCHUP_PASSES` restrained passes for an absence
+over `CATCHUP_AFTER_MS` and adds one summary line — *"The shelf is not arranged the way you
+left it. Everyone denies involvement."* — instead of flooding the feed.
+
+**New persisted state**, all defaulted lazily so old saves need no migration and `state.js`
+needed no edit: `state.behavior = { lastRun, claims: { [propId]: {by, at} }, props: {
+[propId]: { uses, emptyUntil, touched: { [petId]: ts } } } }`, and per pet
+`pet.lastMoveAt` / `pet.lastMischiefAt`. `pruneBehavior()` drops records for props and pets
+that no longer exist.
+
+**Verification**
+- `test/behavior.test.mjs`: 53 tests covering affinity resolution and its graceful skipping
+  of unknown trait ids and prop kinds; anatomy resolution and the generator's `can`/`gait`
+  block winning over inference; anatomy-gated reachability (rows for legs, shelves for arms,
+  anywhere for wings, one slot for a blob); motivated movement for each motive (loved prop,
+  hated prop, hunger, feud, solitude, company) plus determinism across 25 identical shelves;
+  cooldowns and nocturnal sleep; claiming, blocking, hoarding, depleting, contesting;
+  reach-theft over a neighbour; pass budgets, the interval gate, catch-up limits; and 120
+  randomized shelves (junk anatomy, deleted trait ids, unknown prop kinds) asserting no
+  throw, no duplicated or lost piece, needs in range, and no unfilled `{p}/{n}/{m}/{q}`
+  placeholder in any note.
+- `node --test test/*.test.mjs`: 123 pass, 0 fail (the 60 pre-existing tests included), run
+  repeatedly to rule out order/randomness flakiness.
+- Live browser: seeded six pets and six props, clicked "Check the shelf", and read the feed
+  back — *"Took the spot beside the Snack Bowl. Waited until nobody was looking, then took
+  it anyway."* (starving sugar fiend), *"Has relocated toward the Black Candle."* (cultist),
+  *"Moved to be nearer the Tin Bathtub. Denies moving."* (damp pet), then *"Has claimed the
+  Tin Bathtub. There was no vote."* and *"Is on the Uncle and will not be moved."*. The
+  screenshot confirms all three pets standing beside the prop their traits wanted. Reloaded
+  with `behavior.lastRun` set 7 hours back to exercise the catch-up path: two restrained
+  notes plus the summary line. Zero console errors throughout.
+- **Not verified here**: how it feels over days rather than minutes — whether the movement
+  rate reads as "alive" or "restless" at real-world pacing is a play judgement, and the
+  tuning constants at the top of the file are deliberately all in one block for that.
+
+---
+
+### Phase 2A: animation overhaul
+
+**Files:**
+- Create: `src/art/animator.js` (the director), `src/art/anatomy.js` (capability resolver)
+- Create: `test/fixtures/limbed-sprite.html` (executable spec for the `data-part` contract)
+- Rewrite: `src/art/sprite.js` (nested sprite DOM, same exports)
+- Edit: `src/ui/render.js`, `src/ui/card.js`, `src/main.js` (wiring)
+- Append-only: `css/style.css`
+
+**Why:** the shipped animation was one infinite CSS loop per sprite plus one canned
+loop per stamp kind. Every pet ran the same curve forever and nothing ever *decided*
+to do anything, so it read as "a picture that wobbles". It also had two real bugs:
+stamp keyframes set `transform`, which wiped the `translate(-50%,-50%)` that centres
+a stamp on its anchor, and stamps were measured against the non-square sprite box, so
+they were stretched horizontally and off-centre features drifted from where they were
+drawn in the studio.
+
+#### The layering problem, and the fix
+
+`animation` is a non-additive shorthand: two classes on one element that both declare
+`animation:` do not compose, the later rule simply wins. That is why the old
+`moodMotionClasses` deliberately returned exactly one class. The fix is to give each
+simultaneous motion its own box:
+
+```
+div.sprite.sl2        posture   – static transform from mood / feud / trait classes
+  div.sprite-act      behaviour – one-shot clips the director assigns
+    div.sprite-figure idle      – continuous breathing (+ tremor); square, so it is
+      img.sprite-body             also the correct coordinate space for stamps
+      div.sprite-stamp          – placement only, never animated
+        div.stamp-art           – secondary motion (flap / wag / undulate / blink)
+```
+
+Breathing uses the individual `scale`/`translate` properties rather than `transform`,
+so a second comma-separated animation can drive `rotate` on the same box — that is how
+an annoyed pet gets a shallow breath *and* a tic at once. Limb motion uses the
+individual properties for the same reason: a generated SVG part usually carries its
+own `transform` attribute for placement, and `rotate:` composes with it instead of
+overwriting it.
+
+Every class the animation system adds is namespaced `sl-…` (`sl-mood-content`,
+`sl-asleep`, `sl-feud-left`, `sl-t-thief`, `sl-can-hang`). An earlier pass used bare
+`mood-content` and silently collided with the card sheet's mood chip, painting a panel
+behind every creature.
+
+#### The director (`src/art/animator.js`)
+
+One shared 220 ms timer for the whole shelf — not 18 rAF loops. Each pass is a single
+`querySelectorAll` over <20 nodes plus arithmetic, so cost is flat in shelf size, and
+it skips entirely while `document.hidden`.
+
+`ui/render.js` rebuilds the cabinet wholesale on every `renderShelf`, so the director
+never holds element references. It re-scans and looks pets up by `data-pet`; the state
+that must survive a re-render (a pet's personality clock) lives in a `Map` keyed by pet
+id, pruned once a pet has been unseen for 90 s, so it cannot grow. One-shot clips clean
+themselves up with a `once` `animationend` listener, which dies with the element if the
+pet is removed mid-behaviour. Verified: 12 consecutive "Check the shelf" presses leave
+no console errors and a flat animation count.
+
+Two independent clocks per pet, so blinking carries on during a hop:
+
+- **blink** — randomised 0.9–6.2 s by mood, 16 % chance of a double-blink. Director-driven
+  rather than an infinite loop, so both eyes of a pet close *together* and no two pets
+  are ever metronomically in step.
+- **behaviour** — a weighted pick from the clip library, gap 0.9–11 s by mood.
+
+Clip library, weighted per mood and biased by trait: `look`, `hop`, `stretch`, `shiver`,
+`sigh`, `perk`, `sway`, `wobble`, `skitter`, `snatch`, `leanin` (feuding pets only),
+`leanaway`, `stare` (pauses every loop on the pet — an unsettling dead-still), plus
+`stir`/`snore` for sleepers. Squash-and-stretch throughout, `transform-origin: 50% 100%`
+(feet planted), real easing curves, never `linear` except for shivers.
+
+Mood is legible at a glance: content pets breathe deep and bouncy and are the only ones
+offered `hop`; annoyed ones breathe shallow with a tic; furious ones are tense, shuddering
+at 0.27 s and leaning *in* at a feud neighbour instead of away; sleepers droop, sag and
+breathe at 2.1× length. Traits bias the pick — `thief` weights `snatch` and `sneak`,
+`wanderer` weights `skitter` and `sway`, `nocturnal` weights `stare`.
+
+**Care reactions.** `reactTo(petId, 'food'|'fuss'|'clean'|'rounds')` — a chomp/lunge for
+food, a happy wiggle for fuss, an annoyed recoil if the pet is already annoyed or furious,
+a wet-dog shake-off for clean. `ui/card.js` calls it *after* `renderAll`, because
+`renderAll` destroys the element the reaction has to play on; it finds the pet again by id
+and animates the shelf sprite and the card portrait together. `reactShelf(ids, 'rounds')`
+staggers the whole shelf 110 ms apart for "Do the rounds", so it reads as going down the
+line rather than everyone twitching at once.
+
+**Thought bubbles.** Rationed hard, per the "clarity over clutter" note: at most two on
+screen, a 9.5 s global cooldown, a 30 % chance when a behaviour fires, and only ever the
+first clause of a trait line if it is ≤40 characters, else a short fallback emote. Never
+on the card portrait.
+
+`prefers-reduced-motion` stops the director outright (and is watched live, so toggling
+the OS setting takes effect without a reload); the CSS block additionally nulls every
+`.sl2` animation, transition and transform, and hides bubbles.
+
+#### Locomotion and anatomy (`src/art/anatomy.js`)
+
+`resolveMotion(pet)` answers "what can this creature actually do?", from three sources in
+falling order of authority:
+
+1. An explicit anatomy block on `pet.anatomy` or `pet.art.anatomy` —
+   `{ hasLegs, legCount, hasArms, armCount, hasWings, wingCount, hasTail, gait, hasTentacles }`.
+   The field names match what `src/art/creatures.js`'s `describeAnatomy` already emits, and
+   a `gait` it declares is honoured when it is one of `GAITS`.
+2. The stamps a hand-drawn pet wears — tentacles ⇒ oozes, a wing ⇒ flaps. This is what
+   keeps every pet already on a player's shelf interesting with no migration.
+3. Nothing at all — a legless painted blob. It still breathes, blinks and behaves; it is
+   simply never offered a clip it has no body for.
+
+Returns `{ legs, arms, wings, tails, gait, canWalk, canSneak, canHang, canFlap, source }`.
+Gaits: `walk` | `scuttle` | `ooze` | `flap` | `hop`. The director turns these into
+`sl-can-*` classes and a `data-sl-gait` attribute; clips carrying `req: 'hang'` etc. are
+skipped for creatures that lack the body, which is the whole of the graceful-degradation
+story — no per-creature special-casing anywhere.
+
+Anatomy-gated clips: **sneak** (crouched, slow, and it *stops dead* halfway — the point is
+that you notice afterwards that something moved when it shouldn't have), **hang** (drops
+off the front edge below the plank line, arms up, body swinging), **flutter**, **stomp**.
+
+**Travel is real movement, not a teleport.** `renderShelf` calls
+`captureShelfPositions(cabinet)` before it empties the cabinet and `playShelfMoves(cabinet, before)`
+after it rebuilds — FLIP. A pet whose **slot index** changed (compared by `data-slot`, not by
+pixels, so a row collapsing and shifting everything below it does not make the whole shelf
+walk) is animated from where it used to be to where it now is, with a Web Animations
+keyframe on the `.pet` element and the gait classes on the sprite. The timing is
+deliberately mischievous rather than smooth: a beat of hesitation, a glance back, then a
+quick scurry, then a landing squash. Duration scales with distance (560–1800 ms), the
+stride length with gait, and `--sl-dir` flips so the creature faces where it is going. This
+means `engine/behavior.js` relocating a pet, and the player dragging one, both produce a
+visible walk for free.
+
+#### The `data-part` contract (for the creature generator integration)
+
+Any element inside a sprite may declare itself an animatable limb. The director tags it
+`.sl-part`, gives it a phase and a joint, and CSS moves it — a generator never has to know
+about animation.
+
+```
+data-part   required — leg | arm | wing | tail | head | ear | antenna | tentacle | jaw | eye
+data-index  optional — 0-based index within that kind; drives phase (a pair alternates at
+                       half a cycle, six legs ripple). Defaults to document order.
+data-side   optional — 'l' | 'r'. Informational.
+data-pivot-x / data-pivot-y
+            preferred — the convention creatures.js already emits: the part group carries
+                       NO transform of its own and its local origin (0,0) IS the joint (an
+                       outer mount group does the placement). CSS then uses
+                       transform-box:view-box + transform-origin:0 0 — exact, nothing
+                       inferred from a bounding box.
+data-pivot  fallback  — "x y" inside the element's own bounding box, used with
+                       transform-box:fill-box.
+(none)      fallback  — PART_ORIGIN's sensible default per part kind (hip at the top of a
+                       leg, shoulder for an arm, base for a tail, and so on).
+```
+
+Verified against real `creatures.js` output: four generated creatures had all 11–13 parts
+tagged, pivots resolved to `transform-origin: 0px 0px` with `transform-box: view-box`, arms
+animating in opposite phase, and gaits resolved correctly (`walk` for two legs, `scuttle`
+for six) *even with no state lookup wired up*, because the resolver also builds an anatomy
+block by counting the limb elements it can see in the DOM.
+
+`test/fixtures/limbed-sprite.html` is the executable spec: a hand-written creature with
+`data-part` limbs plus buttons for every clip and a walk-to-the-next-slot control. Serve
+the repo and open `/test/fixtures/limbed-sprite.html`.
+
+#### Exports
+
+```
+art/sprite.js:   renderPetSprite(pet)                                   (unchanged signature)
+                 moodMotionClasses(pet, {mood, asleep, feudDirection, traits})
+                     — `traits` is new and optional; still returns the legacy motion-* class
+                       first, so older callers keep working
+                 MOTION_TRAIT_FLAGS
+art/anatomy.js:  resolveMotion(pet), gaitFor(parts), limbPhase(kind, index, count),
+                 PART_KINDS, PART_ORIGIN, GAITS
+art/animator.js: initAnimator({ getPet }), reactTo(id, need, delay), reactShelf(ids, need),
+                 captureShelfPositions(root), playShelfMoves(root, before)
+```
+
+`main.js` calls `initAnimator({ getPet: id => state.pets.find(p => p.id === id) || null })`
+once at boot — `getPet` is how the director reads trait copy for bubbles without `art/`
+importing `state.js`.
+
+#### Verified
+
+- 123/123 tests pass; `node --check` clean on every touched file.
+- In-browser: no console errors on a fresh load or after 12 repeated shelf rebuilds.
+- 14 s of recorded activity on a six-pet shelf: 16 blinks and 26 distinct idle clips across
+  ten behaviours, every stamp loop running with its own phase, no two pets in step.
+- Care reactions fire on the right pet: `sl2-chomp` / `sl2-wiggle` / `sl2-shakeoff`, twice
+  each (shelf sprite + card portrait).
+- Travel: identical re-renders produce zero travel; a real slot swap animates both pets with
+  the correct gait and facing.
+- Stamp geometry: `translate(-50%,-50%)` now survives, and stamps render square instead of
+  horizontally stretched.

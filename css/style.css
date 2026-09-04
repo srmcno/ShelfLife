@@ -26,6 +26,10 @@
   --btn-edge:var(--line);
   --btn-fg:var(--bone);
   --accent-ink:#180A11;          /* text that sits on a --pink fill */
+  /* Muted text that sits directly on the ROOM (not on a panel). Mortuary Mint
+     and Haunted Nursery have mid-tone room colours where --bone-dim only
+     manages 2.4:1, so this steps AWAY from the room instead of toward it. */
+  --bone-soft:var(--bone);
   --ok-ink:var(--mint); --warn-ink:var(--amber); --danger-ink:var(--blood);
   --tint-ok:var(--surface); --tint-warn:var(--surface); --tint-danger:var(--surface);
   --hair:var(--rule);
@@ -47,7 +51,12 @@
 /* Auto-contrast label for the accent fill: flips to near-white below 55% HSL
    lightness and near-black above it, so all six ACCENTS stay readable. */
 @supports (color:hsl(from red h s l)){
-  :root{--accent-ink:hsl(from var(--pink) h calc(s * .30) clamp(9, calc((l - 55) * -1000), 96))}
+  :root{
+    --accent-ink:hsl(from var(--pink) h calc(s * .30) clamp(9, calc((l - 55) * -1000), 96));
+    /* Desaturate and step further from mid-grey: softer than --bone on the dark
+       rooms, and DARKER (so more readable) on the pale ones. */
+    --bone-soft:hsl(from var(--bone) h calc(s * .55) calc(l * .78));
+  }
 }
 *{box-sizing:border-box}
 #wall{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.9}
@@ -73,7 +82,7 @@ body{
 h1{font-family:var(--display);font-size:clamp(40px,9vw,66px);line-height:.9;margin:0 0 6px;letter-spacing:-.015em;
   text-shadow:0 2px 0 var(--room-b),0 3px 14px rgba(0,0,0,.28)}
 h1 .tail{color:var(--pink)}
-.tagline{font-size:14px;color:var(--bone-dim);font-style:italic;max-width:38ch;margin:0;line-height:1.45}
+.tagline{font-size:14px;color:var(--bone-soft);font-style:italic;max-width:38ch;margin:0;line-height:1.45}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;max-width:100%}
 
 button{font-family:var(--body);font-size:15px;cursor:pointer;border:none;background:none;color:inherit}
@@ -89,7 +98,7 @@ button{font-family:var(--body);font-size:15px;cursor:pointer;border:none;backgro
 .btn-primary{background:var(--pink);color:var(--accent-ink);border-color:var(--pink);font-weight:700;letter-spacing:.005em;
   box-shadow:0 1px 0 rgba(255,255,255,.28) inset,0 2px 8px rgba(0,0,0,.22)}
 .btn-primary:hover{background:var(--pink);color:var(--accent-ink);border-color:var(--accent-ink);filter:brightness(1.08)}
-.btn-ghost{border:1px solid var(--btn-edge);background:transparent;color:var(--bone-dim);box-shadow:none}
+.btn-ghost{border:1px solid var(--btn-edge);background:transparent;color:var(--bone-soft);box-shadow:none}
 .btn-ghost:hover{color:var(--bone);background:var(--btn-bg);border-color:var(--bone-dim)}
 .btn-ghost[aria-pressed="true"]{color:var(--bone);background:var(--btn-bg);border-color:var(--bone-dim);font-weight:700}
 .btn-danger{background:transparent;color:var(--danger-ink);border:1px solid var(--danger-ink);box-shadow:none}
@@ -101,7 +110,7 @@ button{font-family:var(--body);font-size:15px;cursor:pointer;border:none;backgro
 @media (pointer:coarse){ .btn-sm{min-height:44px;padding:9px 13px} }
 
 .status{max-width:var(--shell);margin:0 auto 16px;display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;
-  font-size:var(--fs-small);color:var(--bone-dim);
+  font-size:var(--fs-small);color:var(--bone-soft);
   border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:10px 2px}
 .status>span{display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 8px;border-radius:99px;
   background:var(--surface);border:1px solid var(--rule);white-space:nowrap;line-height:1.7}
@@ -348,7 +357,7 @@ input[type=text]:focus{border-color:var(--mint)}
 
 .storage-warn{max-width:var(--shell);margin:0 auto 16px;padding:11px 14px;border-radius:var(--radius);
   border:1px solid var(--warn-ink);background:var(--tint-warn);color:var(--bone);font-size:var(--fs-small);line-height:1.45}
-footer{max-width:var(--shell);margin:40px auto 0;font-size:12px;color:var(--bone-dim);line-height:1.6;opacity:.85}
+footer{max-width:var(--shell);margin:40px auto 0;font-size:12px;color:var(--bone-soft);line-height:1.6;opacity:.85}
 
 /* ============ SMALL SCREENS ============
    The shelf keeps SIX columns at every width. Left/right neighbours are the
@@ -1076,3 +1085,30 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
   padding:12px;border:1px solid var(--line);background:var(--surface);border-radius:2px}
 .inline-prompt label{font-size:12px;color:var(--bone-dim);flex:none}
 .inline-prompt input[type=text]{flex:1 1 160px;min-width:140px;width:auto}
+
+/* Parts emitted by src/art/creatures.js carry data-pivot-x/y and put their own
+   local origin exactly on the joint (an outer mount group does the placement),
+   so they rotate about 0 0 in their own coordinate system. Nothing has to be
+   inferred from a bounding box, which is both cheaper and exact. */
+.sl2 .sl-part[data-pivot-x]{transform-box:view-box;transform-origin:0 0}
+
+/* The ooze gait: tentacled things do not walk, they pour. No leg swing, a low
+   rippling body, and the tentacles themselves carry the motion. */
+.sl2.sl-gait-ooze .sprite-figure{
+  animation:sl2-oozebob calc(var(--sl-gait-dur,300ms) * 1.6) ease-in-out infinite;
+}
+.sl2.sl-gait-ooze .sl-part[data-part="leg"],
+.sl2.sl-gait-ooze .sl-part[data-part="tentacle"]{
+  animation:sl2-oozecreep calc(var(--sl-gait-dur,300ms) * 1.6) ease-in-out
+            calc(var(--sl-ph,0) * var(--sl-gait-dur,300ms) * 1.6) infinite;
+}
+@keyframes sl2-oozebob{
+  0%,100%{translate:0 0;scale:1.06 .94}
+  35%{translate:0 -2%;scale:.96 1.05}
+  70%{translate:0 1%;scale:1.08 .93}
+}
+@keyframes sl2-oozecreep{
+  0%,100%{rotate:-12deg;translate:0 0}
+  40%{rotate:10deg;translate:0 -5%}
+  70%{rotate:2deg;translate:0 2%}
+}
