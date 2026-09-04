@@ -15,21 +15,28 @@ export function renderAll(state) {
   renderNotes(state);
 }
 
+// Three figures, and a fourth only when something is wrong.
+//
+// This used to be nine metrics in a pill rail. Four of them — Content / Fine /
+// Annoyed / Furious — were the mood census, which the shelf already renders as
+// physics: the pips under every creature and the ink on every nameplate. Showing
+// it a second time as analytics put a dashboard in front of the thing it
+// describes. So the census and the streak are gone from here (the streak now
+// lives in the Incidents sheet, which is the log it belongs to), and what is
+// left is a line that CHANGES when the game changes rather than a readout that
+// is always the same shape. Styled as an engraving on the case's bottom rail —
+// see the .stage>.status rules in css/style.css.
 export function renderStatus(state) {
   const days = Math.max(1, Math.floor((Date.now() - state.started) / 86400000) + 1);
   const counts = { content: 0, fine: 0, annoyed: 0, furious: 0 };
   state.pets.forEach(p => counts[moodOf(p)]++);
   const feuds = activeFeuds(state).length;
+  const unrest = counts.furious + feuds;
   statusBar.innerHTML =
     '<span>Day <b>' + days + '</b></span>' +
-    '<span>Living here: <b>' + state.pets.length + '</b> of ' + state.slots.length + '</span>' +
-    '<span class="good">Content: <b>' + counts.content + '</b></span>' +
-    '<span>Fine: <b>' + counts.fine + '</b></span>' +
-    '<span class="mid">Annoyed: <b>' + counts.annoyed + '</b></span>' +
-    '<span class="bad">Furious: <b>' + counts.furious + '</b></span>' +
-    '<span>Feuds: <b>' + feuds + '</b></span>' +
-    '<span>Bond: <b>' + totalBond(state) + '</b></span>' +
-    '<span class="streak-badge">🔥 Streak: <b>' + (state.streak.count || 0) + '</b></span>';
+    '<span>Living here <b>' + state.pets.length + '</b> of ' + state.slots.length + '</span>' +
+    '<span>Bond <b>' + totalBond(state) + '</b></span>' +
+    (unrest ? '<span class="bad">Unrest <b>' + unrest + '</b></span>' : '');
 }
 
 function feudDirectionFor(state, pet, slotIndex) {
@@ -88,6 +95,11 @@ function propEl(pr, slotIndex) {
   btn.dataset.id = pr.id;
   btn.dataset.kind = 'prop';
   btn.dataset.slot = slotIndex;
+  // The one hook the lighting model needs: a candle and a lamp are light
+  // SOURCES, and css/style.css gives each kind its own pool that falls on the
+  // neighbours. Where you put a prop is therefore a lighting decision as well as
+  // an aura one. Everything else about props is unchanged.
+  btn.dataset.prop = pr.kind;
   btn.setAttribute('aria-label', def.name);
   btn.innerHTML = PROP_ART[pr.kind] + '<span class="nameplate">' + escapeHtml(def.name) + '</span>';
   return btn;

@@ -36,6 +36,12 @@ function setTray(open) {
   document.body.style.overflow = open ? 'hidden' : '';
 }
 
+// COUPLING, DELIBERATE AND EASY TO MISS: this listener is NOT width-gated, and
+// css/style.css relies on that. The art-direction pass gives the desktop the
+// same disclosure — three verbs and a More — and renders .tb-rest as a drawer
+// under the toolbar at >=641px. That drawer is opened by exactly this click and
+// dimmed by the same #trayScrim. Gate this on PHONE.matches and eight settings
+// become unreachable on a desktop with no visible error.
 if (moreBtn) {
   moreBtn.addEventListener('click', () => setTray(!trayOpen));
 }

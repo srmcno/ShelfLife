@@ -1647,5 +1647,889 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
   .sheet{margin-top:0;min-height:100vh;border-radius:0}
   /* Same call as portrait: the creatures go first, the tally follows them. */
   .stage>.status{order:2;margin:10px auto 0;padding:6px 0}
-  .stage>.cabinet-wrap{order:1}
+  .stage>.cabinet-wrap{order:1;width:auto}
+}
+
+/* ===========================================================================
+   PHASE 2L — ART DIRECTION: THE DARK ROOM, THE LIT SHELF
+   ---------------------------------------------------------------------------
+   THE DIRECTION. The page is a dark room. The shelf is a piece of furniture
+   standing in it with a light above it. The creatures are the only lit,
+   saturated, moving things in the frame, and light is the only compositional
+   tool.
+
+   Everything below answers one question of every pixel: WHERE IS THE LIGHT
+   COMING FROM AND WHAT IS IT FALLING ON. Chrome is not styled; it is either
+   unlit (recedes into the room), engraved (cut into a surface that is lit), or
+   the one ember on the page ("Make a pet"). Emptiness is not a void — it is the
+   unlit part of a room, and where it must be looked at it is PRINTED: an empty
+   slot carries its own position mark, the way an empty plinth in a collection
+   carries its label.
+
+   THE LIGHT MODEL, back to front:
+
+     body                    flat --night (the room's own dark, near-black)
+     body::before  (fixed)   wall bloom + room vignette      - the room, unlit
+     #wall::before/::after   dust in the beam, grain in the shadows
+       .cabinet-wrap         carcass: asymmetric side returns, cornice, spill
+         .cabinet            interior back wall + key pool + depth falloff
+           .shelf-row x3     per-row exposure (--sl-stop)
+             .slots          props' own light pools (they spill on neighbours)
+               .slot::before elliptical pool of key on the plank at the feet
+                 .pet        drop-shadow chain: cast -> contact -> warm edge
+               .plank        lit top lip / dark front face (engraved name)
+
+   ONE KEY, DECLARED ONCE. --key is the room's bulb (content/decor.js ships one
+   per room); --cast-dx/dy is the direction everything agrees on. Because the
+   creature chain, the prop pools and the plank's own cast all consume the same
+   two numbers, NOTHING on this page throws a shadow in a direction that
+   disagrees with anything else.
+
+   HOW IT SURVIVES SIX ROOMS. Nothing here hardcodes a room colour. Each room is
+   re-expressed as that room AT NIGHT, and what varies between the six is the
+   BULB, not the hue of the darkness — otherwise six rooms collapse into one
+   room with a hue rotation, and the decor system (a feature players buy with
+   bond) stops being worth buying.
+
+   PRESERVING THE MEASURED CONTRAST WORK. --ink-lit/--ink-dim keep each room's
+   --bone HUE and force its LIGHTNESS, because three of the six rooms are light
+   rooms shipping dark ink that would be invisible on a black wall. All the
+   re-pointing lands on `body`, never on `:root`: decorUI writes to
+   documentElement, and the :root color-mix() derivations must keep deriving
+   from the room's real values. --accent-ink (the auto-flipping label on the
+   accent fill) is untouched, semantic colour still rides on the bead rather
+   than on the text, and the nameplate is now theme-proof BY CONSTRUCTION —
+   fixed cream on a forced-dark plank face.
+
+   Delete this block and the previous build is back, exactly.
+   =========================================================================== */
+
+/* ---- 0. two real bugs, worth fixing on their own merits ------------------- */
+/* A bare 1fr track has an `auto` minimum, so a sprite deliberately drawn wider
+   than its own column silently widened all six tracks and pushed columns 5 and
+   6 off the screen. The TRACK must stay a sixth of the shelf and let the
+   PICTURE spill over its neighbours — that is the whole idea, and it is what
+   keeps the six-column adjacency mechanic honest at every width. */
+.slots{grid-template-columns:repeat(6,minmax(0,1fr));gap:0;padding:0}
+.slots>.slot{min-width:0}
+/* .plank's margin-bottom collapsed out of the row, so anything painted on
+   .shelf-row missed the label strip entirely. */
+.shelf-row{display:flow-root}
+
+/* ---- 1. the night, and one light ----------------------------------------- */
+:root{
+  --shell:1140px;
+  /* Plain fallbacks first, as everywhere else in this file. */
+  --night:#07060C; --night-2:#120D19;
+  --case-lit:#150F1F; --case-mid:#0B0813; --case-deep:#050409;
+  --ink-lit:#F2E9DC; --ink-dim:#B4A79A; --ink-faint:#9C9184;
+  /* The bulb. content/decor.js gives every room its own; this is the fallback
+     for the first paint, before decorUI has written anything. */
+  --key:var(--room-key,#F2C083);
+}
+@supports (color:color-mix(in srgb,red 50%,blue)){
+  :root{
+    --night:color-mix(in srgb,var(--room-b) 20%,#06050B);
+    --night-2:color-mix(in srgb,var(--room-a) 26%,#0B0813);
+    --case-lit:color-mix(in srgb,var(--room-a) 30%,#0D0A16);
+    --case-mid:color-mix(in srgb,var(--room-b) 20%,#08060E);
+    --case-deep:color-mix(in srgb,var(--room-b) 10%,#040309);
+  }
+}
+/* The same lightness pin the ink gets, for the same reason and in the other
+   direction. Three of the six rooms are LIGHT rooms: mixing a fixed share of
+   #F4EDDF or #A8C9B9 into black gave Bone Parlor and Mortuary Mint a mid-grey
+   back wall, which is not a dark room and — worse — made the two of them the
+   same picture. Keeping the hue and FORCING the lightness makes every room the
+   same near-black with its own colour of darkness, so what actually separates
+   them is the bulb, which is the whole point of §6. */
+@supports (color:hsl(from red h s l)){
+  :root{
+    --night:hsl(from var(--room-b) h calc(s * .5 + 8) 3.5);
+    --night-2:hsl(from var(--room-a) h calc(s * .5 + 10) 6.5);
+    --case-lit:hsl(from var(--room-a) h calc(s * .5 + 12) 9.5);
+    --case-mid:hsl(from var(--room-b) h calc(s * .45 + 9) 5);
+    --case-deep:hsl(from var(--room-b) h calc(s * .4 + 7) 2.2);
+  }
+}
+/* The lightness pin. Bone Parlor keeps its warm sepia hue and Mortuary Mint its
+   cold green one; both become legible cream-weight ink on a black wall without
+   either of them owning a second palette. Bare numbers, not percentages: that
+   is the relative-colour form this engine actually accepts. */
+@supports (color:hsl(from red h s l)){
+  :root{
+    --ink-lit:hsl(from var(--bone) h calc(s * .5 + 5) 93);
+    --ink-dim:hsl(from var(--bone) h calc(s * .45 + 4) 70);
+    --ink-faint:hsl(from var(--bone) h calc(s * .26 + 3) 64);
+  }
+}
+
+/* Every downstream token, re-pointed at the night palette in ONE place — and on
+   `body`, so :root keeps deriving from the room's real values. */
+body{
+  --bone:var(--ink-lit); --bone-dim:var(--ink-dim); --bone-soft:var(--ink-dim);
+  --room-a:var(--night-2); --room-b:var(--night);
+  --panel-a:var(--night-2); --panel-b:var(--night);
+  --hair-lit:rgba(242,233,220,.16);
+  --hair:rgba(242,233,220,.10);
+  --rule:rgba(242,233,220,.09);
+  --line:rgba(242,233,220,.14);
+  --surface:#15111C; --surface-hi:#1E1826; --field:#0A080F;
+  --btn-bg:transparent; --btn-bg-hi:rgba(255,225,180,.09);
+  --btn-edge:rgba(242,233,220,.17); --btn-fg:var(--ink-lit);
+  --wall-ink:rgba(255,240,215,.05);
+  --paper-lit:#EFE2CB;
+  /* The source, in cabinet space, and the one direction every shadow obeys. */
+  --key-x:32%; --key-y:-8%;
+  --cast-dx:26px; --cast-dy:18px;
+}
+@supports (color:color-mix(in srgb,red 50%,blue)){
+  body{
+    --hair-lit:color-mix(in srgb,var(--ink-lit) 16%,transparent);
+    --hair:color-mix(in srgb,var(--ink-lit) 10%,transparent);
+    --rule:color-mix(in srgb,var(--ink-lit) 9%,transparent);
+    --line:color-mix(in srgb,var(--ink-lit) 14%,transparent);
+    --surface:color-mix(in srgb,var(--ink-lit) 6%,var(--night));
+    --surface-hi:color-mix(in srgb,var(--ink-lit) 11%,var(--night));
+    --field:color-mix(in srgb,#000 50%,var(--night));
+    --btn-edge:color-mix(in srgb,var(--ink-lit) 17%,transparent);
+    --btn-bg-hi:color-mix(in srgb,var(--key) 11%,transparent);
+    --wall-ink:color-mix(in srgb,var(--ink-lit) 5%,transparent);
+    --paper-lit:color-mix(in srgb,var(--paper) 86%,var(--key));
+    /* The semantic inks keep the pairing the contrast pass measured — a hue
+       mixed TOWARD the readable ink rather than used raw — but they are now
+       measured against the night ink instead of the room's own. Colour still
+       rides on the bead in the status line; this is for the sheets. */
+    --ok-ink:color-mix(in srgb,var(--mint) 42%,var(--ink-lit));
+    --warn-ink:color-mix(in srgb,var(--amber) 48%,var(--ink-lit));
+    --danger-ink:color-mix(in srgb,var(--blood) 44%,var(--ink-lit));
+    --tint-ok:color-mix(in srgb,var(--mint) 13%,var(--surface));
+    --tint-warn:color-mix(in srgb,var(--amber) 13%,var(--surface));
+    --tint-danger:color-mix(in srgb,var(--blood) 17%,var(--surface));
+  }
+}
+
+body{
+  background:var(--night);
+  color:var(--ink-lit);
+  padding:20px 18px calc(64px + env(safe-area-inset-bottom));
+  padding-left:calc(18px + env(safe-area-inset-left));
+  padding-right:calc(18px + env(safe-area-inset-right));
+}
+/* The room. FIXED, so it is a property of the room and the furniture moves
+   through it when you scroll — not a gradient stuck to a box. (Fixed layer
+   rather than background-attachment:fixed on body: iOS Safari ignores that.) */
+body::before{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(58% 40% at 50% 6%,color-mix(in srgb,var(--key) 15%,transparent),transparent 70%),
+    radial-gradient(120% 90% at 50% 42%,transparent 46%,rgba(0,0,0,.55) 100%);
+}
+/* Dust, only where the light is. Six motes on a very slow drift: this is what
+   makes a light read as a BEAM rather than as a gradient, and it costs one
+   compositor layer. */
+#wall::before{
+  content:'';position:absolute;left:0;right:0;top:-4vh;height:70vh;
+  pointer-events:none;opacity:.14;
+  background-image:
+    radial-gradient(2px 2px at 22% 34%,var(--key),transparent),
+    radial-gradient(1.6px 1.6px at 37% 62%,var(--key),transparent),
+    radial-gradient(2.2px 2.2px at 47% 18%,var(--key),transparent),
+    radial-gradient(1.5px 1.5px at 58% 71%,var(--key),transparent),
+    radial-gradient(2px 2px at 66% 41%,var(--key),transparent),
+    radial-gradient(1.7px 1.7px at 29% 9%,var(--key),transparent);
+  animation:ad-dust 38s ease-in-out infinite alternate;
+}
+@keyframes ad-dust{0%{transform:translate3d(0,0,0)}100%{transform:translate3d(-12px,-30px,0)}}
+/* Grain in the shadows, clean in the light — which is how film works. Masked
+   away from the middle of the frame so it never crawls over the lit wood, and
+   NOT animated: a 500ms noise crawl is a compositing tax for a texture nobody
+   consciously sees. */
+#wall::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  opacity:.04;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  -webkit-mask-image:radial-gradient(120% 90% at 50% 42%,transparent 30%,#000 100%);
+  mask-image:radial-gradient(120% 90% at 50% 42%,transparent 30%,#000 100%);
+}
+
+/* ---- 2. the cabinet is built geometry, not a bordered rectangle ----------- */
+/* Side returns, a cornice shadow, headroom above row 1, a lit floor under row
+   3. You can see the box join. The single most useful move here is that the two
+   returns are NOT mirror images: the key is at 32% across, so the left return
+   shows a lit inner face and the right one is turned away into the dark. That
+   one asymmetry does more than any amount of border work. */
+.cabinet-wrap{
+  --case-pad:26px;
+  --shelf-w:min(var(--shell),calc(100vw - 36px));
+  --rail:calc(var(--shelf-w) - var(--case-pad) * 2);
+  box-shadow:0 0 170px -60px color-mix(in srgb,var(--key) 42%,transparent);
+}
+.cabinet-wrap::before,.cabinet-wrap::after{
+  width:22px;top:0;bottom:0;z-index:4;border-radius:0;
+}
+.cabinet-wrap::before{
+  left:0;
+  background:linear-gradient(90deg,
+    rgba(0,0,0,.9) 0 2px,
+    color-mix(in srgb,#000 58%,var(--wood)) 2px 9px,
+    color-mix(in srgb,var(--wood-lip) 58%,var(--key)) 9px 13px,
+    color-mix(in srgb,#000 34%,var(--wood)) 13px 100%);
+  box-shadow:4px 0 14px rgba(0,0,0,.72);
+}
+.cabinet-wrap::after{
+  right:0;transform:none;
+  background:linear-gradient(90deg,
+    color-mix(in srgb,#000 42%,var(--wood)) 0 4px,
+    color-mix(in srgb,#000 64%,var(--wood)) 4px 18px,
+    rgba(0,0,0,.92) 18px 100%);
+  box-shadow:-4px 0 14px rgba(0,0,0,.72);
+}
+.cabinet{
+  border:0;border-radius:2px;
+  padding:30px var(--case-pad) 0;
+  background:
+    /* the key pool, hitting the back wall behind row 1 */
+    radial-gradient(120% 62% at var(--key-x) var(--key-y),
+      color-mix(in srgb,var(--key) 30%,transparent) 0%,
+      color-mix(in srgb,var(--key) 9%,transparent) 42%,transparent 74%),
+    /* just enough panelling on the back wall for the light to land on */
+    repeating-linear-gradient(90deg,rgba(255,240,215,.026) 0 1px,transparent 1px 52px),
+    /* depth: the box gets darker as it goes down and back */
+    linear-gradient(180deg,var(--case-lit) 0%,var(--case-mid) 46%,var(--case-deep) 100%);
+  /* the top of the box occludes the key, so there is a shadow under the ceiling
+     — this is what makes it read as a BOX rather than as a lit panel */
+  box-shadow:
+    inset 0 14px 24px -10px rgba(0,0,0,.78),
+    inset 0 0 0 1px rgba(255,240,215,.05),
+    0 44px 84px -44px #000;
+}
+.cabinet::before{
+  border-radius:2px;
+  background:radial-gradient(80% 64% at var(--key-x) 2%,
+    transparent 26%,rgba(0,0,0,.5) 74%,rgba(0,0,0,.86) 100%);
+}
+/* The floor of the case, catching the last of the key. The frame now ends on a
+   piece of furniture rather than on a crop. */
+.cabinet::after{
+  content:'';display:block;height:26px;margin:0 calc(-1 * var(--case-pad));
+  background:
+    linear-gradient(180deg,color-mix(in srgb,var(--key) 8%,transparent) 0,transparent 62%),
+    linear-gradient(180deg,rgba(0,0,0,.45),rgba(0,0,0,.88));
+}
+/* Depth in three stops. Row 3 is NOT dead black — it is lit enough to read as
+   unlit floor rather than as a hole; only the AMBIENT falls off, and its
+   creatures keep full-strength rim and cast. */
+/* The prop light pools are 300% of their own slot so a candle can fall on its
+   neighbours. On the sixth column that pool reached ~28px past the case and,
+   because an absolutely-positioned pseudo-element is LAYOUT overflow, it made
+   the document 28px wider than a 390px phone — invisible only because
+   body{overflow-x:hidden} was swallowing it. `clip` (not `hidden`) cuts the
+   spill without turning the case into a scroll container, and leaving the Y
+   axis visible keeps thought bubbles able to rise above row 1. The clip margin
+   is slack for the outermost creature's cast shadow. */
+#cabinet{counter-reset:sl-row;overflow-x:clip;overflow-clip-margin:10px}
+#cabinet>.shelf-row{--sl-stop:.38}
+#cabinet>.shelf-row:nth-child(1){--sl-stop:1}
+#cabinet>.shelf-row:nth-child(2){--sl-stop:.62}
+
+/* ---- 3. the creatures: the size of the subject, and lit from somewhere ---- */
+.shelf-row{
+  counter-increment:sl-row;
+  --pitch:calc(var(--rail) / 6);
+  --pet-size:clamp(148px,min(calc(var(--pitch) * 1.14),calc((100vh - 452px) / 2)),232px);
+  --slot-h:calc(var(--pet-size) + 16px);
+  --plank-h:28px;          /* was 15 — it now carries the type */
+  --label-drop:12px;       /* was 38 — the dead band is gone    */
+}
+.slots{counter-reset:sl-col;align-items:end}
+.slot{counter-increment:sl-col;overflow:visible}
+/* Scoped to .slot, so the card portrait and the studio preview keep filling
+   their own hosts. A separate name from --pet-h on purpose: a custom property
+   cannot be defined in terms of itself. */
+.slot .sprite{--pet-h:var(--pet-size)}
+.slot .sprite.sl2{width:var(--pet-h);max-width:none}
+.slot .prop svg{width:calc(var(--pitch) * .58);height:calc(var(--pitch) * .58)}
+
+/* THE SHADOW CHAIN — the single most important correction to the direction.
+   A drop-shadow at even weight all round detaches from the form and reads as
+   Photoshop outer-glow. These three agree with --cast-dx/dy, and note that the
+   warm edge is offset UP AND LEFT, toward the source. That one negative offset
+   is the difference between "lit from somewhere" and "sticker outline", and it
+   costs nothing. Because drop-shadow follows the vector outline, horns cast
+   horn-shaped shadows and wings cast wing-shaped ones — on generated AND
+   freehand pets, with zero DOM cost.
+   One filter, on .sprite-figure, so the chain traces the WHOLE silhouette
+   (body + every stamp) instead of the body and the horns separately. */
+.sl2 .sprite-creature,.sl2 .sprite-body{filter:none}
+.sl2 .sprite-figure{
+  filter:
+    drop-shadow(var(--cast-dx) var(--cast-dy) 14px rgba(0,0,0,.58))
+    drop-shadow(2px 3px 1px rgba(0,0,0,.42))
+    drop-shadow(-3px -2px 5px color-mix(in srgb,var(--key) 62%,transparent));
+}
+.pet.furious .sprite-figure{
+  filter:
+    drop-shadow(var(--cast-dx) var(--cast-dy) 14px rgba(0,0,0,.58))
+    drop-shadow(2px 3px 1px rgba(0,0,0,.42))
+    drop-shadow(-3px -2px 5px rgba(255,74,87,.72))
+    drop-shadow(0 0 18px rgba(255,74,87,.3));
+}
+.pet.asleep .sprite-figure{
+  filter:
+    drop-shadow(calc(var(--cast-dx) * .5) calc(var(--cast-dy) * .5) 12px rgba(0,0,0,.5))
+    drop-shadow(2px 3px 1px rgba(0,0,0,.4));
+}
+.pet:hover .sprite-figure,.pet:focus-visible .sprite-figure{
+  filter:
+    drop-shadow(var(--cast-dx) var(--cast-dy) 14px rgba(0,0,0,.58))
+    drop-shadow(2px 3px 1px rgba(0,0,0,.42))
+    drop-shadow(-3px -2px 7px color-mix(in srgb,var(--key) 92%,transparent));
+}
+
+/* FOOTING. Pool underneath, dark patch on top of it, offset right because the
+   key is at the left. An underglow that REPLACES the contact shadow leaves feet
+   hovering over a lit plank lip; both are needed.
+   One explicit stack for the whole shelf, because everything here overlaps:
+
+     1 the plank        2 the pool of key on it     3 the contact patch
+     4 the creature     5 the engraved name and the need lights
+
+   The creature sits ABOVE the wood rather than tucking behind it. That is a
+   deliberate reversal: several idle clips (sl-hanging especially, which dangles
+   a pet off the front edge by its arms) travel a long way below the baseline,
+   and a plank painting over them cuts the creature in half. The dark contact
+   patch does the planting instead, which it can do for every pose. */
+.plank{z-index:1}
+.pet .sprite,.prop svg{z-index:4}
+.pet::after,.prop::after{z-index:3}
+.slot::before{
+  content:'';position:absolute;z-index:2;pointer-events:none;
+  left:50%;transform:translateX(-50%);
+  bottom:calc(-1 * var(--plank-h));
+  width:150%;height:calc(var(--plank-h) * .55);
+  background:radial-gradient(ellipse at 42% 22%,
+    color-mix(in srgb,var(--key) calc(24% * var(--sl-stop,1)),transparent),transparent 68%);
+}
+/* The pool is 150% of its track so it spills onto its neighbours, which is the
+   point — but on the two outermost tracks that spill left the cabinet entirely
+   and drew a soft streak on the wall beside the furniture. Anchor those two to
+   their own outer edge instead of clipping the case (which would cut the cast
+   shadow off the sixth creature). */
+.slot:first-child::before{left:0;right:auto;transform:none;width:126%}
+.slot:last-child::before{left:auto;right:0;transform:none;width:126%}
+.pet::after,.prop::after{
+  left:56%;width:64%;height:9px;bottom:-1px;
+  background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,.72),rgba(0,0,0,.24) 52%,transparent 72%);
+}
+
+/* ---- 3b. props that are actually light sources ---------------------------- */
+/* ui/render.js tags each prop with data-prop="<kind>". A candle and a lamp now
+   cast a real pool that falls on their NEIGHBOURS, so where you put one is a
+   lighting decision as well as an aura one. */
+.prop{overflow:visible}
+.prop svg{filter:drop-shadow(var(--cast-dx) var(--cast-dy) 12px rgba(0,0,0,.5)) drop-shadow(2px 3px 1px rgba(0,0,0,.4))}
+.prop[data-prop="candle"]::before,.prop[data-prop="lamp"]::before,
+.prop[data-prop="musicbox"]::before,.prop[data-prop="board"]::before,
+.prop[data-prop="mirror"]::before,.prop[data-prop="globe"]::before,
+.prop[data-prop="bell"]::before,.prop[data-prop="skull"]::before{
+  content:'';position:absolute;z-index:0;pointer-events:none;
+  left:50%;top:50%;width:300%;height:260%;transform:translate(-50%,-34%);
+}
+.prop[data-prop="candle"]::before{
+  background:radial-gradient(50% 50% at 50% 50%,
+    color-mix(in srgb,var(--key) 62%,transparent) 0%,
+    color-mix(in srgb,var(--key) 26%,transparent) 16%,
+    color-mix(in srgb,var(--key) 9%,transparent) 34%,transparent 70%);
+  animation:ad-flicker 4.3s ease-in-out infinite;
+}
+.prop[data-prop="candle"] svg{filter:drop-shadow(0 0 10px var(--key)) drop-shadow(0 0 24px color-mix(in srgb,var(--key) 40%,transparent))}
+.prop[data-prop="lamp"]::before{
+  width:340%;height:290%;
+  background:radial-gradient(50% 50% at 50% 46%,
+    color-mix(in srgb,var(--key) 46%,transparent) 0%,
+    color-mix(in srgb,var(--key) 18%,transparent) 20%,
+    color-mix(in srgb,var(--key) 6%,transparent) 40%,transparent 74%);
+  animation:ad-flicker 11s ease-in-out infinite;
+}
+.prop[data-prop="lamp"] svg{filter:drop-shadow(0 0 14px color-mix(in srgb,var(--key) 46%,transparent))}
+/* Cold light: glass and bone CATCH the key rather than making their own. */
+.prop[data-prop="mirror"]::before,.prop[data-prop="globe"]::before,
+.prop[data-prop="bell"]::before,.prop[data-prop="skull"]::before{
+  width:240%;height:210%;
+  background:radial-gradient(50% 50% at 50% 50%,color-mix(in srgb,var(--mint) 12%,transparent) 0%,transparent 62%);
+}
+.prop[data-prop="musicbox"]::before,.prop[data-prop="board"]::before{
+  background:radial-gradient(50% 50% at 50% 50%,color-mix(in srgb,var(--pink) 14%,transparent) 0%,transparent 66%);
+}
+/* A lit prop throws a POOL onto the wood it stands on, not a shadow. */
+.prop[data-prop="candle"]::after,.prop[data-prop="lamp"]::after{
+  left:50%;width:190%;height:16px;bottom:-3px;
+  background:
+    radial-gradient(ellipse at 50% 50%,rgba(0,0,0,.55) 0%,rgba(0,0,0,.22) 24%,transparent 46%),
+    radial-gradient(ellipse at 50% 50%,color-mix(in srgb,var(--key) 40%,transparent) 0%,transparent 70%);
+}
+@keyframes ad-flicker{
+  0%,100%{opacity:1}
+  17%{opacity:.84} 31%{opacity:1} 48%{opacity:.76} 63%{opacity:.97} 81%{opacity:.88}
+}
+
+/* ---- 4. the plank's front face IS the nameplate --------------------------- */
+/* This kills three failures at once: the hard-edged label bar ruled across the
+   picture, the fixed-cream chips that become the brightest objects in the frame
+   and out-shout the creatures, and the dead 38px band under every row. The
+   reveal is forced dark by color-mix(var(--wood) 26%, #000), which is near-black
+   for every one of the seven woods including Bone and Gilt — so ONE fixed cream
+   ink is legible on all of them, and nameplates leave the theme system
+   entirely. */
+.plank{
+  position:relative;height:var(--plank-h);border-radius:0;
+  margin-bottom:var(--label-drop);
+  background:
+    /* The key raking the top lip. THIS is where the highlight comes from — the
+       lip itself is left as plain --wood-lip, because mixing wood toward #fff
+       lit the whole board evenly and, on the pink woods, drew a neon strip
+       across the picture that out-shouted the cast. Warm, left-weighted, and
+       scaled by the row's own exposure: the board is bright where it faces the
+       source and plain wood where it does not. */
+    linear-gradient(90deg,
+      color-mix(in srgb,var(--key) calc(58% * var(--sl-stop,1)),transparent) 0%,
+      color-mix(in srgb,var(--key) calc(16% * var(--sl-stop,1)),transparent) 46%,
+      transparent 82%) 0 0/100% 3px no-repeat,
+    /* two grain passes, the second raked 3deg so it is not a perfect comb */
+    repeating-linear-gradient(93deg,rgba(0,0,0,.05) 0 1px,rgba(255,255,255,.02) 1px 2px,transparent 2px 17px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.07) 0 1px,rgba(255,255,255,.03) 1px 2px,transparent 2px 11px),
+    linear-gradient(180deg,
+      var(--wood-lip) 0 3px,
+      color-mix(in srgb,#000 16%,var(--wood)) 3px 7px,
+      color-mix(in srgb,#000 34%,var(--wood)) 7px 14px,
+      rgba(0,0,0,.94) 14px 15px,
+      color-mix(in srgb,var(--wood) 26%,#000) 15px 100%);
+  box-shadow:0 12px 22px -8px rgba(0,0,0,.9);
+}
+.plank::after{display:none}
+
+/* Engraved into the reveal. One line, ellipsised: two ragged lines was worse
+   than an ellipsis in every screenshot in this set, and the tap target opens
+   the card anyway. */
+.pet .nameplate,.prop .nameplate{
+  z-index:5;left:0;right:0;padding:0 3px;
+  top:calc(100% + 15px);height:13px;line-height:13px;
+  font-family:var(--body);font-size:10.5px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:#EFE2CE;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.prop .nameplate{font-weight:400;color:#C4B7A4;opacity:1}
+.pet:hover .nameplate{color:#FFF6E6}
+.pet.furious .nameplate,.pet.feuding .nameplate{color:#FF9AA6;font-weight:600}
+/* The need lights, recessed into the strip under the board. */
+.pips{z-index:5;top:calc(100% + var(--plank-h) + 3px);gap:5px;height:7px}
+.pip{width:6px;height:6px;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 6px currentColor}
+.pip.food{background:var(--amber);color:var(--amber)}
+.pip.fuss{background:var(--pink);color:var(--pink)}
+.pip.clean{background:var(--mint);color:var(--mint)}
+.pip.zzz{font-size:8.5px;font-style:normal;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-faint);box-shadow:none;background:none}
+
+/* ---- 5. chrome, ranked by how loudly it is allowed to speak ---------------
+   1 the creatures  2 the lit wood  3 "Make a pet" (one ember)  4 the engraved
+   names  5 three actions + More  6 the case rail  7 notes  8 footer.
+   Everything from 5 down is UNLIT: transparent, hairline, tracked caps. */
+.masthead{align-items:flex-start;gap:18px;margin-bottom:16px}
+h1{
+  font-family:var(--display);font-size:34px;line-height:1;letter-spacing:-.02em;
+  margin:0 0 5px;color:var(--ink-lit);text-shadow:none;
+}
+/* A drop shadow on type, in a room lit from one direction, is a second and
+   contradictory light. The wordmark is a CAPTION on the room, not a sign in it:
+   a glowing display headline takes first fixation from 200px characters no
+   matter how it is rationalised. */
+h1 .tail{color:color-mix(in srgb,var(--key) 62%,var(--ink-dim))}
+.tagline{font-size:12.5px;font-style:italic;color:var(--ink-faint);max-width:44ch;line-height:1.5}
+footer{color:var(--ink-faint);font-size:11.5px;max-width:80ch;margin-top:46px;opacity:1}
+
+.btn{
+  min-height:38px;padding:10px 14px;border-radius:2px;
+  font-family:var(--body);font-size:11.5px;font-weight:600;line-height:1;
+  letter-spacing:.16em;text-transform:uppercase;
+  background:transparent;color:var(--ink-lit);border:1px solid var(--hair-lit);
+  box-shadow:none;
+}
+.btn:hover{background:var(--btn-bg-hi);color:var(--ink-lit);border-color:color-mix(in srgb,var(--key) 46%,transparent)}
+.btn-ghost{border-color:var(--hair);color:var(--ink-dim);background:transparent}
+.btn-ghost:hover,.btn-ghost[aria-pressed="true"]{color:var(--ink-lit);border-color:color-mix(in srgb,var(--key) 46%,transparent);background:var(--btn-bg-hi)}
+/* The one ember. Left on the measured --pink / --accent-ink pairing on purpose:
+   that flip is the contrast work and must not be re-litigated. It is simply
+   SMALL now, so it can be the brightest object without being the biggest. */
+.btn-primary,.btn-primary:hover{
+  background:var(--pink);color:var(--accent-ink);border-color:var(--pink);font-weight:700;
+  box-shadow:0 0 26px -8px var(--pink);
+}
+.btn-danger{border-color:var(--danger-ink);color:var(--danger-ink)}
+.btn-sm{min-height:34px;padding:8px 11px;font-size:10.5px}
+@media (pointer:coarse){.btn,.btn-sm{min-height:44px}}
+:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
+
+/* Eleven buttons become four, at EVERY width, with no JS: the disclosure the
+   phone already ships is simply given a desktop geometry.
+   COUPLING: this depends on ui/mobileNav.js firing its #moreBtn listener at all
+   widths (it is not width-gated; there is a comment in that file saying so).
+   It also reuses #trayScrim to dim the room behind the drawer, which is free. */
+@media (min-width:641px){
+  /* Above #trayScrim (57), so "More" stays a toggle and the three verbs stay
+     reachable while the drawer is open; .tb-rest is a child, so its own z-index
+     is scoped inside this context and it still paints over the scrim. */
+  .toolbar{position:relative;z-index:59;flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:nowrap}
+  .tb-primary{display:flex;gap:8px;flex-wrap:nowrap}
+  .tb-more{display:inline-flex}
+  .tb-rest{
+    display:flex;flex-direction:column;align-items:stretch;gap:5px;flex-wrap:nowrap;
+    position:absolute;top:calc(100% + 10px);right:0;z-index:58;width:250px;padding:9px;
+    background:linear-gradient(180deg,var(--night-2),var(--night));
+    border:1px solid var(--hair-lit);border-radius:2px;
+    box-shadow:0 30px 60px -24px #000,inset 0 1px 0 color-mix(in srgb,var(--key) 14%,transparent);
+    opacity:0;visibility:hidden;transform:translateY(-8px);transform-origin:100% 0;
+    transition:opacity .16s ease,transform .16s ease,visibility 0s linear .16s;
+  }
+  .tb-rest.open{opacity:1;visibility:visible;transform:none;pointer-events:auto;transition-delay:0s}
+  /* One padding for every row: #decorBtn is a .btn and the rest are .btn-sm, so
+     the drawer was printing one label 3px further in than the other seven. */
+  .tb-rest .btn{justify-content:flex-start;min-height:36px;padding:8px 11px;font-size:10.5px;border-color:transparent}
+  .tb-rest .btn:hover{border-color:var(--hair-lit)}
+  .tray-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:2px 4px 8px;margin-bottom:3px;border-bottom:1px solid var(--hair)}
+  .tray-head h2{font-family:var(--body);font-size:10px;font-weight:600;letter-spacing:.28em;
+    text-transform:uppercase;color:var(--ink-faint);margin:0}
+  .tray-scrim{position:fixed;inset:0;z-index:57;background:rgba(0,0,0,.55)}
+}
+
+/* THE CASE RAIL. Nine metrics were cut, not restyled — engraving a KPI rail in
+   brass does not stop it being a KPI rail, and the mood census was the shelf's
+   own pips rendered a second time as analytics. What is left is a line engraved
+   on the case's bottom rail, exactly as wide as the furniture, UNDER the thing
+   it describes. No node moved: .stage is already a flex column. */
+/* width:100% is load-bearing and the reason is not obvious: .cabinet-wrap has
+   `margin:0 auto` for centring, and an auto CROSS-AXIS margin cancels
+   align-self:stretch in a flex column. So the case was shrink-to-fit — which
+   nobody noticed while it held creatures, but on a brand new shelf, whose only
+   content is a 34ch card, the whole cabinet rendered ~370px wide in the middle
+   of a 1140px page. The phone and landscape builds re-declare width:auto, where
+   the negative bleed margins have to do the widening instead. */
+.stage>.cabinet-wrap{order:1;width:100%}
+.stage>.status{
+  order:2;max-width:var(--shell);width:100%;margin:0 auto;
+  display:flex;flex-wrap:wrap;align-items:center;gap:0;
+  border:0;border-top:1px solid var(--hair-lit);
+  padding:11px var(--case-pad,26px);
+  font-family:var(--body);font-size:10.5px;font-weight:400;line-height:1.9;
+  letter-spacing:.20em;text-transform:uppercase;color:var(--ink-dim);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--key) 5%,transparent),transparent);
+}
+.status>span{background:none;border:0;border-left:1px solid var(--hair-lit);border-radius:0;
+  padding:0 16px;gap:8px;color:var(--ink-dim);line-height:1.9}
+.status>span:first-child{border-left:0;padding-left:0}
+.status b{font-family:var(--display);font-weight:400;font-size:15px;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;color:var(--ink-lit)}
+/* Semantic colour rides on the BEAD, never on the text — a blood-coloured
+   figure measures 3.7:1 in Haunted Nursery. That is the measured fix. */
+.status .bad,.status .mid,.status .good{background:none}
+.status .bad::before{width:7px;height:7px;background:var(--blood);box-shadow:0 0 8px var(--blood)}
+
+/* ---- 6. emptiness, composed ----------------------------------------------
+   Three mechanisms, in priority order: collapse, print, light.
+   1. COLLAPSE. :has(.pet), not "row is completely empty" — a single prop used to
+      keep a row at full height, which is exactly how a screenshot ends up with a
+      200px black band holding one clock. :has(.slot) excludes the bare-shelf row,
+      which holds the pinned "nothing lives here yet" card instead of slots. */
+.shelf-row:not(:has(.pet)):has(.slot){--slot-h:88px;--label-drop:10px}
+.shelf-row:not(:has(.pet)):has(.slot) .slot .prop svg{width:calc(var(--pitch) * .38);height:calc(var(--pitch) * .38)}
+.shelf-row.row-empty{--slot-h:58px;--label-drop:8px}
+.shelf-row.row-empty .slots{opacity:1}
+.shelf-row.row-empty:hover .slot{background:color-mix(in srgb,var(--key) 6%,transparent)}
+/* 2. PRINT THE VACANCY. An empty slot carries its own position mark rather than
+      being a void, generated by CSS counters with no JS — and it is TRUTHFUL
+      about the six-column adjacency mechanic: A 04 is row A, position four, and
+      it is always between A 03 and A 05 whether or not anything stands there.
+      A half-full shelf now reads as a shelf with vacancies. */
+.slot:empty::after{
+  content:counter(sl-row,upper-alpha) "\2009" counter(sl-col,decimal-leading-zero);
+  position:absolute;left:50%;bottom:8px;transform:translateX(-50%);
+  padding-top:16px;pointer-events:none;
+  font-family:var(--body);font-size:9.5px;font-weight:400;line-height:1;letter-spacing:.22em;
+  font-variant-numeric:tabular-nums;
+  /* 34%, not 26%: sampled off the render, 26% measured 4.02:1 against the
+     Blacklight Basement case and 9.5px type needs 4.5. */
+  color:color-mix(in srgb,var(--ink-lit) 34%,transparent);
+  /* a small register cross above the number */
+  background-image:linear-gradient(currentColor,currentColor),linear-gradient(currentColor,currentColor);
+  background-size:9px 1px,1px 9px;
+  background-position:50% 4px,50% 0;
+  background-repeat:no-repeat;
+}
+/* 3. LIGHT THE EMPTINESS. The unoccupied end of a row still takes the key
+      falling across it: unoccupied but lit reads as room, unoccupied and black
+      reads as a bug. */
+.slot:empty::before{opacity:.55}
+
+/* ---- 7. the notes: paper pinned to the same dark wall --------------------- */
+/* The corkboard panel is gone. Sort order becomes visible AS LIGHT: the newest
+   notes sit in a second, weaker pool and the older ones fall out of it. The
+   falloff stops at .62 because note ink is #2B2028 on paper and the PAIR dims
+   together. MEASURED off rendered pixels rather than computed: .55 put the
+   dimmest note at 4.08:1 and .62 puts it at 5.0:1, with the sort order still
+   plainly readable as light. */
+.notes-head{max-width:var(--shell);margin:40px auto 0;justify-content:flex-start;align-items:center;gap:14px}
+.notes-head h2{
+  order:0;flex:none;font-family:var(--body);font-size:10px;font-weight:600;
+  letter-spacing:.34em;text-transform:uppercase;color:var(--ink-dim);margin:0;line-height:1;
+}
+.notes-head::after{content:'';order:1;flex:1 1 auto;min-width:16px;height:1px;background:var(--hair-lit)}
+.notes-head .btn{order:2;flex:none}
+.notes{
+  position:relative;isolation:isolate;
+  background:none;border:0;box-shadow:none;border-radius:0;
+  padding:34px 0 0;margin-left:auto;margin-right:auto;
+  grid-template-columns:repeat(auto-fill,minmax(212px,1fr));
+  gap:30px 18px;
+}
+.notes::before{
+  content:'';position:absolute;z-index:0;inset:-18px 0 auto;height:340px;pointer-events:none;
+  background:radial-gradient(60% 100% at 30% 0%,color-mix(in srgb,var(--key) 13%,transparent),transparent 72%);
+}
+.note{
+  z-index:1;
+  background-color:color-mix(in srgb,var(--paper) 84%,var(--key));
+  box-shadow:0 2px 3px rgba(0,0,0,.5),0 18px 30px -14px rgba(0,0,0,.92);
+}
+.note:nth-child(n+7){filter:brightness(.72)}
+.note:nth-child(n+11){filter:brightness(.62)}
+.note:hover{filter:none;z-index:2}
+.notes-empty{color:var(--ink-faint);font-size:20px}
+
+/* ---- 8. the surfaces nobody art-directed --------------------------------- */
+/* THE NARRATOR NOTE. A pale bordered box with SHOW ME / NO THANKS, sitting mid
+   fold, is the most "web page" object that could be put in a candlelit room. It
+   is a note about the narrator, in a game about creatures who leave notes — so
+   it is a note, pinned to the wall, in the same hand as everything else on the
+   board. */
+.voice-hint{
+  display:block;position:relative;
+  max-width:36ch;margin:22px auto 0;padding:20px 18px 14px;
+  background:var(--paper-lit);color:#2B2028;border:0;border-radius:2px;
+  font-family:var(--hand);font-size:20px;line-height:1.3;
+  transform:rotate(-.8deg);
+  box-shadow:0 2px 2px rgba(0,0,0,.3),0 16px 28px -12px #000;
+}
+.voice-hint::before{
+  content:'';position:absolute;top:-7px;left:50%;margin-left:-7px;width:14px;height:14px;border-radius:50%;
+  background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.85),rgba(255,255,255,0) 46%),#B8414F;
+  box-shadow:0 2px 3px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.25);
+}
+.voice-hint p{margin:0 0 10px;max-width:none;font-family:var(--hand);font-size:20px;line-height:1.3;color:#2B2028}
+.voice-hint-actions{display:flex;justify-content:flex-end;gap:9px}
+.voice-hint .btn,.voice-hint .btn:hover{
+  font-family:var(--hand);font-size:17px;font-weight:600;letter-spacing:.01em;text-transform:none;
+  min-height:34px;padding:3px 12px;color:#2B2028;background:transparent;
+  border:1px solid rgba(43,32,40,.32);box-shadow:none;
+}
+.voice-hint .btn:hover{background:rgba(43,32,40,.08);border-color:rgba(43,32,40,.6)}
+/* `display:block` above outranks the UA's [hidden] rule, so restate it. */
+.voice-hint[hidden]{display:none}
+
+/* THE SHEETS get the case treatment. The studio should be the most theatrical
+   screen in the game, and it was a settings dialog. */
+.veil{background:rgba(4,3,8,.86)}
+.sheet{
+  border:1px solid var(--hair-lit);border-radius:3px;
+  background:linear-gradient(180deg,var(--night-2),var(--night));
+  box-shadow:0 40px 100px -30px #000,inset 0 1px 0 color-mix(in srgb,var(--key) 12%,transparent);
+}
+.sheet h2{font-family:var(--display);font-weight:400;color:var(--ink-lit);letter-spacing:.01em}
+.sheet-head{border-bottom:1px solid var(--hair-lit)}
+.tool-label,.decor-section h3{
+  font-family:var(--body);font-size:10px;font-weight:600;letter-spacing:.28em;
+  text-transform:uppercase;color:var(--ink-faint);
+}
+.card-meta,.hint,.bondline{color:var(--ink-dim)}
+.studio-tab{border-color:var(--hair-lit);color:var(--ink-dim)}
+.studio-tab[aria-selected="true"]{background:var(--btn-bg-hi);color:var(--ink-lit);border-color:color-mix(in srgb,var(--key) 40%,transparent)}
+.chip,.opt,.prop-card{border-color:var(--hair-lit);background:transparent;color:var(--ink-lit)}
+.chip:hover,.opt:hover,.prop-card:hover:not(.locked){background:var(--btn-bg-hi);border-color:color-mix(in srgb,var(--key) 40%,transparent)}
+.prop-card b{color:var(--ink-lit)}
+.prop-card small{color:var(--ink-faint)}
+input[type=text],select.voice-select{background:var(--field);border-color:var(--hair-lit);color:var(--ink-lit)}
+/* The studio preview stands in the same light the shelf does, on the same wood,
+   so the footing you approve here is the footing you get. */
+.gen-stage{
+  border-color:var(--hair-lit);
+  background:radial-gradient(110% 72% at var(--key-x) 0%,
+    color-mix(in srgb,var(--key) 16%,transparent) 0%,
+    color-mix(in srgb,var(--key) 4%,transparent) 40%,var(--night) 76%);
+  box-shadow:inset 0 12px 22px -12px rgba(0,0,0,.8),0 20px 44px -24px #000;
+}
+.gen-stage::after{
+  height:16px;
+  background:linear-gradient(180deg,
+    color-mix(in srgb,var(--wood-lip) 62%,#fff) 0 2px,
+    var(--wood-lip) 2px 5px,
+    color-mix(in srgb,#000 26%,var(--wood)) 5px 12px,
+    color-mix(in srgb,var(--wood) 26%,#000) 12px 100%);
+}
+.gen-mount .sprite-figure,.card-portrait .sprite-figure{
+  filter:
+    drop-shadow(calc(var(--cast-dx) * .6) calc(var(--cast-dy) * .6) 12px rgba(0,0,0,.55))
+    drop-shadow(2px 3px 1px rgba(0,0,0,.4))
+    drop-shadow(-3px -2px 6px color-mix(in srgb,var(--key) 66%,transparent));
+}
+.card-portrait{
+  border-color:var(--hair-lit);
+  background:radial-gradient(80% 74% at var(--key-x) 12%,
+    color-mix(in srgb,var(--key) 14%,transparent),var(--night) 76%);
+}
+/* ONE ember per screen. In the studio the accent belongs to "Move it in" — the
+   commit — not to a full-width "Surprise me" slab, which was the brightest
+   object in a sheet whose whole job is to show you the creature. */
+#genSurprise,#genSurprise:hover{
+  background:transparent;color:var(--ink-lit);
+  border:1px solid color-mix(in srgb,var(--key) 44%,transparent);
+  box-shadow:none;font-weight:600;
+}
+#genSurprise:hover{background:var(--btn-bg-hi)}
+.empty-shelf,#toast,.to-shelf,.sl-bubble{background:var(--paper-lit)}
+.sl-bubble::after{border-top-color:var(--paper-lit)}
+.storage-warn{background:color-mix(in srgb,var(--amber) 10%,transparent);border-color:var(--warn-ink);color:var(--ink-lit)}
+.bar,.bond-bar{background:var(--field);border-color:var(--hair-lit)}
+.traits li,.section-rule,#incidentsSheet .incident{border-top-color:var(--hair)}
+.bio{border-left-color:color-mix(in srgb,var(--key) 40%,transparent);color:var(--ink-lit)}
+.mood-tag{color:var(--ink-lit);border-color:var(--hair-lit)}
+.inline-prompt{border-color:var(--hair-lit);background:var(--surface)}
+
+/* Between the phone and a wide desktop the track drops under ~100px, and a
+   10.5px name at .14em tracking starts ellipsing on ordinary names. Tighten the
+   tracking before shortening the name. */
+@media (min-width:641px) and (max-width:900px){
+  .pet .nameplate,.prop .nameplate{font-size:9.5px;letter-spacing:.05em;padding:0 2px}
+  .cabinet-wrap{--case-pad:18px}
+  .cabinet{padding-top:24px}
+}
+
+/* ---- 9. the phone: the same room, with the light closer ------------------- */
+/* The overhang model is kept and raised. The tight second shadow at 1.5px blur
+   is what stops six overlapping silhouettes of similar colour merging into one
+   ribbon, and every blur radius is halved because three drop-shadows on up to
+   eighteen continuously-animating inline SVGs is real per-frame GPU cost. */
+@media (max-width:640px){
+  body{padding:14px 10px calc(var(--dock-h,64px) + 30px + env(safe-area-inset-bottom))}
+  .cabinet-wrap,.stage>.cabinet-wrap{--case-pad:11px;--shelf-w:100vw;width:auto;box-shadow:none}
+  .cabinet-wrap::before,.cabinet-wrap::after{width:9px}
+  .cabinet-wrap::before{background:linear-gradient(90deg,rgba(0,0,0,.9) 0 1px,
+    color-mix(in srgb,var(--wood-lip) 58%,var(--key)) 1px 4px,
+    color-mix(in srgb,#000 34%,var(--wood)) 4px 100%)}
+  .cabinet-wrap::after{background:linear-gradient(90deg,
+    color-mix(in srgb,#000 52%,var(--wood)) 0 6px,rgba(0,0,0,.92) 6px 100%)}
+  #cabinet{padding:20px var(--case-pad) 0;border-radius:0}
+  .cabinet::after{height:18px}
+  h1{font-size:25px;margin:0}
+  .shelf-row{
+    --rail:calc(100vw - 22px);
+    --pitch:calc(var(--rail) / 6.6);
+    --pet-size:calc(var(--pitch) * 1.72);
+    --slot-h:calc(var(--pet-size) + 12px);
+    --plank-h:22px;--label-drop:10px;
+  }
+  .slots{padding:0 calc(var(--pitch) * .3)}
+  .slot .prop svg{width:calc(var(--pitch) * 1.05);height:calc(var(--pitch) * 1.05)}
+  .plank{background:
+    linear-gradient(90deg,
+      color-mix(in srgb,var(--key) calc(54% * var(--sl-stop,1)),transparent) 0%,
+      color-mix(in srgb,var(--key) calc(14% * var(--sl-stop,1)),transparent) 46%,transparent 82%) 0 0/100% 2px no-repeat,
+    repeating-linear-gradient(90deg,rgba(0,0,0,.07) 0 1px,rgba(255,255,255,.03) 1px 2px,transparent 2px 11px),
+    linear-gradient(180deg,
+      var(--wood-lip) 0 2px,
+      color-mix(in srgb,#000 16%,var(--wood)) 2px 5px,
+      color-mix(in srgb,#000 34%,var(--wood)) 5px 10px,
+      rgba(0,0,0,.94) 10px 11px,
+      color-mix(in srgb,var(--wood) 26%,#000) 11px 100%)}
+  .sl2 .sprite-figure{
+    filter:drop-shadow(9px 7px 7px rgba(0,0,0,.6))
+           drop-shadow(0 0 1.5px rgba(0,0,0,.55))
+           drop-shadow(-2px -1px 3px color-mix(in srgb,var(--key) 55%,transparent));
+  }
+  .pet.furious .sprite-figure{
+    filter:drop-shadow(9px 7px 7px rgba(0,0,0,.6))
+           drop-shadow(0 0 1.5px rgba(0,0,0,.55))
+           drop-shadow(-2px -1px 3px rgba(255,74,87,.7));
+  }
+  .pet.asleep .sprite-figure{
+    filter:drop-shadow(5px 4px 6px rgba(0,0,0,.52)) drop-shadow(0 0 1.5px rgba(0,0,0,.5));
+  }
+  .prop svg{filter:drop-shadow(8px 6px 6px rgba(0,0,0,.5)) drop-shadow(0 0 1.5px rgba(0,0,0,.5))}
+  /* One line with an ellipsis. Two ragged lines under a 58px tile was worse in
+     every mobile screenshot in this set. The box is allowed 6% past its own
+     track on each side, and the tracking goes to zero: at 9.5px/.02em six of
+     the nine names on a 390px shelf ellipsed, and at 9px/0 across 112% of the
+     track only the longest do. Kept inside its own track, though: letting the
+     box overrun by 6% fitted two more names and made two others touch, and
+     "MISS TEETHBARTHOLOM..." is worse than an ellipsis. The tap target opens
+     the card either way. */
+  .pet .nameplate,.prop .nameplate{
+    display:block;-webkit-line-clamp:none;white-space:nowrap;overflow-wrap:normal;
+    left:0;right:0;padding:0 2px;
+    top:calc(100% + 11px);height:11px;line-height:11px;
+    font-size:9px;letter-spacing:0;
+    overflow:hidden;text-overflow:ellipsis;
+  }
+  .pips{top:calc(100% + var(--plank-h) + 2px);gap:4px;height:6px}
+  .pip{width:5.5px;height:5.5px}
+  .pet::after,.prop::after{width:92%;left:54%}
+  .slot:empty::after{font-size:8.5px;letter-spacing:.12em;padding-top:13px;bottom:6px;
+    background-size:7px 1px,1px 7px;background-position:50% 3px,50% 0}
+  .shelf-row:not(:has(.pet)):has(.slot){--slot-h:62px;--label-drop:8px}
+  .shelf-row.row-empty{--slot-h:44px;--label-drop:6px}
+  .stage>.status{padding:9px 11px;font-size:9.5px;letter-spacing:.13em;margin-top:0}
+  .status>span{padding:0 10px}
+  .status b{font-size:13px}
+  .voice-hint{max-width:none;margin:16px 4px 0;padding:16px 15px 11px;font-size:17px}
+  .voice-hint p{font-size:17px;margin-bottom:8px}
+  .voice-hint .btn,.voice-hint .btn:hover{font-size:15px;min-height:32px}
+  .notes-head{margin-top:32px}
+  .notes{padding:26px 0 0;grid-template-columns:1fr;gap:28px 0;border:0;background:none}
+  /* The dock is the one lit rail on a phone: it has to clear the vignette. */
+  .tb-primary{
+    background:linear-gradient(180deg,var(--night-2),var(--night));
+    border-top:1px solid var(--hair-lit);
+    box-shadow:0 -1px 0 color-mix(in srgb,var(--key) 12%,transparent) inset,0 -18px 34px -18px #000;
+  }
+  .tb-primary .btn{color:var(--ink-dim);font-size:10px;letter-spacing:.1em;line-height:1.3;border:0}
+  .tb-primary .btn-primary,.tb-primary .btn-primary:hover{
+    color:var(--accent-ink);background:var(--pink);border:1px solid var(--pink);
+    font-size:10.5px;box-shadow:0 0 22px -8px var(--pink);
+  }
+  .tb-rest{background:linear-gradient(180deg,var(--night-2),var(--night));border-top:1px solid var(--hair-lit)}
+  .tray-head{background:var(--night-2);border-bottom-color:var(--hair)}
+  .tray-head h2{font-family:var(--body);font-size:10px;font-weight:600;letter-spacing:.28em;text-transform:uppercase;color:var(--ink-faint)}
+  .sheet-head{background:var(--night-2)}
+  #studioVeil .studio-actions{background:var(--night)}
+}
+@media (max-width:520px){
+  .cabinet-wrap{margin-left:calc(-1 * (10px + env(safe-area-inset-left)));
+    margin-right:calc(-1 * (10px + env(safe-area-inset-right)))}
+  /* Real bug, pre-dating this pass: .cabinet-wrap ALREADY bleeds to the screen
+     edges at <=640, and the older <=520 rule bled #cabinet by another 10px on
+     each side on top of that. The case was 20px wider than the viewport at
+     every phone width, which body{overflow-x:hidden} was quietly swallowing. */
+  .cabinet{margin-left:0;margin-right:0}
+  h1{font-size:23px}
+  .slot:empty::after{font-size:8px;letter-spacing:.06em}
+}
+
+/* Motion and cost. The dust and the flicker are the only two things running
+   when nothing is happening, and both stop. The shadow chain collapses to one
+   shadow, because three drop-shadows per animating SVG is the class of thing
+   that turns this screenshot into a 20fps game on a mid-range Android. */
+@media (prefers-reduced-motion:reduce){
+  #wall::before,.prop[data-prop]::before{animation:none!important}
+  .sl2 .sprite-figure,.pet.furious .sprite-figure,.pet.asleep .sprite-figure,
+  .pet:hover .sprite-figure{filter:drop-shadow(2px 3px 2px rgba(0,0,0,.5))!important}
 }

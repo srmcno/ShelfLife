@@ -5797,3 +5797,76 @@ arrangement was only one of them:
 - `css/style.css` was found duplicated end-to-end in HEAD at one point during this phase
   (a concurrent write race between agents); it was repaired here. Worth a `grep -c` on a
   banner comment before trusting a big shared stylesheet mid-swarm.
+
+### Phase 2L: art direction implementation
+
+Implements `docs/art-direction.md` — the synthesis of the eight-way prototype judge
+panel. **The page is a dark room. The shelf is a piece of furniture standing in it with
+a light above it. The creatures are the only lit, saturated, moving things in the frame,
+and light is the only compositional tool.**
+
+Everything is one appended block at the end of `css/style.css` (~470 lines) plus five
+small JS/HTML edits. Delete the block and the previous build is back exactly. No id
+renamed, no node moved, no listener touched.
+
+**What was grafted from which prototype**
+
+| Source | Taken |
+|---|---|
+| #3 candlelit (winner, 39.5) | The spatial premise: near-black room, one lit object in it. Props as real light sources (`[data-prop]` pools that fall on the neighbours). Light as sort order on the notes wall. The `--bone` lightness pin. |
+| #0 diorama (38.5) | The **drop-shadow chain** — long cast, tight contact offset, warm directional edge — replacing candlelit's symmetric outer glow. Shadow 3 is offset **up and left, toward the source**; that one negative offset is the whole difference between "lit from somewhere" and "sticker outline". |
+| #4 specimen (38) | The typographic register, and **the catalogued vacancy**: an empty slot prints `A 04` from CSS counters instead of being a void. It is also truthful about the six-column adjacency mechanic. |
+| #5 dollhouse | The plank's **front face is the nameplate**, forced dark by `color-mix(var(--wood) 26%, #000)` so one fixed cream ink works on all seven woods. Kills the dead 38px label band. |
+| #7 noir | The elliptical pool of key on the plank at each figure's feet, and the demotion of "What they left you" from 30px Gloock to a 10px machine label with a rule running off it. |
+
+**Ordered, as the spec sequences it**
+
+0. **Two real bugs.** `.slots{grid-template-columns:repeat(6,minmax(0,1fr))}` + `.slot{min-width:0}` (six `1fr` tracks silently widened past the screen), and `.shelf-row{display:flow-root}` (the plank's margin collapsed out of the row).
+1. **Night + one light.** `--night/--night-2/--case-*` and `--ink-lit/--ink-dim/--ink-faint` derived on `:root` from the room's real values, then re-pointed on `body`. Fixed `body::before` wall bloom + vignette; dust in the beam and `feTurbulence` grain **masked to the shadows** on `#wall`.
+2. **The cabinet as geometry.** 22px side returns that are deliberately *asymmetric* (the left one shows a lit inner face because the key is at 32%), a cornice inset shadow, 30px of headroom above row 1, a lit floor band under row 3, and a three-stop depth gradient with `--sl-stop` per row.
+3. **Creature scale + the shadow chain.** `--shell:1140px`; `--pet-size` clamps to ~206px at 1440x900 (from ~124px declared / ~60px rendered) and the picture is drawn wider than its own track so the row shingles shoulder to shoulder. One filter on `.sprite-figure` so the chain traces the whole silhouette including stamps — horns cast horn-shaped shadows.
+4. **The plank carries the name.** `--plank-h:28px`, `--label-drop:12px`, engraved 10.5px tracked caps in fixed `#EFE2CE` on the forced-dark reveal, need-lights recessed under it.
+5. **Chrome.** Eleven buttons to four at *every* width (the phone's disclosure given a desktop drawer, CSS only). Unlit transparent/hairline buttons; `.btn-primary` keeps the measured `--pink`/`--accent-ink` pairing as the one ember. Nine metrics **cut, not restyled** — see below. Five emoji deleted.
+6. **Emptiness.** `:not(:has(.pet)):has(.slot)` collapse (so a single prop no longer holds a row at full height), CSS-counter vacancy marks, and the empty end of a row still takes the key.
+7. **Notes.** Panel deleted; paper pinned to the same dark wall in a second, weaker pool, with brightness falloff as visible sort order.
+8. **The un-directed surfaces.** `#voiceHint` becomes a pinned paper note in the narrator's own hand; the veils get the case treatment.
+9. **Mobile + measurement.** 1.72x overhang kept and raised, blur radii halved, one-line ellipsised names, all six rooms sampled at both breakpoints.
+
+**JS/HTML/data (five files, small)**
+
+- `src/content/decor.js` — one `--room-key` per room. This is the answer to the honest cost of the night rework: if what varies between rooms is the *hue of the darkness*, six rooms collapse into one room with a hue rotation and the decor system (a thing players buy with bond) stops being worth buying. What varies is the **bulb** — tungsten, clinical fluoro, rose nightlight, UV tube, gaslight, moonlight. Every pool, rim, plank lip and cast shadow mixes from that one token.
+- `src/ui/render.js` — `renderStatus` drops from nine metrics to three, plus a fourth that appears only when something is wrong. The mood census was the shelf's own pips and nameplate ink rendered a *second* time as analytics. Also `btn.dataset.prop = pr.kind`, the hook that makes a candle a light source.
+- `src/main.js` — the check-in streak moves into the Incidents sheet (it is a log entry, not a vital sign); three emoji removed from the audio toggles.
+- `index.html` — four emoji glyphs deleted from the More tray.
+- `src/ui/mobileNav.js` — no behaviour change, one comment recording that the `#moreBtn` listener must stay width-ungated because the desktop drawer now depends on it.
+
+**Three latent bugs found while art-directing**
+
+1. `.cabinet-wrap` has `margin:0 auto`, and an auto **cross-axis** margin cancels `align-self:stretch` in a flex column. The case was shrink-to-fit — invisible while it held creatures, but a brand-new shelf whose only content is a 34ch card rendered the whole cabinet ~370px wide in the middle of a 1140px page.
+2. `.cabinet-wrap` already bleeds to the screen edges at <=640, and an older <=520 rule bled `#cabinet` by a further 10px on each side on top of that. The case was 20px wider than the viewport at every phone width; `body{overflow-x:hidden}` was swallowing it.
+3. The prop light pools are 300% of their slot (so a candle falls on its neighbours). On column six that is layout overflow, and it made the document 28px wider than a 390px phone. Fixed with `overflow-x:clip` + `overflow-clip-margin:10px` on `#cabinet` — `clip` rather than `hidden` so the case does not become a scroll container, and Y left visible so thought bubbles still rise above row 1.
+
+**One deliberate reversal of the spec.** The spec keeps the creature *behind* the plank (feet tucking under the wood). Several idle clips travel a long way below the baseline — `sl-hanging` dangles a pet off the front edge by its arms — and a plank painting over them cuts the creature in half on screen. The stack is therefore plank(1) / pool(2) / contact patch(3) / creature(4) / engraved name + pips(5), and the hard dark contact patch does the planting instead, which it can do for every pose.
+
+**Measured contrast, sampled from rendered pixels, never computed** (element screenshots at native 2x, ink = lightest pixel in the text run, ground = 55th percentile of the same run; notes inverted). Worst case across all six rooms:
+
+| element | worst | room |
+|---|---|---|
+| wordmark | 14.65:1 | parlor |
+| tagline | 5.79:1 | basement |
+| button label (unlit) | 13.78:1 | parlor |
+| button label on the accent fill | 8.66:1 | all |
+| engraved nameplate on the plank | 10.92:1 | parlor |
+| case rail label | 11.02:1 | basement |
+| case rail "unrest" | 8.61:1 | basement |
+| notes heading | 6.79:1 | basement |
+| vacancy mark | 5.43:1 | basement |
+| note in the pool | 10.84:1 | basement |
+| dimmest note (brightness .62) | 4.81:1 | all |
+| narrator note | 11.00:1 | basement |
+
+Two of these were failures found *by* the sampling and fixed: `--ink-faint` at L52 put the tagline at 3.42:1 in Blacklight Basement (now L64, 5.79:1), and the vacancy mark at 26% of `--ink-lit` measured 4.02:1 against the basement case (now 34%, 5.43:1). The notes' brightness floor went .55 -> .62 for the same reason. Nothing here was arithmetic.
+
+**Verification.** 251/251 `node --test test/*.test.mjs`. Cache-busted dynamic `import('/src/main.js?v=...')` returns BOOT OK; no console errors. No horizontal overflow at 320 / 390 / 768 / 1440. Rendered and read at 1440x900, 768x1024, 660x900, 390x844 and 320x720; all six rooms at 1440x900; the pet card, studio sheet, decor sheet, More drawer, first-run empty shelf, and a full 18-slot shelf. 60fps with 8 and with 15 continuously-animating creatures on this machine.
+
+**Known weaknesses.** (a) The three-`drop-shadow` chain is unprofiled on a mid-range Android; the mobile radii are halved and `prefers-reduced-motion` collapses it to a single shadow, but that is mitigation, not measurement. (b) At 1440x900 the third shelf sits just below the fold when it holds a pet — the spec's `--pet-size` clamp budgets two rows to the first screenful on purpose, but on a short laptop it means scrolling to see row C. (c) Sheet headings are still Gloock, which the type rules reserve for the wordmark and numerals; the reading taken here is that the rule exists to stop display type competing with the shelf, and inside a modal there is no shelf. (d) On a 390px shelf three of nine names still ellipsise.

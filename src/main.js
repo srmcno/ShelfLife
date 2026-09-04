@@ -157,13 +157,17 @@ const muteBtn = document.getElementById('muteBtn');
 const narratorBtn = document.getElementById('narratorBtn');
 const matureBtn = document.getElementById('matureBtn');
 
+// No emoji. A full-colour OS glyph is the most saturated thing on the page and
+// these sit in a dark menu next to hand-drawn creatures that are supposed to be
+// the only saturated things in the frame. The aria-pressed state already says
+// which way each toggle is set; the word says the rest.
 function syncAudioButtons() {
   muteBtn.setAttribute('aria-pressed', String(isMuted()));
-  muteBtn.textContent = isMuted() ? '🔇 Muted' : '🔊 Sound';
+  muteBtn.textContent = isMuted() ? 'Muted' : 'Sound';
   narratorBtn.setAttribute('aria-pressed', String(isNarratorOn()));
-  narratorBtn.textContent = isNarratorOn() ? '🗣️ Narrator' : '🤫 Narrator off';
+  narratorBtn.textContent = isNarratorOn() ? 'Narrator' : 'Narrator off';
   matureBtn.setAttribute('aria-pressed', String(!!state.settings.matureMode));
-  matureBtn.textContent = state.settings.matureMode ? '🔞 Mature: On' : '🔞 Mature: Off';
+  matureBtn.textContent = state.settings.matureMode ? 'Mature: On' : 'Mature: Off';
 }
 muteBtn.addEventListener('click', () => { if (toggleMuted()) stopSpeech(); syncAudioButtons(); });
 narratorBtn.addEventListener('click', () => { toggleNarrator(); syncAudioButtons(); });
@@ -185,8 +189,14 @@ function closeIncidents() {
 
 function renderIncidents() {
   const unlocked = new Set(state.achievements);
+  // The check-in streak used to be a ninth pill on the status rail. It is a log
+  // entry, not a vital sign, so it lives here now — next to the other things
+  // that have happened.
+  const streak = state.streak.count || 0;
   let html = '<div class="sheet-head"><div><h2>Incidents</h2><div class="card-meta">' +
-    unlocked.size + ' of ' + ACHIEVEMENTS.length + ' on record</div></div>' +
+    unlocked.size + ' of ' + ACHIEVEMENTS.length + ' on record' +
+    (streak ? ' &middot; checked in ' + streak + (streak === 1 ? ' day' : ' days') + ' running' : '') +
+    '</div></div>' +
     '<button class="btn btn-ghost btn-sm" id="incidentsClose">Close</button></div>';
   if (!unlocked.size) {
     html += '<div class="incident-empty">No incidents logged. Give it time.</div>';
