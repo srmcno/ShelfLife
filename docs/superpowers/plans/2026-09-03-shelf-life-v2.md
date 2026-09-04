@@ -5456,3 +5456,132 @@ six rooms: selected tab label 5.5-6.4, unselected 7.3-12.1, description 7.3-12.1
 JSON round-trip, anatomy resolution per gait, footing per body). In-browser at 1280px and
 375px: generator output, per-part re-rolls, save from both tabs, mixed shelf, pet card
 portrait, slot-to-slot travel, repeated "Check the shelf" — no console errors.
+
+### Phase 2I: dialogue system
+
+The pets now talk — to each other, past each other, and straight at the player. New
+files only: `src/content/dialogue.js`, `src/engine/dialogue.js`, `test/dialogue.test.mjs`,
+plus an expansion of `src/content/mature.js`. **`loop.js` was not touched**; the selector
+exports a clean entry point to wire up.
+
+Written against `docs/comedy-direction.md`: the funny half is always the second speaker,
+the physical facts (four inches, glazed, cracked, damp, on a grid of squares, cannot die)
+are load-bearing, scenes stop one beat early, and the withhold is rationed.
+
+**Data shapes** (`src/content/dialogue.js`)
+
+An exchange is `{ turns: [[who, line], ...], night?, mood? }`. `who` is a role key the
+engine resolves against the live shelf, never a name:
+
+| role | means |
+|---|---|
+| `a` / `b` | the two adjacent pets in a two-hander |
+| `c` | a third pet — chorus scenes, and the voice of a reaction shot |
+| `all` | everyone in the scene at once (renders as the constant `CHORUS_SPEAKER`) |
+| `p` | the pet talking (direct address, fragments) |
+| `n` | a neighbour who interrupts (direct address only) |
+
+`night: true` restricts an entry to `isNight()`; `mood: 'furious' | ['annoyed','furious']`
+fires only when a participant is in that mood, and a matching mood gets a coin-flip's
+worth of priority so the hunger/neglect/filth/fond scenes actually land on the shelf
+state they were written for.
+
+Exported pools:
+
+| export | shape | base | +mature |
+|---|---|---|---|
+| `GENERIC_EXCHANGES` | `{turns, night?, mood?}` | 75 | 20 |
+| `TRAIT_EXCHANGES` | `{pair:[traitA,traitB], turns}` — pet holding `pair[0]` speaks as `a` | 193 | 22 |
+| `FEUD_EXCHANGES` | `{1:[…],2:[…],3:[…]}` keyed by feud tier | 30 | 15 |
+| `FEUD_TRAIT_EXCHANGES` | `{pair, level, turns}` — `level` = minimum tier | 23 | 6 |
+| `REACTION_SHOTS` | `{setup, turns:[['c', line]]}` — narrated setup, one bystander line | 31 | 8 |
+| `DIRECT_ADDRESS` | `{category, turns, needs?:'neighbor'}` | 75 | 23 |
+| `TRAIT_DIRECT` | `{trait, turns}` | 76 | 18 |
+| `FRAGMENTS` | plain strings, no placeholders | 48 | 15 |
+| `NEIGHBOUR_FRAGMENTS` | plain strings, `{n}` required | 21 | 8 |
+| `CHORUS_EXCHANGES` | `{turns}` using `a`/`b`/`c`/`all` | 27 | 9 |
+
+743 scenes, 1910 spoken lines; median line 23 chars, longest 69, so every form fits the
+§2 length budget without a `note--doc` treatment.
+
+Direct-address categories: `bargain guilt lovebomb threat terms confession existential`.
+`directCategoriesFor()` picks from mood, `pet.grudges`, `pet.bond` and the hour (a furious
+pet never love-bombs; a thief confesses; night unlocks confession/existential).
+
+Placeholders are enforced by test: `{a}`/`{b}` in exchange lines and reaction setups only,
+`{c}` additionally in chorus, `{n}` **only** in `NEIGHBOUR_FRAGMENTS` and in a direct entry
+marked `needs:'neighbor'`, and `FRAGMENTS` must contain no braces at all.
+
+**Selector** (`src/engine/dialogue.js`) — pure, no DOM, `state` first argument throughout.
+Imports `neighborPets`/`moodOf`/`isAsleep`/`isNight`/`hasTrait` from `tick.js` and
+`activeFeuds`/`feudPairKey` from `achievements.js` rather than reimplementing adjacency
+or feud detection.
+
+```js
+import { pickDialogue, dialogueText } from './dialogue.js';
+
+const d = pickDialogue(state);          // { now?, kind?, rng? } — null if nothing to say
+if (d) addNote(state, dialogueText(d), d.from, d.tone /*, d.form */);
+```
+
+`pickDialogue(state, opts) -> DialogueResult | null`
+
+```js
+{
+  kind:  'feud'|'trait'|'generic'|'reaction'|'direct'|'fragment'|'chorus',
+  form:  'two-hander'|'reaction'|'direct'|'line'|'chorus',   // §2 form tag for addNote
+  from:  'overheard' | 'observed' | 'the shelf' | pet.name,  // suggested byline
+  tone:  'note' | 'feud' | 'angry',                          // suggested addNote kind
+  setup: string | null,                                      // reaction shots only
+  turns: [{ who, speaker, line }],                           // placeholders substituted
+  cast:  [pet, ...],
+  meta:  { pair?, level?, category?, trait?, mature }
+}
+```
+
+Selection weights the available forms (`KIND_WEIGHT`: feud 22, trait 26, generic 13,
+reaction 12, direct 12, fragment 9, chorus 6), then walks them in weighted order so a form
+that turns out to have no playable entry falls through instead of dropping the call.
+Trait-specific content is preferred over generic wherever a pairing matches, and a feud
+with bespoke trait material uses it 70% of the time. Sleeping pets never speak.
+
+Also exported: `pickDirectAddress(state, pet, opts)` for a tap-the-pet or arrival beat;
+`pickExchange(state, a, b, opts)` for a scene between two named pets; `formatDialogue(r)`
+→ `['Doreen: …', 'Gnash: …']`; `dialogueText(r, sep='\n')`; and the inspectors
+`adjacentPairs`, `awakePets`, `feudingPairs`, `feudTier`, `traitExchangesFor`,
+`directCategoriesFor`, `dialoguePools`.
+
+**Wiring notes for the caller**
+- Multi-turn notes need `.note { white-space: pre-line }` (already a §7 prerequisite).
+- `d.form` is ready for `addNote(state, text, from, kind, form)` and the no-repeat rotation.
+- Mature content is concatenated onto every pool **only** when `state.settings.matureMode`
+  is true; base pools are untouched and the toggle is fully reversible.
+
+**Mature expansion** (`src/content/mature.js`) — the four existing overlay pools grew
+(complaints 39, happy 11, events 13, grudges 21) and ten new dialogue pools were added,
+mirroring the base shapes exactly. Real profanity as deadpan emphasis, aimed at the player
+and at other pets. No slurs, no sexual content, nothing aimed at real people or groups.
+
+**Tests** — `test/dialogue.test.mjs`, 46 tests: pool shapes and size floors, role keys per
+pool, placeholder legality in both directions, every referenced trait id exists, every
+feud-specific pair is a real `FEUDS` pair (dead content otherwise), no duplicate scene or
+fragment anywhere, the §2 length budget, mature pools strictly additive and disjoint, and
+selection across varied fixture shelves — empty, all-asleep, one-pet, traitless, every-trait,
+day vs night, mature on/off, and each form forced.
+
+**Verification:** `node --test test/*.test.mjs` green — 218 tests, all passing, over 20
+consecutive full-suite runs. One transient failure was seen mid-session in
+`test/loop.test.mjs` ("petLine returns an angry complaint for a furious pet"); it did not
+reproduce in 30 runs of that file alone with or without this phase's `mature.js`, nor in
+20 subsequent full-suite runs, so it was most likely a concurrently-edited file caught
+mid-write rather than a real regression. Worth one more look if it resurfaces: the
+rewritten form-rotating `petLine` can now legitimately draw a non-`angry` form for a
+furious pet, which that assertion does not allow for.
+
+Output was read, not just generated: two scratch scripts in `/tmp` ran the selector
+against fabricated shelves (starving / content / feuding / mature / night) and printed
+every scene, and every trait pairing was rendered through a purpose-built two-pet shelf so
+nothing hid behind a fixture. Roughly a dozen lines were cut or rewritten off the back of
+that read — glosses ("That's the interesting part", "I want you to sit with that"),
+duplicated punchlines, a withhold with nothing under it, and one direct-address entry that
+had the pet answering a question nobody asked.
