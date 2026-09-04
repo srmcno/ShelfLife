@@ -578,7 +578,13 @@ export function initSoundNoteHook() {
     burstAt = now;
     const i = burstCount++;
     if (i >= BURST_MAX) return;
+    // 'arrival' is what checkUnlocks and checkAchievements use for their notes,
+    // and it's how the unlock/achievement stings get played at all — they were
+    // written, exported, and then never called by anything. Routing them through
+    // the note hook keeps every caller of those engine functions ignorant of
+    // audio, which is the point of this hook existing.
     if (note.kind === 'feud') playFeud({ delay: i * 0.09 });
+    else if (note.kind === 'arrival') playAchievement({ delay: i * 0.085 });
     else playNoteArrive({ delay: i * 0.085, step: i });
   });
 }

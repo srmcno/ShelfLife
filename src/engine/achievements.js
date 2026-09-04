@@ -1,5 +1,6 @@
 import { FEUDS, FEUD_LINES, ESCALATION_LINES, TRUCE_LINES } from '../content/feuds.js';
 import { GRUDGE_LINES, STREAK_LINES } from '../content/copy.js';
+import { MATURE_GRUDGE_EXTRA } from '../content/mature.js';
 import { neighborPets, neighborSlots } from './tick.js';
 import { totalBond } from './unlocks.js';
 import { pick, addNote, clamp, petById } from '../state.js';
@@ -69,7 +70,15 @@ export function checkGrudgeEscalation(state, pet) {
   const newStage = grudgeStageFor(pet.grudges);
   if (newStage <= pet.grudgeStage) return false;
   pet.grudgeStage = newStage;
-  const lines = GRUDGE_LINES[newStage] || [];
+  // Mature mode has to be mixed in HERE too, not just in engine/loop.js. It was
+  // missed originally, so all 18 MATURE_GRUDGE_EXTRA lines were unreachable: the
+  // mode quietly upgraded complaints, happy notes and events but left grudge
+  // escalation — its darkest beat — tame. A test asserting the pool merely
+  // exists kept the suite green and hid it.
+  let lines = GRUDGE_LINES[newStage] || [];
+  if (state.settings && state.settings.matureMode) {
+    lines = lines.concat(MATURE_GRUDGE_EXTRA[newStage] || []);
+  }
   if (!lines.length) return false;
   addNote(state, pick(lines).replace(/\{n\}/g, pet.name), pet.name, 'angry');
   if (newStage === 1) {
