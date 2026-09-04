@@ -2,7 +2,7 @@
 // plus stamps recorded as positional data instead of being baked into canvas pixels.
 // Everything here takes `state` as an explicit argument or reads the live `state`
 // import — never a hidden closure over a duplicated copy of the save data.
-import { CANVAS_SIZE, BASE_STAMPS, UNLOCK_STAMPS, STAMP_SVG, STAMP_LABELS } from './stamps.js';
+import { CANVAS_SIZE, STAMP_SCALE, BASE_STAMPS, UNLOCK_STAMPS, STAMP_SVG, STAMP_LABELS } from './stamps.js';
 import { state } from '../state.js';
 
 // Ported verbatim from ~/Documents/shelf-life.html (lines ~475-480). Studio-only concern:
@@ -100,7 +100,7 @@ export function initStudio({ onSave }) {
     el.className = 'sprite-stamp';
     el.style.left = (s.x / CANVAS_SIZE * 100) + '%';
     el.style.top = (s.y / CANVAS_SIZE * 100) + '%';
-    const wh = (s.size * 2 / CANVAS_SIZE * 100) + '%';
+    const wh = (s.size * STAMP_SCALE / CANVAS_SIZE * 100) + '%';
     el.style.width = wh;
     el.style.height = wh;
     el.style.transform = 'translate(-50%,-50%)';

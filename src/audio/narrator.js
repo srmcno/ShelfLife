@@ -468,7 +468,12 @@ export function initNarratorUI() {
     if (!hint || !hintText) return;
     const up = voiceQualityHint();
     if (!up || state.settings.voiceHintSeen) return;
-    hintText.textContent = up.short + ' ' + up.detail;
+    // Only ever reveal the bar once it actually has copy in it. A stale cached
+    // narrator.js against fresh index.html markup once produced a visible hint
+    // bar containing nothing but its two buttons.
+    const copy = [up.short, up.detail].filter(Boolean).join(' ').trim();
+    if (!copy) return;
+    hintText.textContent = copy;
     hint.hidden = false;
   });
   if (typeof synth !== 'undefined' && synth && typeof synth.addEventListener === 'function') {

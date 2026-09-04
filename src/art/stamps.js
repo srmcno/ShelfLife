@@ -4,6 +4,13 @@
 // relative spot on the shelf (rendered much smaller) as it was drawn in the studio.
 export const CANVAS_SIZE = 640;
 
+// How many canvas units wide a stamp's SVG box is, per unit of its `size`.
+// Every STAMP_SVG below is generated at 12 SVG units per canvas unit on a
+// "-30 -30 60 60" viewBox, so the box spans 60/12 = 5x size. Both the shelf
+// renderer (art/sprite.js) and the studio preview (art/studio.js) must use
+// this same constant or the studio stops being WYSIWYG.
+export const STAMP_SCALE = 5;
+
 export const BASE_STAMPS = ['blob','eyes','bigeye','deadeyes','ears','horns','grin','tail','wing','bow','halo','stitches','spots'];
 export const UNLOCK_STAMPS = [
   { at:20, stamps:['thirdeye','antlers'], label:'a third eye and antlers' },

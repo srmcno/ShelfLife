@@ -1,4 +1,4 @@
-import { STAMP_SVG, STAMP_ANIM_CLASS, CANVAS_SIZE } from './stamps.js';
+import { STAMP_SVG, STAMP_ANIM_CLASS, CANVAS_SIZE, STAMP_SCALE } from './stamps.js';
 
 // ---------------------------------------------------------------------------
 // Layered sprite DOM
@@ -81,7 +81,12 @@ export function renderPetSprite(pet) {
   (pet.art.stamps || []).forEach((stamp, i) => {
     const layer = box('sprite-stamp');
     layer.dataset.kind = stamp.kind;
-    const wPct = (stamp.size * 2 / CANVAS_SIZE) * 100;
+    // STAMP_SCALE is 5, not 2: every stamp SVG is drawn at 12 units per canvas
+    // unit of `size` on a `-30 -30 60 60` viewBox, so the box spans 60/12 = 5x
+    // size. With 2 here, stamps rendered at 40% of their intended size and read
+    // as specks on the shelf. studio.js uses the same constant so the studio
+    // preview stays WYSIWYG with the shelf — change them together or not at all.
+    const wPct = (stamp.size * STAMP_SCALE / CANVAS_SIZE) * 100;
     layer.style.left = (stamp.x / CANVAS_SIZE * 100) + '%';
     layer.style.top = (stamp.y / CANVAS_SIZE * 100) + '%';
     layer.style.width = wPct + '%';
