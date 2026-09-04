@@ -308,7 +308,7 @@ export const BODIES = {
       top:{x:0,y:-35,spread:8,scale:.95}, ears:{x:0,y:-28,spread:14,scale:.95},
       head:{x:0,y:-22,r:15},
       arms:[{x:-19,y:-6,angle:-24},{x:19,y:-6,angle:24}],
-      legs:[], manyLegs:[],
+      legs:[], manyLegs:[{x:-19,y:33,angle:-16},{x:-9.5,y:35,angle:-8},{x:0,y:36,angle:0},{x:9.5,y:35,angle:8},{x:19,y:33,angle:16}],
       tail:{x:24,y:16,angle:-20,scale:.85},
       wings:{x:0,y:-10,spread:15,scale:1,angle:0},
       detail:{x:0,y:22,w:36,h:16}
@@ -412,7 +412,7 @@ export const BODIES = {
       top:{x:0,y:-39,spread:8,scale:.85}, ears:{x:0,y:-2,spread:20,scale:.9},
       head:{x:0,y:6,r:19},
       arms:[{x:-25,y:12,angle:-34},{x:25,y:12,angle:34}],
-      legs:[], manyLegs:[],
+      legs:[], manyLegs:[{x:-13,y:34,angle:-14},{x:-6.5,y:36,angle:-6},{x:0,y:37,angle:0},{x:6.5,y:36,angle:6},{x:13,y:34,angle:14}],
       tail:{x:25,y:22,angle:-24,scale:.8},
       wings:{x:0,y:-2,spread:18,scale:.9,angle:0},
       detail:{x:0,y:-24,w:20,h:16}
@@ -942,7 +942,7 @@ function bodyPlan(rng, body) {
   } else {
     legs = pickWeighted(rng, [['stubby', 4], ['hoof', 2.5], ['bird', 2], ['spindly', 2], ['none', 2]]);
   }
-  if ((legs === 'many' || legs === 'tentacles') && !body.anchors.manyLegs) {
+  if ((legs === 'many' || legs === 'tentacles') && (body.anchors.manyLegs || []).length < 4) {
     legs = squat || sits ? 'none' : 'stubby';
   }
 

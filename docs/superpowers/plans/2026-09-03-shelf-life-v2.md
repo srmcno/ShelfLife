@@ -5191,3 +5191,173 @@ importing `state.js`.
   the correct gait and facing.
 - Stamp geometry: `translate(-50%,-50%)` now survives, and stamps render square instead of
   horizontally stretched.
+
+---
+
+### Phase 2G: creature generator library
+
+`src/art/creatures.js` — a self-contained library of **designed** creature parts plus a
+seeded generator that composes them into appealing characters. It sits alongside the
+freehand drawing pad as an equal studio mode ("Surprise me" -> an instant monster with
+real personality). Zero DOM access, zero imports from the rest of the app, no
+dependencies. Tests in `test/creatures.test.mjs` (34 tests, `node --test test/*.test.mjs`).
+
+**Contents:** 16 body silhouettes, 63 part variants across 9 slots (11 eyes, 10 mouths,
+11 horn/crown/crest tops, 6 ears, 5 arms, 7 legs, 7 tails, 5 wings, 8 markings), and
+12 curated palettes harmonised with `css/style.css` `:root`.
+
+#### Coordinate convention
+
+Everything lives in ONE space: a centred 100x100 box, `viewBox="-50 -50 100 100"` —
+the same centred-box idea as `art/stamps.js` (`-30 -30 60 60`) and `content/props.js`
+(`0 0 60 60`), just roomier so horns/wings/tails fit.
+
+- origin `(0,0)` is the middle of the creature's bounding box
+- x grows RIGHT, y grows DOWN (SVG native — a *smaller* y is *higher up*)
+- `BASELINE = 42` is the shelf surface: feet and flat-bottomed bodies rest on it, so a
+  row of creatures stands on one line
+- silhouettes occupy roughly x ∈ [-34, 34], y ∈ [-45, +42]; the outer ±50 margin is
+  slack for overhang. Nothing may exceed ±50 (a test enforces this).
+- `SPAN = 9` is the reference half-distance between a pair of eyes/horns. Centred
+  (non-mirrored) variants are authored against it and scaled by `anchor.spread / SPAN`.
+
+#### Data shapes
+
+```js
+SHAPE   { k:'path'|'circle'|'ellipse'|'line', ...geometry,
+          fill, stroke, sw, cap, join, op }        // fill/stroke hold a ROLE name
+VARIANT { id, name, mirror, flip, tags, shapes }   // mirror:true -> drawn twice
+        { id, name, groups:[{id, shapes}] }        // explicitly asymmetric (manic, cluster)
+BODY    { id, name, tags, base, path, back?, shade?, anchors }
+```
+
+Colour **roles** (resolved from the palette at render time, never baked into part data):
+`body`, `bodyDark`, `bodyLight`, `accent`, `detail`, `ink`, `line`, `bone`.
+`line` is line-art *on* the body (mouth strokes, brows) — usually `== ink`, but flipped
+to a LIGHT value on the dark palettes so a face never vanishes. `bone` is the fixed
+off-white `#F2E9DC` used for eye-whites and teeth, matching `stamps.js`.
+
+Body **anchors** are what make composition look intentional rather than random:
+`eyes {x,y,spread,scale}`, `mouth {x,y,scale}`, `top`, `ears`, `head {x,y,r}`,
+`arms [{x,y,angle}]`, `legs [{x,y,angle}]`, `manyLegs [...]` (4-8 joints for
+scuttlers/tentacles), `tail {x,y,angle,scale}`, `wings {x,y,spread,scale,angle}`,
+`detail {x,y,w,h}`.
+
+#### Generated creature (plain, JSON-serializable)
+
+```js
+generateCreature({ seed?, body?, palette?, parts? }) -> {
+  v: 1,
+  seed: 'k3f9q1z',       // reproduce exactly with generateCreature({ seed })
+  body: 'pear',          // key into BODIES
+  palette: 'mint',       // key into PALETTES
+  parts: { eyes, mouth, top, ears, arms, legs, tail, wings, detail },
+  tune:  { eyeScale, eyeSpread, mouthScale, lean },
+  anatomy: { ... },      // capability flags — see below
+  rig:     { ... }       // per-limb pivots — see below
+}
+```
+
+Deterministic: a seed drives its own PRNG (xmur3 + mulberry32). `Math.random()` is used
+only to invent a fresh seed when none is given, and that seed is then recorded, so every
+creature is reproducible from `{ seed }` alone. Coherence rules stop it looking like part
+soup: a cyclops or five-eye cluster gets a quiet mouth; a small skull never gets a gaping
+maw or a wide crown; flat-bottomed bodies are legless or tentacled; many-legged styles
+only land on bodies with the joints; markings are capped at one and get rarer as horns /
+wings / ears stack up.
+
+#### ANATOMY — the gameplay contract
+
+Body plan determines what a creature can physically DO on the shelf. **Read these flags;
+never infer physicality from part names.** The roll deliberately produces a spread (tested:
+in 300 rolls, >=30 legless, >=20 many-legged, >=120 armed, >=60 able to hang, >=20 winged,
+and all four gaits present).
+
+```js
+anatomy = {
+  hasLegs, legCount, legStyle,       // 'stubby'|'spindly'|'bird'|'hoof'|'many'|'tentacles'|'none'
+  hasArms, armCount, armStyle, armReach,   // armReach in art units; >=18 is a long arm
+  hasWings, wingCount, wingStyle, wingSpan,
+  hasTail, tailStyle, tailLength,
+  hasTentacles,                      // legStyle === 'tentacles'
+  isLimbless,                        // no legs AND no arms — can only shuffle/hop
+  heightClass,                       // 'tall' | 'medium' | 'squat'
+  buildClass,                        // 'thin' | 'round' | 'lumpy' | 'wide'
+  gait,                              // 'walk' | 'scuttle' | 'ooze' | 'hop'
+  can: {
+    walk,     // alternating two-leg walk cycle
+    scuttle,  // fast many-leg ripple (legCount >= 4)
+    hop,      // legless shuffle-hop, or a short-leg bounce
+    sneak,    // crouched creep (spindly/bird legs, or oozing)
+    hang,     // long enough arms to grip the shelf edge (armReach >= 18)
+    climb,    // arms + legs, armReach >= 14
+    glide,    // has wings
+    wag       // tail long enough to read (tailLength >= 12)
+  }
+}
+```
+
+#### RIG — per-limb pivots for the animation system
+
+Absolute art-space coordinates (same -50..50 space as the SVG), so an animator never has
+to re-derive geometry. `angle` is degrees, `0` = straight down for a limb, and it is
+exactly the rotation the renderer bakes into the mount — so rotating the inner part group
+by 0 reproduces the resting pose.
+
+```js
+rig = {
+  legs:  [{ id:'leg-0',  index, side:'left'|'right', x, y, angle, length, style }],
+  arms:  [{ id:'arm-0',  index, side, x, y, angle, reach, style }],
+  wings: [{ id:'wing-0', index, side, x, y, angle, span, style }],
+  tail:  { id:'tail', x, y, angle, length, style } | null,
+  head:  { x, y, r },              // pivot + radius for a head bob / nod
+  eyes:  [{ id, x, y, r }],        // blink pivots, one per rendered eye
+  base:  { y: 42 }                 // ground contact line
+}
+```
+
+#### Markup contract
+
+`renderCreatureSVG(creature, opts?) -> string`. Every moving feature is its own
+addressable element, in a deliberate two-level structure:
+
+```html
+<g class="cr-mount" transform="translate(-9 32) rotate(-4)">
+  <g class="cr-part cr-leg" data-part="leg" data-index="0"
+     data-side="left" data-variant="bird" data-pivot-x="-9" data-pivot-y="32">
+     ...shapes...
+  </g>
+</g>
+```
+
+The OUTER `.cr-mount` carries placement and is never animated. The INNER `.cr-part`
+group carries **no transform of its own**, so its local origin `(0,0)` IS the joint and
+an animator can set `transform` (attribute or CSS) on it without fighting a baked-in
+value — this is enforced by a test. `data-pivot-x/y` repeat the joint in absolute
+art-space coordinates, matching `rig` exactly (also tested).
+
+`data-part` values: `body, detail, eye, mouth, horn, crest, ear, arm, leg, tail, wing`.
+Repeated features carry `data-index` (0-based) and `data-side`. Draw order back to front:
+legs, then a `.cr-torso` group (which carries the small resting `lean`) holding wings,
+tail, arms, horns, ears, body, markings, eyes, mouth. Limbs sit behind the body so their
+joins are hidden. Wrapping groups: `.cr-figure` > (`.cr-mount` legs, `.cr-torso`).
+
+#### Consuming it
+
+```js
+import { generateCreature, renderCreatureSVG, rerollPart, listVariants,
+         BODIES, PALETTES, SLOT_KEYS, describeCreature } from './art/creatures.js';
+
+const pet = generateCreature();                       // "Surprise me"
+el.innerHTML = renderCreatureSVG(pet, { size: 300 }); // crisp at any size
+const next  = rerollPart(pet, 'top');                 // "re-roll just the horns"
+listVariants('top');                                  // [{id,name}, ...] for a picker
+```
+
+Other exports: `renderPartSVG(slot, variantId, opts)` and `renderBodySVG(bodyId, opts)`
+for pickers/thumbnails, `normalizeCreature()` (repairs unknown ids instead of throwing —
+safe to render anything loaded from an old save), `resolveColors()`, `describeAnatomy()`,
+`buildRig()`, `makeRng()`, `makeSeed()`, and the constants `VIEWBOX`, `BASELINE`, `SPAN`.
+
+Save format: store `{ seed, body, palette, parts, tune }` (or just `seed` for an
+unedited roll) — `anatomy` and `rig` are derived and rebuilt by `normalizeCreature()`.
