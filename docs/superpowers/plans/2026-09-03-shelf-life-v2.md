@@ -5658,3 +5658,142 @@ Content audit against the kill list: see the phase report. 251 tests pass
 (`test/comedy.test.mjs` adds 33). Verified in the browser at
 `localhost:8420` — boot clean, two-handers/lists/documents render as multiple lines,
 documents span two columns at desktop width.
+
+### Phase 2K: mobile redesign
+
+The previous pass made the phone build *not broken* (no overflow, 44px targets, six
+columns kept). It was still not designed for a phone. At 390x844 the chrome ate 58% of
+the first screen — eleven toolbar buttons wrapping onto four rows, then nine status
+pills onto three more — and the creatures underneath it were 63px tall, smaller than
+an emoji. Every action lived in a top toolbar, on the least reachable part of a
+844px-tall screen.
+
+**Owned:** `css/style.css`, `index.html`, `src/ui/drag.js`, new `src/ui/mobileNav.js`.
+`src/art/studio.js` and `src/content/*` were left to the agents rebuilding them;
+`src/ui/render.js` needed no change in the end and is untouched.
+
+#### The six-columns problem, and why the shelf still does not scroll
+
+Pets feud with whoever is immediately left or right of them **in the same row of six**.
+Re-flowing to three columns on a narrow screen would show two pets as neighbours who
+are not and hide two who are — it would lie about the game state — so the columns stay
+six at every width. Six columns across a 390px phone is 58px of floor each, which is
+the size problem restated, not solved.
+
+A horizontally swipeable shelf was built first and then removed: it keeps adjacency
+honest but it makes you drag to see your own pets, which is not acceptable. **Nothing
+in the phone build scrolls sideways.** The columns fit the screen.
+
+What changed instead is that a creature is no longer confined to its own floor tile.
+It is drawn at **1.6x its slot width** and the surplus hangs over its neighbours, the
+way figurines actually stand on a crowded shelf. The model underneath is untouched: the
+SLOT is still the tap target, still the drop target, still exactly one of six, so who
+stands next to whom is unchanged and unambiguous. Only the picture got bigger:
+
+| width | slot pitch | creature | was |
+|---|---|---|---|
+| 390px | 56px | **89px** | 63px |
+| 360px | 51px | **82px** | 58px |
+| 320px | 45px | **72px** | ~50px |
+
+Three details make the overlap read as depth rather than as a mess: the tracks are
+`minmax(0,1fr)` (a plain `1fr` has an `auto` minimum, so the oversized sprite blew every
+track out to its own width and pushed the row off-screen); every creature gets a second,
+tight drop-shadow so two overlapping silhouettes of similar colour do not merge; and
+nameplates are held **inside** their own slot (two clamped lines at 10.5px), because a
+label spilling over its neighbour's would make the one thing that must stay
+unambiguous — who is where — ambiguous.
+
+#### Restructured chrome
+
+- **Thumb dock.** The three things you *do* — Make a pet, Do the rounds, Check the
+  shelf — plus **More**, fixed to the bottom edge, safe-area padded. One accent fill on
+  "Make a pet"; the rest are quiet labels on the same rail.
+- **A bottom sheet** holds the eight things you *set*: Decorate, Incidents, Sound,
+  Narrator, Voice, Mature, Back up, Restore. Grab handle, sticky head, scrim.
+- **No node moves.** The eleven buttons live in two wrappers in `index.html` that are
+  `display:contents` on a desktop (the flat row is byte-identical in behaviour) and
+  become the dock and the sheet on a phone. Every existing id survives — verified by
+  diffing the id list against HEAD: **none removed**, six added (`moreBtn`, `moreClose`,
+  `moreTray`, `trayScrim`, `cabinetWrap`, `toShelfBtn`).
+- **The tally moved below the shelf** via `order` on a new `.stage` wrapper (again, no
+  DOM move) and became a 3x3 grid of typeset figures instead of nine badges.
+- **`#voiceHint` moved below the cabinet**, and a real bug was fixed while there:
+  `.voice-hint{display:flex}` outranks the UA's `[hidden]{display:none}`, so that
+  panel had been painting as an empty box with two buttons on *every* load at *every*
+  width.
+- **Back to the shelf**: a pinned paper tab above the dock once the notes wall has
+  scrolled the creatures off the top.
+
+First screen at 390x844, before and after: `.cabinet-wrap` moved from **y=487** (58% of
+the viewport was chrome, zero creatures visible) to **y=54**. All three shelf rows, the
+tally and the notes heading now fit above the fold.
+
+#### Touch
+
+`.pet{touch-action:none}` was claiming every touch that landed on a creature, so the
+page could not be scrolled anywhere a pet stood — which on a phone is most places. Touch
+now gets the home-screen contract: **press and hold (300ms) to pick up**. Until the hold
+completes the browser owns the gesture and pans normally; movement past 10px before it
+completes drops the candidate drag entirely, so the pointerup at the end of a scroll
+cannot open a card either. Once it completes, `drag.js` takes the gesture back by
+preventing the `touchmove` itself — `touch-action` is latched at touchstart and cannot
+be tightened mid-gesture, so `preventDefault` is the only lever, and nothing has been
+scrolled yet because the hold requires a stationary finger. A mouse keeps the original
+7px threshold, unchanged.
+
+Also in `drag.js`: the ghost now **clones the sprite standing in the slot** instead of
+rebuilding it from `pet.art.body` (a generated vector creature has no raster body and
+used to lift as a broken image); `setPointerCapture` is guarded, because a throw there
+used to eat the hold timer; edge auto-scroll walks the page toward an off-screen drop.
+The concurrent stale-slot fix (`state.slots.indexOf(d.id)` at drop time) was preserved.
+
+Verified with synthetic touch pointer events at 390x844: `touch-action: manipulation`;
+quick tap opens the card; a swipe across a pet lifts no ghost, opens no card and moves
+nobody; press-and-hold lifts a ghost, lights the drop target and swaps the two pets;
+ghost cleaned up; card stays shut after a drag. Mouse re-verified separately: no ghost
+at 3px, ghost at 20px, swap correct, click opens the card.
+
+#### Craft
+
+Three things made the page read as a template website rather than as an object, and the
+arrangement was only one of them:
+
+- **The cabinet is furniture.** `.cabinet-wrap` draws two wooden side stiles; the planks
+  grew grain.
+- **The status line is a printed label**, not a badge rail — small-caps in the body face,
+  figures in the display face, hairlines between. `--danger-ink` on the Furious figure
+  was measured at **3.68:1** against the Haunted Nursery room and dropped; the colour
+  semantics ride on the bead, as the theme work intended.
+- **An empty shelf is a pinned card**, not a dashed box.
+- **The desktop toolbar** now splits on the same seam as the dock: three primary actions
+  on one rail, eight settings on a quieter one, instead of a ragged wall whose second row
+  was whatever fell off the first.
+- Sheets are phone sheets: grab handle, sticky head so Close is always reachable, sticky
+  action bar in the studio, safe-area bottom padding.
+
+#### Verification
+
+- 390x844, 360x800, 320x568, 844x390, 667x375, 1280x900: **no horizontal page overflow,
+  no shelf scroller** at any of them.
+- All six rooms read at 390x844 (screenshots). Contrast measured by painting each
+  computed colour to a canvas (the theme tokens resolve to `color(srgb ...)` via
+  `color-mix`, which a regex parser silently misreads by a factor of 255): every piece
+  of new chrome clears 4.5:1 in the worst room — dock labels 4.07 (basement), status
+  labels 5.79, tray heading 11.48, primary button 8.66, back-to-shelf 12.33.
+- Boot verified by cache-busted dynamic import of both `main.js` and `mobileNav.js`
+  (`node --check` cannot catch a bad import); console clean.
+- `node --test test/*.test.mjs`: **251 pass, 0 fail**.
+
+#### Left for others
+
+- `--danger-ink` measures 3.68:1 against Haunted Nursery and 3.74:1 against Mortuary
+  Mint, which affects the pre-existing feuding **nameplate** colour. Not touched here
+  because it is theme-token work.
+- The studio's mobile layout is styled from this stylesheet only (`.studio-actions`,
+  `#savePet`, `.pad-wrap`), with selectors that tolerate the markup changing. If the
+  Grow/Draw rebuild wants structural phone work inside `src/art/studio.js`, it is that
+  agent's to make.
+- `css/style.css` was found duplicated end-to-end in HEAD at one point during this phase
+  (a concurrent write race between agents); it was repaired here. Worth a `grep -c` on a
+  banner comment before trusting a big shared stylesheet mid-swarm.

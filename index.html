@@ -21,26 +21,55 @@
     <h1>Shelf<span class="tail">&nbsp;Life</span></h1>
     <p class="tagline">Small creatures with needs, opinions, and long memories. They cannot die. They have looked into it.</p>
   </div>
+  <!-- Two groups, one toolbar. On a desktop both wrappers are `display:contents`
+       so this lays out exactly as the flat row always did. On a phone the first
+       group becomes the fixed thumb-reach dock and the second becomes a bottom
+       sheet — the same DOM nodes and ids either way, relocated by CSS only. -->
   <div class="toolbar">
-    <button class="btn btn-primary" id="newPetBtn">Make a pet</button>
-    <button class="btn" id="roundsBtn">Do the rounds</button>
-    <button class="btn" id="checkBtn">Check the shelf</button>
-    <button class="btn" id="decorBtn">Decorate</button>
-    <button class="btn btn-ghost btn-sm" id="incidentsBtn">Incidents</button>
-    <button class="btn btn-ghost btn-sm" id="muteBtn" aria-pressed="false">🔊 Sound</button>
-    <button class="btn btn-ghost btn-sm" id="narratorBtn" aria-pressed="true">🗣️ Narrator</button>
-    <button class="btn btn-ghost btn-sm" id="voiceBtn" title="Choose who reads the notes out loud.">🎙️ Voice</button>
-    <button class="btn btn-ghost btn-sm" id="matureBtn" aria-pressed="false" title="Adds swearing and cruder jokes to notes. Off by default.">🔞 Mature: Off</button>
-    <button class="btn btn-ghost btn-sm" id="exportBtn">Back up</button>
-    <button class="btn btn-ghost btn-sm" id="importBtn">Restore</button>
-    <input type="file" id="importFile" accept="application/json" hidden>
+    <div class="tb-primary">
+      <button class="btn btn-primary" id="newPetBtn">Make a pet</button>
+      <button class="btn" id="roundsBtn">Do the rounds</button>
+      <button class="btn" id="checkBtn">Check the shelf</button>
+      <button class="btn tb-more" id="moreBtn" aria-expanded="false" aria-controls="moreTray">More</button>
+    </div>
+    <div class="tb-rest" id="moreTray">
+      <div class="tray-head">
+        <h2>Everything else</h2>
+        <button class="btn btn-ghost btn-sm" id="moreClose">Close</button>
+      </div>
+      <button class="btn" id="decorBtn">Decorate</button>
+      <button class="btn btn-ghost btn-sm" id="incidentsBtn">Incidents</button>
+      <button class="btn btn-ghost btn-sm" id="muteBtn" aria-pressed="false">🔊 Sound</button>
+      <button class="btn btn-ghost btn-sm" id="narratorBtn" aria-pressed="true">🗣️ Narrator</button>
+      <button class="btn btn-ghost btn-sm" id="voiceBtn" title="Choose who reads the notes out loud.">🎙️ Voice</button>
+      <button class="btn btn-ghost btn-sm" id="matureBtn" aria-pressed="false" title="Adds swearing and cruder jokes to notes. Off by default.">🔞 Mature: Off</button>
+      <button class="btn btn-ghost btn-sm" id="exportBtn">Back up</button>
+      <button class="btn btn-ghost btn-sm" id="importBtn">Restore</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
   </div>
 </header>
+<div class="tray-scrim" id="trayScrim" hidden></div>
 
 <div class="storage-warn" id="storageWarn" hidden>
   Saving is off in this preview window. Download the file or open the hosted link and your shelf will stick around.
 </div>
 
+<!-- .stage exists so the phone can put the tally UNDER the shelf (CSS `order`)
+     without moving either node in the DOM. The creatures are the product; nine
+     figures are a footnote, and on a phone a footnote does not go first. -->
+<div class="stage">
+  <div class="status" id="statusBar"></div>
+  <!-- The frame is furniture: .cabinet-wrap draws the two wooden side stiles, and
+       #cabinet is the run of shelves standing between them. Nothing here scrolls
+       sideways at any width — the six columns always fit the screen. -->
+  <div class="cabinet-wrap" id="cabinetWrap">
+    <main class="cabinet" id="cabinet"></main>
+  </div>
+</div>
+
+<!-- A one-time narrator nudge. It sits BELOW the shelf on purpose: it is a
+     footnote, and on a phone it used to push the creatures off the first screen. -->
 <div class="voice-hint" id="voiceHint" hidden>
   <p id="voiceHintText"></p>
   <div class="voice-hint-actions">
@@ -49,16 +78,13 @@
   </div>
 </div>
 
-<div class="status" id="statusBar"></div>
-<main class="cabinet" id="cabinet"></main>
-
 <div class="notes-head">
   <h2>What they left you</h2>
   <button class="btn btn-ghost btn-sm" id="clearNotes">Clear notes</button>
 </div>
 <section class="notes" id="notes"></section>
 
-<footer>They get hungry, bored and filthy in real time, whether the game is open or not. Drag a pet to move it. Tap a pet to take care of it. Who they stand next to matters.</footer>
+<footer>They get hungry, bored and filthy in real time, whether the game is open or not. Drag a pet to move it. Tap a pet to take care of it. Who they stand next to matters.<span class="phone-only"> On a phone, press and hold a creature to pick it up, then drag it where you want it.</span></footer>
 
 <div class="veil" id="studioVeil">
   <div class="sheet">
@@ -173,8 +199,10 @@
 
 <div class="veil" id="cardVeil"><div class="sheet" id="cardSheet"></div></div>
 <div class="veil" id="incidentsVeil"><div class="sheet" id="incidentsSheet"></div></div>
+<button class="to-shelf" id="toShelfBtn" hidden>Back to the shelf</button>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script type="module" src="src/main.js"></script>
+<script type="module" src="src/ui/mobileNav.js"></script>
 </body>
 </html>

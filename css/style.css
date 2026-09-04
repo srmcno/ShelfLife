@@ -1117,6 +1117,7 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
   70%{rotate:2deg;translate:0 2%}
 }
 
+
 /* ===========================================================================
    THE GENERATOR (see src/art/creatures.js, src/art/studio.js, src/art/sprite.js)
    Two blocks: how a vector creature stands on the shelf, and the studio's two
@@ -1256,6 +1257,7 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
    the horizontal scroller). Backgrounds do not scroll with a scroll container's
    content, and these are on the wrap anyway, so the frame stays put while the
    shelf slides underneath it. */
+.stage{display:flex;flex-direction:column}
 .cabinet-wrap{position:relative;max-width:var(--shell);margin:0 auto}
 .cabinet-wrap::before,.cabinet-wrap::after{
   content:'';position:absolute;top:1px;bottom:1px;width:10px;z-index:2;pointer-events:none;
@@ -1266,11 +1268,6 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
 }
 .cabinet-wrap::before{left:1px;border-radius:var(--radius) 0 0 var(--radius)}
 .cabinet-wrap::after{right:1px;transform:scaleX(-1);border-radius:var(--radius) 0 0 var(--radius)}
-/* Set by ui/mobileNav.js when there is more shelf past the frame. The stile
-   casts a shadow inward, so the run reads as continuing underneath it rather
-   than as simply stopping. */
-.cabinet-wrap.can-left::before{box-shadow:1px 0 0 rgba(0,0,0,.34),10px 0 15px -7px rgba(0,0,0,.8)}
-.cabinet-wrap.can-right::after{box-shadow:1px 0 0 rgba(0,0,0,.34),10px 0 15px -7px rgba(0,0,0,.8)}
 .cabinet{border-color:color-mix(in srgb,var(--wood) 34%,var(--line))}
 
 /* Grain. Redeclared in full because `background-image` alone would drop the lit
@@ -1287,8 +1284,9 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
 /* ---- 1b. the status line is a label, not a badge rail --------------------- */
 /* Nine tinted pills is a dashboard. This is one typeset line: small-caps labels
    in the body face, figures in the display face, hairlines between. The colour
-   semantics stay exactly where the theme work put them — on the bead, plus a
-   readable --danger-ink figure, never on a tinted chip. */
+   semantics stay exactly where the theme work put them — on the bead, never on
+   the text: --danger-ink measures 3.7:1 against the Haunted Nursery room, so a
+   blood-coloured figure here would have been unreadable in two of the six. */
 .status{gap:0;padding:9px 0;border-color:var(--hair);font-size:var(--fs-micro);letter-spacing:.085em;text-transform:uppercase}
 .status>span{
   background:none;border:0;border-left:1px solid var(--hair);border-radius:0;
@@ -1297,7 +1295,6 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
 .status>span:first-child{border-left:0;padding-left:2px}
 .status b{font-family:var(--display);font-weight:400;font-size:15px;letter-spacing:.01em;color:var(--bone)}
 .status .bad,.status .mid,.status .good,.streak-badge{background:none}
-.status .bad b{color:var(--danger-ink)}
 .status .bad::before,.status .mid::before,.status .good::before{width:7px;height:7px}
 .status .bad::before{box-shadow:0 0 0 1px var(--hair),0 0 7px var(--blood)}
 .status .mid::before{box-shadow:0 0 0 1px var(--hair),0 0 6px var(--amber)}
@@ -1343,11 +1340,7 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
    2. THE PHONE
    =========================================================================== */
 @media (max-width:640px){
-  :root{--dock-h:64px}
-  body{
-    padding-top:14px;
-    padding-bottom:calc(var(--dock-h) + 34px + env(safe-area-inset-bottom));
-  }
+  body{padding-top:14px}
 
   /* ---- the masthead is a wordmark and nothing else ----------------------- */
   /* Every action moved to the dock, so the header's whole job is to say what
@@ -1359,54 +1352,211 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
   body:has(.empty-shelf) .tagline{display:block;margin-top:5px;font-size:13px;max-width:100%}
 
   /* ---- one swipeable strip instead of three rows of pills ---------------- */
-  .status{
-    margin-bottom:11px;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;
-    scrollbar-width:none;padding:8px 0;
-    -webkit-mask-image:linear-gradient(90deg,#000 0 90%,transparent 100%);
-            mask-image:linear-gradient(90deg,#000 0 90%,transparent 100%);
+  /* Two tight rows of type, not three rows of badges and not a strip you have
+     to drag: at 10px with the figures still in the display face the whole state
+     of the shelf fits above the fold and nothing is hidden off-screen. */
+  /* The tally goes BELOW the shelf (see .stage in index.html). Nine figures cost
+     three rows of badges above the fold — a dashboard standing in front of the
+     thing it describes. Nothing is hidden and nothing has to be dragged
+     sideways; it is simply no longer first. */
+  /* Nine figures wrap into a ragged three-row heap. As a 3x3 grid they are the
+     same nine figures, in tidy columns, reading like the card taped to the front
+     of a display case. */
+  .stage>.status{
+    order:2;display:grid;grid-template-columns:repeat(3,1fr);
+    margin:13px auto 0;padding:8px 0;font-size:9.5px;letter-spacing:.03em;row-gap:3px;
   }
-  .status::-webkit-scrollbar{display:none}
-  .status>span{padding:1px 11px;flex:none}
-  .status b{font-size:14px}
+  .status>span:nth-child(3n+1){border-left:0;padding-left:1px}
+  /* width:auto, so the negative bleed margins actually widen the frame instead
+     of just sliding a fixed-width box left. */
+  .stage>.cabinet-wrap{order:1;width:auto}
+  .status>span{padding:0 6px;line-height:1.8}
+  .status>span:first-child{padding-left:1px}
+  .status b{font-size:13px}
 
-  /* ---- THE SHELF: six columns, larger creatures, swiped sideways ---------- */
+  /* ---- THE SHELF: six columns, no sideways scrolling, big creatures ------- */
   /* The hard constraint: pets feud with whoever is immediately left/right of
      them in the same row of six. Re-flowing to three columns would show two pets
      as neighbours who are not, and hide two who are — it would lie about the
-     game state. So the columns stay six and stop being fluid: each is a fixed,
-     legible width and the run scrolls past the frame, exactly like reaching the
-     end of a real shelf. Every pet is still reachable, still droppable (drag.js
-     auto-scrolls the run at the edges) and still truthfully adjacent. */
-  .cabinet-wrap{margin-left:0;margin-right:0}
-  #cabinet{
-    margin:0;border-radius:var(--radius);padding:12px 12px 6px;
-    overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
-    scroll-snap-type:x proximity;scroll-padding-left:12px;scrollbar-width:none;
+     game state. So the columns stay six, and stay on screen: nothing here
+     scrolls sideways.
+     Six columns across a 390px phone is 58px of floor each, which is the width
+     of an emoji, and that was the real complaint. The fix is that a creature is
+     no longer confined to its own floor tile. It is drawn at 1.6x its slot and
+     the surplus hangs over its neighbours, the way figurines actually stand on a
+     crowded shelf — shoulder to shoulder, the big ones leaning on the small.
+     Nothing about the model moves: the SLOT is still the tap target, still the
+     drop target, still exactly one of six, so who stands next to whom is
+     unchanged and unambiguous. Only the picture got bigger. */
+  .cabinet-wrap{
+    margin-left:calc(-1 * (10px + env(safe-area-inset-left)));
+    margin-right:calc(-1 * (10px + env(safe-area-inset-right)));
   }
-  #cabinet::-webkit-scrollbar{display:none}
-  #cabinet::before{display:none}          /* the vignette would scroll away */
+  /* Deep top padding: a thought bubble is anchored above the creature's head and
+     would otherwise be clipped off by the top of the frame. */
+  #cabinet{margin:0;border-radius:0;border-left:0;border-right:0;padding:22px 11px 6px;overflow:visible}
   .shelf-row{
-    --slot-w:clamp(102px,32.5vw,152px);
-    --slot-h:calc(var(--slot-w) * 1.14);
-    --plank-h:13px;--label-drop:34px;
-    width:max-content;min-width:100%;
+    /* The cabinet's inner width, split into six tracks plus the side room the
+       outermost creatures need to overhang into without being clipped. */
+    --rail:calc(100vw - 22px);
+    --pitch:calc(var(--rail) / 6.6);
+    --pet-size:calc(var(--pitch) * 1.6);
+    --slot-h:calc(var(--pet-size) + 15px);
+    --plank-h:12px;--label-drop:44px;
   }
-  .slots{grid-template-columns:repeat(6,var(--slot-w));gap:5px;padding:0}
-  .slot{scroll-snap-align:start}
-  /* --pet-h is declared on .sprite itself upstream, so it has to be overridden
-     there rather than inherited from the row. --slot-w still inherits down. */
-  .sprite{--pet-h:calc(var(--slot-w) * .95)}
-  .pet .nameplate,.prop .nameplate{font-size:11px;letter-spacing:.01em;left:-3px;right:-3px;top:calc(100% + var(--plank-h) + 6px)}
-  .pips{top:calc(100% + var(--plank-h) + 22px);gap:4px}
+  /* minmax(0,1fr), not 1fr: a plain 1fr track has an `auto` minimum, so the
+     deliberately oversized sprite inside would blow every track out to its own
+     width and push the row off the screen. */
+  .slots{grid-template-columns:repeat(6,minmax(0,1fr));gap:0;padding:0 calc(var(--pitch) * .3)}
+  /* Scoped to .slot so the card portrait keeps filling its own host box. */
+  .slot .sprite{--pet-h:var(--pet-size)}
+  .slot .sprite.sl2{width:var(--pet-h);max-width:none}
+  /* Later slots paint over earlier ones, so the overlap shingles one way down
+     the row instead of fighting for depth at every join. */
+  .pet::after,.prop::after{width:92%}
+  /* Shoulder to shoulder needs an edge, or two overlapping silhouettes of
+     similar colour merge into one shape. A tight second shadow rims each
+     creature against whoever is standing in front of it. */
+  .sl2 .sprite-creature,.sl2 .sprite-body,.prop svg{
+    filter:drop-shadow(0 5px 4px rgba(0,0,0,.38)) drop-shadow(0 0 1.5px rgba(0,0,0,.5));
+  }
+  /* Two lines, because a name has 58px of floor and "The Reverend" does not fit
+     on one. Clamped, so a 22-character name cannot push the plank below it. */
+  .pet .nameplate,.prop .nameplate{
+    font-size:10.5px;letter-spacing:0;line-height:1.15;white-space:normal;
+    left:1px;right:1px;top:calc(100% + var(--plank-h) + 5px);overflow-wrap:anywhere;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .pips{top:calc(100% + var(--plank-h) + 32px);gap:4px}
   .pip{width:7px;height:7px}
-  .prop svg{width:calc(var(--slot-w) * .62);height:calc(var(--slot-w) * .62)}
-  .shelf-row.row-empty{--slot-h:52px;--label-drop:16px}
-  /* The "nothing lives here yet" card must not be stretched across six fixed
-     columns — that would park it off-screen to the right. */
-  .slots:has(.empty-shelf){grid-template-columns:1fr}
-  .shelf-row:has(.empty-shelf){width:100%;min-width:0}
+  .prop svg{width:calc(var(--pitch) * 1.15);height:calc(var(--pitch) * 1.15)}
   .empty-shelf{font-size:21px;padding:18px 14px 14px}
 
+  /* ---- notes: one column, one comfortable measure ------------------------ */
+  .notes{
+    grid-template-columns:1fr;gap:30px 0;margin-left:0;margin-right:0;
+    padding:28px 16px 22px;border:1px solid var(--line);border-radius:var(--radius);
+  }
+  .notes-head{margin:32px auto 12px}
+  .note{
+    font-size:21px;line-height:30px;padding:24px 18px 14px;
+    background-image:repeating-linear-gradient(180deg,transparent 0 29px,rgba(43,32,40,.075) 29px 30px);
+  }
+  .note--doc{font-size:15px;line-height:1.5}
+  .notes-empty{font-size:20px;line-height:1.35}
+
+  .card-portrait{width:164px;height:164px}
+  .card-portrait .sprite{--pet-h:146px}
+  .care-row{margin:16px 0 6px;gap:7px}
+  .care-row .btn{flex:1 1 0;min-width:0;padding:11px 5px;font-size:13px}
+  .card-actions{gap:8px}
+  .card-actions .btn{flex:1 1 0}
+  .prop-tray{grid-template-columns:repeat(auto-fill,minmax(94px,1fr))}
+  /* Studio: styled by class/id only, and tolerant of the panel markup changing
+     underneath it — the Grow/Draw rebuild owns that file, not this stylesheet. */
+  #studioVeil .studio-actions{
+    position:sticky;bottom:0;z-index:2;margin:18px -16px 0;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:var(--panel-b);border-top:1px solid var(--rule);gap:8px;
+  }
+  #studioVeil .studio-actions .btn{flex:1 1 0;min-width:0}
+  #studioVeil #savePet{flex:1.5 1 0}
+  footer{margin-top:26px}
+}
+
+/* ===========================================================================
+   3. LANDSCAPE, AND OTHER SHORT VIEWPORTS
+   A phone on its side has ~390px of height. Nothing here may be taller than it
+   has to be, and a sheet that starts 9vh down would have no room left at all.
+   =========================================================================== */
+@media (orientation:landscape) and (max-height:520px){
+  body{padding-top:12px}
+  .masthead{margin-bottom:9px;align-items:center}
+  h1{font-size:26px;margin:0}
+  .tagline,body:has(.empty-shelf) .tagline{display:none}
+  .status{margin-bottom:9px;padding:6px 0}
+  .shelf-row{--slot-h:118px;--label-drop:30px}
+  .sprite{--pet-h:96px}
+  .veil{padding:0}
+  .sheet{margin-top:0;min-height:100vh;border-radius:0}
+  .gen-stage{min-height:150px}
+  .gen-mount{--pet-h:120px}
+}
+/* Wide-but-short (a phone on its side is usually 650-950px across, so it misses
+   the phone block entirely): the eleven buttons stay one scrollable row rather
+   than wrapping into four that bury the shelf. */
+@media (orientation:landscape) and (max-height:520px) and (min-width:641px){
+  .toolbar{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;padding-bottom:2px}
+  .toolbar::-webkit-scrollbar{display:none}
+  .toolbar .btn{flex:none}
+  .masthead{flex-wrap:nowrap;gap:14px}
+}
+/* Small phone on its side (568x320 and friends) is in BOTH blocks: keep the
+   dock, just make it shorter. */
+@media (orientation:landscape) and (max-height:520px) and (max-width:640px){
+  :root{--dock-h:52px}
+  .tb-primary .btn{min-height:40px;font-size:11.5px;padding:4px 3px}
+  .tb-rest{max-height:88vh}
+}
+
+/* ---- fixes found while testing the phone build ---------------------------- */
+/* `.voice-hint{display:flex}` outranks the UA's `[hidden]{display:none}`, so the
+   narrator nudge was painting as an empty box with two buttons in it on every
+   load, at every width, whether or not there was anything to say. */
+.voice-hint[hidden]{display:none}
+
+@media (max-width:640px){
+  /* A bare row still has to be a droppable shelf, but it does not need to be a
+     third of the screen: two empty rows used to push the notes wall a long way
+     down for no information at all. */
+  .shelf-row.row-empty{--slot-h:42px;--label-drop:12px}
+  .shelf-row.row-empty .prop svg{width:34px;height:34px}
+  /* The lifted creature is the thing under your finger — size it like one. */
+  .ghost{width:126px}
+}
+
+/* ---- the desktop toolbar, on purpose instead of by accident --------------- */
+/* Eleven buttons of one weight wrapped into a ragged wall whose second row was
+   whatever happened to fall off the first. The two groups the phone dock needs
+   are exactly the right split here too: the three things you DO on one rail, the
+   eight things you SET on a quieter one beneath it. */
+@media (min-width:641px){
+  .toolbar{flex-direction:column;align-items:flex-end;gap:9px;flex-wrap:nowrap}
+  .tb-primary,.tb-rest{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;max-width:100%}
+  .tb-rest{gap:7px}
+}
+
+/* ================= NOTE FORMS (comedy direction, lever 4) =================
+   Eight forms share one corkboard. Three of them are physically multi-line — the
+   two-hander, the list and the filled-in document — and collapse into run-on mush
+   without pre-line, because renderNotes() writes escaped text into innerHTML and
+   the source newlines would otherwise be folded into single spaces. */
+.note{white-space:pre-line}
+.note--doc{
+  font-family:var(--body);letter-spacing:.01em;background-image:none;padding-top:24px}
+/* Type size is set per breakpoint rather than here, so the phone override in the
+   max-width:640px block above (which was written for this class) still wins —
+   these rules are appended after it and would otherwise outrank it. */
+@media (min-width:641px){
+  .note--doc{font-size:14px;line-height:1.45}
+}
+@media (min-width:720px){
+  .note--doc{grid-column:span 2}
+}
+
+/* ===========================================================================
+   THE THUMB CHROME
+   ---------------------------------------------------------------------------
+   The dock, the tray and the sheets, on one media query shared by a phone held
+   either way up. A phone on its side is 650-950px across, which misses the
+   phone breakpoint entirely — and eleven buttons fit 844px no better than they
+   fit 390px, they just wrap into a wall on top of a screen only 390px tall.
+   Placed AFTER the min-width:641px desktop rail so it wins in that overlap.
+   =========================================================================== */
+@media (max-width:640px),(orientation:landscape) and (max-height:520px){
+  :root{--dock-h:64px}
+  body{padding-bottom:calc(var(--dock-h) + 34px + env(safe-area-inset-bottom))}
+  #toast{bottom:calc(var(--dock-h) + 20px + env(safe-area-inset-bottom));font-size:19px}
   /* ---- the dock: three primary actions, inside thumb reach --------------- */
   /* Eleven equal-weight buttons is a desktop toolbar. On a 844px-tall phone the
      three things a player actually does were the hardest things to reach. */
@@ -1461,25 +1611,13 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
     width:38px;height:4px;border-radius:99px;background:var(--btn-edge);
   }
   .tb-rest .btn{flex:1 1 45%;min-height:48px;justify-content:flex-start;padding:10px 14px;font-size:14px}
+  .tray-head .btn{flex:0 0 auto;justify-content:center}
   .tray-scrim{
     position:fixed;inset:0;z-index:57;background:rgba(10,6,14,.62);
     -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
   }
   .to-shelf{display:block}
   .phone-only{display:inline}
-
-  /* ---- notes: one column, one comfortable measure ------------------------ */
-  .notes{
-    grid-template-columns:1fr;gap:30px 0;margin-left:0;margin-right:0;
-    padding:28px 16px 22px;border:1px solid var(--line);border-radius:var(--radius);
-  }
-  .notes-head{margin:32px auto 12px}
-  .note{
-    font-size:21px;line-height:30px;padding:24px 18px 14px;
-    background-image:repeating-linear-gradient(180deg,transparent 0 29px,rgba(43,32,40,.075) 29px 30px);
-  }
-  .note--doc{font-size:15px;line-height:1.5}
-  .notes-empty{font-size:20px;line-height:1.35}
 
   /* ---- veils become phone sheets ----------------------------------------- */
   /* Not a shrunken desktop modal: a sheet that rises from the bottom edge, keeps
@@ -1499,75 +1637,15 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
     content:'';position:absolute;left:50%;top:9px;transform:translateX(-50%);
     width:38px;height:4px;border-radius:99px;background:var(--btn-edge);
   }
-  .card-portrait{width:164px;height:164px}
-  .card-portrait .sprite{--pet-h:146px}
-  .care-row{margin:16px 0 6px;gap:7px}
-  .care-row .btn{flex:1 1 0;min-width:0;padding:11px 5px;font-size:13px}
-  .card-actions{gap:8px}
-  .card-actions .btn{flex:1 1 0}
-  .prop-tray{grid-template-columns:repeat(auto-fill,minmax(94px,1fr))}
-  /* Studio: styled by class/id only, and tolerant of the panel markup changing
-     underneath it — the Grow/Draw rebuild owns that file, not this stylesheet. */
-  #studioVeil .studio-actions{
-    position:sticky;bottom:0;z-index:2;margin:18px -16px 0;
-    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
-    background:var(--panel-b);border-top:1px solid var(--rule);gap:8px;
-  }
-  #studioVeil .studio-actions .btn{flex:1 1 0;min-width:0}
-  #studioVeil #savePet{flex:1.5 1 0}
-  #toast{bottom:calc(var(--dock-h) + 20px + env(safe-area-inset-bottom));font-size:19px}
-  footer{margin-top:26px}
 }
-
-/* ===========================================================================
-   3. LANDSCAPE, AND OTHER SHORT VIEWPORTS
-   A phone on its side has ~390px of height. Nothing here may be taller than it
-   has to be, and a sheet that starts 9vh down would have no room left at all.
-   =========================================================================== */
+/* Landscape has no vertical room to spare: a shorter dock, and a sheet that
+   starts at the top edge instead of 9vh down. */
 @media (orientation:landscape) and (max-height:520px){
-  body{padding-top:12px}
-  .masthead{margin-bottom:9px;align-items:center}
-  h1{font-size:26px;margin:0}
-  .tagline,body:has(.empty-shelf) .tagline{display:none}
-  .status{margin-bottom:9px;padding:6px 0}
-  .shelf-row{--slot-h:118px;--label-drop:30px}
-  .sprite{--pet-h:96px}
-  .veil{padding:0}
-  .sheet{margin-top:0;min-height:100vh;border-radius:0}
-  .gen-stage{min-height:150px}
-  .gen-mount{--pet-h:120px}
-}
-/* Wide-but-short (a phone on its side is usually 650-950px across, so it misses
-   the phone block entirely): the eleven buttons stay one scrollable row rather
-   than wrapping into four that bury the shelf. */
-@media (orientation:landscape) and (max-height:520px) and (min-width:641px){
-  .toolbar{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;padding-bottom:2px}
-  .toolbar::-webkit-scrollbar{display:none}
-  .toolbar .btn{flex:none}
-  .masthead{flex-wrap:nowrap;gap:14px}
-}
-/* Small phone on its side (568x320 and friends) is in BOTH blocks: keep the
-   dock, just make it shorter. */
-@media (orientation:landscape) and (max-height:520px) and (max-width:640px){
-  :root{--dock-h:52px}
+  :root{--dock-h:50px}
   .tb-primary .btn{min-height:40px;font-size:11.5px;padding:4px 3px}
-  .tb-rest{max-height:88vh}
-}
-
-/* ================= NOTE FORMS (comedy direction, lever 4) =================
-   Eight forms share one corkboard. Three of them are physically multi-line — the
-   two-hander, the list and the filled-in document — and collapse into run-on mush
-   without pre-line, because renderNotes() writes escaped text into innerHTML and
-   the source newlines would otherwise be folded into single spaces. */
-.note{white-space:pre-line}
-.note--doc{
-  font-family:var(--body);letter-spacing:.01em;background-image:none;padding-top:24px}
-/* Type size is set per breakpoint rather than here, so the phone override in the
-   max-width:640px block above (which was written for this class) still wins —
-   these rules are appended after it and would otherwise outrank it. */
-@media (min-width:641px){
-  .note--doc{font-size:14px;line-height:1.45}
-}
-@media (min-width:720px){
-  .note--doc{grid-column:span 2}
+  .tb-rest{max-height:86vh}
+  .sheet{margin-top:0;min-height:100vh;border-radius:0}
+  /* Same call as portrait: the creatures go first, the tally follows them. */
+  .stage>.status{order:2;margin:10px auto 0;padding:6px 0}
+  .stage>.cabinet-wrap{order:1}
 }
