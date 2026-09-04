@@ -4,7 +4,8 @@ import {
 import { TRAITS, TRAIT_BY_ID } from './content/traits.js';
 import { ORIGINS, HABITS, CLOSERS, FALLBACK_NAMES } from './content/copy.js';
 import { tick } from './engine/tick.js';
-import { checkShelf, petLine, doRounds } from './engine/loop.js';
+import { checkShelf, petLine } from './engine/loop.js';
+import { doRounds } from './engine/care.js';
 import { checkAchievements, ACHIEVEMENTS } from './engine/achievements.js';
 import { checkUnlocks, totalBond } from './engine/unlocks.js';
 import { initStudio } from './art/studio.js';

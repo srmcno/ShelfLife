@@ -1,5 +1,6 @@
 import { moodOf, isAsleep, MOOD_WORD } from '../engine/tick.js';
-import { activeFeuds, feudingIds, totalBond } from '../engine/achievements.js';
+import { activeFeuds, feudingIds } from '../engine/achievements.js';
+import { totalBond } from '../engine/unlocks.js';
 import { renderPetSprite, moodMotionClasses } from '../art/sprite.js';
 import { PROPS, PROP_ART } from '../content/props.js';
 
