@@ -1116,3 +1116,440 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
   40%{rotate:10deg;translate:0 -5%}
   70%{rotate:2deg;translate:0 2%}
 }
+
+/* ===========================================================================
+   THE GENERATOR (see src/art/creatures.js, src/art/studio.js, src/art/sprite.js)
+   Two blocks: how a vector creature stands on the shelf, and the studio's two
+   equal tabs. Every colour below is a derived theme token (--btn-bg, --bone-soft,
+   --accent-ink, --hair …) rather than a literal, because the six rooms swap the
+   variables those are mixed from and a hardcoded chrome colour goes unreadable in
+   at least two of them.
+   =========================================================================== */
+
+/* A generated pet is a single <svg> in the same square .sprite-figure the raster
+   body used, so it inherits breathing, mood posture and the director's classes
+   unchanged. The one extra thing it needs is FOOTING: art/creatures.js draws the
+   shelf surface at BASELINE (y=42 of a -50..50 box), not at the bottom edge, so
+   sprite.js measures the creature's own contact point and hands it down as
+   --sl-foot — the slice of the box that has to hang below the plank line.
+   Percentage translate resolves against the element's own height, so this is the
+   same fraction at every --pet-h. Feet that reach past the baseline slide behind
+   the plank, which paints after the slots, and read as planted. */
+.sl2 .sprite-creature{
+  position:relative;width:100%;height:100%;display:block;overflow:visible;
+  pointer-events:none;
+  transform:translateY(var(--sl-foot,8%));
+  filter:drop-shadow(0 5px 4px rgba(0,0,0,.38));
+}
+/* The raster path forces a square figure for stamp maths; the vector path wants
+   the same square, and gets it from the shared .sprite-figure rule. Nothing to
+   add — but a creature must never be clipped by its boxes, because horns and
+   tails are authored outside the viewBox on purpose. */
+.sl2.sl-vector .sprite-act,.sl2.sl-vector .sprite-figure{overflow:visible}
+
+/* ---- studio tabs ---------------------------------------------------------
+   Two buttons of identical weight, size and colour. The selected one lifts onto
+   the sheet's own surface with an accent rule under it; the other stays flat.
+   Neither is a link, a footnote or a smaller thing than the other. */
+.studio-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 18px}
+.studio-tab{
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  min-height:58px;padding:10px 14px;text-align:left;cursor:pointer;
+  border:1px solid var(--btn-edge);border-radius:var(--radius);
+  background:transparent;color:var(--bone-soft);
+  font-family:var(--body);
+  transition:background .12s ease,color .12s ease,border-color .12s ease;
+}
+.studio-tab:hover{background:var(--btn-bg);color:var(--bone);border-color:var(--bone-dim)}
+.studio-tab-name{font-size:var(--fs-base);font-weight:700;letter-spacing:.01em}
+.studio-tab-sub{font-size:var(--fs-micro);opacity:.82;line-height:1.3}
+.studio-tab[aria-selected="true"]{
+  background:var(--btn-bg-hi);color:var(--bone);border-color:var(--bone-dim);
+  box-shadow:inset 0 -3px 0 var(--pink),0 1px 0 var(--hair) inset;
+}
+.studio-tab[aria-selected="true"] .studio-tab-sub{opacity:.9}
+.studio-tab:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.studio-panel[hidden]{display:none}
+
+/* ---- generate panel ------------------------------------------------------
+   The preview is the loudest thing in the sheet, because it is the answer to
+   "what am I about to move in". It is a real .sprite element driven by the same
+   animation director as the shelf, standing on a drawn plank so the footing you
+   approve here is the footing you get. */
+.gen-stage{
+  position:relative;width:100%;max-width:340px;margin:0 auto 14px;
+  min-height:262px;display:flex;align-items:flex-end;justify-content:center;
+  padding:16px 16px 0;border:1px solid var(--line);border-radius:3px;
+  background:radial-gradient(120% 78% at 50% 12%,var(--surface-hi),var(--panel-b) 78%);
+  box-shadow:0 1px 0 var(--hair) inset,0 10px 26px -14px rgba(0,0,0,.8);
+}
+/* The plank the preview stands on: same lit lip and front face as the shelf's,
+   so "standing on it" is verifiable here rather than only after saving. */
+.gen-stage::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:13px;border-radius:0 0 2px 2px;
+  background:linear-gradient(180deg,var(--wood-lip) 0 4px,var(--wood) 4px 100%);
+  box-shadow:0 -1px 0 rgba(0,0,0,.25) inset;
+}
+/* No z-index here on purpose: the plank pseudo-element comes later in tree order
+   and so paints OVER the mount, exactly as the shelf's real plank paints over
+   the slots. Feet that reach past the baseline tuck behind the wood in both
+   places, which is the whole reason the preview is trustworthy. */
+.gen-mount{
+  position:relative;width:100%;display:flex;align-items:flex-end;justify-content:center;
+}
+/* --pet-h has to land on .sprite itself, not on an ancestor: the base .sprite
+   rule declares --pet-h:124px on the element, and a declaration always beats an
+   inherited value. (.card-portrait does the same thing for the same reason.)
+   The stage is sized to leave headroom above it — horns and antlers are drawn
+   outside the viewBox on purpose and reach ~16% past the top of the box. */
+.gen-mount .sprite{--pet-h:200px;margin-bottom:13px}
+.gen-desc{
+  margin:0 0 16px;text-align:center;font-family:var(--hand);font-size:19px;line-height:1.25;
+  color:var(--bone-soft);min-height:1.25em;
+}
+.btn-wide{width:100%;justify-content:center;text-align:center}
+
+/* Palette swatches reuse .sw (the drawing tab's colour chips) so the two tabs
+   keep one visual vocabulary; only the fill differs — half body, half accent. */
+.gen-palette .sw{width:34px;height:34px}
+
+@media (max-width:560px){
+  .studio-tabs{gap:6px}
+  .studio-tab{min-height:52px;padding:9px 11px}
+  .studio-tab-name{font-size:var(--fs-small)}
+  .studio-tab-sub{display:none}
+  .gen-stage{min-height:218px;padding:12px 10px 0}
+  .gen-mount .sprite{--pet-h:160px}
+  .gen-desc{font-size:17px}
+}
+@media (max-width:400px){
+  .gen-stage{min-height:194px}
+  .gen-mount .sprite{--pet-h:140px}
+  .gen-palette .sw{width:30px;height:30px}
+}
+
+/* ===========================================================================
+   PHASE 2K — THE PHONE, AND THE FURNITURE
+   ---------------------------------------------------------------------------
+   Two jobs in one block.
+
+   1. CRAFT (every width). Three things made the page read as a website rather
+      than as a thing: a wall of identical rounded buttons, a row of dashboard
+      pills, and a shelf that was a card with lines in it. So: the cabinet grows
+      real stiles and its planks grow grain; the status line becomes a typeset
+      museum label instead of nine badges; the empty shelf becomes a pinned card
+      instead of a dashed box.
+
+   2. THE PHONE (<=640px). The shelf comes FIRST — the chrome used to eat 58% of
+      an iPhone screen before a single creature appeared. The eleven toolbar
+      buttons split into a four-item thumb dock and a bottom sheet; the status
+      line becomes one swipeable strip; the shelf keeps all SIX columns and
+      scrolls sideways instead of shrinking, so adjacency never lies.
+
+   Everything is built from the derived theme tokens (--btn-bg, --bone-soft,
+   --hair, --wood ...) because the six rooms swap the variables underneath them.
+   =========================================================================== */
+
+/* ---- 1a. the cabinet is furniture ---------------------------------------- */
+/* index.html wraps <main id="cabinet"> in .cabinet-wrap. The wrap draws the two
+   side stiles; #cabinet stays the run of shelves inside them (and, on a phone,
+   the horizontal scroller). Backgrounds do not scroll with a scroll container's
+   content, and these are on the wrap anyway, so the frame stays put while the
+   shelf slides underneath it. */
+.cabinet-wrap{position:relative;max-width:var(--shell);margin:0 auto}
+.cabinet-wrap::before,.cabinet-wrap::after{
+  content:'';position:absolute;top:1px;bottom:1px;width:10px;z-index:2;pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(0,0,0,.34) 0 1px,var(--wood-lip) 1px 3px,var(--wood) 3px 100%),
+    var(--wood);
+  box-shadow:1px 0 0 rgba(0,0,0,.34);
+}
+.cabinet-wrap::before{left:1px;border-radius:var(--radius) 0 0 var(--radius)}
+.cabinet-wrap::after{right:1px;transform:scaleX(-1);border-radius:var(--radius) 0 0 var(--radius)}
+/* Set by ui/mobileNav.js when there is more shelf past the frame. The stile
+   casts a shadow inward, so the run reads as continuing underneath it rather
+   than as simply stopping. */
+.cabinet-wrap.can-left::before{box-shadow:1px 0 0 rgba(0,0,0,.34),10px 0 15px -7px rgba(0,0,0,.8)}
+.cabinet-wrap.can-right::after{box-shadow:1px 0 0 rgba(0,0,0,.34),10px 0 15px -7px rgba(0,0,0,.8)}
+.cabinet{border-color:color-mix(in srgb,var(--wood) 34%,var(--line))}
+
+/* Grain. Redeclared in full because `background-image` alone would drop the lit
+   lip that the shorthand above sets. */
+.plank{
+  background:
+    repeating-linear-gradient(90deg,rgba(0,0,0,.06) 0 1px,rgba(255,255,255,.03) 1px 2px,transparent 2px 11px),
+    linear-gradient(180deg,var(--wood-lip) 0 5px,var(--wood) 5px 100%);
+  background:
+    repeating-linear-gradient(90deg,rgba(0,0,0,.06) 0 1px,rgba(255,255,255,.03) 1px 2px,transparent 2px 11px),
+    linear-gradient(180deg,color-mix(in srgb,var(--wood-lip) 70%,#fff) 0 2px,var(--wood-lip) 2px 6px,var(--wood) 6px 100%);
+}
+
+/* ---- 1b. the status line is a label, not a badge rail --------------------- */
+/* Nine tinted pills is a dashboard. This is one typeset line: small-caps labels
+   in the body face, figures in the display face, hairlines between. The colour
+   semantics stay exactly where the theme work put them — on the bead, plus a
+   readable --danger-ink figure, never on a tinted chip. */
+.status{gap:0;padding:9px 0;border-color:var(--hair);font-size:var(--fs-micro);letter-spacing:.085em;text-transform:uppercase}
+.status>span{
+  background:none;border:0;border-left:1px solid var(--hair);border-radius:0;
+  padding:1px 13px;gap:7px;color:var(--bone-soft);line-height:1.9;
+}
+.status>span:first-child{border-left:0;padding-left:2px}
+.status b{font-family:var(--display);font-weight:400;font-size:15px;letter-spacing:.01em;color:var(--bone)}
+.status .bad,.status .mid,.status .good,.streak-badge{background:none}
+.status .bad b{color:var(--danger-ink)}
+.status .bad::before,.status .mid::before,.status .good::before{width:7px;height:7px}
+.status .bad::before{box-shadow:0 0 0 1px var(--hair),0 0 7px var(--blood)}
+.status .mid::before{box-shadow:0 0 0 1px var(--hair),0 0 6px var(--amber)}
+.status .good::before{box-shadow:0 0 0 1px var(--hair),0 0 6px var(--mint)}
+
+/* ---- 1c. an empty shelf is a card someone left, not a dashed box ---------- */
+.empty-shelf{
+  border:0;border-radius:2px;background:var(--paper);color:#2B2028;
+  font-size:23px;line-height:1.25;padding:20px 18px 16px;margin:0 auto;
+  max-width:34ch;position:relative;transform:rotate(-.7deg);
+  box-shadow:0 2px 2px rgba(0,0,0,.22),0 12px 22px -12px rgba(0,0,0,.6);
+}
+.empty-shelf::before{
+  content:'';position:absolute;top:-7px;left:50%;margin-left:-7px;width:14px;height:14px;border-radius:50%;
+  background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.85),rgba(255,255,255,0) 46%),#B8414F;
+  box-shadow:0 2px 3px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.25);
+}
+
+/* ---- 1d. touch semantics on the creatures --------------------------------- */
+/* Was `touch-action:none`, which meant a finger landing on a pet could neither
+   scroll the page nor swipe the shelf — and pets cover most of both. Now the
+   browser owns panning until ui/drag.js decides a press is a real pick-up, at
+   which point it preventDefaults the touchmove itself. */
+.pet,.prop{touch-action:manipulation;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+
+/* ---- 1e. the toolbar's two groups ---------------------------------------- */
+/* `display:contents` is what lets the phone relocate these without a single DOM
+   move: on a desktop the wrappers vanish and the eleven buttons are the flat row
+   they always were. */
+.tb-primary,.tb-rest{display:contents}
+.tb-more,.tray-head{display:none}
+.tray-scrim[hidden],.to-shelf[hidden]{display:none}
+.to-shelf{
+  position:fixed;z-index:54;right:14px;display:none;
+  bottom:calc(var(--dock-h,64px) + 14px + env(safe-area-inset-bottom));
+  padding:9px 15px;min-height:44px;border:1px solid rgba(43,32,40,.25);border-radius:3px;
+  background:var(--paper);color:#2B2028;font-family:var(--hand);font-size:19px;line-height:1.1;
+  box-shadow:0 3px 0 rgba(0,0,0,.3),0 14px 26px -12px rgba(0,0,0,.7);
+}
+.phone-only{display:none}
+
+/* ===========================================================================
+   2. THE PHONE
+   =========================================================================== */
+@media (max-width:640px){
+  :root{--dock-h:64px}
+  body{
+    padding-top:14px;
+    padding-bottom:calc(var(--dock-h) + 34px + env(safe-area-inset-bottom));
+  }
+
+  /* ---- the masthead is a wordmark and nothing else ----------------------- */
+  /* Every action moved to the dock, so the header's whole job is to say what
+     this is. The tagline is the pitch: it comes back only for someone whose
+     shelf is still empty, which is the only person it is written for. */
+  .masthead{margin:0 0 12px;align-items:center;gap:0}
+  h1{font-size:31px;margin:0;letter-spacing:-.02em}
+  .tagline{display:none}
+  body:has(.empty-shelf) .tagline{display:block;margin-top:5px;font-size:13px;max-width:100%}
+
+  /* ---- one swipeable strip instead of three rows of pills ---------------- */
+  .status{
+    margin-bottom:11px;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;
+    scrollbar-width:none;padding:8px 0;
+    -webkit-mask-image:linear-gradient(90deg,#000 0 90%,transparent 100%);
+            mask-image:linear-gradient(90deg,#000 0 90%,transparent 100%);
+  }
+  .status::-webkit-scrollbar{display:none}
+  .status>span{padding:1px 11px;flex:none}
+  .status b{font-size:14px}
+
+  /* ---- THE SHELF: six columns, larger creatures, swiped sideways ---------- */
+  /* The hard constraint: pets feud with whoever is immediately left/right of
+     them in the same row of six. Re-flowing to three columns would show two pets
+     as neighbours who are not, and hide two who are — it would lie about the
+     game state. So the columns stay six and stop being fluid: each is a fixed,
+     legible width and the run scrolls past the frame, exactly like reaching the
+     end of a real shelf. Every pet is still reachable, still droppable (drag.js
+     auto-scrolls the run at the edges) and still truthfully adjacent. */
+  .cabinet-wrap{margin-left:0;margin-right:0}
+  #cabinet{
+    margin:0;border-radius:var(--radius);padding:12px 12px 6px;
+    overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
+    scroll-snap-type:x proximity;scroll-padding-left:12px;scrollbar-width:none;
+  }
+  #cabinet::-webkit-scrollbar{display:none}
+  #cabinet::before{display:none}          /* the vignette would scroll away */
+  .shelf-row{
+    --slot-w:clamp(102px,32.5vw,152px);
+    --slot-h:calc(var(--slot-w) * 1.14);
+    --plank-h:13px;--label-drop:34px;
+    width:max-content;min-width:100%;
+  }
+  .slots{grid-template-columns:repeat(6,var(--slot-w));gap:5px;padding:0}
+  .slot{scroll-snap-align:start}
+  /* --pet-h is declared on .sprite itself upstream, so it has to be overridden
+     there rather than inherited from the row. --slot-w still inherits down. */
+  .sprite{--pet-h:calc(var(--slot-w) * .95)}
+  .pet .nameplate,.prop .nameplate{font-size:11px;letter-spacing:.01em;left:-3px;right:-3px;top:calc(100% + var(--plank-h) + 6px)}
+  .pips{top:calc(100% + var(--plank-h) + 22px);gap:4px}
+  .pip{width:7px;height:7px}
+  .prop svg{width:calc(var(--slot-w) * .62);height:calc(var(--slot-w) * .62)}
+  .shelf-row.row-empty{--slot-h:52px;--label-drop:16px}
+  /* The "nothing lives here yet" card must not be stretched across six fixed
+     columns — that would park it off-screen to the right. */
+  .slots:has(.empty-shelf){grid-template-columns:1fr}
+  .shelf-row:has(.empty-shelf){width:100%;min-width:0}
+  .empty-shelf{font-size:21px;padding:18px 14px 14px}
+
+  /* ---- the dock: three primary actions, inside thumb reach --------------- */
+  /* Eleven equal-weight buttons is a desktop toolbar. On a 844px-tall phone the
+     three things a player actually does were the hardest things to reach. */
+  .toolbar{display:contents}
+  .tb-primary{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:55;
+    gap:0;align-items:stretch;
+    padding:7px 9px calc(7px + env(safe-area-inset-bottom));
+    padding-left:calc(9px + env(safe-area-inset-left));
+    padding-right:calc(9px + env(safe-area-inset-right));
+    background:linear-gradient(180deg,color-mix(in srgb,var(--bone) 7%,var(--panel-a)),var(--panel-b));
+    border-top:1px solid var(--btn-edge);
+    box-shadow:0 -1px 0 var(--hair) inset,0 -12px 26px -16px rgba(0,0,0,.95);
+  }
+  .tb-primary .btn{
+    flex:1 1 0;min-width:0;min-height:50px;
+    flex-direction:column;justify-content:center;gap:0;text-align:center;
+    padding:6px 4px;font-size:12.5px;line-height:1.16;letter-spacing:.005em;
+    background:transparent;border:0;color:var(--bone-soft);box-shadow:none;border-radius:3px;
+  }
+  .tb-primary .btn:not(.btn-primary)+.btn{border-left:1px solid var(--hair)}
+  .tb-primary .btn:hover,.tb-primary .btn:active{background:var(--btn-bg);color:var(--bone);border-color:var(--hair)}
+  /* One loud thing. "Make a pet" is the whole point of the game and gets the
+     accent; the rest are quiet labels on the same rail. */
+  .tb-primary .btn-primary{
+    flex:1.3 1 0;color:var(--accent-ink);background:var(--pink);border:1px solid var(--pink);
+    font-weight:700;box-shadow:0 1px 0 rgba(255,255,255,.28) inset,0 2px 8px rgba(0,0,0,.25);
+  }
+  .tb-primary .btn-primary:hover,.tb-primary .btn-primary:active{background:var(--pink);color:var(--accent-ink)}
+  .tb-more{display:inline-flex}
+
+  /* ---- the rest, in a sheet ---------------------------------------------- */
+  .tb-rest{
+    display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;
+    position:fixed;left:0;right:0;bottom:0;z-index:58;max-height:82vh;overflow-y:auto;
+    padding:0 14px calc(20px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg,var(--panel-a),var(--panel-b));
+    border-top:1px solid var(--btn-edge);border-radius:16px 16px 0 0;
+    box-shadow:0 -26px 60px -22px rgba(0,0,0,.85);
+    transform:translateY(101%);opacity:0;visibility:hidden;pointer-events:none;
+    transition:transform .24s cubic-bezier(.32,1,.45,1),opacity .16s ease,visibility 0s linear .24s;
+  }
+  .tb-rest.open{transform:none;opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s}
+  .tray-head{
+    display:flex;flex:0 0 100%;align-items:center;justify-content:space-between;gap:12px;
+    position:sticky;top:0;z-index:2;margin:0 -14px 4px;padding:22px 14px 12px;
+    background:var(--panel-a);border-bottom:1px solid var(--rule);
+  }
+  .tray-head h2{font-family:var(--display);font-weight:400;font-size:22px;margin:0;line-height:1.1}
+  .tray-head::before{
+    content:'';position:absolute;left:50%;top:9px;transform:translateX(-50%);
+    width:38px;height:4px;border-radius:99px;background:var(--btn-edge);
+  }
+  .tb-rest .btn{flex:1 1 45%;min-height:48px;justify-content:flex-start;padding:10px 14px;font-size:14px}
+  .tray-scrim{
+    position:fixed;inset:0;z-index:57;background:rgba(10,6,14,.62);
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+  }
+  .to-shelf{display:block}
+  .phone-only{display:inline}
+
+  /* ---- notes: one column, one comfortable measure ------------------------ */
+  .notes{
+    grid-template-columns:1fr;gap:30px 0;margin-left:0;margin-right:0;
+    padding:28px 16px 22px;border:1px solid var(--line);border-radius:var(--radius);
+  }
+  .notes-head{margin:32px auto 12px}
+  .note{
+    font-size:21px;line-height:30px;padding:24px 18px 14px;
+    background-image:repeating-linear-gradient(180deg,transparent 0 29px,rgba(43,32,40,.075) 29px 30px);
+  }
+  .note--doc{font-size:15px;line-height:1.5}
+  .notes-empty{font-size:20px;line-height:1.35}
+
+  /* ---- veils become phone sheets ----------------------------------------- */
+  /* Not a shrunken desktop modal: a sheet that rises from the bottom edge, keeps
+     its heading (and its Close) pinned while the body scrolls, and ends above
+     the home indicator rather than under it. */
+  .veil{padding:0}
+  .sheet{
+    max-width:none;margin:9vh 0 0;min-height:91vh;
+    border-radius:16px 16px 0 0;border-left:0;border-right:0;border-bottom:0;
+    padding:0 16px calc(26px + env(safe-area-inset-bottom));
+  }
+  .sheet-head{
+    position:sticky;top:0;z-index:3;margin:0 -16px 16px;padding:22px 16px 13px;
+    background:var(--panel-a);border-bottom:1px solid var(--rule);
+  }
+  .sheet-head::before{
+    content:'';position:absolute;left:50%;top:9px;transform:translateX(-50%);
+    width:38px;height:4px;border-radius:99px;background:var(--btn-edge);
+  }
+  .card-portrait{width:164px;height:164px}
+  .card-portrait .sprite{--pet-h:146px}
+  .care-row{margin:16px 0 6px;gap:7px}
+  .care-row .btn{flex:1 1 0;min-width:0;padding:11px 5px;font-size:13px}
+  .card-actions{gap:8px}
+  .card-actions .btn{flex:1 1 0}
+  .prop-tray{grid-template-columns:repeat(auto-fill,minmax(94px,1fr))}
+  /* Studio: styled by class/id only, and tolerant of the panel markup changing
+     underneath it — the Grow/Draw rebuild owns that file, not this stylesheet. */
+  #studioVeil .studio-actions{
+    position:sticky;bottom:0;z-index:2;margin:18px -16px 0;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:var(--panel-b);border-top:1px solid var(--rule);gap:8px;
+  }
+  #studioVeil .studio-actions .btn{flex:1 1 0;min-width:0}
+  #studioVeil #savePet{flex:1.5 1 0}
+  #toast{bottom:calc(var(--dock-h) + 20px + env(safe-area-inset-bottom));font-size:19px}
+  footer{margin-top:26px}
+}
+
+/* ===========================================================================
+   3. LANDSCAPE, AND OTHER SHORT VIEWPORTS
+   A phone on its side has ~390px of height. Nothing here may be taller than it
+   has to be, and a sheet that starts 9vh down would have no room left at all.
+   =========================================================================== */
+@media (orientation:landscape) and (max-height:520px){
+  body{padding-top:12px}
+  .masthead{margin-bottom:9px;align-items:center}
+  h1{font-size:26px;margin:0}
+  .tagline,body:has(.empty-shelf) .tagline{display:none}
+  .status{margin-bottom:9px;padding:6px 0}
+  .shelf-row{--slot-h:118px;--label-drop:30px}
+  .sprite{--pet-h:96px}
+  .veil{padding:0}
+  .sheet{margin-top:0;min-height:100vh;border-radius:0}
+  .gen-stage{min-height:150px}
+  .gen-mount{--pet-h:120px}
+}
+/* Wide-but-short (a phone on its side is usually 650-950px across, so it misses
+   the phone block entirely): the eleven buttons stay one scrollable row rather
+   than wrapping into four that bury the shelf. */
+@media (orientation:landscape) and (max-height:520px) and (min-width:641px){
+  .toolbar{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;padding-bottom:2px}
+  .toolbar::-webkit-scrollbar{display:none}
+  .toolbar .btn{flex:none}
+  .masthead{flex-wrap:nowrap;gap:14px}
+}
+/* Small phone on its side (568x320 and friends) is in BOTH blocks: keep the
+   dock, just make it shorter. */
+@media (orientation:landscape) and (max-height:520px) and (max-width:640px){
+  :root{--dock-h:52px}
+  .tb-primary .btn{min-height:40px;font-size:11.5px;padding:4px 3px}
+  .tb-rest{max-height:88vh}
+}

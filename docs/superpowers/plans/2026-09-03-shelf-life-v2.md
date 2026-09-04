@@ -5361,3 +5361,98 @@ safe to render anything loaded from an old save), `resolveColors()`, `describeAn
 
 Save format: store `{ seed, body, palette, parts, tune }` (or just `seed` for an
 unedited roll) — `anatomy` and `rig` are derived and rebuilt by `normalizeCreature()`.
+
+### Phase 2H: creature generator integration
+
+The generator existed and was good; nothing on the shelf used it. This phase wires
+`src/art/creatures.js` into the game as a first-class way to make a pet, alongside —
+not instead of — the freehand pad. The owner's verdict on the old shelf was that the
+pets "look like blobs", and the fix is not a better brush.
+
+#### The art model
+
+`pet.art` gains ONE optional field. There is no second pet shape, no `kind` discriminator:
+
+```js
+{ body, stamps }                  // freehand: raster data-URL + positional stamps
+{ body:'', stamps:[], creature }  // generated: a serializable creature, rendered as SVG
+```
+
+`normalizePetArt(art)` in `src/state.js` is the single funnel. It guarantees `body` and
+`stamps` exist on every pet, so every reader written before the generator — `sprite.js`'s
+raster branch, `anatomy.js`'s stamp inference, `behavior.js` — keeps the shape it expects
+and needed no changes.
+
+**A generated pet stores no raster fallback, deliberately.** Vector is the point: it stays
+crisp at any `--pet-h`, it carries the `data-part` tagging the animation director needs to
+move individual limbs, and it costs ~1.2KB of save instead of a ~9KB PNG data-URL. A
+raster thumbnail would be a second, immediately-stale source of truth for the same pet.
+
+Migration is a no-op by construction. `migratePet` gained one branch ahead of the existing
+ones: a pet carrying a creature is already current and is returned by identity, repaired
+only if a hand-edited save lost `body`/`stamps`. Every previously-saved pet takes exactly
+the path it always did, byte for byte — asserted by object identity in
+`test/artmodel.test.mjs`, not by deep-equality.
+
+#### Standing on the shelf
+
+`creatures.js` draws the shelf surface at `BASELINE` (y=42 of a `-50 -50 100 100` box), not
+at the bottom edge of the box, so a creature dropped into the sprite unaltered floats ~8%
+of its own height above the plank. `sprite.js` exports `footY(creature)` /
+`creatureFootDrop(creature)`, which answer "where is this creature's contact point" and
+hand the answer to CSS as `--sl-foot`:
+
+* legged creatures stand on `BASELINE`. Their feet routinely reach PAST it — a bird leg
+  bottoms out near y=50 — and that overhang is left to slide behind the plank, which
+  paints after the slots. Long legs then read as planted rather than as stilts.
+* a legless creature has no feet; it rests on its belly, which is `BODIES[body].base`.
+  Aligning those to `BASELINE` too would leave a lump hovering ~7 units clear of the wood.
+
+Measured across the whole shelf, every pet's rendered ink now lands within 7px of the plank
+line (raster pets included, which sit at ±2px) — the two kinds of pet are indistinguishable
+in their footing.
+
+#### Animation
+
+Nothing in the animation stack needed rewriting; it was built for this. Rendering a creature
+into `.sprite-figure` gives the director 11-15 `data-part` elements with exact
+`data-pivot-x/y` joints, and the existing CSS moves them. One line changed in
+`art/anatomy.js`: `anatomyBlock()` now also looks at `pet.art.creature.anatomy`, so gait
+and capability classes come from the creature rather than falling through to the
+legless-blob profile. (`engine/behavior.js` already read that path.)
+
+Verified in-browser: a four-legged walker, a six-legged scuttler, a tentacled oozer and a
+legless hopper on one shelf, each with the right gait, capability classes and independently
+phased legs / arms / tail / ears — sampled over time, not just asserted to exist. Raster
+pets alongside them keep whole-body motion and stamp-derived capabilities, unchanged.
+
+#### The studio: two tabs, one sheet
+
+`initStudio` keeps its exact contract (`{open, close, rebuildPalette, rebuildStamps,
+isOpen, isEmpty}`). `mode` decides only two things: which panel is visible, and which art
+shape `onSave` receives.
+
+* **Grow one** — a large live preview, "Surprise me" (full re-roll), ten "change one thing"
+  chips (Body first, then the nine `SLOT_KEYS` labels straight from the library, so a new
+  part slot appears here for free), and the twelve palettes as body/accent swatches.
+  Per-slot re-rolls go through `rerollPart`; a palette change is a pure field swap through
+  `normalizeCreature`, so picking a colour never drifts the creature you already liked.
+  `describeCreature()` sits under the preview in the handwriting face.
+* **Draw one** — the original pad, mechanically untouched.
+
+The preview is a **real sprite element** (`renderPetSprite` with a throwaway id), not a bare
+SVG, so the same animation director breathes, blinks and steps it, and it stands on a drawn
+plank matching the shelf's. What you approve is what moves in. The tabs are the same size,
+weight and colour; Grow opens first only because a new player should meet a finished
+creature rather than an empty box asking them to be an artist.
+
+CSS is appended at the end of `css/style.css` and uses the derived theme tokens
+(`--btn-bg-hi`, `--bone-soft`, `--btn-edge`, `--hair`) throughout. Contrast measured in all
+six rooms: selected tab label 5.5-6.4, unselected 7.3-12.1, description 7.3-12.1.
+
+#### Verification
+
+157 -> 172 tests with `test/artmodel.test.mjs` (art-shape funnel, migration by identity,
+JSON round-trip, anatomy resolution per gait, footing per body). In-browser at 1280px and
+375px: generator output, per-part re-rolls, save from both tabs, mixed shelf, pet card
+portrait, slot-to-slot travel, repeated "Check the shelf" — no console errors.

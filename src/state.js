@@ -30,9 +30,45 @@ export function blankState() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// The pet art model
+// ---------------------------------------------------------------------------
+// Two shapes, one optional field:
+//
+//   { body, stamps }               a FREEHAND pet — a raster data-URL body plus
+//                                  positional stamp layers. Unchanged since v4.
+//   { body:'', stamps:[], creature } a GENERATED pet — a plain serializable
+//                                  creature from src/art/creatures.js, rendered
+//                                  as vector SVG at display time.
+//
+// A generated pet deliberately stores NO raster fallback: vector is the whole
+// point (it stays crisp at any --pet-h, it carries the data-part tagging the
+// animation director needs, and it costs ~600 bytes of save instead of a ~60KB
+// PNG data-URL). `body`/`stamps` are still always present so every existing
+// reader — sprite.js's raster path, art/anatomy.js's stamp inference,
+// engine/behavior.js — keeps the shape it already expects.
+export function normalizePetArt(art) {
+  const a = art && typeof art === 'object' ? art : {};
+  const out = {
+    body: typeof a.body === 'string' ? a.body : '',
+    stamps: Array.isArray(a.stamps) ? a.stamps : []
+  };
+  if (a.creature && typeof a.creature === 'object') out.creature = a.creature;
+  return out;
+}
+
 // Upgrades a pre-v4 pet (flattened single image, no art.stamps) to the v4 shape.
 // Idempotent: a pet that already has `art.stamps` is returned unchanged.
 export function migratePet(rawPet) {
+  // A generated pet is already current; it only needs the {body,stamps} keys
+  // guaranteed present, so a save hand-edited down to just `creature` (or one
+  // written by an older/newer build) still renders and still animates.
+  if (rawPet.art && rawPet.art.creature && typeof rawPet.art.creature === 'object') {
+    if (Array.isArray(rawPet.art.stamps) && typeof rawPet.art.body === 'string') return rawPet;
+    const p = { ...rawPet, art: normalizePetArt(rawPet.art) };
+    if (typeof p.grudgeStage !== 'number') p.grudgeStage = 0;
+    return p;
+  }
   if (rawPet.art && Array.isArray(rawPet.art.stamps)) return rawPet;
   const p = { ...rawPet };
   p.art = { body: rawPet.img || '', stamps: [] };

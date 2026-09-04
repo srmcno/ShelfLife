@@ -1,8 +1,26 @@
-// Drawing studio: freehand body canvas (unchanged mechanics from the original prototype)
-// plus stamps recorded as positional data instead of being baked into canvas pixels.
+// The studio: two equal ways to make a pet, sharing one name field and one
+// "Move it in" button.
+//
+//   GROW ONE  — art/creatures.js rolls a designed vector creature; the player
+//               re-rolls the whole thing, or nudges one feature at a time, and
+//               watches a live animated preview of exactly what will stand on
+//               the shelf. Saves `{ creature }`.
+//   DRAW ONE  — the original freehand pad: a raster body canvas plus stamps
+//               recorded as positional data rather than baked into pixels.
+//               Saves `{ body, stamps }`. Mechanics unchanged.
+//
+// Neither is the "real" one. They are two tabs of the same size in the same
+// place, and the only asymmetry is which opens first — Grow, because a brand
+// new player should meet a creature that already looks like something.
+//
 // Everything here takes `state` as an explicit argument or reads the live `state`
 // import — never a hidden closure over a duplicated copy of the save data.
 import { CANVAS_SIZE, STAMP_SCALE, BASE_STAMPS, UNLOCK_STAMPS, STAMP_SVG, STAMP_LABELS } from './stamps.js';
+import {
+  generateCreature, rerollPart, normalizeCreature, describeCreature,
+  SLOTS, SLOT_KEYS, PALETTES, PALETTE_IDS, BODY_IDS
+} from './creatures.js';
+import { renderPetSprite } from './sprite.js';
 import { state } from '../state.js';
 
 // Ported verbatim from ~/Documents/shelf-life.html (lines ~475-480). Studio-only concern:
@@ -35,6 +53,17 @@ function unlockedStampKinds() {
   return out;
 }
 
+// The preview sprite is a real sprite, with a real `data-pet`, so art/animator.js
+// picks it up on its next pass and breathes/blinks/steps it exactly as it will on
+// the shelf. The id is not a valid pet id (those are `p<seq>_<base36>`), so it can
+// never collide with a resident.
+const PREVIEW_ID = 'studio-preview';
+
+const BLURB = {
+  generate: 'Roll one until it looks like trouble, then change whatever bothers you.',
+  draw: 'Draw it, stamp it, name it. It takes over from there.'
+};
+
 export function initStudio({ onSave }) {
   const studioVeil = document.getElementById('studioVeil');
   const pad = document.getElementById('pad');
@@ -49,6 +78,17 @@ export function initStudio({ onSave }) {
   const studioClose = document.getElementById('studioClose');
   const cancelPet = document.getElementById('cancelPet');
   const savePet = document.getElementById('savePet');
+
+  const studioBlurb = document.getElementById('studioBlurb');
+  const tabGenerate = document.getElementById('tabGenerate');
+  const tabDraw = document.getElementById('tabDraw');
+  const genPanel = document.getElementById('genPanel');
+  const drawPanel = document.getElementById('drawPanel');
+  const genMount = document.getElementById('genMount');
+  const genDesc = document.getElementById('genDesc');
+  const genSurprise = document.getElementById('genSurprise');
+  const genParts = document.getElementById('genParts');
+  const genPalette = document.getElementById('genPalette');
 
   const ctx = pad.getContext('2d');
   pad.width = CANVAS_SIZE;
@@ -70,6 +110,115 @@ export function initStudio({ onSave }) {
 
   let drawing = false;
   let lastPt = null;
+
+  // ---- generate mode ------------------------------------------------------
+  // `mode` is the single source of truth for which tab is live; it decides only
+  // two things — which panel is visible, and which art shape Save hands back.
+
+  let mode = 'generate';
+  let creature = null;
+
+  // Slot chips, in the order the SLOTS registry declares them, plus body. Body is
+  // deliberately first: it is the one change that alters the silhouette, and the
+  // labels come from the library so a new part slot appears here for free.
+  const PART_CHIPS = [{ key: 'body', label: 'Body' }]
+    .concat(SLOT_KEYS.map(k => ({ key: k, label: SLOTS[k].label })));
+
+  function renderPreview() {
+    genMount.innerHTML = '';
+    // A real sprite element, not a bare <svg>: the preview then inherits every
+    // shelf behaviour (breathing, blinking, limb idles, gait) from the same
+    // director, so what you approve here is what moves in.
+    const sprite = renderPetSprite({ id: PREVIEW_ID, art: { body: '', stamps: [], creature } });
+    sprite.classList.add('sl-mood-content');
+    genMount.appendChild(sprite);
+    genDesc.textContent = describeCreature(creature);
+  }
+
+  function setCreature(next) {
+    creature = normalizeCreature(next);
+    renderPreview();
+    syncPalette();
+  }
+
+  function syncPalette() {
+    genPalette.querySelectorAll('.sw').forEach(b => {
+      b.setAttribute('aria-pressed', String(b.dataset.palette === creature.palette));
+    });
+  }
+
+  function buildPartChips() {
+    genParts.innerHTML = '';
+    PART_CHIPS.forEach(({ key, label }) => {
+      const b = document.createElement('button');
+      b.className = 'chip';
+      b.type = 'button';
+      b.textContent = label;
+      b.addEventListener('click', () => {
+        if (key === 'body') {
+          // A new body moves every anchor, so anatomy and rig have to be rebuilt
+          // from scratch — generateCreature does that; a shallow field swap would
+          // leave a rig pointing at the old skeleton.
+          const others = BODY_IDS.filter(id => id !== creature.body);
+          const nextBody = others[Math.floor(Math.random() * others.length)];
+          setCreature(generateCreature({
+            seed: creature.seed, body: nextBody, palette: creature.palette, parts: creature.parts
+          }));
+        } else {
+          setCreature(rerollPart(creature, key));
+        }
+      });
+      genParts.appendChild(b);
+    });
+  }
+
+  function buildPalette() {
+    genPalette.innerHTML = '';
+    PALETTE_IDS.forEach(id => {
+      const p = PALETTES[id];
+      const b = document.createElement('button');
+      b.className = 'sw';
+      b.type = 'button';
+      b.dataset.palette = id;
+      // Body over accent: the two colours that actually change the read of a
+      // creature, so the swatch is a preview rather than a label.
+      b.style.background = `linear-gradient(135deg, ${p.body} 0 58%, ${p.accent} 58% 100%)`;
+      b.setAttribute('aria-label', p.name);
+      b.title = p.name;
+      b.addEventListener('click', () => {
+        // Palette is pure colour: keep every rolled part, seed and tune exactly
+        // as they are rather than regenerating and drifting the creature.
+        setCreature(Object.assign({}, creature, { palette: id }));
+      });
+      genPalette.appendChild(b);
+    });
+  }
+
+  genSurprise.addEventListener('click', () => setCreature(generateCreature()));
+
+  // ---- tabs ---------------------------------------------------------------
+
+  function setMode(next) {
+    mode = next === 'draw' ? 'draw' : 'generate';
+    const gen = mode === 'generate';
+    tabGenerate.setAttribute('aria-selected', String(gen));
+    tabDraw.setAttribute('aria-selected', String(!gen));
+    genPanel.hidden = !gen;
+    drawPanel.hidden = gen;
+    studioBlurb.textContent = BLURB[mode];
+  }
+
+  tabGenerate.addEventListener('click', () => setMode('generate'));
+  tabDraw.addEventListener('click', () => setMode('draw'));
+  [tabGenerate, tabDraw].forEach(tab => {
+    tab.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      const next = mode === 'generate' ? 'draw' : 'generate';
+      setMode(next);
+      (next === 'generate' ? tabGenerate : tabDraw).focus();
+    });
+  });
 
   function padPos(e) {
     const r = pad.getBoundingClientRect();
@@ -244,6 +393,10 @@ export function initStudio({ onSave }) {
     brush.stamp = null;
     rebuildPalette(unlockedBond);
     rebuildStamps(unlockedBond);
+    // A fresh roll every time the studio opens: the first thing a player sees is
+    // a finished creature, not an empty box asking them to be an artist.
+    setMode('generate');
+    setCreature(generateCreature());
     studioVeil.classList.add('open');
     document.body.style.overflow = 'hidden';
   }
@@ -251,6 +404,10 @@ export function initStudio({ onSave }) {
   function close() {
     studioVeil.classList.remove('open');
     document.body.style.overflow = '';
+    // Drop the preview sprite. art/animator.js scans the whole document each
+    // pass, and a closed studio should not leave a pet it has to keep animating.
+    // open() rolls a fresh one anyway.
+    genMount.innerHTML = '';
   }
 
   function isOpen() {
@@ -260,12 +417,21 @@ export function initStudio({ onSave }) {
   studioClose.addEventListener('click', close);
   cancelPet.addEventListener('click', close);
   savePet.addEventListener('click', () => {
+    const name = (petName.value || '').trim();
+    if (mode === 'generate') {
+      if (!creature) return;
+      onSave({ creature }, name);
+      close();
+      return;
+    }
     if (isEmpty()) return;
     const art = { body: padThumb(), stamps: stamps.map(s => ({ ...s })) };
-    const name = (petName.value || '').trim();
     onSave(art, name);
     close();
   });
+
+  buildPartChips();
+  buildPalette();
 
   return { open, close, rebuildPalette, rebuildStamps, isOpen, isEmpty };
 }

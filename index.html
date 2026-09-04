@@ -65,34 +65,65 @@
     <div class="sheet-head">
       <div>
         <h2>Make a pet</h2>
-        <div class="card-meta">Draw it, stamp it, name it. It takes over from there.</div>
+        <div class="card-meta" id="studioBlurb">Grow one, or draw one. Name it. It takes over from there.</div>
       </div>
       <button class="btn btn-ghost btn-sm" id="studioClose">Close</button>
     </div>
-    <div class="pad-wrap"><canvas id="pad"></canvas><div id="stampLayer" class="stamp-preview-layer"></div></div>
-    <div class="tool-block">
-      <div class="tool-label">Color</div>
-      <div class="swatches" id="swatches"></div>
+
+    <div class="studio-tabs" role="tablist" aria-label="How to make a pet">
+      <button class="studio-tab" id="tabGenerate" role="tab" aria-selected="true" aria-controls="genPanel">
+        <span class="studio-tab-name">Grow one</span>
+        <span class="studio-tab-sub">Roll a body and nudge it</span>
+      </button>
+      <button class="studio-tab" id="tabDraw" role="tab" aria-selected="false" aria-controls="drawPanel">
+        <span class="studio-tab-name">Draw one</span>
+        <span class="studio-tab-sub">Freehand, by your own hand</span>
+      </button>
     </div>
-    <div class="tool-block">
-      <div class="tool-label">Brush</div>
-      <div class="chiprow" id="sizes">
-        <button class="chip" data-size="6">Thin</button>
-        <button class="chip" data-size="16" aria-pressed="true">Medium</button>
-        <button class="chip" data-size="34">Fat</button>
-        <button class="chip" id="eraserChip" data-erase="1">Eraser</button>
+
+    <div class="studio-panel" id="genPanel" role="tabpanel" aria-labelledby="tabGenerate">
+      <div class="gen-stage"><div class="gen-mount" id="genMount"></div></div>
+      <p class="gen-desc" id="genDesc"></p>
+      <div class="tool-block">
+        <button class="btn btn-primary btn-wide" id="genSurprise">Surprise me</button>
+      </div>
+      <div class="tool-block">
+        <div class="tool-label">Change one thing</div>
+        <div class="chiprow" id="genParts"></div>
+      </div>
+      <div class="tool-block">
+        <div class="tool-label">Colour</div>
+        <div class="swatches gen-palette" id="genPalette"></div>
       </div>
     </div>
-    <div class="tool-block">
-      <div class="tool-label">Stamps: pick one, then tap the canvas</div>
-      <div class="chiprow" id="stamps"></div>
-    </div>
-    <div class="tool-block">
-      <div class="chiprow">
-        <button class="chip" id="undoBtn">Undo</button>
-        <button class="chip" id="clearBtn">Start over</button>
+
+    <div class="studio-panel" id="drawPanel" role="tabpanel" aria-labelledby="tabDraw" hidden>
+      <div class="pad-wrap"><canvas id="pad"></canvas><div id="stampLayer" class="stamp-preview-layer"></div></div>
+      <div class="tool-block">
+        <div class="tool-label">Color</div>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <div class="tool-block">
+        <div class="tool-label">Brush</div>
+        <div class="chiprow" id="sizes">
+          <button class="chip" data-size="6">Thin</button>
+          <button class="chip" data-size="16" aria-pressed="true">Medium</button>
+          <button class="chip" data-size="34">Fat</button>
+          <button class="chip" id="eraserChip" data-erase="1">Eraser</button>
+        </div>
+      </div>
+      <div class="tool-block">
+        <div class="tool-label">Stamps: pick one, then tap the canvas</div>
+        <div class="chiprow" id="stamps"></div>
+      </div>
+      <div class="tool-block">
+        <div class="chiprow">
+          <button class="chip" id="undoBtn">Undo</button>
+          <button class="chip" id="clearBtn">Start over</button>
+        </div>
       </div>
     </div>
+
     <div class="tool-block">
       <div class="tool-label">Name</div>
       <input type="text" id="petName" maxlength="22" placeholder="Bartholomew, Gnash, Miss Teeth...">

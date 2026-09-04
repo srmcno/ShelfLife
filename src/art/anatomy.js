@@ -7,7 +7,8 @@
 //
 // Three sources, in falling order of authority:
 //
-//  1. An explicit anatomy block, `pet.anatomy` or `pet.art.anatomy`, as
+//  1. An explicit anatomy block — `pet.anatomy`, `pet.art.anatomy`, or
+//     `pet.art.creature.anatomy` where a generated pet keeps it — as
 //     produced by a parts-based creature generator:
 //       { hasLegs, legCount, hasArms, armCount, hasWings, wingCount,
 //         hasTail, hasHead, ... }
@@ -49,6 +50,12 @@ function anatomyBlock(pet) {
   if (!pet) return null;
   if (pet.anatomy && typeof pet.anatomy === 'object') return pet.anatomy;
   if (pet.art && pet.art.anatomy && typeof pet.art.anatomy === 'object') return pet.art.anatomy;
+  // A generated pet keeps the whole creature at art.creature (see state.js's art
+  // model) rather than copying its anatomy up a level, so the creature stays the
+  // single source of truth. Same contract, one hop deeper. engine/behavior.js
+  // reads it from the same place.
+  const c = pet.art && pet.art.creature;
+  if (c && c.anatomy && typeof c.anatomy === 'object') return c.anatomy;
   return null;
 }
 

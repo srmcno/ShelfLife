@@ -1,4 +1,5 @@
 import { STAMP_SVG, STAMP_ANIM_CLASS, CANVAS_SIZE, STAMP_SCALE } from './stamps.js';
+import { renderCreatureSVG, normalizeCreature, BODIES, BASELINE, VIEW_MIN, VIEW_SIZE } from './creatures.js';
 
 // ---------------------------------------------------------------------------
 // Layered sprite DOM
@@ -53,6 +54,53 @@ function box(cls) {
   return el;
 }
 
+// ---------------------------------------------------------------------------
+// Standing on the shelf
+// ---------------------------------------------------------------------------
+// A creature is authored in a square `-50 -50 100 100` viewBox, and the bottom
+// of that box is NOT where the creature's feet are: art/creatures.js puts the
+// shelf surface at BASELINE (y=42), so a creature dropped into the sprite box
+// unaltered floats 8% of its own height above the plank.
+//
+// footY() answers "which y in art space is this creature's contact point", and
+// creatureFootDrop() turns that into the fraction of the box that has to be
+// pushed below the plank line to put it there:
+//
+//   * legged creatures stand on BASELINE, the generator's documented contract.
+//     Their feet routinely reach a few units PAST it (a bird leg bottoms out
+//     around y=50) — that overhang is deliberately left to slide behind the
+//     plank, which paints after the slots, so long legs read as planted rather
+//     than as stilts.
+//   * a legless creature has no feet; it rests on its own belly, which is what
+//     BODIES[body].base records. Aligning those to BASELINE too would leave a
+//     lump or a ghost hovering 7 units clear of the wood.
+export function footY(creature) {
+  const body = BODIES[creature && creature.body];
+  const hasLegs = !!(creature && creature.anatomy && creature.anatomy.hasLegs);
+  if (hasLegs || !body) return BASELINE;
+  return typeof body.base === 'number' ? body.base : BASELINE;
+}
+
+/** Fraction (0..1) of the sprite box that sits below the creature's feet. */
+export function creatureFootDrop(creature) {
+  return ((VIEW_MIN + VIEW_SIZE) - footY(creature)) / VIEW_SIZE;
+}
+
+// Vector path: the creature IS the artwork, so there is no <img> and no stamp
+// layers. Everything else about the sprite — the nested boxes, the personality
+// constants, the classes the director reads — is identical to the raster path,
+// which is what lets one animation director drive both.
+function appendCreature(figure, creature) {
+  const c = normalizeCreature(creature);
+  figure.insertAdjacentHTML('beforeend', renderCreatureSVG(c, { className: 'sprite-creature' }));
+  const svg = figure.lastElementChild;
+  if (svg) {
+    svg.setAttribute('aria-hidden', 'true');
+    svg.style.setProperty('--sl-foot', (creatureFootDrop(c) * 100).toFixed(3) + '%');
+  }
+  return svg;
+}
+
 export function renderPetSprite(pet) {
   const id = (pet && pet.id) || 'anon';
 
@@ -70,6 +118,18 @@ export function renderPetSprite(pet) {
 
   const act = box('sprite-act');
   const figure = box('sprite-figure');
+
+  // Generated pets render as vector and take no raster/stamp path at all.
+  // Everything before and after this branch is shared, so a creature pet gets
+  // the same breathing, the same mood postures and the same director hooks.
+  const creature = pet && pet.art && pet.art.creature;
+  if (creature) {
+    wrap.classList.add('sl-vector');
+    appendCreature(figure, creature);
+    act.appendChild(figure);
+    wrap.appendChild(act);
+    return wrap;
+  }
 
   const img = document.createElement('img');
   img.className = 'sprite-body';
