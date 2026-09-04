@@ -29,6 +29,7 @@
     <button class="btn btn-ghost btn-sm" id="incidentsBtn">Incidents</button>
     <button class="btn btn-ghost btn-sm" id="muteBtn" aria-pressed="false">🔊 Sound</button>
     <button class="btn btn-ghost btn-sm" id="narratorBtn" aria-pressed="true">🗣️ Narrator</button>
+    <button class="btn btn-ghost btn-sm" id="voiceBtn" title="Choose who reads the notes out loud.">🎙️ Voice</button>
     <button class="btn btn-ghost btn-sm" id="matureBtn" aria-pressed="false" title="Adds swearing and cruder jokes to notes. Off by default.">🔞 Mature: Off</button>
     <button class="btn btn-ghost btn-sm" id="exportBtn">Back up</button>
     <button class="btn btn-ghost btn-sm" id="importBtn">Restore</button>
@@ -38,6 +39,14 @@
 
 <div class="storage-warn" id="storageWarn" hidden>
   Saving is off in this preview window. Download the file or open the hosted link and your shelf will stick around.
+</div>
+
+<div class="voice-hint" id="voiceHint" hidden>
+  <p id="voiceHintText"></p>
+  <div class="voice-hint-actions">
+    <button class="btn btn-ghost btn-sm" id="voiceHintOpen">Show me</button>
+    <button class="btn btn-ghost btn-sm" id="voiceHintDismiss">No thanks</button>
+  </div>
 </div>
 
 <div class="status" id="statusBar"></div>
@@ -107,6 +116,27 @@
     <div class="decor-section"><h3>Shelf</h3><div class="opt-row" id="woodOpts"></div></div>
     <div class="decor-section"><h3>Trim</h3><div class="opt-row" id="accentOpts"></div></div>
     <div class="decor-section"><h3>Things for the shelf</h3><div class="prop-tray" id="propTray"></div></div>
+  </div>
+</div>
+
+<div class="veil" id="voiceVeil">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div><h2>The narrator</h2><div class="card-meta">Whoever reads the notes out loud. They did not audition.</div></div>
+      <button class="btn btn-ghost btn-sm" id="voiceClose">Close</button>
+    </div>
+    <div class="tool-block">
+      <div class="tool-label">Voice</div>
+      <select id="voiceSelect" class="voice-select" aria-label="Narrator voice"></select>
+      <div class="hint" id="voiceMeta"></div>
+    </div>
+    <div class="tool-block">
+      <div class="chiprow">
+        <button class="btn btn-sm" id="voicePreview">Hear it</button>
+        <button class="btn btn-ghost btn-sm" id="voiceAuto">Pick for me</button>
+      </div>
+    </div>
+    <div class="voice-upgrade" id="voiceUpgrade" hidden></div>
   </div>
 </div>
 

@@ -4656,3 +4656,111 @@ Empty Birdcage were redrawn after the first pass read as mush at icon size.
 the original 46. Nothing breaks (unknown ids fall through to defaults, verified by a 40-pass
 sim), but the 19 new archetypes won't participate in prop affinity or social pull until
 entries are added for them.
+
+---
+
+### Phase 2E: audio overhaul
+
+Two complaints drove this: the narrator did not sound like "a nice, natural English man",
+and the SFX were thin. Both files were rebuilt; `index.html` and `main.js` got small
+additive edits; a `.voice-*` block was appended to the end of `css/style.css`.
+
+**What is actually installed on this machine** (enumerated in the real browser, not
+assumed): 68 voices, 25 English, and exactly **one** en-GB voice — `Daniel`, local, and by
+default the low-bitrate *compact* build. No Google network voices are exposed in this
+Chromium, and no Enhanced/Premium variants are installed. Daniel is therefore the whole
+British bench, and the only real quality upgrade available is the user downloading
+**Daniel (Enhanced)** from System Settings. The game now says so instead of quietly
+sounding like a train announcement.
+
+**Narrator (`src/audio/narrator.js`)**
+
+- *Prosody*: `rate 0.95`, `pitch 0.88`, `volume 0.95`. The old code raised pitch to 1.18,
+  which is what made a British male voice sound thin and cartoonish — pitch above 1 on a
+  male voice compresses the formants and reads as "small". Lowering it slightly, at just
+  under natural rate, reads dry, plummy and deadpan, which is also the game's voice.
+  The drop is applied only to voices with some chest in them (`DEEP_VOICE`); on a lighter
+  fallback voice (Samantha, Karen) the same move just sounds muffled, so those get 0.97.
+- *Selection* is now a deterministic score, not a loose scan. Chain: the player's explicit
+  choice -> en-GB male with an enhanced/premium variant -> en-GB male (Daniel) -> any other
+  en-GB -> en-IE/AU/NZ/ZA -> en-US -> other English -> browser default. macOS's drawer of
+  joke voices (Bells, Boing, Zarvox, Fred, Bad News...) is penalised 280 points so it can
+  never win a tie; non-English voices score 0 and are never auto-selected. Verified on this
+  machine: Daniel scores 790, next best is Karen/Moira/Tessa at 400, every novelty voice 20.
+- *Async voices*: `getVoices()` is routinely empty on first call. The module listens for
+  `voiceschanged`, polls 10x at 220ms, and hard-releases after 2.5s so a browser that never
+  fires the event speaks with its default rather than going silent. Lines queued before
+  voices resolve are flushed, not dropped.
+- *Queueing*: `cancel()`-per-utterance is gone. One "Check the shelf" can add six notes;
+  they now queue with a cap of 3 pending (newest kept) and a 170ms breath between lines,
+  so a burst reads as a few complete sentences instead of six half-sentences. A poller
+  covers Chrome's habit of dropping `onend`, which would otherwise wedge the queue shut.
+- *Text prep*: em/en dashes become commas, ellipses become full stops, `&`/`%`/`/` are
+  spoken as words, markdown-ish punctuation and emoji are stripped, SHOUTED words are
+  de-capitalised (some engines spell them out letter by letter), and over-long lines are
+  cut at a sentence boundary.
+- *Voice picker*: new 🎙️ Voice toolbar button opens a veil with a grouped voice dropdown
+  (English first, best-scoring first, 69 entries here), a "Hear it" preview, "Pick for me"
+  to return to automatic, and a live read-out of the chosen voice and its prosody. The
+  choice persists through the existing `state.settings.narratorVoiceURI` +
+  `setNarratorVoice()`. A one-time hint bar under the toolbar spells out the
+  System Settings -> Accessibility -> Spoken Content -> Manage Voices -> English (UK) ->
+  Daniel (Enhanced) path, and dismisses itself for good once seen (`settings.voiceHintSeen`,
+  a new key that rides along on the existing settings object without a schema change).
+  The picker UI lives in `narrator.js` so `main.js` only gained one call.
+
+**Sound (`src/audio/sound.js`)**
+
+Everything is still synthesised at play time — no asset files, no dependencies. The
+single-oscillator blips are replaced by layered voices sharing one master chain:
+master gain -> compressor (glue, stops overlapping triggers clipping) -> out, plus a
+reverb bus fed by a procedurally generated impulse response (dark one-pole-filtered noise
+tail with four discrete early reflections: a small boxy room, not a cathedral) and a
+filtered feedback delay. Every sound routes dry/reverb/delay independently and detunes
+itself slightly per play, so repeats never sound identical.
+
+- **feed** — a wet chomp in four layers: a bright noise crunch bandpassed 2.6k->520Hz
+  through soft saturation (teeth), a resonant lowpass squelch sweeping 1.5k->240Hz (flesh),
+  a sine thud falling 138->52Hz (the jaw), and a small gulp 135ms later.
+- **fuss** — warm but watched: two detuned triangle pairs lifting a whole tone under a
+  7.5Hz tremolo purr, with a quiet sine drone a semitone above the root swelling in late
+  and drenched in reverb. The comfort never quite resolves.
+- **clean** — four pentatonic sine glints with octave shimmer, staggered 50-75ms into the
+  delay bus, over a noise swish sweeping 1.8k->7.2kHz.
+- **noteArrive** — a paper slip (highpassed noise) plus a small dry tick; the quietest
+  sound in the set because it fires most, and it steps up in pitch across a burst.
+- **feud** — a saturated minor second in the bass (D3 vs D#3) swept shut by a resonant
+  lowpass, a vibrato'd high semitone cluster shivering above it, a sub dropping 92->44Hz
+  and a filtered breath. The loudest and most dissonant thing here, deliberately.
+- **unlock** — a plucked A-minor arpeggio, each note a detuned triangle/sine stack, the
+  filter opening as it climbs and the last note left ringing in the delay.
+- **achievement** — a C-*minor* fanfare (saw+square brass stack) landing on a held
+  C/Eb/G chord, with a quiet Db sliding in underneath a beat late: triumphant, slightly wrong.
+- **error** — a low saturated A2/Bb2 buzz drooping in pitch under a 560Hz lowpass. Deadpan.
+
+Note bursts are also handled at source: `initSoundNoteHook` spreads a burst into a run of
+rising ticks 85ms apart and caps it at 4, instead of stacking six identical hits.
+
+**Verification** (no audio can be heard in this environment, so everything was proved
+another way):
+- Every sound rendered through `OfflineAudioContext` (`renderSoundOffline()`, exported for
+  exactly this) and measured: all eight are audible, none clip, and levels are matched by
+  role — note 0.058 peak, error 0.13, clean 0.14, feed 0.22, unlock 0.22, fuss 0.25,
+  achievement 0.39, feud 0.60. Audible lengths 0.05s-1.36s.
+- Graph construction asserted per sound via `getLastSound()` (node kind/count):
+  feed 20 nodes, fuss 19, clean 41, note 10, feud 27, unlock 44, achievement 60, error 13 —
+  identical live and offline.
+- All eight triggered live with the AudioContext `running`, and the three care sounds
+  triggered by real clicks on Feed/Fuss/Clean: zero console errors.
+- Burst cap proved by timestamps: 6 notes in one tick produce 4 sounds at +0/+85/+180/+255ms
+  and 2 skips.
+- Narrator: `pickBestVoice()` resolves to Daniel (en-GB, score 790) and the built utterance
+  carries voice=Daniel, lang=en-GB, rate 0.95, pitch 0.88, volume 0.95. Queue test: 6 lines
+  in -> "One." spoken first, "Two."/"Three." dropped, "Four./Five./Six." spoken in full,
+  one at a time. In the live page, "Check the shelf" produces ~2.4s of continuous narration
+  with a clean gap between lines and no mid-word cuts.
+- UI screenshotted and read back: hint bar and voice panel both legible in the game's palette.
+- **Not verifiable here**: how any of it actually *sounds*. Timbre, the feel of the chomp,
+  whether the minor fanfare lands as funny rather than sour, and whether Daniel at 0.88
+  pitch reads as dry rather than sleepy are ear judgements. The numbers above say the
+  synthesis is correct and safe, not that it is pleasant.

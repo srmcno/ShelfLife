@@ -1,62 +1,491 @@
 import { state, save, onNote } from '../state.js';
 
+/* ---------------------------------------------------------------------------
+   Shelf Life — the narrator
+   ---------------------------------------------------------------------------
+   Reads the notes out loud in the driest English voice the machine has.
+
+   Three things matter here and none of them are obvious:
+
+   1. Voice choice. getVoices() is async and frequently returns [] on the first
+      call, so nothing may pick a voice synchronously at boot. Selection is a
+      deterministic score (en-GB male, enhanced first) rather than "the first
+      thing that looks British", and the macOS novelty voices (Bells, Boing,
+      Zarvox, Fred...) are actively pushed down so they can never win a tie.
+
+   2. Prosody. The old code raised pitch to 1.18, which turns a British male
+      voice thin and cartoonish. A slightly *lowered* pitch at a near-natural
+      rate is what reads as dry, plummy and deadpan, which is the joke.
+
+   3. Queueing. One "Check the shelf" click can add half a dozen notes at once.
+      cancel()-ing per utterance chopped every line in half. Lines are queued
+      with a small cap instead, newest kept, so a burst reads as a few complete
+      sentences rather than a stutter.
+--------------------------------------------------------------------------- */
+
+const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
+
+// Tuned against Daniel (en-GB) — the only British voice most macOS installs
+// have. Slightly under natural rate, slightly under natural pitch: unhurried
+// and a bit plummy, without tipping into slow-motion or into a cartoon.
+export const PROSODY = { rate: 0.95, pitch: 0.88, lightPitch: 0.97, volume: 0.95 };
+
+// Voices with enough body that dropping the pitch reads as dry rather than muddy.
+const DEEP_VOICE = /^(daniel|arthur|oliver|george|jamie|graham|thomas|malcolm|alex|rishi|lee|aaron|gordon|reed|rocko|eddy|fred|ralph|bruce)\b/i;
+// A named English man, in rough order of how often they exist on real machines.
+const ENGLISH_MALE = /^(daniel|arthur|oliver|george|jamie|malcolm|graham|thomas|ryan)\b/i;
+const ENHANCED = /\b(enhanced|premium|neural|natural|siri)\b/i;
+// macOS ships a drawer of joke voices. They are all English. None of them narrate.
+const NOVELTY = /^(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|junior|kathy|organ|princess|ralph|superstar|trinoids|whisper|wobble|zarvox|fred|bruce|agnes|victoria|grandma|grandpa|flo|sandy|shelley|eddy|rocko|reed|junior|wobble)\b/i;
+
+const MAX_QUEUE = 3;      // pending lines, on top of the one being spoken
+const GAP_MS = 170;       // a breath between lines
+const MAX_CHARS = 320;
+const READY_TIMEOUT = 2500;
+
 let voices = [];
-let ready = false;
-const readyCallbacks = [];
+let ready = false;        // safe to pick a voice and speak
+let resolved = false;     // voices actually arrived (vs. we gave up waiting)
+let readyCallbacks = [];
+let queue = [];
+let speaking = false;
+let poller = null;
+let pumpPending = false;
+let lastUtterance = null;
 
 function refreshVoices() {
-  voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-  if (voices.length && !ready) {
-    ready = true;
-    readyCallbacks.forEach(fn => fn());
-    readyCallbacks.length = 0;
+  voices = synth ? synth.getVoices() || [] : [];
+  if (voices.length && !resolved) {
+    resolved = true;
+    markReady();
   }
+}
+
+function markReady() {
+  if (ready) return;
+  ready = true;
+  const cbs = readyCallbacks;
+  readyCallbacks = [];
+  cbs.forEach(fn => { try { fn(); } catch (e) {} });
 }
 
 export function initNarrator() {
-  if (!window.speechSynthesis) return;
+  if (!synth) return;
   refreshVoices();
-  window.speechSynthesis.addEventListener('voiceschanged', refreshVoices);
-  onNote((note) => {
-    if (isNarratorOn()) speak(note.text);
-  });
+  if (typeof synth.addEventListener === 'function') {
+    synth.addEventListener('voiceschanged', refreshVoices);
+  } else {
+    synth.onvoiceschanged = refreshVoices;
+  }
+  // voiceschanged is unreliable: it can fire before we listen, or never. Poll a
+  // few times, then give up and speak with the browser default rather than
+  // going silent forever.
+  let tries = 0;
+  const tick = setInterval(() => {
+    refreshVoices();
+    if (resolved || ++tries > 10) clearInterval(tick);
+  }, 220);
+  setTimeout(markReady, READY_TIMEOUT);
+
+  onNote(note => { if (isNarratorOn()) speak(note.text); });
+  return true;
 }
 
-function scoreVoice(v) {
-  const name = v.name.toLowerCase();
-  if (v.lang === 'en-GB' && /daniel|arthur|oliver|george|male/.test(name)) return 100;
-  if (v.lang === 'en-GB') return 80;
-  if (v.lang && v.lang.startsWith('en-GB')) return 70;
-  if (/british|uk english/.test(name)) return 65;
-  if (v.lang && v.lang.startsWith('en')) return 30;
-  return 0;
+// ---------- voice selection ----------
+
+// Fallback chain, highest first:
+//   the player's explicit choice
+//   -> en-GB male, enhanced/premium variant
+//   -> en-GB male (Daniel)
+//   -> any other en-GB voice
+//   -> en-IE / en-AU / en-NZ / en-ZA
+//   -> en-US / other English, novelty voices last
+//   -> null, meaning "let the browser use its default"
+export function scoreVoice(v) {
+  if (!v) return 0;
+  const name = v.name || '';
+  const lang = (v.lang || '').replace('_', '-');
+  let s;
+  if (/^en-GB/i.test(lang) || /\b(uk|british) english\b/i.test(name)) s = 600;
+  else if (/^en-(IE|AU|NZ|ZA)/i.test(lang)) s = 400;
+  else if (/^en-US/i.test(lang)) s = 300;
+  else if (/^en/i.test(lang)) s = 250;
+  else return 0; // never auto-select a voice that cannot read English
+  if (ENGLISH_MALE.test(name) || /\bmale\b/i.test(name)) s += 150;
+  if (ENHANCED.test(name)) s += 120;
+  if (/^daniel\b/i.test(name)) s += 40; // the known-good British man on macOS
+  // Enough to sink them below every serious voice, not enough to zero them:
+  // a score of 0 means "not usable at all", and Boing is still a last resort.
+  if (NOVELTY.test(name)) s -= 280;
+  return s;
 }
 
 export function pickBestVoice() {
-  if (state.settings.narratorVoiceURI) {
-    const chosen = voices.find(v => v.voiceURI === state.settings.narratorVoiceURI);
+  if (!voices.length) return null;
+  const wanted = state.settings.narratorVoiceURI;
+  if (wanted) {
+    // Keep the setting even if the voice is missing right now — it may still be
+    // loading, or the player may be on another machine for the afternoon.
+    const chosen = voices.find(v => v.voiceURI === wanted) || voices.find(v => v.name === wanted);
     if (chosen) return chosen;
   }
-  if (!voices.length) return null;
-  return voices.slice().sort((a, b) => scoreVoice(b) - scoreVoice(a))[0] || null;
+  let best = null;
+  let bestScore = 0;
+  voices.forEach(v => {
+    const s = scoreVoice(v);
+    if (s > bestScore) { bestScore = s; best = v; } // ties keep the earlier voice
+  });
+  return best;
+}
+
+export function prosodyFor(voice) {
+  const name = (voice && voice.name) || '';
+  return {
+    rate: PROSODY.rate,
+    // Dropping the pitch only flatters a voice with some chest in it; on a
+    // lighter voice the same move just sounds muffled.
+    pitch: DEEP_VOICE.test(name) ? PROSODY.pitch : PROSODY.lightPitch,
+    volume: PROSODY.volume
+  };
 }
 
 export function availableVoices() { return voices.slice(); }
 export function onVoicesReady(cb) { if (ready) cb(); else readyCallbacks.push(cb); }
+export function voicesResolved() { return resolved; }
 
-export function speak(text) {
-  if (!window.speechSynthesis || state.settings.muted) return;
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  const voice = pickBestVoice();
-  if (voice) utter.voice = voice;
-  utter.rate = 0.93;
-  utter.pitch = 1.18;
-  utter.volume = 0.9;
-  window.speechSynthesis.speak(utter);
+// ---------- text preparation ----------
+
+const KEEP_CAPS = new Set(['I', 'OK', 'TV', 'DNA', 'IOU', 'PS', 'RIP', 'BBC', 'NHS']);
+
+// Note text is written to be read on paper. Speech engines say "dash", spell
+// out shouted words letter by letter, and run whole paragraphs together without
+// the pauses the punctuation implies. This fixes the worst of it.
+export function prepareForSpeech(raw) {
+  let s = String(raw == null ? '' : raw);
+  s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{FE0F}\u{200D}]/gu, ' ');
+  s = s.replace(/[“”„]/g, '"').replace(/[‘’]/g, "'");
+  s = s.replace(/\s*[—–]+\s*/g, ', ');   // em/en dash -> a breath
+  s = s.replace(/…|\.{3,}/g, '. ');           // ellipsis -> a full stop
+  s = s.replace(/&/g, ' and ');
+  s = s.replace(/(\d)\s*%/g, '$1 percent');
+  s = s.replace(/(\w)\/(\w)/g, '$1 or $2');
+  s = s.replace(/[*_`~|#^<>[\]{}\\]/g, ' ');
+  s = s.replace(/\b[A-Z]{2,}\b/g, w => (KEEP_CAPS.has(w) ? w : w.charAt(0) + w.slice(1).toLowerCase()));
+  s = s.replace(/\s+([,.!?;:])/g, '$1');
+  s = s.replace(/\s+/g, ' ').trim();
+  s = s.replace(/^["'(\s]+/, '').replace(/["')\s]+$/, '').trim();
+  if (!s) return '';
+  if (s.length > MAX_CHARS) {
+    const head = s.slice(0, MAX_CHARS);
+    const stop = Math.max(head.lastIndexOf('. '), head.lastIndexOf('! '), head.lastIndexOf('? '));
+    s = (stop > 60 ? head.slice(0, stop + 1) : head.slice(0, head.lastIndexOf(' '))).trim();
+  }
+  if (!/[.!?"']$/.test(s)) s += '.';
+  return s;
 }
 
+// ---------- speaking ----------
+
+export function buildUtterance(text) {
+  const u = new SpeechSynthesisUtterance(text);
+  const voice = pickBestVoice();
+  if (voice) {
+    u.voice = voice;
+    if (voice.lang) u.lang = voice.lang;
+  }
+  const p = prosodyFor(voice);
+  u.rate = p.rate;
+  u.pitch = p.pitch;
+  u.volume = p.volume;
+  return u;
+}
+
+export function speak(text, opts) {
+  const o = opts || {};
+  if (!synth) return false;
+  if (state.settings.muted && !o.force) return false;
+  const line = prepareForSpeech(text);
+  if (!line) return false;
+  if (o.immediate) {
+    queue.length = 0;
+    stopSpeech();
+  }
+  queue.push(line);
+  // A burst of notes should not become a five-minute monologue. Keep the newest.
+  if (queue.length > MAX_QUEUE) queue.splice(0, queue.length - MAX_QUEUE);
+  pump();
+  return true;
+}
+
+export const PREVIEW_LINE =
+  'It has been three days. The shelf remembers, even if you do not.';
+
+// The voice-picker preview: jumps the queue and ignores the mute button,
+// because the player just pressed a button that says "hear it".
+export function speakPreview(text) {
+  return speak(text || PREVIEW_LINE, { immediate: true, force: true });
+}
+
+function pump() {
+  if (!synth || speaking || !queue.length) return;
+  if (!ready) {
+    if (!pumpPending) {
+      pumpPending = true;
+      onVoicesReady(() => { pumpPending = false; pump(); });
+    }
+    return;
+  }
+  const line = queue.shift();
+  const u = buildUtterance(line);
+  lastUtterance = u;
+  speaking = true;
+  u.onend = finish;
+  u.onerror = finish;
+  try {
+    synth.speak(u);
+  } catch (e) {
+    finish();
+    return;
+  }
+  watch(line);
+}
+
+function finish() {
+  if (!speaking) return;
+  speaking = false;
+  unwatch();
+  if (queue.length) setTimeout(pump, GAP_MS);
+}
+
+// Chrome drops `onend` often enough that a queue relying on it alone can wedge
+// shut. Poll the engine, and hard-stop after a generous estimate of the line's
+// own length so a lost event costs one pause, not the rest of the session.
+function watch(line) {
+  unwatch();
+  const words = line.split(/\s+/).length;
+  const estimate = (words / (2.6 * PROSODY.rate)) * 1000 + 2500;
+  const startedAt = Date.now();
+  poller = setInterval(() => {
+    const elapsed = Date.now() - startedAt;
+    if (elapsed > 400 && !synth.speaking && !synth.pending) finish();
+    else if (elapsed > estimate) { try { synth.cancel(); } catch (e) {} finish(); }
+  }, 300);
+}
+
+function unwatch() {
+  if (poller) { clearInterval(poller); poller = null; }
+}
+
+export function stopSpeech() {
+  queue.length = 0;
+  unwatch();
+  speaking = false;
+  if (synth) { try { synth.cancel(); } catch (e) {} }
+}
+
+export function narratorDebug() {
+  const voice = pickBestVoice();
+  return {
+    voiceCount: voices.length,
+    resolved, ready, speaking, queued: queue.length,
+    chosen: voice ? { name: voice.name, lang: voice.lang, uri: voice.voiceURI, score: scoreVoice(voice) } : null,
+    last: lastUtterance
+      ? { text: lastUtterance.text, voice: lastUtterance.voice && lastUtterance.voice.name, rate: lastUtterance.rate, pitch: lastUtterance.pitch, volume: lastUtterance.volume }
+      : null
+  };
+}
+
+// ---------- settings ----------
+
 export function isNarratorOn() { return !!state.settings.narratorOn; }
-export function setNarratorOn(v) { state.settings.narratorOn = !!v; save(); }
+export function setNarratorOn(v) {
+  state.settings.narratorOn = !!v;
+  if (!state.settings.narratorOn) stopSpeech();
+  save();
+}
 export function toggleNarrator() { setNarratorOn(!isNarratorOn()); return isNarratorOn(); }
-export function setNarratorVoice(voiceURI) { state.settings.narratorVoiceURI = voiceURI || null; save(); }
+export function setNarratorVoice(voiceURI) {
+  state.settings.narratorVoiceURI = voiceURI || null;
+  save();
+}
+
+// ---------- quality hint ----------
+
+// The honest state of things on a stock Mac: exactly one British voice exists,
+// Daniel, and by default it is the low-bitrate "compact" build. Installing the
+// enhanced one is a two-minute job and the single biggest improvement available,
+// so say so once instead of quietly sounding like a train announcement.
+export function voiceQualityHint() {
+  const v = pickBestVoice();
+  const mac = typeof navigator !== 'undefined' &&
+    /mac/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent);
+  if (!v) return null;
+  if (ENHANCED.test(v.name)) return null;
+  if (/^daniel\b/i.test(v.name)) {
+    return {
+      id: 'daniel-enhanced',
+      short: 'The narrator is Daniel, the compact British voice. There is a much better version of him going spare.',
+      steps: mac
+        ? ['System Settings', 'Accessibility', 'Spoken Content', 'System Voice', 'Manage Voices', 'English (UK)', 'Daniel (Enhanced)']
+        : null,
+      detail: mac
+        ? 'Download Daniel (Enhanced), then reopen this page and pick him below. Same man, considerably less robot.'
+        : 'Install a higher quality English (UK) voice in your system settings, then reopen this page and pick it below.'
+    };
+  }
+  if (!/^en-GB/i.test(v.lang || '')) {
+    return {
+      id: 'no-en-gb',
+      short: 'No British voice is installed, so the narrator is ' + v.name + '.',
+      steps: mac
+        ? ['System Settings', 'Accessibility', 'Spoken Content', 'System Voice', 'Manage Voices', 'English (UK)', 'Daniel (Enhanced)']
+        : null,
+      detail: 'Install an English (UK) voice in your system settings and the narrator will switch to it automatically.'
+    };
+  }
+  return null;
+}
+
+/* ---------------------------------------------------------------------------
+   Voice picker UI
+
+   Lives here rather than in main.js so the whole narrator, including the bit
+   the player touches, is one file. Every element is optional: if the markup
+   isn't there, this quietly does nothing.
+--------------------------------------------------------------------------- */
+
+function voiceLabel(v) {
+  const tags = [];
+  if (/^en-GB/i.test(v.lang || '')) tags.push('British');
+  if (ENHANCED.test(v.name)) tags.push('enhanced');
+  if (!v.localService) tags.push('online');
+  return v.name + ' (' + (v.lang || '??') + (tags.length ? ', ' + tags.join(', ') : '') + ')';
+}
+
+export function initNarratorUI() {
+  if (typeof document === 'undefined') return null;
+  const btn = document.getElementById('voiceBtn');
+  const veil = document.getElementById('voiceVeil');
+  const select = document.getElementById('voiceSelect');
+  if (!btn || !veil || !select) return null;
+
+  const meta = document.getElementById('voiceMeta');
+  const upgrade = document.getElementById('voiceUpgrade');
+  const hint = document.getElementById('voiceHint');
+  const hintText = document.getElementById('voiceHintText');
+
+  function fillSelect() {
+    const list = availableVoices();
+    const best = pickBestVoice();
+    // English first, best-scoring first, everything else after — the list is
+    // 68 voices long on a stock Mac and the player wants the top of it.
+    const english = list.filter(v => /^en/i.test(v.lang || '')).sort((a, b) => scoreVoice(b) - scoreVoice(a));
+    const rest = list.filter(v => !/^en/i.test(v.lang || ''));
+    let html = '<option value="">Best available (' + (best ? best.name : 'system default') + ')</option>';
+    if (english.length) {
+      html += '<optgroup label="English">' +
+        english.map(v => '<option value="' + escapeAttr(v.voiceURI) + '">' + escapeText(voiceLabel(v)) + '</option>').join('') +
+        '</optgroup>';
+    }
+    if (rest.length) {
+      html += '<optgroup label="Other languages">' +
+        rest.map(v => '<option value="' + escapeAttr(v.voiceURI) + '">' + escapeText(voiceLabel(v)) + '</option>').join('') +
+        '</optgroup>';
+    }
+    select.innerHTML = html;
+    select.value = state.settings.narratorVoiceURI || '';
+    if (select.value !== (state.settings.narratorVoiceURI || '')) select.value = '';
+    describe();
+  }
+
+  function describe() {
+    if (!meta) return;
+    const v = pickBestVoice();
+    if (!v) {
+      meta.textContent = availableVoices().length
+        ? 'No English voice found. The browser will use its own default.'
+        : 'Still asking the system what voices it has.';
+      return;
+    }
+    const auto = !state.settings.narratorVoiceURI;
+    const p = prosodyFor(v);
+    meta.textContent = (auto ? 'Chosen for you: ' : 'Your pick: ') + v.name + ' (' + (v.lang || '??') + '). ' +
+      'Rate ' + p.rate + ', pitch ' + p.pitch + '. ' +
+      (isNarratorOn() ? '' : 'The narrator is currently switched off.');
+    const up = voiceQualityHint();
+    if (upgrade) {
+      if (up) {
+        upgrade.hidden = false;
+        upgrade.innerHTML = '<b>' + escapeText(up.short) + '</b>' +
+          (up.steps ? '<div class="voice-steps">' + up.steps.map(escapeText).join(' <span aria-hidden="true">&rsaquo;</span> ') + '</div>' : '') +
+          '<p>' + escapeText(up.detail) + '</p>';
+      } else {
+        upgrade.hidden = true;
+        upgrade.innerHTML = '';
+      }
+    }
+  }
+
+  function open() {
+    fillSelect();
+    veil.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    dismissHint();
+  }
+  function close() {
+    veil.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function dismissHint() {
+    if (hint) hint.hidden = true;
+    if (!state.settings.voiceHintSeen) { state.settings.voiceHintSeen = true; save(); }
+  }
+
+  btn.addEventListener('click', open);
+  veil.addEventListener('click', e => { if (e.target === veil) close(); });
+  const closeBtn = document.getElementById('voiceClose');
+  if (closeBtn) closeBtn.addEventListener('click', close);
+
+  select.addEventListener('change', () => {
+    setNarratorVoice(select.value || null);
+    describe();
+    speakPreview();
+  });
+
+  const preview = document.getElementById('voicePreview');
+  if (preview) preview.addEventListener('click', () => speakPreview());
+
+  const auto = document.getElementById('voiceAuto');
+  if (auto) auto.addEventListener('click', () => {
+    setNarratorVoice(null);
+    fillSelect();
+    speakPreview();
+  });
+
+  onVoicesReady(() => {
+    fillSelect();
+    if (!hint || !hintText) return;
+    const up = voiceQualityHint();
+    if (!up || state.settings.voiceHintSeen) return;
+    hintText.textContent = up.short + ' ' + up.detail;
+    hint.hidden = false;
+  });
+  if (typeof synth !== 'undefined' && synth && typeof synth.addEventListener === 'function') {
+    synth.addEventListener('voiceschanged', () => { if (veil.classList.contains('open')) fillSelect(); });
+  }
+
+  const hintOpen = document.getElementById('voiceHintOpen');
+  if (hintOpen) hintOpen.addEventListener('click', open);
+  const hintDismiss = document.getElementById('voiceHintDismiss');
+  if (hintDismiss) hintDismiss.addEventListener('click', dismissHint);
+
+  return { open, close, refresh: fillSelect };
+}
+
+function escapeText(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escapeAttr(s) {
+  return escapeText(s).replace(/"/g, '&quot;');
+}

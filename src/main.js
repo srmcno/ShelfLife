@@ -15,7 +15,7 @@ import { renderAll, renderStatus, renderShelf, renderNotes, escapeHtml } from '.
 import { toast } from './ui/toast.js';
 import { openCard, closeCard, getOpenPetId } from './ui/card.js';
 import { initSoundNoteHook, isMuted, toggleMuted } from './audio/sound.js';
-import { initNarrator, isNarratorOn, toggleNarrator } from './audio/narrator.js';
+import { initNarrator, initNarratorUI, isNarratorOn, toggleNarrator, stopSpeech } from './audio/narrator.js';
 
 // ---------- pet generation (ported from the original prototype's rollTraits/rollStats/makeBio) ----------
 
@@ -156,7 +156,7 @@ function syncAudioButtons() {
   matureBtn.setAttribute('aria-pressed', String(!!state.settings.matureMode));
   matureBtn.textContent = state.settings.matureMode ? '🔞 Mature: On' : '🔞 Mature: Off';
 }
-muteBtn.addEventListener('click', () => { toggleMuted(); syncAudioButtons(); });
+muteBtn.addEventListener('click', () => { if (toggleMuted()) stopSpeech(); syncAudioButtons(); });
 narratorBtn.addEventListener('click', () => { toggleNarrator(); syncAudioButtons(); });
 matureBtn.addEventListener('click', () => {
   state.settings.matureMode = !state.settings.matureMode;
@@ -203,6 +203,7 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 initDecorUI(state);
 initDrag(state);
 initNarrator();
+initNarratorUI();
 initSoundNoteHook();
 
 document.addEventListener('keydown', e => {
@@ -211,6 +212,7 @@ document.addEventListener('keydown', e => {
   studio.close();
   closeIncidents();
   document.getElementById('decorVeil').classList.remove('open');
+  document.getElementById('voiceVeil').classList.remove('open');
   document.body.style.overflow = '';
 });
 
