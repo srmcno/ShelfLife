@@ -41,38 +41,46 @@ export function migratePet(rawPet) {
   return p;
 }
 
+// Shared by load() (parsing from Store) and main.js's import/restore flow
+// (parsing from an uploaded backup file) so both go through identical
+// migration/defaulting logic. Returns null if `raw` isn't a usable save shape.
+export function normalizeState(raw) {
+  if (!raw || !Array.isArray(raw.pets)) return null;
+  const s = raw;
+  s.v = 4;
+  s.notes = Array.isArray(s.notes) ? s.notes : [];
+  s.seq = s.seq || (s.pets.length + 1);
+  s.lastTick = s.lastTick || Date.now();
+  s.started = s.started || Date.now();
+  s.seenUnlocks = Array.isArray(s.seenUnlocks) ? s.seenUnlocks : [];
+  s.props = Array.isArray(s.props) ? s.props : [];
+  s.decor = Object.assign(defaultDecor(), s.decor || {});
+  s.achievements = Array.isArray(s.achievements) ? s.achievements : [];
+  s.feudArcs = s.feudArcs && typeof s.feudArcs === 'object' ? s.feudArcs : {};
+  s.streak = s.streak && typeof s.streak === 'object' ? Object.assign(defaultStreak(), s.streak) : defaultStreak();
+  s.settings = s.settings && typeof s.settings === 'object' ? Object.assign(defaultSettings(), s.settings) : defaultSettings();
+  if (!Array.isArray(s.slots) || s.slots.length !== SLOT_COUNT) {
+    const slots = new Array(SLOT_COUNT).fill(null);
+    s.pets.forEach((p, i) => { if (i < SLOT_COUNT) slots[i] = p.id; });
+    s.slots = slots;
+  }
+  s.pets = s.pets.map(migratePet);
+  s.pets.forEach(p => {
+    if (!p.needs) p.needs = defaultNeeds();
+    if (typeof p.bond !== 'number') p.bond = 0;
+    if (typeof p.cared !== 'number') p.cared = 0;
+    if (typeof p.grudges !== 'number') p.grudges = 0;
+    if (typeof p.grudgeStage !== 'number') p.grudgeStage = 0;
+  });
+  return s;
+}
+
 export function load() {
   try {
     const raw = Store.get(SAVE_KEY) || Store.get('shelflife.v2') || Store.get('shelflife.v1');
     if (!raw) return blankState();
-    const s = JSON.parse(raw);
-    if (!s || !Array.isArray(s.pets)) return blankState();
-    s.v = 4;
-    s.notes = Array.isArray(s.notes) ? s.notes : [];
-    s.seq = s.seq || (s.pets.length + 1);
-    s.lastTick = s.lastTick || Date.now();
-    s.started = s.started || Date.now();
-    s.seenUnlocks = Array.isArray(s.seenUnlocks) ? s.seenUnlocks : [];
-    s.props = Array.isArray(s.props) ? s.props : [];
-    s.decor = Object.assign(defaultDecor(), s.decor || {});
-    s.achievements = Array.isArray(s.achievements) ? s.achievements : [];
-    s.feudArcs = s.feudArcs && typeof s.feudArcs === 'object' ? s.feudArcs : {};
-    s.streak = s.streak && typeof s.streak === 'object' ? Object.assign(defaultStreak(), s.streak) : defaultStreak();
-    s.settings = s.settings && typeof s.settings === 'object' ? Object.assign(defaultSettings(), s.settings) : defaultSettings();
-    if (!Array.isArray(s.slots) || s.slots.length !== SLOT_COUNT) {
-      const slots = new Array(SLOT_COUNT).fill(null);
-      s.pets.forEach((p, i) => { if (i < SLOT_COUNT) slots[i] = p.id; });
-      s.slots = slots;
-    }
-    s.pets = s.pets.map(migratePet);
-    s.pets.forEach(p => {
-      if (!p.needs) p.needs = defaultNeeds();
-      if (typeof p.bond !== 'number') p.bond = 0;
-      if (typeof p.cared !== 'number') p.cared = 0;
-      if (typeof p.grudges !== 'number') p.grudges = 0;
-      if (typeof p.grudgeStage !== 'number') p.grudgeStage = 0;
-    });
-    return s;
+    const normalized = normalizeState(JSON.parse(raw));
+    return normalized || blankState();
   } catch (e) { return blankState(); }
 }
 

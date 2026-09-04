@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { migratePet, blankState, clamp, defaultNeeds, SLOT_COUNT, petById, addNote, onNote } from '../src/state.js';
+import { migratePet, normalizeState, blankState, clamp, defaultNeeds, SLOT_COUNT, petById, addNote, onNote } from '../src/state.js';
 
 test('clamp bounds a value', () => {
   assert.equal(clamp(150, 0, 100), 100);
@@ -32,6 +32,18 @@ test('migratePet upgrades a v3 flattened-image pet', () => {
 test('migratePet is idempotent on a v4 pet', () => {
   const v4 = { id: 'p2', name: 'Doreen', art: { body: 'x', stamps: [{ kind: 'eyes', x: 10, y: 10, size: 20, rotation: 0, color: '#fff' }] } };
   assert.equal(migratePet(v4), v4);
+});
+
+test('normalizeState rejects non-save shapes and fills in every default field on a valid one', () => {
+  assert.equal(normalizeState(null), null);
+  assert.equal(normalizeState({}), null);
+  assert.equal(normalizeState({ pets: 'not-an-array' }), null);
+  const n = normalizeState({ pets: [{ id: 'p1', name: 'X', img: 'data:x' }] });
+  assert.equal(n.v, 4);
+  assert.equal(n.slots.length, SLOT_COUNT);
+  assert.equal(n.slots[0], 'p1');
+  assert.deepEqual(n.achievements, []);
+  assert.equal(n.pets[0].art.body, 'data:x');
 });
 
 test('petById finds by id in a given state, not a global', () => {

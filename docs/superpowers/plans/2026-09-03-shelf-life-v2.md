@@ -87,7 +87,7 @@ state.js:
   Store, SAVE_KEY, SLOT_COUNT, HOUR, MAX_OFFLINE_HOURS
   pick(arr), clamp(n,lo,hi)
   defaultNeeds(), defaultDecor(), defaultStreak(), defaultSettings()
-  blankState(), migratePet(rawPet), load(), save(), state, setState(next)
+  blankState(), migratePet(rawPet), normalizeState(raw), load(), save(), state, setState(next)
   onNote(listener), addNote(state, text, from, kind='note')
   petById(state,id), propById(state,id), occupant(state,id)
 
@@ -207,38 +207,46 @@ export function migratePet(rawPet) {
   return p;
 }
 
+// Shared by load() (parsing from Store) and main.js's import/restore flow
+// (parsing from an uploaded backup file) so both go through identical
+// migration/defaulting logic. Returns null if `raw` isn't a usable save shape.
+export function normalizeState(raw) {
+  if (!raw || !Array.isArray(raw.pets)) return null;
+  const s = raw;
+  s.v = 4;
+  s.notes = Array.isArray(s.notes) ? s.notes : [];
+  s.seq = s.seq || (s.pets.length + 1);
+  s.lastTick = s.lastTick || Date.now();
+  s.started = s.started || Date.now();
+  s.seenUnlocks = Array.isArray(s.seenUnlocks) ? s.seenUnlocks : [];
+  s.props = Array.isArray(s.props) ? s.props : [];
+  s.decor = Object.assign(defaultDecor(), s.decor || {});
+  s.achievements = Array.isArray(s.achievements) ? s.achievements : [];
+  s.feudArcs = s.feudArcs && typeof s.feudArcs === 'object' ? s.feudArcs : {};
+  s.streak = s.streak && typeof s.streak === 'object' ? Object.assign(defaultStreak(), s.streak) : defaultStreak();
+  s.settings = s.settings && typeof s.settings === 'object' ? Object.assign(defaultSettings(), s.settings) : defaultSettings();
+  if (!Array.isArray(s.slots) || s.slots.length !== SLOT_COUNT) {
+    const slots = new Array(SLOT_COUNT).fill(null);
+    s.pets.forEach((p, i) => { if (i < SLOT_COUNT) slots[i] = p.id; });
+    s.slots = slots;
+  }
+  s.pets = s.pets.map(migratePet);
+  s.pets.forEach(p => {
+    if (!p.needs) p.needs = defaultNeeds();
+    if (typeof p.bond !== 'number') p.bond = 0;
+    if (typeof p.cared !== 'number') p.cared = 0;
+    if (typeof p.grudges !== 'number') p.grudges = 0;
+    if (typeof p.grudgeStage !== 'number') p.grudgeStage = 0;
+  });
+  return s;
+}
+
 export function load() {
   try {
     const raw = Store.get(SAVE_KEY) || Store.get('shelflife.v2') || Store.get('shelflife.v1');
     if (!raw) return blankState();
-    const s = JSON.parse(raw);
-    if (!s || !Array.isArray(s.pets)) return blankState();
-    s.v = 4;
-    s.notes = Array.isArray(s.notes) ? s.notes : [];
-    s.seq = s.seq || (s.pets.length + 1);
-    s.lastTick = s.lastTick || Date.now();
-    s.started = s.started || Date.now();
-    s.seenUnlocks = Array.isArray(s.seenUnlocks) ? s.seenUnlocks : [];
-    s.props = Array.isArray(s.props) ? s.props : [];
-    s.decor = Object.assign(defaultDecor(), s.decor || {});
-    s.achievements = Array.isArray(s.achievements) ? s.achievements : [];
-    s.feudArcs = s.feudArcs && typeof s.feudArcs === 'object' ? s.feudArcs : {};
-    s.streak = s.streak && typeof s.streak === 'object' ? Object.assign(defaultStreak(), s.streak) : defaultStreak();
-    s.settings = s.settings && typeof s.settings === 'object' ? Object.assign(defaultSettings(), s.settings) : defaultSettings();
-    if (!Array.isArray(s.slots) || s.slots.length !== SLOT_COUNT) {
-      const slots = new Array(SLOT_COUNT).fill(null);
-      s.pets.forEach((p, i) => { if (i < SLOT_COUNT) slots[i] = p.id; });
-      s.slots = slots;
-    }
-    s.pets = s.pets.map(migratePet);
-    s.pets.forEach(p => {
-      if (!p.needs) p.needs = defaultNeeds();
-      if (typeof p.bond !== 'number') p.bond = 0;
-      if (typeof p.cared !== 'number') p.cared = 0;
-      if (typeof p.grudges !== 'number') p.grudges = 0;
-      if (typeof p.grudgeStage !== 'number') p.grudgeStage = 0;
-    });
-    return s;
+    const normalized = normalizeState(JSON.parse(raw));
+    return normalized || blankState();
   } catch (e) { return blankState(); }
 }
 
@@ -265,7 +273,7 @@ export function occupant(state, id) { return petById(state, id) || propById(stat
 ```js
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { migratePet, blankState, clamp, defaultNeeds, SLOT_COUNT, petById, addNote, onNote } from '../src/state.js';
+import { migratePet, normalizeState, blankState, clamp, defaultNeeds, SLOT_COUNT, petById, addNote, onNote } from '../src/state.js';
 
 test('clamp bounds a value', () => {
   assert.equal(clamp(150, 0, 100), 100);
@@ -297,6 +305,18 @@ test('migratePet upgrades a v3 flattened-image pet', () => {
 test('migratePet is idempotent on a v4 pet', () => {
   const v4 = { id: 'p2', name: 'Doreen', art: { body: 'x', stamps: [{ kind: 'eyes', x: 10, y: 10, size: 20, rotation: 0, color: '#fff' }] } };
   assert.equal(migratePet(v4), v4);
+});
+
+test('normalizeState rejects non-save shapes and fills in every default field on a valid one', () => {
+  assert.equal(normalizeState(null), null);
+  assert.equal(normalizeState({}), null);
+  assert.equal(normalizeState({ pets: 'not-an-array' }), null);
+  const n = normalizeState({ pets: [{ id: 'p1', name: 'X', img: 'data:x' }] });
+  assert.equal(n.v, 4);
+  assert.equal(n.slots.length, SLOT_COUNT);
+  assert.equal(n.slots[0], 'p1');
+  assert.deepEqual(n.achievements, []);
+  assert.equal(n.pets[0].art.body, 'data:x');
 });
 
 test('petById finds by id in a given state, not a global', () => {
