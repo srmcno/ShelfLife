@@ -4053,3 +4053,229 @@ git commit -m "Add ui/card.js: pet/prop detail sheet with grudge-stage display
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
 ```
+
+### Task 13: ui/decorUI.js + ui/drag.js
+
+**Files:**
+- Create: `src/ui/decorUI.js`
+- Create: `src/ui/drag.js`
+
+**Interfaces:**
+- Consumes: `ROOMS`/`WALLS`/`WOODS`/`ACCENTS` (content/decor.js), `PROPS`/`PROP_ART` (content/props.js), `totalBond` (engine/unlocks.js), `save`/`addNote`/`defaultDecor`/`petById`/`propById` (state.js), `toast` (ui/toast.js), `renderAll`/`escapeHtml` (ui/render.js), `openCard`/`openPropCard` (ui/card.js — Task 12, built in parallel; not yet on disk when this task starts, but it will exist by the time anyone runs the page).
+- Produces: `buildDecor(state)`, `applyDecor(state)`, `initDecorUI(state)` (decorUI.js); `initDrag(state)` (drag.js).
+- DOM-facing, no automated test possible (drag physics, pointer events, veil open/close) — verified with `node --check` only here; full behavioral verification happens in Task 16's manual browser smoke test.
+
+`ui/decorUI.js` owns the decor veil's entire lifecycle itself — `initDecorUI(state)` wires `#decorBtn`'s click (build the pickers, then open the veil), `#decorClose`'s click (close it), and click-outside-to-close on `#decorVeil` — mirroring how `art/studio.js` (Task 7) owns its own veil rather than leaving that wiring to `main.js`. `placeProp` stays internal to the module (not exported); it's only reachable via a prop-tray card's click handler built inside `buildDecor`.
+
+`ui/drag.js` wraps the original prototype's module-level `drag` variable and its four `cabinet` pointer-event listeners (`pointerdown`/`pointermove`/`pointerup`/`pointercancel`) inside one `initDrag(state)` function, called once at boot. There is no `FEUD_SET` cache to maintain here — `ui/render.js` (Task 11) already calls `feudingIds(state)` fresh on every render, so a successful drop just needs `save()` (no args — it persists the module-level `state` singleton) and `renderAll(state)`. The pet drag ghost is built from `pet.art.body` (the freehand body image) — stamps are intentionally not rendered in the drag ghost, a lightweight body-only preview matching the original's "lightweight drag preview" spirit.
+
+- [ ] **Step 1: Write `src/ui/decorUI.js`**
+
+```js
+// Decor veil: room/wall/wood/accent pickers plus the prop tray. Owns its own
+// veil open/close lifecycle (mirrors art/studio.js's self-contained-widget
+// pattern) rather than leaving that wiring to main.js.
+import { ROOMS, WALLS, WOODS, ACCENTS } from '../content/decor.js';
+import { PROPS, PROP_ART } from '../content/props.js';
+import { totalBond } from '../engine/unlocks.js';
+import { save, addNote, defaultDecor } from '../state.js';
+import { toast } from './toast.js';
+import { renderAll, escapeHtml } from './render.js';
+
+// Ported verbatim from ~/Documents/shelf-life.html's optButton (~line 1339).
+// Not part of the module's export contract — only buildDecor needs it.
+function optButton(label, pressed, swatchColor, onClick, disabled) {
+  const b = document.createElement('button');
+  b.className = 'opt';
+  b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+  b.innerHTML = (swatchColor ? '<span class="dot" style="background:' + swatchColor + '"></span>' : '') + escapeHtml(label);
+  if (disabled) b.disabled = true;
+  else b.addEventListener('click', onClick);
+  return b;
+}
+
+export function applyDecor(state) {
+  const d = state.decor || defaultDecor();
+  const root = document.documentElement.style;
+  const room = ROOMS[d.room] || ROOMS.aubergine;
+  for (const k in room.vars) root.setProperty(k, room.vars[k]);
+  const wood = WOODS[d.wood] || WOODS.rosewood;
+  root.setProperty('--wood', wood.wood);
+  root.setProperty('--wood-lip', wood.lip);
+  root.setProperty('--pink', (ACCENTS[d.accent] || ACCENTS.bubblegum).c);
+  document.body.className = 'wall-' + d.wall;
+}
+
+// Not exported — only the prop-tray click handler built inside buildDecor
+// calls it, matching the original's internal-only placeProp.
+function placeProp(state, kind) {
+  const slot = state.slots.indexOf(null);
+  if (slot === -1) { toast('No room on the shelf. Move something first.'); return; }
+  const pr = { id: 'd' + (state.seq++) + '_' + Date.now().toString(36), kind: kind };
+  state.props.push(pr);
+  state.slots[slot] = pr.id;
+  addNote(state, PROPS[kind].name + ' arrived on the shelf. They are pretending not to care.', 'the shelf', 'arrival');
+  save();
+  buildDecor(state);
+  renderAll(state);
+  toast(PROPS[kind].name + ' placed. Drag it where you want it.');
+}
+
+export function buildDecor(state) {
+  const d = state.decor;
+
+  const rooms = document.getElementById('roomOpts');
+  rooms.innerHTML = '';
+  Object.keys(ROOMS).forEach(k => rooms.appendChild(optButton(ROOMS[k].name, d.room === k, ROOMS[k].swatch, () => { d.room = k; applyDecor(state); save(); buildDecor(state); })));
+
+  const walls = document.getElementById('wallOpts');
+  walls.innerHTML = '';
+  Object.keys(WALLS).forEach(k => walls.appendChild(optButton(WALLS[k], d.wall === k, null, () => { d.wall = k; applyDecor(state); save(); buildDecor(state); })));
+
+  const woods = document.getElementById('woodOpts');
+  woods.innerHTML = '';
+  Object.keys(WOODS).forEach(k => woods.appendChild(optButton(WOODS[k].name, d.wood === k, WOODS[k].lip, () => { d.wood = k; applyDecor(state); save(); buildDecor(state); })));
+
+  const acc = document.getElementById('accentOpts');
+  acc.innerHTML = '';
+  Object.keys(ACCENTS).forEach(k => acc.appendChild(optButton(ACCENTS[k].name, d.accent === k, ACCENTS[k].c, () => { d.accent = k; applyDecor(state); save(); buildDecor(state); })));
+
+  const tray = document.getElementById('propTray');
+  tray.innerHTML = '';
+  const bond = totalBond(state);
+  Object.keys(PROPS).forEach(kind => {
+    const def = PROPS[kind];
+    const locked = bond < def.at;
+    const card = document.createElement('button');
+    card.className = 'prop-card' + (locked ? ' locked' : '');
+    const owned = state.props.filter(x => x.kind === kind).length;
+    card.innerHTML = PROP_ART[kind] + '<b>' + escapeHtml(def.name) + '</b><small>' +
+      (locked ? 'Needs bond ' + def.at : escapeHtml(def.desc) + (owned ? '<br>On the shelf: ' + owned : '')) + '</small>';
+    if (locked) card.disabled = true;
+    else card.addEventListener('click', () => placeProp(state, kind));
+    tray.appendChild(card);
+  });
+}
+
+export function initDecorUI(state) {
+  const decorVeil = document.getElementById('decorVeil');
+  const decorBtn = document.getElementById('decorBtn');
+  const decorClose = document.getElementById('decorClose');
+
+  function openIt() {
+    buildDecor(state);
+    decorVeil.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeIt() {
+    decorVeil.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  decorBtn.addEventListener('click', openIt);
+  decorClose.addEventListener('click', closeIt);
+  decorVeil.addEventListener('click', e => {
+    if (e.target === decorVeil) closeIt();
+  });
+}
+```
+
+- [ ] **Step 2: Write `src/ui/drag.js`**
+
+```js
+// Shelf drag-and-drop: pointer-event handlers delegated from #cabinet.
+// Wraps the original prototype's module-level `drag` variable and its four
+// cabinet pointer listeners inside one init function so main.js can wire it
+// up once at boot with the live state.
+import { petById, propById, save } from '../state.js';
+import { PROP_ART } from '../content/props.js';
+import { renderAll } from './render.js';
+import { openCard, openPropCard } from './card.js';
+
+export function initDrag(state) {
+  const cabinet = document.getElementById('cabinet');
+  let drag = null;
+
+  cabinet.addEventListener('pointerdown', e => {
+    const piece = e.target.closest('.piece');
+    if (!piece) return;
+    drag = { id: piece.dataset.id, kind: piece.dataset.kind, from: Number(piece.dataset.slot), el: piece, startX: e.clientX, startY: e.clientY, moved: false, ghost: null };
+    piece.setPointerCapture(e.pointerId);
+  });
+
+  cabinet.addEventListener('pointermove', e => {
+    if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 7) return;
+    if (!drag.moved) {
+      drag.moved = true;
+      drag.el.classList.add('dragging');
+      let g;
+      if (drag.kind === 'pet') {
+        g = document.createElement('img');
+        g.src = petById(state, drag.id).art.body;
+      } else {
+        g = document.createElement('div');
+        g.innerHTML = PROP_ART[propById(state, drag.id).kind];
+      }
+      g.className = 'ghost';
+      document.body.appendChild(g);
+      drag.ghost = g;
+    }
+    drag.ghost.style.left = e.clientX + 'px';
+    drag.ghost.style.top = e.clientY + 'px';
+    document.querySelectorAll('.slot.drop-target').forEach(s => s.classList.remove('drop-target'));
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const slot = under && under.closest ? under.closest('.slot') : null;
+    if (slot) slot.classList.add('drop-target');
+  });
+
+  cabinet.addEventListener('pointerup', e => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    document.querySelectorAll('.slot.drop-target').forEach(s => s.classList.remove('drop-target'));
+    if (d.ghost) d.ghost.remove();
+    d.el.classList.remove('dragging');
+    if (!d.moved) {
+      if (d.kind === 'pet') openCard(state, d.id);
+      else openPropCard(state, d.id);
+      return;
+    }
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const slot = under && under.closest ? under.closest('.slot') : null;
+    if (!slot) return;
+    const to = Number(slot.dataset.slot);
+    if (to === d.from) return;
+    const tmp = state.slots[to];
+    state.slots[to] = d.id;
+    state.slots[d.from] = tmp;
+    save();
+    renderAll(state);
+  });
+
+  cabinet.addEventListener('pointercancel', () => {
+    if (drag && drag.ghost) drag.ghost.remove();
+    if (drag) drag.el.classList.remove('dragging');
+    drag = null;
+  });
+}
+```
+
+- [ ] **Step 3: Syntax check**
+
+```bash
+cd ~/shelf-life
+node --check src/ui/decorUI.js && echo "decorUI.js OK"
+node --check src/ui/drag.js && echo "drag.js OK"
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd ~/shelf-life
+git add src/ui/decorUI.js src/ui/drag.js docs/superpowers/plans/2026-09-03-shelf-life-v2.md
+git commit -m "Add ui/decorUI.js and ui/drag.js: decor veil + shelf drag-and-drop
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
+```
