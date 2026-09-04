@@ -252,10 +252,12 @@ const MOVE_LINES = {
   ],
   'prop-need': [
     'Has moved in on the {q}. It is not subtle and it is not sorry.',
-    'Relocated to within reach of the {q}. Hunger has made it honest.'
+    'Relocated to within reach of the {q}. Hunger has made it honest.',
+    'Crossed two slots to reach the {q}. It took most of the afternoon.',
+    'Has stationed itself an inch from the {q} and stopped pretending otherwise.'
   ],
   'prop-hate': [
-    'Moved away from the {q}. Would not say why. The {q} knows why.',
+    'Moved away from the {q}. Four inches. Facing it the whole time.',
     'Has put a slot between itself and the {q}. Calls this "boundaries."',
     'Relocated. The {q} was the reason. It insists the {q} was not the reason.'
   ],
@@ -276,15 +278,18 @@ const MOVE_LINES = {
   ],
   company: [
     'Moved into the busy end. Nobody invited it. Nobody stopped it.',
-    'Has relocated closer to everyone else and is being very casual about it.'
+    'Has relocated closer to everyone else and is being very casual about it.',
+    'Has moved two slots toward the noise and settled at the edge of it.'
   ],
   storm: [
     'Moved itself. Loudly. The move took four seconds and made a point.',
-    'Changed spots out of pure spite. It looks better over there anyway.'
+    'Changed spots out of pure spite. It looks better over there anyway.',
+    'Left its slot at speed. Four inches at speed is not very fast.'
   ],
   restless: [
-    'Is somewhere else now. It will not be explaining the decision.',
-    'Has relocated. There was no announcement and there will be no announcement.'
+    'Is somewhere else now. There was no announcement.',
+    'Has moved one slot along, for no reason it has offered.',
+    'Is in a different square. The dust in the old one has not settled.'
   ]
 };
 
@@ -336,7 +341,7 @@ const USE_LINES = {
     'Used the {q}. Came back cleaner and considerably more smug.',
     'Spent a while at the {q}. Wants this noted somewhere permanent.',
     'Submitted to the {q}. Complained throughout. Went back an hour later.',
-    'Emerged from the {q} presentable, which none of the others appreciated.'
+    'Emerged from the {q} presentable. None of the others have mentioned it.'
   ],
   fuss: [
     'Spent an hour with the {q}. Seems steadier. Will not credit the {q}.',
@@ -353,13 +358,21 @@ const USE_LINES = {
 
 const REACH_LINES = [
   'Reached right over {m} to do it. {m} allowed this.',
-  'Did not get up. Simply reached past {m}. The arms are longer than they look.'
+  'Did not get up. Simply reached past {m}. The arms are longer than they look.',
+  'Got at it without leaving its slot. {m} was in the way and is now underneath.',
+  'Extended over {m} by about four inches and helped itself.',
+  'Leaned across {m} rather than walk two slots. {m} has not moved since.'
 ];
 
 const CLAIM_LINES = [
   'Has claimed the {q}. There was no vote.',
   'Is on the {q} and will not be moved. This is its {q} now.',
-  'Has annexed the {q}. Others may look at it.'
+  'Has annexed the {q}. Others may look at it.',
+  'Has been sitting on the {q} for six hours and has left a mark on it.',
+  'Is four inches tall and has taken the whole {q}.',
+  'Has slept on the {q} two nights running. That is how this starts.',
+  'Will not come off the {q}. You can lift it off. It goes back.',
+  'Has arranged itself across the {q} so that no part of it is free.'
 ];
 
 const DRAG_LINES = [
@@ -370,7 +383,10 @@ const DRAG_LINES = [
 
 const BLOCKED_LINES = [
   'Went to the {q}. {n} was already on it. Came back.',
-  'Waited near the {q} for its turn. {n} does not believe in turns.'
+  'Waited near the {q} for its turn. {n} does not believe in turns.',
+  'Stood one inch from the {q} until {n} looked up. {n} did not look up.',
+  'Could not get on the {q}. Sat where it would be seen not getting on the {q}.',
+  'Has been queueing for the {q}. The queue is one thing long and it is {n}.'
 ];
 
 const CONTEST_LINES = [
@@ -381,39 +397,55 @@ const CONTEST_LINES = [
 
 const EMPTY_LINES = [
   'Empty again. {p} was the last one near it and has no comment.',
-  'Cleaned out. Nobody saw anything, and {p} saw the least of all.'
+  'Cleaned out. {p} was the nearest thing to it and is four inches tall.',
+  'Nothing left. There are prints in it and they are {p}-sized.',
+  'Empty, and warm on the inside, and {p} is nearby looking elsewhere.'
 ];
 
 const THEFT_LINES = [
   'Took food from {n}. {n} is aware.',
   'Helped itself to {n}\'s share. There is a witness. The witness is {n}.',
-  'Ate something that was accounted for. {n} was doing the accounting.'
+  'Ate something that was accounted for. {n} was doing the accounting.',
+  'Carried a crumb the size of its own head away from {n}.',
+  'Took one crumb from {n}, waited, then took the rest.',
+  'Ate {n}\'s and then stood in {n}\'s slot to finish it.',
+  'Has {n}\'s dinner. Has had it for some time. {n} is still looking.',
+  'Robbed {n} at four inches and did not hurry once.'
 ];
 
 const REACH_THEFT_LINES = [
   'Reached over {m} to get at {n}\'s food. {m} said nothing. {m} is complicit now.',
-  'Did not need to get up to rob {n}. Simply extended, over {m}, and took it.'
+  'Did not need to get up to rob {n}. Simply extended, over {m}, and took it.',
+  'Reached over {m} rather than walk round it. {n} is one crumb down.',
+  'Extended across {m} and took {n}\'s. {m} has been very still since.'
 ];
 
 const AVERSION_LINES = [
   'Has been glaring at the {q} for an hour. The {q} is winning.',
-  'Would like the {q} moved. It has mentioned this. Repeatedly.'
+  'Would like the {q} moved. It has mentioned this. Repeatedly.',
+  'Has put half an inch between itself and the {q}. That is all the room there is.',
+  'Sits with its back to the {q} and checks on it.',
+  'Has been leaning away from the {q} so long it has set that way.'
 ];
 
 // Anatomy-flavoured mischief: things to do without going anywhere.
 const MISCHIEF_LINES = {
   hang: [
     'Is hanging off the front edge of the shelf by both arms. Says this is fine.',
-    'Spent the afternoon dangling from the shelf lip. Would not say for how long. Hours.',
+    'Spent the afternoon dangling from the shelf lip by both arms. Hours.',
     'Hung upside down over the drop for a while. It looks better from there, apparently.'
   ],
   nudge: [
     'Rolled into the {q}. The {q} is now where {p} was. Nobody is claiming responsibility.',
-    'Leaned on the {q} until the {q} was somewhere else. No legs were required.'
+    'Leaned on the {q} until the {q} was somewhere else. No legs were required.',
+    'Moved the {q} four inches by lying against it for an afternoon.',
+    'Put its whole weight into the {q}. Its whole weight is not very much.'
   ],
   knock: [
     'Knocked the {q} over with the tail. Insists the tail acted alone.',
-    'The {q} went over. The tail was in the area. The tail has no comment.'
+    'The {q} went over. The tail was in the area. The tail has no comment.',
+    'The {q} is on its side. There is one small print on the upper surface.',
+    'Took the {q} over the edge with it and came back up without it.'
   ],
   lurk: [
     'Is closer than you left it. It has not moved. It is closer.',
@@ -424,9 +456,11 @@ const MISCHIEF_LINES = {
 };
 
 const CATCHUP_LINES = [
-  'Things moved while you were out. Nobody will say who moved them.',
-  'The shelf is not arranged the way you left it. Everyone denies involvement.',
-  'Something happened here in your absence. The details are not being shared.'
+  'The shelf is not arranged the way you left it. Everything is an inch off.',
+  'Two things have swapped slots. The dust under both has been swept.',
+  'Something was dragged the length of the shelf and dragged back.',
+  'The gaps between them are all the same width now. They were not before.',
+  'Everything is facing the door. It was facing the room when you left.'
 ];
 
 /* ---------------- safe content lookups ---------------- */

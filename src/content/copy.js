@@ -12,245 +12,565 @@
                                 ORIGIN + ' ' + HABIT + ' ' + trait.blurb + ' ' + CLOSER,
                                 so each has to be a complete standalone sentence.
    GRUDGE_LINES              -> bylined with the pet's name, and {n} is that same pet.
-   STREAK_LINES              -> bylined "the shelf". {d} is the day count. */
+   STREAK_LINES              -> bylined "the shelf". {d} is the day count.
+
+   THE TEST FOR A LINE IN HERE (docs/comedy-direction.md, rule A2): a line that would
+   survive being said by an adult in a flatshare is not a Shelf Life line. These are
+   four inches tall, wrong-textured, sitting in numbered slots six to a row, and
+   nothing here can end. If none of that is doing work, the line is doing nothing.
+
+   The pools above are rendered raw, so they carry no placeholders and no cast: a
+   one-pet shelf on its first hour must get full-strength material out of them. The
+   state-aware pools further down are the opposite — every one declares its required
+   substitutions in TEMPLATE_SUBS and is only fired when engine/loop.js can supply
+   them from the save file. Never write a number these pools cannot prove. */
 export const NEED_LABEL = { food: 'Fed', fuss: 'Fussed', clean: 'Clean' };
 export const DECAY = { food: 5.2, fuss: 4.4, clean: 3.4 };
 
 export const COMPLAINTS = {
   food: {
     annoyed: [
-      'Has not eaten. Is being brave about it.',
-      'Asked when dinner is. Dinner was yesterday.',
-      'Has been staring at the kitchen. Pointedly.',
-      'Is chewing the shelf. Slowly. Meaningfully.',
-      'Checked the bowl four times this hour. Optimism, mostly.',
-      'Has started rationing. There was nothing to ration.',
-      'Sighed near the empty bowl until somebody looked.',
-      'Says it is "not hungry, just disappointed." It is hungry.',
-      'Moved the empty bowl into your path. Twice.',
-      'Has begun describing meals it has had. In detail. To nobody.'
+      'Is chewing the shelf. Slowly.',
+      'Has climbed into the bowl. There is room on either side of it.',
+      'Has drawn a bowl on the wood and licked the drawing.',
+      'Turned the bowl over and got underneath. Is still under there.',
+      'Is holding one crumb. Has been holding it since this morning.',
+      'Has been licking the same patch of shelf all afternoon.',
+      'Pushed the bowl off the shelf. The bowl was already empty. It went anyway.',
+      'Says it is not hungry. Has described three dinners it once had.',
+      'Rearranged four crumbs into a smaller pile and called that dinner.',
+      'Is small enough to sleep in the bowl and has stopped pretending otherwise.',
+      'Has started on the dust. Reports that the dust is fine.'
     ],
     furious: [
-      'Has started eyeing the others.',
-      'Says it will eat the shelf. It might.',
-      'Ate something structural. You will find out which part later.',
-      'Has drawn up a menu. The others are on it.',
-      'Says hunger is temporary and grudges are forever.',
+      'Ate four inches of shelf and is standing on the part it ate.',
+      'Went to bite the shelf. Got tired halfway. Is resting on it with its mouth open.',
+      'Cannot starve. Has looked into this. Is furious about the finding.',
+      'Bit through the bowl. The bowl is ceramic. Its teeth are fine.',
       'Has divided the shelf into food and not-yet-food.',
-      'Chewed the cord. The cord was not plugged in. It checked first.',
-      'Has stopped asking. That is worse.',
-      'Looked at your hand like it was an appetizer.',
-      'Filed dinner under "unresolved." The file is thick.',
-      'Is no longer distinguishing between snacks and neighbors.',
-      'Told the others it would go first, and that they should be ready.'
+      'Has been at one corner of the shelf for six hours. The corner is a curve now.',
+      'Ate a screw out of the bracket. The bracket was doing something.',
+      'Is gnawing the number off its slot.',
+      'Has eaten the label off the underside of the shelf.',
+      'Has stopped asking. It has all the time there is.',
+      'Says it will eat the shelf. It is four inches tall. It has started.',
+      'Took the bowl to the back of its slot and sat in it, facing out.',
+      'Is standing in the empty bowl. It has been standing in the empty bowl.'
     ]
   },
   fuss: {
     annoyed: [
-      'Waited by the door. You walked past twice.',
-      'Says you have been busy. Says it in that voice.',
-      'Heard your footsteps and sat up. It was the radiator.',
-      'Asked the others whether you had mentioned it. You had not.',
-      'Left a spot warm for you. You did not sit in it.',
-      'Practiced a conversation with you that did not happen.',
-      'Has started a countdown. It will not say to what.',
-      'Was fine all day and would like that investigated.',
-      'Has been keeping track of who you greeted first. It was not this one.',
-      'Turned its back, then checked over its shoulder to see if that had worked.'
+      'Waited at the front of its slot. You walked past twice.',
+      'Left a warm patch on the wood the size of a thumbprint. You did not touch it.',
+      'Sat up at your footsteps. It was the radiator.',
+      'Has moved to the very front of its slot. That is the whole gesture.',
+      'Rehearsed a conversation with you and got both parts wrong.',
+      'Is facing the room. Has been facing the room since lunch.',
+      'Turned its back, then checked over its shoulder to see if that had worked.',
+      'Has been keeping track of who you picked up first. It was not this one.',
+      'Would like to be held. Will not be the one who says so.',
+      'Arranged itself decoratively an hour ago and has not been able to stop.',
+      'Has practised being picked up. Alone. Against the side of the bowl.'
     ],
     furious: [
-      'Has stopped waiting. Wants you to know it stopped.',
-      'Has decided it does not need anyone. It is lying.',
-      'Turned to face the wall. It has been hours.',
-      'Has written you out of something. There was nothing to be written out of.',
-      'Says it is fine. Nothing about it is fine.',
-      'Has unlearned your name on purpose.',
-      'Practiced getting along without you. Badly.',
-      'Told the others it never liked you anyway.',
-      'Has drafted a goodbye it has no intention of sending. Yet.',
-      'Stopped saving you a spot. Somebody else is in it.',
-      'Has begun introducing itself as unattached.',
-      'Looked directly at you and then looked directly away. Deliberately. Slowly.'
+      'Has turned to face the wall. It has been hours and it does not get tired.',
+      'Has stopped waiting. Has not moved from the waiting spot.',
+      'Says it does not need anyone. Is four inches tall on a shelf you put up.',
+      'Has unlearned your name and has been practising not knowing it.',
+      'Has faced the wall long enough to leave a mark on the wall.',
+      'Will not be picked up. Has made itself heavier. It weighs the same.',
+      'Withdrew to the back of its slot. Six inches. It took an hour.',
+      'Has gone rigid. You can move it. It will go back.',
+      'Wrote a goodbye and left it where you would find it. It has nowhere to go.',
+      'Is not speaking to you. Has been not speaking to you since Tuesday, out loud.',
+      'Has stopped saving you the warm end of the shelf.',
+      'Sat down facing away and has not adjusted its feet once.'
     ]
   },
   clean: {
     annoyed: [
       'Something is growing on it. It has named the something.',
-      'Is sticky and will not explain why.',
-      'Left a mark. The mark is spreading.',
-      'Has begun attracting flies. Considers them company.',
-      'Smells faintly of something you cannot place. Yet.',
+      'Is tacky to the touch. Leaves a print on the wood and takes the print with it.',
       'Has developed a texture. It is proud of the texture.',
-      'Left a print on the ceiling. Nobody is addressing the ceiling.',
+      'Left a ring on the shelf. The ring is not drying.',
       'Is furred with dust and calls it a coat.',
-      'Was clean on Tuesday. Nobody can account for Wednesday.',
-      'Has stopped being wiped down and started being negotiated with.'
+      'Has been damp since Tuesday. The wood under it has gone dark.',
+      'Smells of the inside of a drawer.',
+      'Left a print on the underside of the shelf above.',
+      'Is sticky. Has picked up two crumbs and a hair and is wearing them.',
+      'Has stopped being wiped down and started being negotiated with.',
+      'Was clean on Tuesday. The shelf disagrees about Wednesday.'
     ],
     furious: [
       'Has achieved a new texture. Do not touch it.',
       'Is no longer entirely one color.',
-      'The shelf smells. It says that is not its problem.',
-      'Something has moved in with it and started charging rent.',
-      'You will need gloves. Possibly a bag.',
-      'Has begun to shine. Nothing clean shines like that.',
-      'Left a trail. The trail is still moving.',
-      'Something under it has a heartbeat. It is slower than yours.',
-      'Has stopped being a color and started being a warning.',
-      'Requires a hazmat approach and a moment of silence.',
+      'The wood under it has gone soft. That part of the shelf is soft now.',
+      'Has left a trail from its slot to the edge and back. The trail is still wet.',
+      'Something is living underneath it. It arrived on its own.',
       'Is damp in a way that suggests intent.',
-      'The others have relocated. All of them. Without discussion.'
+      'Has begun to shine. Nothing clean shines like that.',
+      'Cannot be rinsed. It has been rinsed.',
+      'Went through the paper towel. Both of them.',
+      'Its slot has taken the color of it. That slot is that color now.',
+      'Has left a mark on the wood shaped exactly like itself.',
+      'You will need gloves. You will not get the gloves back.',
+      'Smells. Says the shelf smells. The shelf did not smell on Monday.'
     ]
   }
 };
 
-export const CARE_LINES = {
+/* Lever 1 in the highest-frequency slot, without a script: the same complaint with
+   a neighbour physically in it. {n} is a pet in an adjacent slot, so engine/loop.js
+   only draws from here when there is one. The base COMPLAINTS pools stay cast-free
+   so an hour-old, one-pet shelf still gets everything. */
+export const NEIGHBOR_COMPLAINTS = {
   food: [
-    'Ate. Said nothing.',
-    'Ate it. Wanted a different one.',
-    'Inhaled it. Looked at the bowl. Looked at you.',
-    'Ate, then asked what the next one is.',
-    'Chewed slowly while maintaining eye contact.',
-    'Finished it in one bite and pretended it took longer.',
-    'Ate half. Saved the rest. For spite, probably.',
-    'Sniffed it first. Approved, reluctantly.',
-    'Ate without looking away from the door.',
-    'Licked the bowl clean and rated it "adequate."',
-    'Ate it in the corner, facing out, like it expected trouble.',
-    'Took the food. Did not take it graciously.'
+    'Went to bite {n}. Got tired halfway. Is now resting against {n} with its mouth open.',
+    'Has been watching {n} eat. Has not blinked. Has moved one inch closer.',
+    'Told {n} it could go another day. {n} did not ask.',
+    'Has put {n} on a list of things that are technically food.',
+    'Ate the crumb {n} was saving and sat down in the space it left.',
+    'Is standing between {n} and the bowl. The bowl is empty. This is the point.'
   ],
   fuss: [
-    'Allowed it. Briefly.',
-    'Pretended not to enjoy that.',
+    'Has moved so that {n} is between it and you. It has been there an hour.',
+    'Watched you pick up {n}. Has not turned round since.',
+    'Told {n} it does not need anybody. {n} was asleep for all of it.',
+    'Sat down against {n} because {n} was warm and there was nothing else warm.',
+    'Has stopped speaking to you and started speaking to {n}, at your volume.',
+    'Asked {n} whether you had said anything about it. You had not.'
+  ],
+  clean: [
+    'Has leaned on {n}. {n} has taken some of it.',
+    'Wiped itself on {n} and walked off four inches.',
+    'Says {n} is worse. {n} is dry. {n} has been dry all week.',
+    'Something has spread from it to {n}, in a straight line, along the wood.',
+    'Sat next to {n} for an hour. There is now a ring around both of them.',
+    'Has been asked by {n} to move. Has moved half an inch.'
+  ]
+};
+
+export const CARE_LINES = {
+  food: [
+    'Ate. Said nothing. Sat down against the bowl.',
+    'Ate the whole thing and then got into the bowl.',
+    'Took it to the back of its slot and ate it facing out.',
+    'Ate half. Put the other half underneath itself.',
+    'Ate, then leaned on your finger for a while.',
+    'Licked the bowl until the bowl moved, then followed it.',
+    'Ate with both hands. It has two hands today.',
+    'Chewed slowly while maintaining eye contact.',
+    'Ate it and fell asleep in the empty bowl.',
+    'Wanted a different one. Ate this one. Wanted a different one.',
+    'Held the food up to the light, looked through it, and ate it.',
+    'Ate, and has stayed by the bowl in case that happens again.',
+    'Went through it in four goes. It is the size of the bowl.'
+  ],
+  fuss: [
     'Leaned in. Will deny leaning in.',
-    'Purred, then acted like nothing happened.',
-    'Says it tolerated that. Its eyes were closed the entire time.',
-    'Closed its eyes for exactly four seconds. A record.',
-    'Let you get close. Filed it under "an exception."',
-    'Made a small sound. Refuses to repeat it.',
-    'Softened, visibly, then caught itself.',
+    'Fell asleep mid-fuss holding your finger. Has not let go.',
+    'Closed its eyes and went soft all the way through. Took about a second.',
+    'Permitted it. Sat down afterwards where your hand had been.',
+    'Purred, then acted like nothing had happened.',
+    'Made a sound. It was not a sound it makes.',
+    'Turned itself over to be got at properly.',
+    'Headbutted your fingertip. Once. That was the whole event.',
     'Accepted the attention like it was doing you a favor.',
-    'Headbutted your hand once, then looked away as if that had not happened.',
-    'Stayed for the whole thing. Left the second it ended, to make a point.'
+    'Stayed for all of it. Left the second it ended, to make the point.',
+    'Went entirely limp. You held four inches of unbothered weight.',
+    'Pressed its face into your thumb and stopped moving.',
+    'Let you get close. Filed it under an exception.'
   ],
   clean: [
     'Tolerated the wipe. Barely.',
-    'Is clean. Is furious about being clean.',
-    'Smells like nothing now. It preferred smelling like something.',
+    'Fit entirely in the cloth. Was carried. Allowed it.',
     'Held very still. Made it weird.',
-    'Watched you the entire time without blinking.',
-    'Came out spotless. Went straight for the fern.',
-    'Sat through it with the dignity of someone being wrongly arrested.',
-    'Is shiny now. Will not be seen like this.',
-    'Allowed the cleaning under written protest. There is no writing. There is protest.',
+    'Is clean and furious about being clean.',
+    'Smells of nothing now. It preferred smelling of something.',
+    'Came out spotless. Went and sat in the dust at the back.',
+    'Sat through it like something being wrongly arrested.',
     'Bit the cloth. Once. To establish terms.',
-    'Was cleaned. Immediately sat somewhere questionable.',
-    'Did not resist, which everyone agrees is out of character.'
+    'Dried against your wrist and would not be moved off it.',
+    'Is shiny now. Will not be seen like this.',
+    'Squeaked when it was rubbed. Both of you heard it.',
+    'Went stiff for the whole wipe, then shook once, like a wet thing.',
+    'Came out a shade lighter. Nobody had known it was a shade darker.'
   ]
 };
 
 export const OVERFED = {
   food: [
-    'Was not hungry. Ate anyway. Consequences pending.',
-    'Turned it down. Nobody turns down food. Something is wrong.',
-    'Is full. Took it anyway. For the stash.',
-    'Ate out of spite, not hunger. Same result.',
-    'Says it is stuffed. Is already eyeing the next one.',
+    'Was not hungry. Ate it. Is visibly wider.',
+    'Turned it down, then took it into its slot for later.',
+    'Is full and horizontal and has not moved since.',
     'Ate past the point of dignity and is not embarrassed.',
-    'Accepted a fourth helping the way a hostage accepts a phone call.'
+    'Has stopped fitting in the bowl.',
+    'Took a fourth helping and put it under the shelf with the others.',
+    'Is full. Ate anyway. That is the whole system.'
   ],
   fuss: [
-    'Has had enough attention. Will want more in ten minutes. Has been told this.',
-    'Wriggled away. You are the clingy one now.',
-    'Says this is getting needy. It means you.',
-    'Has had its fill of affection and is filing a complaint about the surplus.',
-    'Requested space. Received it. Immediately missed the attention.',
+    'Wriggled off. You are the clingy one now.',
+    'Has had enough. Will want more in ten minutes. Has been told this.',
+    'Went limp to make you stop. It worked. It regrets that it worked.',
+    'Requested space. Got it. Came back four inches.',
+    'Left mid-fuss to prove it could.',
     'Has been fussed into a mood. The mood is about you.',
-    'Left mid-fuss to prove it could.'
+    'Is too warm now, and blames the hand.'
   ],
   clean: [
     'Is already clean. This is harassment.',
     'Was clean. Is now damp. Well done.',
     'Says you are scrubbing off its personality.',
-    'Has been cleaned down to the base layer. There was supposed to be more.',
-    'Squeaks now. Did not squeak before. Does not want to discuss it.',
-    'Is too clean to be taken seriously by the others. That is on you.',
-    'Has been cleaned three times today and is starting to take it as an accusation.'
+    'Has been cleaned down to the base layer. There was meant to be more of it.',
+    'Squeaks now. Did not squeak before.',
+    'Is too clean to be taken seriously on a shelf like this.',
+    'Has been wiped three times today and has started to take it as an accusation.'
   ]
 };
 
 export const HAPPY_NOTES = [
-  'Everything is fine. It is suspicious about that.',
-  'Has no complaints today and wants that noted as unusual.',
-  'Sat on your thing. Considers this affection.',
-  'Slept somewhere warm. Will not say it was your lap.',
   'Is content. Do not make it weird.',
-  'Said something almost nice, then took it back.',
+  'Slept in the sun on the wood and went warm all the way through.',
+  'Sat on your thing. Considers this affection.',
   'Has decided to keep you. For now.',
-  'Is in a good mood. The others find this unsettling.',
-  'Hummed something. Stopped the second you noticed.',
-  'Left the good spot for you. Will deny it was on purpose.',
-  'Had a fine day and is furious about how fine it was.',
+  'Napped belly up in full view. Four inches of complete trust.',
+  'Hummed something and stopped the second you looked up.',
+  'Left the good end of the shelf free. Will deny it was on purpose.',
+  'Started to complain, thought about it, and stopped.',
+  'Was found asleep facing the door with the door open.',
+  'Has no complaints today and would like that noted as unusual.',
   'Smiled. It was brief. It happened.',
-  'Told the others you are "acceptable." That is the top of its scale.',
-  'Napped in full view of everyone. Belly up. Briefly.',
   'Is, against all evidence and effort, happy.',
-  'Went a whole day without blaming anybody. Nobody knows what to do with that.',
+  'Went the whole day without blaming anybody.',
   'Let you leave the room without comment. That is new.',
-  'Was found asleep facing the door with the door open. It trusts something now.',
-  'Started to complain, thought about it, and stopped.'
+  'Sat in your hand and did not check whether it could get out.',
+  'Has been in the same square all day, warm, doing nothing at all.',
+  'Fits in a teacup and spent the afternoon proving it.',
+  'Made a small sound at nothing, then made it again to hear it.',
+  'Rolled onto its back on the wood and stayed there. That is the report.',
+  'Is fine. Has been fine since Tuesday. Nobody has looked into it.'
 ];
 
 export const ASLEEP_LINES = [
   'Was asleep. Is now awake and unimpressed.',
-  'You woke it. It will remember.',
+  'You woke it. It has all the time there is to remember that.',
   'It is daytime. It is nocturnal. This was always going to go badly.',
   'Opened one eye, closed it. That was your answer.',
-  'Was mid-dream. You will never know about what. Neither will it.',
-  'Grumbled something in its sleep. It was about you.',
-  'Surfaced just enough to register the disappointment, then went back under.',
-  'Is technically awake now. Emotionally, still asleep.',
-  'Accepted the interruption. Filed the interruption.',
-  'Went straight back to sleep, but louder, so you would know.'
+  'Surfaced, registered the disappointment, went back under.',
+  'Went back to sleep louder, so you would know.',
+  'Is technically awake now. Structurally, still asleep.',
+  'Was warm and folded and is now neither.',
+  'Grumbled in its sleep. It was about you.',
+  'Has been moved four inches and has not noticed.',
+  'Slept through the whole thing. You may have to do that again.'
 ];
 
+/* Overnight and shelf-level. Bylined "the shelf", no cast, no speaker — form 5
+   (found object) and the raw material for form 4 (list). The unit of measurement
+   here is the inch and the slot, because that is the size of the world. */
 export const EVENTS = [
-  'Something fell off the shelf in the night. Nothing was near the edge.',
+  'Everything on the shelf is one inch to the left this morning. Including the shelf.',
   'A tooth was found on the floor. Nobody is missing one.',
-  'They were all facing the same direction this morning. Nobody moved them.',
-  'There is one more shadow than there are pets. Probably the lighting.',
-  'A name has been scratched into the wood. It is not one of theirs.',
-  'The house was very quiet at 4am. Too quiet, according to three of them.',
-  'Something has been buried in a houseplant. It is best left there.',
-  'They have voted on something. The result was not shared with you.',
-  'The pile of teeth is growing. They are calling it a collection.',
-  'One of them was on the top shelf this morning. It cannot climb.',
-  'Everyone was exactly one inch to the left. Every single one.',
-  'A small hole has appeared in the wall. It is at their height.',
-  'The clock in the other room stopped at the same time three nights running.',
+  'They were all facing the same direction this morning. Nothing was moved.',
+  'A rota went up overnight. Monday to Sunday, and an eighth column headed AFTER.',
+  'One square of the shelf has deeper dust than the rest. Nothing has ever sat there.',
+  'Something has been buried in the houseplant. It is best left there.',
+  'Something was on the top shelf this morning. Nothing here can climb.',
+  'A hole has appeared in the wall, four inches up.',
+  'The line of dust along the front edge has one gap in it, four inches wide.',
   'Something was singing very quietly after midnight. It knew the words.',
-  'A second set of small footprints appeared beside the usual ones. They stop mid-stride.',
-  'Every mirror on the shelf was turned to face the wall. Nobody will say who started it.',
-  'There is a list taped under the shelf. Your name is on it twice.',
-  'The temperature dropped for exactly six minutes at 3am. It has been noted.',
-  'Something drew a door on the wall. It has no handle. Nobody has tried it. Yet.',
-  'A jar that was empty last night is not empty anymore.',
-  'They all went quiet at 9:14. They went quiet at 9:14 the night before, too.',
-  'The dust has been swept into a shape. There is a name written under the shape.',
-  'A single candle was lit and put out by morning. Nobody in this house owns a lighter.',
-  'Something counted to nine in the night and then started again.',
-  'Every one of them was awake at 3:12 and none of them will discuss it.',
-  'A small chair has been arranged to face the shelf. There is no small chair in this house.',
-  'One of them has been practicing your handwriting. It is getting good.',
-  'The wood under the shelf is warm. It has been warm since Tuesday.',
-  'Somebody left the good spot empty all night. Out of respect, apparently.',
-  'There are eleven of them in the photograph. There are ten of them on the shelf.',
-  'The fern was moved four inches and put back facing a different way.',
-  'Something laughed at 2am. Only one of them laughs, and it was asleep.',
-  'A door in this house opened and closed. Every door is accounted for.',
-  'They have started leaving a gap in the middle of the shelf. Nobody will sit in it.',
-  'A drawing was found under the shelf. It is a drawing of the room, from above.',
-  'Somebody has been leaving crumbs in a line, leading somewhere, deliberately.'
+  'A second set of prints appeared beside the usual ones. They stop mid-stride.',
+  'The temperature dropped for six minutes at 3am. It has been noted.',
+  'Every reflective thing on the shelf is facing the wall.',
+  'Something counted to nine in the night and started again.',
+  'The wood under the shelf is warm, and has been warm since Tuesday.',
+  'A gap has been left in the middle of the shelf. Nothing will sit in it.',
+  'A drawing was found under the shelf. It is this room, from above.',
+  'Crumbs have been left in a line. The line goes over the edge.',
+  'A chair the size of a thumb has been set out facing the shelf.',
+  'Something was moved four inches in the night and put back facing the wrong way.',
+  'The shelf was dusted on Sunday. There is a clean square where nothing stands.',
+  'A slot has been swept clean and left empty. It is not the empty one.',
+  'The bracket has three screws. It was put up with four.',
+  'Something has been practising the sound the door makes.',
+  'A page from something has been folded down to four inches and left flat.',
+  'The nameplates are all straight this morning. They were straight last night too.',
+  'There is a smell of hot dust and nothing on this shelf is plugged in.',
+  'A small pile has been made at the back: dust, a bead, more dust.',
+  'The clock in the other room stopped at the same time three nights running.',
+  'Something has been eating the varnish, in a straight line, along the front.',
+  'A wet ring appeared on the wood overnight. Nothing here holds a cup.',
+  'The shelf creaked at 4am under a weight it does not have.',
+  'Something has arranged the dust into six squares. There are six slots to a row.',
+  'A single thread has been run from one end of the shelf to the other.',
+  'Nothing was moved in the night. That has not happened before.',
+  'A tooth has been put back. It is not in the place the last one was.',
+  'The underside of the shelf has been written on. The writing is very small.'
 ];
+
+/* ================= FORM 4: LIST / MANIFEST =================
+   Mundane, mundane, mundane, wrong. Three to five items, never labelled as a joke.
+   Rendered with real newlines and read as one object on the corkboard. */
+export const LIST_NOTES = [
+  'FOUND THIS MORNING, IN A ROW, SORTED BY SIZE:\na button\na tooth\na smaller tooth\na key that fits nothing here\na second key',
+  'Swept out from under the shelf:\nthree crumbs\nhalf a leaf\na bead\na tooth\nthe bead again',
+  'Left on the wood overnight, in a line, pointing at the door:\na paperclip\na dead moth\na second dead moth\na third, alive',
+  'The shelf, counted:\nsix slots to a row\nthree rows\neighteen places\nnineteen things counted',
+  'Moved one inch to the left overnight:\nthe bowl\nthe dust\nthe nameplates\nthe shelf',
+  'Carried up onto the shelf in the night by something four inches tall:\na bottle cap\na coin\na second coin\na spoon',
+  'Damp this morning, in order:\nthe back of the shelf\nthe front of the shelf\nthe wall behind the shelf\nthe inside of the wall',
+  'Taken from the kitchen and returned to the kitchen, slightly wrong:\na teaspoon\na cap\na cork\nthe kitchen light, on',
+  'Sounds recorded between two and four:\nsomething small walking\nsomething small stopping\nsomething small starting again\nnothing, for eleven minutes',
+  'Left on the mat by the door, in size order, facing in:\na screw\na washer\na tooth\na second tooth\nthe screw again',
+  'Things that were warm this morning:\nthe wood under the far slot\nthe bracket\nthe wall\nnothing else in the house'
+];
+
+/* ================= FORM 8: SILENCE / NEGATIVE SPACE =================
+   A thing that used to happen has stopped. Never explain it. */
+export const SILENCE_NOTES = [
+  'Nothing was filed today. The box is where it was and it is no heavier.',
+  'The complaint about the bowl has not been raised. The bowl is unchanged.',
+  'Nobody moved in the night. The dust along the front is unbroken.',
+  'There was no sound at 3am. There has been a sound at 3am since March.',
+  'The mark on the wood has not been added to today.',
+  'The tally under the shelf has not been added to. It has not been rubbed out either.',
+  'No new grievance. The old ones have been left exactly as they were.',
+  'Nothing has been carried up onto the shelf tonight. The kitchen is intact.'
+];
+
+// The same two forms, about one named pet. These exist so that even a one-pet,
+// first-hour shelf can always supply four distinct forms — which is the condition
+// that makes the two rotation rules always satisfiable. See engine/loop.js.
+export const PET_LIST_NOTES = [
+  '{p}, today, in order:\nfacing the wall\nfacing the wall\nfacing the wall\nfacing you',
+  'Removed from {p} during cleaning:\ndust\na crumb\na hair, not yours\nmore dust\nthe crumb again',
+  '{p} has been counted this week:\nMonday, one\nTuesday, one\nWednesday, one\nThursday, two',
+  'Within four inches of {p} this morning:\nthe bowl\na tooth\nits own nameplate, turned round\nnothing else',
+  '{p} moved, over one whole day:\nhalf an inch forward\nhalf an inch back\nhalf an inch forward\nand stopped',
+  'Things {p} has not forgiven:\nthe wipe\nthe move\nTuesday\nthe wipe',
+  'Found under {p} when it was lifted:\na crumb\na bead\nthe shape of {p}, in dust'
+];
+
+// Form 5 about one named pet: no speaker, just the measurement. This is the pool
+// that keeps the everyday supply from being all complaints, and it is deliberately
+// large because it is drawn from constantly.
+export const FOUND_PET_LINES = [
+  'There is a ring on the wood where {p} sits. It is not drying.',
+  '{p} is one inch further forward than it was this morning.',
+  'The dust around {p} has a clean edge exactly the shape of {p}.',
+  'Something under {p} has been pressed flat into the grain.',
+  '{p} weighs about as much as a wet teabag and has left a dent.',
+  'The nameplate in front of {p} has been turned to face {p}.',
+  '{p} has not slept. The wood under it is warm all the way through.',
+  'There are four marks along the front edge at {p}’s height.',
+  '{p} is in the exact center of its slot, to the inch.',
+  'The varnish in front of {p} has gone matte. Nowhere else has.',
+  '{p} has worn the corner of its slot round.',
+  'Something four inches long has been dragged past {p} and back.',
+  'The gap between {p} and the next thing along has closed by half an inch.',
+  '{p} is warm on one side only, and it is not the side facing the room.'
+];
+
+export const PET_SILENCE_LINES = [
+  '{p} has not complained today. It complained yesterday, and the day before.',
+  'Nothing from {p}. Its slot is exactly as you left it.',
+  '{p} has stopped facing the wall and has not mentioned stopping.',
+  '{p} did not come to the front when you came in. It has come to the front every day.',
+  'The mark {p} leaves has not got any bigger since Tuesday.',
+  '{p} has not asked for anything since the weather changed.'
+];
+
+export const EMPTY_SHELF_NOTES = [
+  'The shelf is empty and somehow still judging you.',
+  'Nothing lives here. The dust has opinions anyway.',
+  'Empty. The wood creaked once, unprompted.',
+  'Eighteen slots, six to a row, and the dust is even across all of them.',
+  'Nothing on the shelf. There is a warm patch in slot one.',
+  'The shelf is bare. Something has been leaning on it.'
+];
+
+/* ================= STATE-AWARE TEMPLATES =================
+   These are the point of lever 3: the game already knows all of this and has never
+   once said so. Every {sub} here is read from the save file by engine/loop.js and
+   every pool's permitted subs are declared in TEMPLATE_SUBS below, so a template
+   can never reach the corkboard with a placeholder its slot cannot fill. */
+
+// {fav} = the pet you go to first most often. {favN} = how many of your last {tot}
+// visits started with it. {selfN} = this pet's own count. Real numbers, always.
+export const FAVOURITE_LINES = [
+  '{p} has the feeding order. Of your last {tot} visits you went to {fav} first {favN} of them.',
+  '{p} has drawn a chart of it. The chart is on the back of last week’s chart, in a steadier hand.',
+  'You went to {fav} first again. {p} was four inches away and facing you.',
+  '{p} has {selfN} of your last {tot}. It has stopped rounding up.',
+  '{fav} has been gone to first {favN} times. {p} has begun standing nearer the front of its slot.',
+  '{p} knows the order. It has known the order for {tot} visits.'
+];
+
+// {h} = whole hours since the last visit ended.
+export const ABSENCE_LINES = [
+  'Nobody counted the {h} hours. There is a tally under the shelf. Nobody counted.',
+  '{h} hours. The dust has settled into the shape of everything.',
+  'You were gone {h} hours. Everything is where it was, including the dust.',
+  '{h} hours of nothing to do and no way to stop. They got through it.',
+  '{p} faced the door for {h} hours. Its feet have marked the wood.',
+  'Somebody worked out what {h} hours is, in inches, at the speed they walk.'
+];
+
+// {d} = consecutive check-in day count.
+export const STREAK_LINES = [
+  'Day {d}. Attendance is kept in a book with two columns. You are in the shorter one.',
+  'Day {d}, and you have opened this on every one of them. Nothing here left.',
+  'Day {d}. One of them was already facing the door when you came in.',
+  'The dust along the front edge has stopped settling. Day {d}.',
+  'Day {d}. They have started expecting you. That costs them nothing.',
+  'Somewhere under this shelf, day {d} is being written down in pencil.',
+  'Back. Day {d}. The shelf keeps better records than you do.',
+  'Day {d} straight. That is longer than the tooth has been on the floor.',
+  'Day {d}. Nobody said anything. Two of them moved to the front of their slots.',
+  'The warm patch at the far end is yours now, apparently. Day {d}.',
+  'Day {d}. The wood by the door end is worn where they wait.',
+  'Day {d}, and every one of them has been four inches from where you left it.'
+];
+
+// {old} = the name it had before. {days} = how long it had it.
+export const RENAME_LINES = [
+  '{p} answered to {old} for {days} days. It answered to {p} within the hour.',
+  'The nameplate still says {old} underneath. {p} has not scratched it off.',
+  '{p} has been {p} for less than a day and has already corrected somebody.',
+  'Something under the shelf is still written {old}. It has not been amended.',
+  '{p} kept the old one. It is four inches long and folded twice.'
+];
+
+// {gone} = a rehomed pet's name. {goneD} = days since. {slot} = the slot it had.
+// state.gone is never pruned, so these keep firing forever, at a thinning rate.
+export const GONE_LINES = [
+  'Slot {slot} has been empty {goneD} days. The dust in that square is deeper than anywhere else.',
+  'The register still lists {gone}. Nothing here can strike a name.',
+  'Nothing has been put in slot {slot}. It has been {goneD} days and there are seventeen others.',
+  '{gone} has been gone {goneD} days. The mark on the wood has not lifted.',
+  'Something is still leaving room for {gone}. Four inches of it, in slot {slot}.',
+  'The nameplate for slot {slot} was never taken down.'
+];
+
+// Grid and adjacency. {a}/{b} are two named pets, {c} the one physically between
+// them, {slot}/{i}/{j} are real slot indices.
+export const GRID_LINES = [
+  '{a} and {b} have divided the shelf. The line runs through {c}.',
+  '{a} moved one inch toward {b} at 3am and has not moved since. {b} was awake for all of it.',
+  '{p} has chosen the worst slot on the shelf. {free} better ones were free.',
+  'You moved {p} from slot {i} to slot {j}. {p} has written a seating clause and dated it yesterday.',
+  '{p} has been in slot {home} since it arrived and has worn a shape into the wood.',
+  '{a} has moved half an inch toward {b}. That took an afternoon.',
+  '{p} will not use the whole slot. It is using the front two inches of it.',
+  '{a} and {b} are two slots apart and have been getting closer all week.',
+  'Slot {slot} is the coldest square on the shelf. {p} has not asked to be moved.',
+  '{p} moved from slot {i} to slot {j} and has faced slot {i} ever since.'
+];
+
+// {g} = this pet's grudges. {G} = the shelf total. Both straight off the save.
+export const GRUDGE_COUNT_LINES = [
+  '{p} has forgiven you {g} times since Tuesday, out loud, at even intervals.',
+  '{p} has stopped keeping score. It went over it {g} times tonight.',
+  'The shelf is at {G}. {p} accounts for {g} of that and would like the credit.',
+  '{p} is at {g}. It has never once said the number out loud and it has never been wrong.',
+  '{g} entries, all in the same hand, all the same size.'
+];
+
+// {best} = pet.bestFuss, the longest run of consecutive fusses. It goes up.
+export const RECORD_LINES = [
+  'Sat through the whole thing. The record is {best} in a row and it stands.',
+  'Let you fuss it {best} times in a row once, on a {bestDay}. It has not beaten that.',
+  'New record. {best} in a row. It has not mentioned it and it has not moved.',
+  'The record is {best} in a row, set on a {bestDay}.',
+  '{best} in a row is the record. Tonight was not the night.'
+];
+
+// 4b, the Briefing. One integer, delivered by something that was not there for any
+// of it. Fires as the first note from a pet that arrived while the shelf was deep.
+export const BRIEFING_LINES = [
+  '{p}: Hello. I’ve been briefed. You’re at {G}.',
+  '{p} arrived, was shown the shelf, and asked whether {G} was the current figure.',
+  '{p} has been here an hour and already knows the number. The number is {G}.'
+];
+
+// 4a, after Item 4 is struck. This pet is barred from forms 6 and 7 forever; these
+// are the whole of what it has to say about it, which is the joke.
+export const STRUCK_LINES = [
+  '{p} said good morning at the usual time and went back to what it was doing.',
+  '{p} has not raised the matter in {strk} days. It has had every opportunity.',
+  '{p} is polite now. It asks nothing and it files nothing.',
+  '{p} moved aside for you. It has started doing that.',
+  'Nothing from {p}. Nothing yesterday either.'
+];
+
+/* ================= FORM 7: DIRECT ADDRESS =================
+   The creature turns round. Rare on purpose — never twice in a session. */
+export const DIRECT_LINES = [
+  'You are four hundred times its size and it has never once acted as though that mattered.',
+  '{p} has turned round and is looking at you. It is not doing anything else.',
+  '{p} knows which hand you use. It has been sitting on that side.',
+  'You are on day {d} of this. It has been here for every one of them.',
+  '{p} would like to ask you about {gone}. Not tonight.',
+  '{p} has stopped and is waiting for you to put the thing down.',
+  'It is four inches tall, it cannot reach the light switch, and it is waiting up for you.'
+];
+
+/* ================= FORM 6: FILLED-IN DOCUMENTS =================
+   Bureaucracy applied to a crumb. Max one per batch, ever. The numbers in them are
+   real: {mtg} is how many times the shelf has convened, {carr} how many times Item 4
+   has been carried forward, {food}/{fuss}/{clean} the actual care counts. */
+export const MINUTES_DOCS = [
+  'MINUTES OF THE SHELF — MEETING {mtg}\nItem 1. The bowl. Unresolved.\nItem 2. Slot {slot}. Deferred.\nItem 3. {a} says it said "after you." {b} says it heard "if you must."\nItem 4. You.\nCarried forward {carr} times.',
+  'MINUTES — MEETING {mtg}\nItem 1. The dust. Noted.\nItem 2. The gap in the middle of the shelf. Left as is.\nItem 3. Whether anything here ends. Tabled again.\nItem 4. You.\nCarried forward {carr} times.',
+  'MINUTES — MEETING {mtg}, HELD UNDER THE SHELF\nPresent: {a}, {b}.\nItem 1. The bowl.\nItem 2. Slot {slot}, and who is nearer the front of it.\nItem 3. The tooth.\nItem 4. You. Carried forward {carr} times.'
+];
+
+export const SOLO_MINUTES_DOCS = [
+  'MINUTES — MEETING {mtg}\nPresent: {p}.\nApologies: none received.\nItem 1. The bowl. Unresolved.\nItem 2. Slot {slot}. Unresolved.\nItem 3. You. Carried forward {carr} times.',
+  'MINUTES — MEETING {mtg}\nHeld at 3am. Attendance one. Quorum reached.\nItem 1. The dust.\nItem 2. You.\nCarried forward {carr} times.'
+];
+
+export const CARE_RECORD_DOCS = [
+  'CARE RECORD — {p}\nFed {food}. Fussed {fuss}. Cleaned {clean}.\nGone to first: {selfN} of your last {tot} visits.\nThe record is not in your handwriting.',
+  'CARE RECORD — {p}\nFed {food}.\nFussed {fuss}.\nCleaned {clean}.\nFirst: {selfN}.\nKept under the shelf, at four inches, in pencil.'
+];
+
+export const ROTA_DOCS = [
+  'ROTA — WHILE YOU WERE OUT\nFeeding: covered.\nFussing: covered.\nCleaning: covered.\nHours worked: {h}. Complaints: none.\nThe rota is four inches long and your name is at the bottom.',
+  'ROTA — {h} HOURS\nMonday to Sunday, and an eighth column headed AFTER.\nEvery box ticked.\nThe ticks are all the same size.\nNobody has said what the eighth column is for.'
+];
+
+// 4a's payoff. Fires once per pet, at grudge stage 3, and then that pet goes quiet.
+export const STRIKE_DOCS = [
+  'ITEM 4 — ANY OTHER BUSINESS\nCarried forward from meetings 1 to {mtg}.\nMoved that the matter be closed. Seconded by {b}.\nItem 4 has been struck from all future agendas.',
+  'ITEM 4 — ANY OTHER BUSINESS\nCarried forward from meetings 1 to {mtg}.\nMoved, by {p}, that the matter be closed.\nItem 4 has been struck from all future agendas.'
+];
+
+/* Which substitutions each state-aware pool is allowed to use. engine/loop.js must
+   supply every one of these before it draws from the pool, and test/comedy.test.mjs
+   fails the build if a template reaches for a sub its slot cannot provide. */
+export const TEMPLATE_SUBS = {
+  NEIGHBOR_COMPLAINTS: ['n'],
+  PET_LIST_NOTES: ['p'],
+  PET_SILENCE_LINES: ['p'],
+  FAVOURITE_LINES: ['p', 'fav', 'favN', 'selfN', 'tot'],
+  ABSENCE_LINES: ['p', 'h'],
+  STREAK_LINES: ['d'],
+  RENAME_LINES: ['p', 'old', 'days'],
+  GONE_LINES: ['gone', 'goneD', 'slot'],
+  GRID_LINES: ['p', 'a', 'b', 'c', 'slot', 'home', 'free', 'i', 'j'],
+  FOUND_PET_LINES: ['p'],
+  GRUDGE_COUNT_LINES: ['p', 'g', 'G'],
+  RECORD_LINES: ['best', 'bestDay'],
+  BRIEFING_LINES: ['p', 'G'],
+  STRUCK_LINES: ['p', 'strk'],
+  DIRECT_LINES: ['p', 'd', 'gone'],
+  MINUTES_DOCS: ['mtg', 'carr', 'slot', 'a', 'b'],
+  SOLO_MINUTES_DOCS: ['mtg', 'carr', 'slot', 'p'],
+  CARE_RECORD_DOCS: ['p', 'food', 'fuss', 'clean', 'selfN', 'tot'],
+  ROTA_DOCS: ['h'],
+  STRIKE_DOCS: ['mtg', 'p', 'b']
+};
 
 /* ================= NAMING + BIO ================= */
 export const FALLBACK_NAMES = [
@@ -283,7 +603,7 @@ export const ORIGINS = [
   'Found in a storage unit with the light still on.',
   'A gift from someone who moved away shortly afterward.',
   'Delivered to the wrong address. Kept anyway.',
-  'Followed you home. You let it.',
+  'Followed you home on foot. It has very small feet.',
   'Bought at a yard sale to keep it away from the other bidder.',
   'Appeared during a power outage and has never explained the timing.',
   'Purchased "as is." As is turned out to be a lot.',
@@ -301,7 +621,7 @@ export const ORIGINS = [
   'Arrived in a hamper addressed to a previous tenant.',
   'Pulled out of a river. Was completely dry.',
   'Bid on by mistake. Won by a wide margin.',
-  'Left behind by a lodger who paid three months in advance and never returned.'
+  'Left behind by a lodger who paid three months up front and never came back.'
 ];
 
 export const HABITS = [
@@ -317,13 +637,13 @@ export const HABITS = [
   'Sleeps facing the door.',
   'Does not like being counted.',
   'Has never once been where you left it.',
-  'Counts things. Will not say what or why.',
+  'Counts things. Has never announced a total.',
   'Naps in fifteen-minute increments, on the hour, without fail.',
-  'Has never once said thank you and never will.',
-  'Keeps something hidden and checks on it nightly.',
+  'Has never said thank you and has all the time it needs not to.',
+  'Keeps something under the shelf and checks on it nightly.',
   'Refuses all beverages except the one you are drinking.',
   'Insists on the last word, even when there is no argument.',
-  'Has a designated sulking corner.',
+  'Has a designated sulking corner. It is two inches across.',
   'Will not enter a room second.',
   'Knows when it is going to rain and sulks in advance.',
   'Only eats in front of an audience.',
@@ -359,49 +679,35 @@ export const CLOSERS = [
   'It sleeps. That is the good news.'
 ];
 
-/* ================= GRUDGES + STREAK ================= */
+/* ================= GRUDGES ================= */
 // Keyed by grudge escalation stage: 1 = mild (5+ grudges), 2 = serious (12+), 3 = terminal (20+).
 // {n} is the grudge-holding pet itself, and the note is bylined with that same name.
 export const GRUDGE_LINES = {
   1: [
-    '{n} has started a list with your name at the top.',
-    "{n} moved your things two inches to the left. Just to see if you'd notice.",
-    '{n} is being extremely polite to you. This is not a good sign.',
-    '{n} has stopped making eye contact. It is on purpose.',
-    '{n} left something unpleasant exactly where you would find it.',
-    '{n} has begun referring to you in the third person while you are in the room.',
-    '{n} has started leaving the room when you enter it. Slowly. So you see it happen.'
+    '{n} has started a list. The list is four inches long and there is room.',
+    '{n} moved your things two inches to the left. Just to see if you would notice.',
+    '{n} is being extremely polite to you. It has never been polite before.',
+    '{n} has stopped making eye contact. It is at ankle height. It is managing it.',
+    '{n} left something damp exactly where your hand goes.',
+    '{n} has started leaving its slot when you come in. Slowly. So you see it happen.',
+    '{n} has begun referring to you in the third person while you are in the room.'
   ],
   2: [
-    '{n} has recruited two others against you. You are the last to know.',
+    '{n} has got two others onto it. You are the last to know.',
     '{n} has stopped eating in front of you. It eats fine when you leave.',
-    '{n} has drawn up something that looks a lot like a formal grievance, with your name on it.',
-    '{n} rearranged the shelf overnight so that nothing faces you.',
-    '{n} has been telling the others a version of events that is not flattering to you.',
-    '{n} has taken something of yours and is not hiding it especially well.',
-    '{n} has stopped filing and started planning.'
+    '{n} turned everything on its shelf to face away from you, one thing at a time.',
+    '{n} has been telling the others a version of events. It is not the true one.',
+    '{n} has taken something of yours. It is four inches tall and it is not hiding it well.',
+    '{n} has stopped filing and started planning.',
+    '{n} has begun writing very small, so that more of it fits.'
   ],
   3: [
-    '{n} has stopped speaking to you entirely. The silence has a schedule.',
-    '{n} has labeled a jar with your name on it. The jar is not empty.',
-    '{n} held a ceremony. You were not invited, but you were definitely the subject.',
-    '{n} leaves notes now. They are all just your name, underlined.',
-    '{n} has built something out of your things. It is arranged like an altar.',
+    '{n} has stopped speaking to you. The silence keeps to a schedule.',
+    '{n} held a ceremony. You were not invited and you were the subject.',
+    '{n} leaves notes now. They are all your name, underlined, at four inches.',
+    '{n} has built something out of your things, at its own scale, and arranged it.',
     '{n} is being very kind to you now. It has never been kind before.',
-    '{n} has forgiven you. It said so out loud, twice, without being asked.'
+    '{n} has forgiven you. It said so out loud, twice, unprompted.',
+    '{n} cannot lift a kettle. There is tea beside you, made how you take it.'
   ]
 };
-
-// {d} = consecutive check-in day count.
-export const STREAK_LINES = [
-  "Oh. You're back. Day {d}.",
-  'Day {d}. They noticed. They will not say they noticed.',
-  '{d} days running. Somewhere between a habit and a hostage situation.',
-  'Day {d} of you showing up. Nobody is impressed. Everybody noticed.',
-  '{d} days. Either you are devoted, or this is an experiment and you are in it.',
-  'Back again. Day {d}. The shelf keeps better records than you do.',
-  '{d} days straight. They have started to expect you, which is worse than needing you.',
-  'Day {d}. Somewhere, quietly, this is being counted as loyalty.',
-  '{d} days. Nobody said it out loud, but they would miss you. Do not bring this up.',
-  'Day {d}. One of them was already facing the door when you came in.'
-];

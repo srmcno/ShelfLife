@@ -1553,3 +1553,21 @@ select.voice-select option,select.voice-select optgroup{background:#241830;color
   .tb-primary .btn{min-height:40px;font-size:11.5px;padding:4px 3px}
   .tb-rest{max-height:88vh}
 }
+
+/* ================= NOTE FORMS (comedy direction, lever 4) =================
+   Eight forms share one corkboard. Three of them are physically multi-line — the
+   two-hander, the list and the filled-in document — and collapse into run-on mush
+   without pre-line, because renderNotes() writes escaped text into innerHTML and
+   the source newlines would otherwise be folded into single spaces. */
+.note{white-space:pre-line}
+.note--doc{
+  font-family:var(--body);letter-spacing:.01em;background-image:none;padding-top:24px}
+/* Type size is set per breakpoint rather than here, so the phone override in the
+   max-width:640px block above (which was written for this class) still wins —
+   these rules are appended after it and would otherwise outrank it. */
+@media (min-width:641px){
+  .note--doc{font-size:14px;line-height:1.45}
+}
+@media (min-width:720px){
+  .note--doc{grid-column:span 2}
+}

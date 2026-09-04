@@ -156,7 +156,9 @@ export function renderNotes(state) {
   }
   state.notes.forEach(n => {
     const d = document.createElement('div');
-    d.className = 'note ' + n.kind;
+    // Forms 2/4/6 carry real newlines and rely on .note{white-space:pre-line}.
+    // A filled-in document additionally drops the handwriting for a typed face.
+    d.className = 'note ' + n.kind + (n.form === 'doc' ? ' note--doc' : '');
     d.innerHTML = escapeHtml(n.text) + '<span class="from">' + escapeHtml(n.from) + '</span>';
     notesEl.appendChild(d);
   });

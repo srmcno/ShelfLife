@@ -5585,3 +5585,76 @@ nothing hid behind a fixture. Roughly a dozen lines were cut or rewritten off th
 that read — glosses ("That's the interesting part", "I want you to sit with that"),
 duplicated punchlines, a withhold with nothing under it, and one direct-address entry that
 had the pet answering a question nobody asked.
+
+### Phase 2J: comedy direction implementation
+
+Implements levers 2, 3 and 4 of `docs/comedy-direction.md` (lever 1, the dialogue
+content, is Phase 2I's; this phase wires it into the note feed). The diagnosis being
+answered: *"every note is one creature performing at you, alone, in the same meter,
+ending on a withheld fact."*
+
+**Lever 4 — form rotation (`src/state.js`).** Every note now carries a `form`, one of
+the spec's eight. `chooseForm(state, candidates, rnd, fallback)` applies the two hard
+rules — never the same form twice in a row, no form other than the plain one-liner
+twice within four notes — against `state.formLog` (last 8). `addNote()` takes an
+optional 5th `form` argument and, when a caller does not supply one, tags the note
+itself from `AMBIENT_FORMS`; that is deliberate, because `engine/achievements.js` and
+`engine/behavior.js` emit prose notes back to back and a hardcoded default would put
+two identical tags side by side. **`AMBIENT_FORMS` must keep four entries including
+`line`** — that is the condition under which both rules are always satisfiable (if the
+previous form is not `line`, `line` is free; if it is, the last three notes hold at
+most two other forms). Every note-producing slot in `loop.js` offers at least four
+forms for the same reason. Render support: `.note{white-space:pre-line}` and
+`.note--doc` appended to `style.css`, and `render.js` adds `note--doc`.
+
+Measured over five seeded ten-day runs: line 36–40%, two-hander 16–18%, reaction
+17–20%, found 11–14%, list 5–8%, silence 4–7%, doc 0–3%, direct 1–2%. Zero rule
+violations. Documents and direct address sit under their targets on purpose — the
+spec caps documents at one per batch and direct address at one per session.
+
+**Lever 3 — real state (`src/state.js`, `src/engine/loop.js`).** New, all defaulted in
+`normalizeState()` so old saves load unchanged: `pet.careLog{food,fuss,clean}`,
+`pet.firstTouch`, `pet.names[]`, `pet.bestFuss`/`bestFussAt`/`fussRun`,
+`pet.slotHist[]`, `state.gone[]` (never pruned), `state.visits[]`,
+`state.ledger{meeting,carried,struck}`, `state.roster`, `state.formLog`,
+`state.noteCount`.
+
+Most of it is written by **`reconcile(state, now)`**, which watches the shelf instead
+of asking callers to report in — a rename from `ui/card.js`, a drag from `ui/drag.js`
+and a self-move from `engine/behavior.js` are all recorded identically without those
+modules knowing it exists. The one exception is care, which has no observable trace:
+`engine/care.js` gained three lines calling `recordCare()`.
+
+`subsFor(state, ctx, now)` builds the substitution set and **only sets a key when the
+save file can back it**; `canFill()` refuses any template reaching for a missing one,
+so an unsubstituted `{placeholder}` cannot reach the corkboard. Two rules worth
+keeping: `{home}` is withheld once a pet has moved (so "in slot 4 since it arrived"
+can never be a lie), and `plural()` withholds any count below two (so "1 days" cannot
+be written — that one was caught on screen, not in tests).
+
+**Lever 2 — physical facts.** Content rewritten against the spec's test: *a line that
+would survive being said by an adult in a flatshare is not a Shelf Life line.*
+
+**Recent-line suppression (fixes the reported "same joke three times in one feed").**
+The shared helper is **`pick()` in `src/state.js`** — upgraded in place to a shuffle
+bag rather than adding a new API, so all ~40 existing call sites benefit with no
+edits. It draws uniformly from pool entries not used recently, and once a pool is
+exhausted draws from its stalest quarter; non-string pools (pets, props, trait
+objects) fall through to a plain uniform draw. Memory is module-scoped
+(`PICK_MEMORY = 120`), seeded in `load()` from the notes already on the board so a
+reload cannot re-tell a visible joke. `rememberPick()` / `wasPickedRecently()` are
+exported for lines assembled without going through `pick()` — `freshDialogue()` in
+`loop.js` uses them to put `engine/dialogue.js` (which draws with its own rng) under
+the same suppression. **Other agents: call `pick()` normally, or
+`rememberPick(text)` if you build a line yourself.** Repeats inside one visible
+40-note board went from 28 to 0–3 per run.
+
+**Dialogue wiring.** `freshDialogue()` maps dialogue.js's prose form names onto the
+eight rotation tags (`DIALOGUE_FORM`) and steers `pickDialogue` by kind
+(`FORM_KINDS`) so a slot the budget wants as a two-hander asks for one. Scenes fire
+from the pet-note slots and from one dedicated slot per batch.
+
+Content audit against the kill list: see the phase report. 251 tests pass
+(`test/comedy.test.mjs` adds 33). Verified in the browser at
+`localhost:8420` — boot clean, two-handers/lists/documents render as multiple lines,
+documents span two columns at desktop width.

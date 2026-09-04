@@ -73,7 +73,7 @@ export const ESCALATION_LINES = [
 
 // Rare, used when a feud arc resolves into a truce
 export const TRUCE_LINES = [
-  '{a} and {b} are speaking again. Nobody knows what changed. Neither will say.',
+  '{a} and {b} are speaking again. They are also an inch closer together.',
   '{a} apologized to {b}. It was three words and it cost {a} everything.',
   '{a} and {b} shared a spot on the shelf without incident. Historians are stunned.',
   '{a} and {b} have called it even. The ledger has been quietly destroyed.',

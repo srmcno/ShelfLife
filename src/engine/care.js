@@ -1,6 +1,6 @@
 import { tick, isAsleep } from './tick.js';
 import { ASLEEP_LINES, OVERFED, CARE_LINES } from '../content/copy.js';
-import { clamp, pick, addNote } from '../state.js';
+import { clamp, pick, addNote, recordCare } from '../state.js';
 
 export const CARE_GAIN = { food: 34, fuss: 38, clean: 42 };
 
@@ -19,6 +19,9 @@ export function careFor(state, pet, need, now = Date.now()) {
     line = pick(CARE_LINES[need]);
   }
   pet.needs[need] = clamp(before + gain, 0, 100);
+  // The only choke point where the game learns who you went to, in what order,
+  // and how long you kept fussing. Read back by the state-aware notes in loop.js.
+  recordCare(state, pet, need, now);
   let bondGained = false;
   if (before < 72) {
     pet.cared++;
