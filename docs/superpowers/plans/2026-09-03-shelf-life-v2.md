@@ -876,3 +876,181 @@ git commit -m "Add 46-trait pool and expanded feud/escalation/truce content
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
 ```
+
+
+---
+
+### Task 5: art/stamps.js
+
+**Files:**
+- Create: `src/art/stamps.js`
+- Test: `test/stamps.test.mjs`
+
+**Interfaces:**
+- Produces: `BASE_STAMPS`, `UNLOCK_STAMPS`, `STAMP_LABELS`, `STAMP_SVG`, `STAMP_ANIM_CLASS`, `DEFAULT_STAMP_SIZE`. Pure static data, zero imports. `art/studio.js` (Task 7) uses `STAMP_SVG`/`DEFAULT_STAMP_SIZE` for the stamp picker and live preview; `art/sprite.js` (Task 6) uses `STAMP_SVG`/`STAMP_ANIM_CLASS` to render each placed stamp as an animated layer.
+
+Every stamp SVG is a hand-converted equivalent of the original canvas-drawn `STAMPS` functions from `~/Documents/shelf-life.html` (the `const STAMPS = {...}` block, lines ~1030-1090), translated from canvas-context draw calls into static SVG markup on a fixed -30..30 (60x60) viewBox — computed programmatically (not hand-transcribed) to guarantee the coordinate math matches the originals' proportions exactly. Colored parts use `fill`/`stroke="currentColor"` so `art/sprite.js` tints them via CSS `color`, matching how the original passed a `col` parameter into each draw function; the two fixed off-white parts (eye whites, teeth) stay literal `#F2E9DC`.
+
+- [ ] **Step 1: Write `src/art/stamps.js`**
+
+```js
+export const BASE_STAMPS = ['blob','eyes','bigeye','deadeyes','ears','horns','grin','tail','wing','bow','halo','stitches','spots'];
+export const UNLOCK_STAMPS = [
+  { at:20, stamps:['thirdeye','antlers'], label:'a third eye and antlers' },
+  { at:45, stamps:['tentacles','crown'], label:'tentacles and a crown' }
+];
+export const STAMP_LABELS = { blob:'Body', eyes:'Eyes', bigeye:'One eye', deadeyes:'X eyes', ears:'Ears', horns:'Horns', grin:'Teeth', tail:'Tail', wing:'Wing', bow:'Bow', halo:'Halo', stitches:'Stitches', spots:'Spots', thirdeye:'Third eye', antlers:'Antlers', tentacles:'Tentacles', crown:'Crown' };
+export const DEFAULT_STAMP_SIZE = 40;
+
+// Each SVG uses fill/stroke=currentColor for the tinted parts and a fixed off-white
+// (#F2E9DC) for eye-whites/teeth, matching the original canvas-drawn stamps. Coordinate
+// space is a fixed -30..30 (60x60) box, same convention as PROP_ART.
+export const STAMP_SVG = {
+  blob: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+  <path d="M 0 -19.2 C 24 -18 22.8 19.2 0 20.4 C -22.8 19.2 -24 -18 0 -19.2 Z"/>
+</svg>`,
+  eyes: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="-6.6" cy="0" rx="5.04" ry="6" fill="#F2E9DC"/>
+  <ellipse cx="6.6" cy="0" rx="5.04" ry="6" fill="#F2E9DC"/>
+  <circle cx="-6" cy="0.6" r="2.4" fill="currentColor"/>
+  <circle cx="7.2" cy="0.6" r="2.4" fill="currentColor"/>
+</svg>`,
+  bigeye: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="0" cy="0" rx="10.8" ry="9" fill="#F2E9DC"/>
+  <circle cx="0" cy="0" r="4.32" fill="currentColor"/>
+  <circle cx="1.92" cy="-1.92" r="1.32" fill="#F2E9DC"/>
+</svg>`,
+  deadeyes: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.92" stroke-linecap="round" fill="none">
+  <line x1="-10.8" y1="-3.6" x2="-3.6" y2="3.6"/>
+  <line x1="-3.6" y1="-3.6" x2="-10.8" y2="3.6"/>
+  <line x1="3.6" y1="-3.6" x2="10.8" y2="3.6"/>
+  <line x1="10.8" y1="-3.6" x2="3.6" y2="3.6"/>
+</svg>`,
+  ears: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+  <path d="M -10.8 8.4 Q -14.4 -13.2 -1.8 -2.4 Z"/>
+  <path d="M 10.8 8.4 Q 14.4 -13.2 1.8 -2.4 Z"/>
+</svg>`,
+  horns: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+  <path d="M -6 7.2 Q -18 -2.4 -9 -14.4 Q -7.2 -1.2 -0.6 7.2 Z"/>
+  <path d="M 6 7.2 Q 18 -2.4 9 -14.4 Q 7.2 -1.2 0.6 7.2 Z"/>
+</svg>`,
+  grin: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 9.62 2.5 A 10.8 10.8 0 0 1 -9.62 2.5" fill="none" stroke="currentColor" stroke-width="1.68"/>
+  <path d="M -9.84 6.6 L -6.48 6.6 L -8.16 11.4 Z" fill="#F2E9DC"/>
+  <path d="M -5.76 6.6 L -2.4 6.6 L -4.08 11.4 Z" fill="#F2E9DC"/>
+  <path d="M -1.68 6.6 L 1.68 6.6 L 0 11.4 Z" fill="#F2E9DC"/>
+  <path d="M 2.4 6.6 L 5.76 6.6 L 4.08 11.4 Z" fill="#F2E9DC"/>
+  <path d="M 6.48 6.6 L 9.84 6.6 L 8.16 11.4 Z" fill="#F2E9DC"/>
+</svg>`,
+  tail: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="4.8" stroke-linecap="round">
+  <path d="M 0 0 C 16.8 -2.4 13.2 -19.2 -1.2 -15.6"/>
+</svg>`,
+  wing: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+  <path d="M 0 0 Q -21.6 -16.8 -25.2 2.4 Q -14.4 1.2 -16.8 10.8 Q -6 6 0 0 Z"/>
+</svg>`,
+  bow: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+  <ellipse cx="-9" cy="0" rx="8.4" ry="6" transform="rotate(-17.2 -9 0)"/>
+  <ellipse cx="9" cy="0" rx="8.4" ry="6" transform="rotate(17.2 9 0)"/>
+  <circle cx="0" cy="0" r="3.6"/>
+</svg>`,
+  halo: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2.64">
+  <ellipse cx="0" cy="0" rx="14.4" ry="5.04"/>
+</svg>`,
+  stitches: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.44" stroke-linecap="round">
+  <line x1="-14.4" y1="0" x2="14.4" y2="0"/>
+  <line x1="-12" y1="-4.8" x2="-12" y2="4.8"/>
+  <line x1="-6" y1="-4.8" x2="-6" y2="4.8"/>
+  <line x1="0" y1="-4.8" x2="0" y2="4.8"/>
+  <line x1="6" y1="-4.8" x2="6" y2="4.8"/>
+  <line x1="12" y1="-4.8" x2="12" y2="4.8"/>
+</svg>`,
+  spots: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+  <circle cx="0" cy="0" r="7.56"/>
+  <circle cx="13.2" cy="6" r="5.94"/>
+  <circle cx="-10.8" cy="7.2" r="5.13"/>
+  <circle cx="4.8" cy="-10.8" r="4.86"/>
+</svg>`,
+  thirdeye: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="0" cy="0" rx="9.6" ry="13.2" fill="#F2E9DC"/>
+  <ellipse cx="0" cy="0" rx="3.6" ry="9" fill="currentColor"/>
+  <g stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+  <line x1="12" y1="0" x2="18" y2="0"/>
+  <line x1="8.49" y1="11.03" x2="12.73" y2="16.12"/>
+  <line x1="0" y1="15.6" x2="0" y2="22.8"/>
+  <line x1="-8.49" y1="11.03" x2="-12.73" y2="16.12"/>
+  <line x1="-12" y1="0" x2="-18" y2="0"/>
+  <line x1="-8.49" y1="-11.03" x2="-12.73" y2="-16.12"/>
+  <line x1="0" y1="-15.6" x2="0" y2="-22.8"/>
+  <line x1="8.49" y1="-11.03" x2="12.73" y2="-16.12"/>
+  </g>
+</svg>`,
+  antlers: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2.16" stroke-linecap="round" fill="none">
+  <line x1="-3.6" y1="9.6" x2="-8.4" y2="-16.8"/>
+  <line x1="-6" y1="-3.6" x2="-16.8" y2="-10.8"/>
+  <line x1="-7.44" y1="-10.8" x2="-15.6" y2="-20.4"/>
+  <line x1="3.6" y1="9.6" x2="8.4" y2="-16.8"/>
+  <line x1="6" y1="-3.6" x2="16.8" y2="-10.8"/>
+  <line x1="7.44" y1="-10.8" x2="15.6" y2="-20.4"/>
+</svg>`,
+  tentacles: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2.64" stroke-linecap="round">
+  <path d="M -13.2 0 C -21.6 10.8 -6 18 -16.8 25.2"/>
+  <path d="M -4.8 0 C 3.6 10.8 -12 18 -1.2 25.2"/>
+  <path d="M 4.8 0 C -3.6 10.8 12 18 1.2 25.2"/>
+  <path d="M 13.2 0 C 21.6 10.8 6 18 16.8 25.2"/>
+</svg>`,
+  crown: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+  <path d="M -15.6 7.2 L -15.6 -8.4 L -7.8 0.6 L 0 -13.2 L 7.8 0.6 L 15.6 -8.4 L 15.6 7.2 Z"/>
+</svg>`,
+};
+
+export const STAMP_ANIM_CLASS = {
+  blob:'', eyes:'anim-blink', bigeye:'anim-blink', deadeyes:'anim-blink-slow', thirdeye:'anim-blink-slow',
+  ears:'anim-sway', wing:'anim-sway', tail:'anim-sway', antlers:'anim-sway-slow', tentacles:'anim-undulate',
+  horns:'anim-twitch', stitches:'anim-twitch', halo:'anim-halo', crown:'anim-bob', bow:'anim-bob',
+  grin:'', spots:''
+};
+```
+
+- [ ] **Step 2: Write `test/stamps.test.mjs`**
+
+```js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { BASE_STAMPS, UNLOCK_STAMPS, STAMP_LABELS, STAMP_SVG, STAMP_ANIM_CLASS, DEFAULT_STAMP_SIZE } from '../src/art/stamps.js';
+
+test('every base and unlockable stamp kind has SVG markup and a label', () => {
+  const allKinds = BASE_STAMPS.concat(UNLOCK_STAMPS.flatMap(u => u.stamps));
+  assert.ok(allKinds.length >= 16, `expected >=16 stamp kinds, got ${allKinds.length}`);
+  allKinds.forEach(kind => {
+    assert.ok(STAMP_SVG[kind] && STAMP_SVG[kind].includes('<svg'), `missing/invalid SVG for ${kind}`);
+    assert.ok(typeof STAMP_LABELS[kind] === 'string' && STAMP_LABELS[kind].length > 0, `missing label for ${kind}`);
+    assert.ok(kind in STAMP_ANIM_CLASS, `missing STAMP_ANIM_CLASS entry for ${kind}`);
+  });
+});
+
+test('DEFAULT_STAMP_SIZE is a positive number', () => {
+  assert.equal(typeof DEFAULT_STAMP_SIZE, 'number');
+  assert.ok(DEFAULT_STAMP_SIZE > 0);
+});
+
+test('UNLOCK_STAMPS thresholds are ascending', () => {
+  const ats = UNLOCK_STAMPS.map(u => u.at);
+  for (let i = 1; i < ats.length; i++) assert.ok(ats[i] > ats[i - 1], 'unlock thresholds must be ascending');
+});
+```
+
+- [ ] **Step 3: Run the tests**
+
+Run: `cd ~/shelf-life && node --test test/stamps.test.mjs`
+Expected: all 3 tests PASS.
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd ~/shelf-life
+git add src/art/stamps.js test/stamps.test.mjs
+git commit -m "Add art/stamps.js: 16 SVG stamp layers converted from the original canvas draws
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
+```
