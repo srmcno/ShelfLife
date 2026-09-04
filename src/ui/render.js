@@ -1,0 +1,148 @@
+import { moodOf, isAsleep, MOOD_WORD } from '../engine/tick.js';
+import { activeFeuds, feudingIds, totalBond } from '../engine/achievements.js';
+import { renderPetSprite, moodMotionClasses } from '../art/sprite.js';
+import { PROPS, PROP_ART } from '../content/props.js';
+
+const cabinet = document.getElementById('cabinet');
+const notesEl = document.getElementById('notes');
+const statusBar = document.getElementById('statusBar');
+
+export function renderAll(state) {
+  renderStatus(state);
+  renderShelf(state);
+  renderNotes(state);
+}
+
+export function renderStatus(state) {
+  const days = Math.max(1, Math.floor((Date.now() - state.started) / 86400000) + 1);
+  const counts = { content: 0, fine: 0, annoyed: 0, furious: 0 };
+  state.pets.forEach(p => counts[moodOf(p)]++);
+  const feuds = activeFeuds(state).length;
+  statusBar.innerHTML =
+    '<span>Day <b>' + days + '</b></span>' +
+    '<span>Living here: <b>' + state.pets.length + '</b> of ' + state.slots.length + '</span>' +
+    '<span class="good">Content: <b>' + counts.content + '</b></span>' +
+    '<span>Fine: <b>' + counts.fine + '</b></span>' +
+    '<span class="mid">Annoyed: <b>' + counts.annoyed + '</b></span>' +
+    '<span class="bad">Furious: <b>' + counts.furious + '</b></span>' +
+    '<span>Feuds: <b>' + feuds + '</b></span>' +
+    '<span>Bond: <b>' + totalBond(state) + '</b></span>' +
+    '<span class="streak-badge">🔥 Streak: <b>' + (state.streak.count || 0) + '</b></span>';
+}
+
+function feudDirectionFor(state, pet, slotIndex) {
+  const partnerIds = new Set();
+  activeFeuds(state).forEach(([a, b]) => {
+    if (a.id === pet.id) partnerIds.add(b.id);
+    else if (b.id === pet.id) partnerIds.add(a.id);
+  });
+  if (!partnerIds.size) return null;
+  const leftIdx = slotIndex % 6 > 0 ? slotIndex - 1 : -1;
+  const rightIdx = slotIndex % 6 < 5 ? slotIndex + 1 : -1;
+  if (leftIdx >= 0 && partnerIds.has(state.slots[leftIdx])) return 'right';
+  if (rightIdx >= 0 && partnerIds.has(state.slots[rightIdx])) return 'left';
+  return null;
+}
+
+function petEl(state, pet, slotIndex) {
+  const mood = moodOf(pet);
+  const asleep = isAsleep(pet);
+  const feuding = feudingIds(state).has(pet.id);
+  const feudDirection = feuding ? feudDirectionFor(state, pet, slotIndex) : null;
+
+  const btn = document.createElement('button');
+  btn.className = 'pet piece' + (feuding ? ' feuding' : '') + (mood === 'furious' ? ' furious' : '') + (asleep ? ' asleep' : '');
+  btn.dataset.id = pet.id;
+  btn.dataset.kind = 'pet';
+  btn.dataset.slot = slotIndex;
+  btn.setAttribute('aria-label', 'Take care of ' + pet.name + ', currently ' + MOOD_WORD[mood]);
+
+  const sprite = renderPetSprite(pet);
+  sprite.classList.add(...moodMotionClasses(pet, { mood, asleep, feudDirection }));
+  btn.appendChild(sprite);
+
+  const nameplate = document.createElement('span');
+  nameplate.className = 'nameplate';
+  nameplate.textContent = pet.name;
+  btn.appendChild(nameplate);
+
+  const pips = document.createElement('span');
+  pips.className = 'pips';
+  if (asleep) pips.innerHTML += '<span class="pip zzz">asleep</span>';
+  ['food', 'fuss', 'clean'].forEach(k => { if (pet.needs[k] < 42) pips.innerHTML += '<span class="pip ' + k + '"></span>'; });
+  btn.appendChild(pips);
+
+  return btn;
+}
+
+function propEl(pr, slotIndex) {
+  const def = PROPS[pr.kind];
+  const btn = document.createElement('button');
+  btn.className = 'prop piece';
+  btn.dataset.id = pr.id;
+  btn.dataset.kind = 'prop';
+  btn.dataset.slot = slotIndex;
+  btn.setAttribute('aria-label', def.name);
+  btn.innerHTML = PROP_ART[pr.kind] + '<span class="nameplate">' + escapeHtml(def.name) + '</span>';
+  return btn;
+}
+
+export function renderShelf(state) {
+  cabinet.innerHTML = '';
+  const rows = state.slots.length / 6;
+  for (let r = 0; r < rows; r++) {
+    const row = document.createElement('div');
+    row.className = 'shelf-row';
+    const slots = document.createElement('div');
+    slots.className = 'slots';
+    for (let c = 0; c < 6; c++) {
+      const i = r * 6 + c;
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      slot.dataset.slot = i;
+      const id = state.slots[i];
+      if (id) {
+        const pet = state.pets.find(p => p.id === id);
+        if (pet) slot.appendChild(petEl(state, pet, i));
+        else {
+          const pr = (state.props || []).find(x => x.id === id);
+          if (pr) slot.appendChild(propEl(pr, i));
+        }
+      }
+      slots.appendChild(slot);
+    }
+    if (r === 0 && !state.pets.length) {
+      slots.innerHTML = '';
+      const msg = document.createElement('div');
+      msg.className = 'empty-shelf';
+      msg.textContent = 'Nothing lives here yet. Make something.';
+      slots.appendChild(msg);
+    }
+    row.appendChild(slots);
+    const plank = document.createElement('div');
+    plank.className = 'plank';
+    row.appendChild(plank);
+    cabinet.appendChild(row);
+  }
+}
+
+export function renderNotes(state) {
+  notesEl.innerHTML = '';
+  if (!state.notes.length) {
+    const d = document.createElement('div');
+    d.className = 'notes-empty';
+    d.textContent = 'No notes yet. Press "Check the shelf" and see what turns up.';
+    notesEl.appendChild(d);
+    return;
+  }
+  state.notes.forEach(n => {
+    const d = document.createElement('div');
+    d.className = 'note ' + n.kind;
+    d.innerHTML = escapeHtml(n.text) + '<span class="from">' + escapeHtml(n.from) + '</span>';
+    notesEl.appendChild(d);
+  });
+}
+
+export function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
