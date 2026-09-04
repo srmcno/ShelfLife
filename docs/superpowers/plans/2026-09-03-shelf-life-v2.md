@@ -2921,3 +2921,534 @@ git commit -m "Add copy/props/decor content and opt-in mature-mode overlay
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
 ```
+
+---
+
+### Task 9: engine/unlocks.js + engine/achievements.js + engine/loop.js
+
+**Files:**
+- Create: `src/engine/unlocks.js`
+- Create: `src/engine/achievements.js`
+- Create: `src/engine/loop.js`
+- Test: `test/unlocks.test.mjs`
+- Test: `test/achievements.test.mjs`
+- Test: `test/loop.test.mjs`
+
+**Interfaces:**
+- Consumes: `BASE_STAMPS`/`UNLOCK_STAMPS` (art/stamps.js — pure data, zero DOM deps, safe for engine to import despite living in `art/`), `FEUDS`/`FEUD_LINES`/`ESCALATION_LINES`/`TRUCE_LINES` (content/feuds.js), `GRUDGE_LINES`/`STREAK_LINES`/`COMPLAINTS`/`HAPPY_NOTES`/`EVENTS` (content/copy.js), `MATURE_COMPLAINTS_EXTRA`/`MATURE_HAPPY_EXTRA`/`MATURE_EVENTS_EXTRA` (content/mature.js), `TRAIT_BY_ID` (content/traits.js), `PROPS` (content/props.js), `neighborSlots`/`neighborProps`/`neighborPets`/`tick`/`moodOf`/`worstNeed`/`isAsleep`/`hasTrait` (engine/tick.js), `pick`/`clamp`/`addNote`/`petById` (state.js).
+- Produces: everything under `engine/unlocks.js:`, `engine/achievements.js:`, `engine/loop.js:` in Global contracts.
+- `engine/achievements.js` imports `totalBond` from `engine/unlocks.js` (both are `engine/`, siblings, no cycle). `engine/loop.js` imports from both `engine/tick.js` and `engine/achievements.js`/`engine/unlocks.js` — it's the top of the engine layer, the orchestration entry point `main.js` (Task 14) calls for "Check the shelf".
+- Color-tier unlocks (`BASE_COLORS`/`UNLOCK_COLORS`) stay owned by `art/studio.js` (Task 7, already built) — `checkUnlocks` here only fires notifications for *stamp* unlock tiers, which is the gameplay-relevant one; the palette silently grows as bond rises (no separate toast), a deliberate scope simplification from the original prototype (which combined both).
+
+- [ ] **Step 1: Write `src/engine/unlocks.js`**
+
+```js
+import { BASE_STAMPS, UNLOCK_STAMPS } from '../art/stamps.js';
+import { addNote } from '../state.js';
+
+export function totalBond(state) {
+  return state.pets.reduce((n, p) => n + p.bond, 0);
+}
+
+export function unlockedStampKinds(state) {
+  const bond = totalBond(state);
+  let out = BASE_STAMPS.slice();
+  UNLOCK_STAMPS.forEach(u => { if (bond >= u.at) out = out.concat(u.stamps); });
+  return out;
+}
+
+export function checkUnlocks(state) {
+  const bond = totalBond(state);
+  const newly = [];
+  UNLOCK_STAMPS.forEach(u => {
+    const key = 'stamps:' + u.at;
+    if (bond >= u.at && !state.seenUnlocks.includes(key)) {
+      state.seenUnlocks.push(key);
+      addNote(state, 'They trust you enough for ' + u.label + ' in the studio.', 'the shelf', 'arrival');
+      newly.push({ key, label: u.label });
+    }
+  });
+  return newly;
+}
+```
+
+- [ ] **Step 2: Write `test/unlocks.test.mjs`**
+
+```js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { totalBond, unlockedStampKinds, checkUnlocks } from '../src/engine/unlocks.js';
+import { BASE_STAMPS, UNLOCK_STAMPS } from '../src/art/stamps.js';
+import { blankState, defaultNeeds } from '../src/state.js';
+
+function makePet(bond) {
+  return { id: 'p' + Math.random(), name: 'T', traits: [], needs: defaultNeeds(), bond, cared: 0, grudges: 0, grudgeStage: 0 };
+}
+
+test('totalBond sums bond across all pets', () => {
+  const s = blankState();
+  s.pets.push(makePet(3), makePet(7));
+  assert.equal(totalBond(s), 10);
+});
+
+test('unlockedStampKinds only includes base stamps below the first threshold', () => {
+  const s = blankState();
+  s.pets.push(makePet(5));
+  const kinds = unlockedStampKinds(s);
+  BASE_STAMPS.forEach(k => assert.ok(kinds.includes(k)));
+  UNLOCK_STAMPS.forEach(u => u.stamps.forEach(k => assert.ok(!kinds.includes(k))));
+});
+
+test('unlockedStampKinds includes a tier once bond meets its threshold', () => {
+  const s = blankState();
+  const firstTier = UNLOCK_STAMPS[0];
+  s.pets.push(makePet(firstTier.at));
+  const kinds = unlockedStampKinds(s);
+  firstTier.stamps.forEach(k => assert.ok(kinds.includes(k)));
+});
+
+test('checkUnlocks fires once per threshold and is idempotent after that', () => {
+  const s = blankState();
+  const firstTier = UNLOCK_STAMPS[0];
+  s.pets.push(makePet(firstTier.at));
+  const first = checkUnlocks(s);
+  assert.equal(first.length, 1);
+  assert.equal(s.notes.length, 1);
+  const second = checkUnlocks(s);
+  assert.equal(second.length, 0);
+  assert.equal(s.notes.length, 1);
+});
+```
+
+- [ ] **Step 3: Run the unlocks tests**
+
+Run: `cd ~/shelf-life && node --test test/unlocks.test.mjs`
+Expected: all 4 tests PASS.
+
+- [ ] **Step 4: Write `src/engine/achievements.js`**
+
+```js
+import { FEUDS, FEUD_LINES, ESCALATION_LINES, TRUCE_LINES } from '../content/feuds.js';
+import { GRUDGE_LINES, STREAK_LINES } from '../content/copy.js';
+import { neighborPets, neighborSlots } from './tick.js';
+import { totalBond } from './unlocks.js';
+import { pick, addNote, clamp, petById } from '../state.js';
+
+export function activeFeuds(state) {
+  const found = [];
+  state.slots.forEach((id, i) => {
+    if (!id) return;
+    const a = petById(state, id);
+    if (!a) return;
+    neighborPets(state, i).forEach(b => {
+      if (b.id <= a.id) return;
+      for (const [x, y] of FEUDS) {
+        if ((a.traits.includes(x) && b.traits.includes(y)) || (a.traits.includes(y) && b.traits.includes(x))) {
+          found.push([a, b]);
+          return;
+        }
+      }
+    });
+  });
+  return found;
+}
+
+export function feudingIds(state) {
+  const s = new Set();
+  activeFeuds(state).forEach(([a, b]) => { s.add(a.id); s.add(b.id); });
+  return s;
+}
+
+export function feudPairKey(a, b) {
+  return [a, b].sort().join('|');
+}
+
+// Every active feud gets exactly one note per call: an ongoing flavor line by
+// default, a chance to escalate (deepening the arc), or — only once the arc
+// has escalated at least twice — a rare chance to resolve into a truce.
+export function stepFeudArc(state, pairKey, a, b) {
+  const arc = state.feudArcs[pairKey] || (state.feudArcs[pairKey] = { level: 0, truce: false });
+  if (arc.truce) return null;
+  const roll = Math.random();
+  if (arc.level >= 2 && roll < 0.12) {
+    arc.truce = true;
+    addNote(state, pick(TRUCE_LINES).replace(/\{a\}/g, a.name).replace(/\{b\}/g, b.name), 'observed', 'note');
+    return 'truce';
+  }
+  if (roll < 0.35) {
+    arc.level += 1;
+    addNote(state, pick(ESCALATION_LINES).replace(/\{a\}/g, a.name).replace(/\{b\}/g, b.name), 'observed', 'feud');
+    return 'escalate';
+  }
+  addNote(state, pick(FEUD_LINES).replace(/\{a\}/g, a.name).replace(/\{b\}/g, b.name), 'observed', 'feud');
+  return 'ongoing';
+}
+
+export const GRUDGE_STAGE_AT = [5, 12, 20];
+
+export function grudgeStageFor(grudges) {
+  let stage = 0;
+  GRUDGE_STAGE_AT.forEach((t, i) => { if (grudges >= t) stage = i + 1; });
+  return stage;
+}
+
+// Called after pet.grudges increments. Fires the escalating "reckoning" the
+// first time a new stage is crossed: a note, a bond hit, and — at stage 2 —
+// the pet relocates itself to a random neighboring slot.
+export function checkGrudgeEscalation(state, pet) {
+  const newStage = grudgeStageFor(pet.grudges);
+  if (newStage <= pet.grudgeStage) return false;
+  pet.grudgeStage = newStage;
+  const lines = GRUDGE_LINES[newStage] || [];
+  if (!lines.length) return false;
+  addNote(state, pick(lines).replace(/\{n\}/g, pet.name), pet.name, 'angry');
+  if (newStage === 1) {
+    pet.bond = clamp(pet.bond - 1, 0, 25);
+  } else if (newStage === 2) {
+    pet.bond = clamp(pet.bond - 2, 0, 25);
+    const i = state.slots.indexOf(pet.id);
+    if (i >= 0) {
+      const nbrs = neighborSlots(i, state.slots.length).filter(x => state.slots[x]);
+      if (nbrs.length) {
+        const j = pick(nbrs);
+        const tmp = state.slots[i]; state.slots[i] = state.slots[j]; state.slots[j] = tmp;
+      }
+    }
+  } else if (newStage === 3) {
+    pet.bond = clamp(pet.bond - 3, 0, 25);
+  }
+  return true;
+}
+
+function dayKey(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+}
+
+export function checkinStreak(state, now = Date.now()) {
+  const today = dayKey(now);
+  if (!state.streak.lastCheckin) {
+    state.streak.count = 1;
+    state.streak.lastCheckin = now;
+    return { streak: 1, isNewDay: true };
+  }
+  const last = dayKey(state.streak.lastCheckin);
+  if (last === today) return { streak: state.streak.count, isNewDay: false };
+  const yesterday = dayKey(now - 86400000);
+  state.streak.count = (last === yesterday) ? state.streak.count + 1 : 1;
+  state.streak.lastCheckin = now;
+  addNote(state, pick(STREAK_LINES).replace(/\{d\}/g, String(state.streak.count)), 'the shelf', 'note');
+  return { streak: state.streak.count, isNewDay: true };
+}
+
+export const ACHIEVEMENTS = [
+  { id: 'first-arrival', label: 'Move-In Day', desc: 'Made your first pet.', toastLine: 'First one. There will be more.', check: state => state.pets.length >= 1 },
+  { id: 'full-shelf', label: 'No Vacancy', desc: 'Filled every slot on the shelf.', toastLine: 'The shelf is full. So are your obligations.', check: state => state.slots.every(s => s !== null) },
+  { id: 'first-feud', label: 'Drama', desc: 'Witnessed your first feud.', toastLine: 'Someone is not speaking to someone else. Achievement unlocked.', check: state => activeFeuds(state).length >= 1 },
+  { id: 'first-grudge', label: 'On The List', desc: 'A pet started keeping score.', toastLine: 'It is counting now. It will not stop.', check: state => state.pets.some(p => p.grudges >= 1) },
+  { id: 'first-reckoning', label: 'The Reckoning', desc: 'A grudge finally escalated.', toastLine: 'That was a mistake. That was definitely a mistake.', check: state => state.pets.some(p => p.grudgeStage >= 1) },
+  { id: 'terminal-grudge', label: 'It Has A Folder Now', desc: 'A grudge reached its final stage.', toastLine: 'This is no longer about the sock.', check: state => state.pets.some(p => p.grudgeStage >= 3) },
+  { id: 'max-bond', label: 'Chosen', desc: 'A pet reached maximum bond.', toastLine: 'It has decided to keep you. Permanently, probably.', check: state => state.pets.some(p => p.bond >= 25) },
+  { id: 'bond-10', label: 'Trusted, Barely', desc: 'Reached 10 total bond.', toastLine: 'They trust you slightly more than the furniture.', check: state => totalBond(state) >= 10 },
+  { id: 'bond-30', label: 'Household Name', desc: 'Reached 30 total bond.', toastLine: 'You are, against all odds, beloved.', check: state => totalBond(state) >= 30 },
+  { id: 'bond-60', label: 'Cult Leader', desc: 'Reached 60 total bond.', toastLine: 'This is either love or a hostage situation.', check: state => totalBond(state) >= 60 },
+  { id: 'streak-3', label: 'Creature Of Habit', desc: 'Checked in three days running.', toastLine: 'Three days. They have noticed the pattern.', check: state => state.streak.count >= 3 },
+  { id: 'streak-7', label: 'They Expect You Now', desc: 'Checked in seven days running.', toastLine: 'A full week. This is a relationship now.', check: state => state.streak.count >= 7 },
+  { id: 'first-truce', label: 'Unlikely Peace', desc: 'A feud resolved into a truce.', toastLine: 'Nobody knows what changed. It is, somehow, fine now.', check: state => Object.values(state.feudArcs).some(a => a.truce) },
+  { id: 'menagerie', label: 'A Real Collection', desc: 'Ten or more pets living on the shelf at once.', toastLine: 'This is either a menagerie or a liability.', check: state => state.pets.length >= 10 },
+  { id: 'decorator', label: 'Furnished', desc: 'Placed five or more things on the shelf.', toastLine: 'The shelf has a personality now. It is not yours.', check: state => state.props.length >= 5 }
+];
+
+export function checkAchievements(state) {
+  const unlocked = [];
+  ACHIEVEMENTS.forEach(a => {
+    if (state.achievements.includes(a.id)) return;
+    if (a.check(state)) {
+      state.achievements.push(a.id);
+      addNote(state, a.toastLine, 'the shelf', 'arrival');
+      unlocked.push(a);
+    }
+  });
+  return unlocked;
+}
+```
+
+- [ ] **Step 5: Write `test/achievements.test.mjs`**
+
+```js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  activeFeuds, feudingIds, feudPairKey, stepFeudArc,
+  GRUDGE_STAGE_AT, grudgeStageFor, checkGrudgeEscalation,
+  checkinStreak, ACHIEVEMENTS, checkAchievements
+} from '../src/engine/achievements.js';
+import { FEUDS } from '../src/content/feuds.js';
+import { blankState, defaultNeeds } from '../src/state.js';
+
+function makePet(id, traits, overrides = {}) {
+  return { id, name: id, traits, needs: defaultNeeds(), bond: 0, cared: 0, grudges: 0, grudgeStage: 0, ...overrides };
+}
+function localHour(h, day = 1) { return new Date(2024, 0, day, h, 0, 0).getTime(); }
+
+test('activeFeuds detects a feuding pair sitting next to each other', () => {
+  const [x, y] = FEUDS[0];
+  const s = blankState();
+  s.pets.push(makePet('a', [x]), makePet('b', [y]));
+  s.slots[0] = 'a'; s.slots[1] = 'b';
+  assert.equal(activeFeuds(s).length, 1);
+  assert.equal(feudingIds(s).has('a'), true);
+  assert.equal(feudingIds(s).has('b'), true);
+});
+
+test('activeFeuds finds nothing for non-adjacent pets', () => {
+  const [x, y] = FEUDS[0];
+  const s = blankState();
+  s.pets.push(makePet('a', [x]), makePet('b', [y]));
+  s.slots[0] = 'a'; s.slots[2] = 'b';
+  assert.equal(activeFeuds(s).length, 0);
+});
+
+test('feudPairKey is order-independent', () => {
+  assert.equal(feudPairKey('a', 'b'), feudPairKey('b', 'a'));
+});
+
+test('stepFeudArc always adds exactly one note per call, level never regresses, truce only after level 2', () => {
+  const s = blankState();
+  const a = makePet('a', []); const b = makePet('b', []);
+  const key = feudPairKey('a', 'b');
+  for (let i = 0; i < 150; i++) {
+    const before = s.feudArcs[key] ? s.feudArcs[key].level : 0;
+    const notesBefore = s.notes.length;
+    const outcome = stepFeudArc(s, key, a, b);
+    if (outcome === null) continue;
+    assert.equal(s.notes.length, notesBefore + 1);
+    const after = s.feudArcs[key].level;
+    assert.ok(after >= before);
+    if (s.feudArcs[key].truce) assert.ok(after >= 2);
+  }
+});
+
+test('grudgeStageFor buckets at the documented thresholds', () => {
+  assert.equal(grudgeStageFor(0), 0);
+  assert.equal(grudgeStageFor(4), 0);
+  assert.equal(grudgeStageFor(GRUDGE_STAGE_AT[0]), 1);
+  assert.equal(grudgeStageFor(GRUDGE_STAGE_AT[1]), 2);
+  assert.equal(grudgeStageFor(GRUDGE_STAGE_AT[2]), 3);
+});
+
+test('checkGrudgeEscalation only fires once per stage and reduces bond', () => {
+  const s = blankState();
+  const pet = makePet('a', [], { grudges: GRUDGE_STAGE_AT[0], bond: 10 });
+  s.pets.push(pet);
+  assert.equal(checkGrudgeEscalation(s, pet), true);
+  assert.equal(pet.grudgeStage, 1);
+  assert.equal(pet.bond, 9);
+  assert.equal(checkGrudgeEscalation(s, pet), false);
+  assert.equal(pet.bond, 9);
+});
+
+test('checkinStreak: first check-in is 1, same day is a no-op, next day increments, a gap resets to 1', () => {
+  const s = blankState();
+  assert.deepEqual(checkinStreak(s, localHour(10, 1)), { streak: 1, isNewDay: true });
+  assert.deepEqual(checkinStreak(s, localHour(20, 1)), { streak: 1, isNewDay: false });
+  assert.equal(checkinStreak(s, localHour(9, 2)).streak, 2);
+  assert.equal(checkinStreak(s, localHour(9, 5)).streak, 1);
+});
+
+test('checkAchievements unlocks first-arrival exactly once', () => {
+  const s = blankState();
+  s.pets.push(makePet('a', []));
+  const unlocked = checkAchievements(s);
+  assert.ok(unlocked.some(a => a.id === 'first-arrival'));
+  assert.ok(s.achievements.includes('first-arrival'));
+  assert.equal(checkAchievements(s).some(a => a.id === 'first-arrival'), false);
+});
+
+test('every achievement has a unique id and a check function', () => {
+  const ids = ACHIEVEMENTS.map(a => a.id);
+  assert.equal(new Set(ids).size, ids.length);
+  ACHIEVEMENTS.forEach(a => assert.equal(typeof a.check, 'function'));
+});
+```
+
+- [ ] **Step 6: Run the achievements tests**
+
+Run: `cd ~/shelf-life && node --test test/achievements.test.mjs`
+Expected: all 8 tests PASS.
+
+- [ ] **Step 7: Write `src/engine/loop.js`**
+
+```js
+import { tick, moodOf, worstNeed, isAsleep, hasTrait, neighborProps, neighborPets } from './tick.js';
+import { activeFeuds, feudPairKey, stepFeudArc, checkGrudgeEscalation, checkinStreak } from './achievements.js';
+import { checkUnlocks } from './unlocks.js';
+import { TRAIT_BY_ID } from '../content/traits.js';
+import { PROPS } from '../content/props.js';
+import { COMPLAINTS, HAPPY_NOTES, EVENTS } from '../content/copy.js';
+import { MATURE_COMPLAINTS_EXTRA, MATURE_HAPPY_EXTRA, MATURE_EVENTS_EXTRA } from '../content/mature.js';
+import { pick, addNote, clamp, petById } from '../state.js';
+
+export function petLine(state, pet) {
+  const mood = moodOf(pet);
+  const need = worstNeed(pet);
+  if (mood === 'furious' || mood === 'annoyed') {
+    let pool = COMPLAINTS[need][mood];
+    if (state.settings.matureMode) pool = pool.concat(MATURE_COMPLAINTS_EXTRA[need] || []);
+    return { text: pick(pool), kind: 'angry' };
+  }
+  const i = state.slots.indexOf(pet.id);
+  const nbrs = i >= 0 ? neighborPets(state, i) : [];
+  const trait = TRAIT_BY_ID[pick(pet.traits)];
+  if (nbrs.length && trait.social && Math.random() < 0.45) {
+    return { text: pick(trait.social).replace(/\{n\}/g, pick(nbrs).name), kind: 'note' };
+  }
+  if (mood === 'content' && Math.random() < 0.35) {
+    let pool = HAPPY_NOTES;
+    if (state.settings.matureMode) pool = pool.concat(MATURE_HAPPY_EXTRA);
+    return { text: pick(pool), kind: 'note' };
+  }
+  return { text: pick(trait.notes), kind: 'note' };
+}
+
+export function autonomy(state) {
+  state.pets.forEach(pet => {
+    const mood = moodOf(pet);
+    const i = state.slots.indexOf(pet.id);
+    if (i < 0) return;
+    if ((mood === 'furious' || hasTrait(pet, 'wanderer')) && Math.random() < (mood === 'furious' ? 0.45 : 0.2)) {
+      const nbrs = neighborPets(state, i);
+      if (nbrs.length) {
+        const other = pick(nbrs);
+        const j = state.slots.indexOf(other.id);
+        state.slots[i] = other.id;
+        state.slots[j] = pet.id;
+        addNote(state, 'Moved itself next to ' + other.name + '. Nobody was consulted.', pet.name, 'angry');
+      }
+    }
+    if (hasTrait(pet, 'thief') && pet.needs.food < 45) {
+      const nbrs = neighborPets(state, i);
+      if (nbrs.length) {
+        const victim = pick(nbrs);
+        victim.needs.food = clamp(victim.needs.food - 14, 0, 100);
+        pet.needs.food = clamp(pet.needs.food + 12, 0, 100);
+        addNote(state, 'Took food from ' + victim.name + '. ' + victim.name + ' is aware.', pet.name, 'feud');
+      }
+    }
+  });
+}
+
+export function checkShelf(state, now = Date.now()) {
+  tick(state, now);
+  if (!state.pets.length) {
+    addNote(state, pick([
+      'The shelf is empty and somehow still judging you.',
+      'Nothing lives here. The dust has opinions anyway.',
+      'Empty. The wood creaked once, unprompted.'
+    ]), 'the shelf', 'note');
+    return;
+  }
+  activeFeuds(state).slice(0, 2).forEach(([a, b]) => {
+    stepFeudArc(state, feudPairKey(a.id, b.id), a, b);
+  });
+  const occupied = state.slots.map((id, i) => id ? i : -1).filter(i => i >= 0);
+  const chosen = occupied.slice().sort(() => Math.random() - 0.5).slice(0, 4);
+  chosen.forEach(i => {
+    const pet = petById(state, state.slots[i]);
+    if (!pet) return;
+    if (isAsleep(pet, new Date(now)) && Math.random() < 0.5) {
+      addNote(state, 'Asleep. Has left a note reading "later".', pet.name, 'note');
+      return;
+    }
+    const near = neighborProps(state, i);
+    if (near.length && moodOf(pet) !== 'furious' && Math.random() < 0.42) {
+      const pr = pick(near);
+      addNote(state, pick(PROPS[pr.kind].lines).replace(/\{p\}/g, pet.name), PROPS[pr.kind].name, 'note');
+      return;
+    }
+    const line = petLine(state, pet);
+    if (line.kind === 'angry') {
+      pet.grudges = (pet.grudges || 0) + 1;
+      checkGrudgeEscalation(state, pet);
+    }
+    addNote(state, line.text, pet.name, line.kind);
+  });
+  if (state.props.length && Math.random() < 0.35) {
+    const pr = pick(state.props);
+    addNote(state, pick(PROPS[pr.kind].ambient), PROPS[pr.kind].name, 'note');
+  }
+  let eventPool = EVENTS;
+  if (state.settings.matureMode) eventPool = eventPool.concat(MATURE_EVENTS_EXTRA);
+  if (Math.random() < 0.4) addNote(state, pick(eventPool), 'the shelf', 'note');
+  autonomy(state);
+  checkinStreak(state, now);
+  checkUnlocks(state);
+}
+```
+
+- [ ] **Step 8: Write `test/loop.test.mjs`**
+
+```js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { petLine, autonomy, checkShelf } from '../src/engine/loop.js';
+import { blankState, defaultNeeds } from '../src/state.js';
+
+function makePet(id, traits, needs) {
+  return { id, name: id, traits, needs: needs || defaultNeeds(), bond: 0, cared: 0, grudges: 0, grudgeStage: 0 };
+}
+
+test('petLine returns an angry complaint for a furious pet', () => {
+  const s = blankState();
+  const pet = makePet('a', ['spiteful'], { food: 5, fuss: 5, clean: 5 });
+  const line = petLine(s, pet);
+  assert.equal(line.kind, 'angry');
+  assert.ok(line.text.length > 0);
+});
+
+test('petLine does not throw with matureMode on, across many draws', () => {
+  const s = blankState();
+  s.settings.matureMode = true;
+  const pet = makePet('a', ['spiteful'], { food: 5, fuss: 90, clean: 90 });
+  for (let i = 0; i < 20; i++) assert.doesNotThrow(() => petLine(s, pet));
+});
+
+test('checkShelf on an empty shelf adds exactly one note', () => {
+  const s = blankState();
+  checkShelf(s, Date.now());
+  assert.equal(s.notes.length, 1);
+});
+
+test('checkShelf on a populated shelf ticks and never throws', () => {
+  const s = blankState();
+  const pet = makePet('a', ['spiteful'], { food: 50, fuss: 50, clean: 50 });
+  s.pets.push(pet); s.slots[0] = pet.id;
+  s.lastTick = Date.now() - 3600000;
+  assert.doesNotThrow(() => checkShelf(s, Date.now()));
+});
+
+test('autonomy never throws across many randomized trials', () => {
+  for (let i = 0; i < 30; i++) {
+    const s = blankState();
+    s.pets.push(makePet('a', [], { food: 0, fuss: 0, clean: 0 }), makePet('b', [], { food: 90, fuss: 90, clean: 90 }));
+    s.slots[0] = 'a'; s.slots[1] = 'b';
+    assert.doesNotThrow(() => autonomy(s));
+  }
+});
+```
+
+- [ ] **Step 9: Run the loop tests**
+
+Run: `cd ~/shelf-life && node --test test/loop.test.mjs`
+Expected: all 5 tests PASS.
+
+- [ ] **Step 10: Commit**
+
+```bash
+cd ~/shelf-life
+git add src/engine/unlocks.js src/engine/achievements.js src/engine/loop.js test/unlocks.test.mjs test/achievements.test.mjs test/loop.test.mjs
+git commit -m "Add engine/unlocks.js, achievements.js, loop.js with full node:test coverage
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
+```
