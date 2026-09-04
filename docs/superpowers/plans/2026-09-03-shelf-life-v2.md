@@ -133,7 +133,7 @@ audio/narrator.js:        initNarrator(), pickBestVoice(), availableVoices(), on
 
 ui/render.js:              renderAll(state), renderStatus(state), renderShelf(state), renderNotes(state)
 ui/toast.js:                toast(msg)
-ui/card.js:                 openCard(state,id,keepScroll), openPropCard(state,id), closeCard()
+ui/card.js:                 openCard(state,id,keepScroll), openPropCard(state,id), closeCard(), getOpenPetId()
 ui/decorUI.js:              buildDecor(state), applyDecor(state), initDecorUI(state)
 ui/drag.js:                  initDrag(state)
 ```
@@ -4042,6 +4042,12 @@ export function openPropCard(state, id) {
     buildDecor(state);
     renderAll(state);
   });
+}
+
+// Lets main.js's periodic tick know which pet's card (if any) to silently
+// refresh, without needing its own copy of this module's open-card state.
+export function getOpenPetId() {
+  return openPetId;
 }
 
 export function closeCard() {

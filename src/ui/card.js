@@ -161,6 +161,12 @@ export function openPropCard(state, id) {
   });
 }
 
+// Lets main.js's periodic tick know which pet's card (if any) to silently
+// refresh, without needing its own copy of this module's open-card state.
+export function getOpenPetId() {
+  return openPetId;
+}
+
 export function closeCard() {
   openPetId = null;
   cardVeil.classList.remove('open');
