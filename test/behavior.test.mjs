@@ -548,21 +548,20 @@ test('mischiefPhase does something anatomy-appropriate and never nothing', () =>
   assert.ok(['hang', 'lurk'].includes(out.act));
   assert.equal(s.notes.length, 1);
 
-  const blob = makePet('b', [], { anatomy: { isLimbless: true, hasLegs: false } });
-  const bowl = makeProp('q1', 'bowl');
-  const s2 = shelf([blob, bowl]);
   let sawNudge = false;
   for (let i = 0; i < 40 && !sawNudge; i++) {
-    const s3 = shelf([makePet('b', [], { anatomy: { isLimbless: true, hasLegs: false } }), makeProp('q1', 'bowl')]);
-    const r = mischiefPhase(s3, NOW);
+    const blobShelf = shelf([
+      makePet('b', [], { anatomy: { isLimbless: true, hasLegs: false } }),
+      makeProp('q1', 'bowl')
+    ]);
+    const r = mischiefPhase(blobShelf, NOW);
     if (r && r.act === 'nudge') {
       sawNudge = true;
-      assert.equal(s3.slots[0], 'q1');                  // the prop actually moved
-      assert.equal(s3.slots[1], 'b');
+      assert.equal(blobShelf.slots[0], 'q1');           // the prop actually moved
+      assert.equal(blobShelf.slots[1], 'b');
     }
   }
   assert.ok(sawNudge, 'a limbless pet beside a prop should sometimes roll into it');
-  assert.ok(bowl);
 });
 
 /* ---------------- the pass ---------------- */
