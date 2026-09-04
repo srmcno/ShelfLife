@@ -3837,3 +3837,219 @@ git commit -m "Add ui/render.js and ui/toast.js: shelf/status/notes rendering vi
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
 ```
+
+### Task 12: ui/card.js
+
+**Files:**
+- Create: `src/ui/card.js`
+
+**Interfaces:**
+- Consumes: `moodOf`/`isAsleep`/`MOOD_WORD` (engine/tick.js), `careFor` (engine/care.js), `checkUnlocks` (engine/unlocks.js), `checkAchievements`/`grudgeStageFor`/`GRUDGE_STAGE_AT` (engine/achievements.js), `TRAIT_BY_ID` (content/traits.js), `PROPS`/`PROP_ART` (content/props.js), `renderPetSprite` (art/sprite.js), `renderAll`/`escapeHtml` (ui/render.js), `toast` (ui/toast.js), `buildDecor` (ui/decorUI.js, Task 13 — built in parallel; not yet on disk when this task runs but present by the time anything imports this module), `playFeed`/`playFuss`/`playClean` (audio/sound.js), `petById`/`propById`/`pick`/`addNote`/`save`/`clamp` (state.js).
+- Produces: `openCard(state,id,keepScroll)`, `openPropCard(state,id)`, `closeCard()`.
+- DOM-facing, no automated test — verified in Task 16's manual smoke test. `node --check` only.
+
+Ported from `~/Documents/shelf-life.html`'s `grievanceLine`/`needRow`/`statRow`/`openCard`/`closeCard`/`openPropCard` and the `cardVeil` click-outside/Escape handlers, adapted for the new data model:
+
+- No global `state` — every function takes it as an explicit first argument.
+- The pet portrait is a live animated sprite, not a static `<img>`. `openCard` builds the header/needs/bio/stats/traits/actions as one HTML string (assigned to `cardSheet.innerHTML`) with an empty `<div class="card-portrait" id="cardPortraitHost">` left in it, then appends `renderPetSprite(pet)` into that host afterward — a real DOM element can't live inside an `innerHTML` string.
+- Care buttons don't mutate/save/render themselves. `careFor(state, pet, need)` only returns `{message, bondGained}`; this module applies the side effects: toast the message, play the matching sound (`playFeed`/`playFuss`/`playClean`), then `checkUnlocks(state)`, `checkAchievements(state)`, `save()`, `renderAll(state)`, and reopen the card (`openCard(state, pet.id, true)`) if it's still open, so the bars visibly update.
+- New grudge-stage UI: a line reading "Grudge stage N of 3" (`grudgeStageFor(pet.grudges)` out of `GRUDGE_STAGE_AT.length`) sits alongside the ported `grievanceLine` text near the bond bar. `grievanceLine`'s thresholds now reference `GRUDGE_STAGE_AT[0]`/`[1]`/`[2]` (5/12/20) instead of the original's hardcoded 4/10/20, to stay in sync with the engine's actual escalation thresholds.
+- `openPropCard`'s "Put it away" button removes the prop from `state.props`/`state.slots`, adds a note, saves, closes the card, and refreshes the decor prop tray via `buildDecor(state)` in addition to `renderAll(state)`.
+- This module wires only `cardVeil`'s own outside-click-to-close handler. It does not install a document-level Escape-key handler (that would need to know about every other veil in the app) — `main.js` (Task 14) owns that and calls the exported `closeCard()`.
+- Rehome keeps the original's blocking `confirm()` — the app has no other modal-confirmation pattern, and it's a destructive, rare action.
+
+- [ ] **Step 1: Write `src/ui/card.js`**
+
+```js
+import { moodOf, isAsleep, MOOD_WORD } from '../engine/tick.js';
+import { careFor } from '../engine/care.js';
+import { checkUnlocks } from '../engine/unlocks.js';
+import { checkAchievements, grudgeStageFor, GRUDGE_STAGE_AT } from '../engine/achievements.js';
+import { TRAIT_BY_ID } from '../content/traits.js';
+import { PROPS, PROP_ART } from '../content/props.js';
+import { renderPetSprite } from '../art/sprite.js';
+import { renderAll, escapeHtml } from './render.js';
+import { toast } from './toast.js';
+import { buildDecor } from './decorUI.js';
+import { playFeed, playFuss, playClean } from '../audio/sound.js';
+import { petById, propById, pick, addNote, save, clamp } from '../state.js';
+
+const cardVeil = document.getElementById('cardVeil');
+const cardSheet = document.getElementById('cardSheet');
+
+let openPetId = null;
+
+// Thresholds mirror engine/achievements.js's GRUDGE_STAGE_AT (5/12/20) rather
+// than the original prototype's hardcoded 4/10/20, so this stays in sync with
+// the actual grudge-stage escalation logic.
+function grievanceLine(pet) {
+  const g = pet.grudges || 0;
+  if (g === 0) return 'No grievances on file. Yet.';
+  if (g < GRUDGE_STAGE_AT[0]) return 'Grievances filed: ' + g + '.';
+  if (g < GRUDGE_STAGE_AT[1]) return 'Grievances filed: ' + g + '. It has started numbering them.';
+  if (g < GRUDGE_STAGE_AT[2]) return 'Grievances filed: ' + g + '. There is a folder now.';
+  return 'Grievances filed: ' + g + '. It has stopped filing and started planning.';
+}
+
+function needRow(pet, key, label) {
+  const v = Math.round(pet.needs[key]);
+  return '<div class="need ' + key + (v < 30 ? ' low' : '') + '"><span>' + label + '</span>' +
+    '<span class="bar"><span style="width:' + v + '%"></span></span><span class="num">' + v + '</span></div>';
+}
+
+function statRow(label, key, val) {
+  return '<div class="stat ' + key + '"><span>' + label + '</span>' +
+    '<span class="bar"><span style="width:' + (val * 10) + '%"></span></span><span class="num">' + val + '</span></div>';
+}
+
+export function openCard(state, id, keepScroll) {
+  const pet = petById(state, id);
+  if (!pet) return;
+  openPetId = id;
+  const y = keepScroll ? cardVeil.scrollTop : 0;
+  const mood = moodOf(pet);
+  const asleep = isAsleep(pet);
+  const dateStr = new Date(pet.born).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const stage = grudgeStageFor(pet.grudges);
+
+  let html = '';
+  html += '<div class="sheet-head"><div><h2>' + escapeHtml(pet.name) + '</h2>' +
+    '<div class="card-meta">Moved in ' + dateStr + (asleep ? '. Asleep right now.' : '') + '</div>' +
+    '<span class="mood-tag mood-' + mood + '">' + MOOD_WORD[mood] + '</span></div>' +
+    '<button class="btn btn-ghost btn-sm" id="cardClose">Close</button></div>';
+  html += '<div class="card-top"><div class="card-portrait" id="cardPortraitHost"></div><div class="needs">' +
+    needRow(pet, 'food', 'Fed') + needRow(pet, 'fuss', 'Fussed') + needRow(pet, 'clean', 'Clean') +
+    '<div class="bondline">Bond ' + pet.bond + ' of 25' +
+    '<br>' + grievanceLine(pet) +
+    '<br>Grudge stage ' + stage + ' of ' + GRUDGE_STAGE_AT.length +
+    '<span class="bond-bar"><span style="width:' + (pet.bond / 25 * 100) + '%"></span></span></div>' +
+    '</div></div>';
+  html += '<div class="care-row">' +
+    '<button class="btn" data-care="food">Feed it</button>' +
+    '<button class="btn" data-care="fuss">Fuss over it</button>' +
+    '<button class="btn" data-care="clean">Clean it up</button></div>';
+  html += '<p class="bio">' + escapeHtml(pet.bio) + '</p>';
+  html += '<div class="section-rule"></div>';
+  html += statRow('Cute', 'cute', pet.stats.cute) + statRow('Menace', 'menace', pet.stats.menace) +
+    statRow('Damp', 'damp', pet.stats.damp) + statRow('Mystique', 'mystique', pet.stats.mystique);
+  html += '<ul class="traits">';
+  pet.traits.forEach(tid => {
+    const t = TRAIT_BY_ID[tid];
+    if (!t) return;
+    html += '<li><strong>' + escapeHtml(t.name) + '</strong><em>' + escapeHtml(t.blurb) + '</em></li>';
+  });
+  html += '</ul>';
+  html += '<div class="card-actions"><button class="btn btn-danger btn-sm" id="rehomeBtn">Rehome</button>' +
+    '<button class="btn btn-sm" id="renameBtn">Rename</button></div>';
+
+  cardSheet.innerHTML = html;
+  // The portrait is a live animated sprite (a real DOM element), not something
+  // that can live inside the innerHTML string above — appended after the fact
+  // into the empty host div that string left behind.
+  document.getElementById('cardPortraitHost').appendChild(renderPetSprite(pet));
+
+  cardVeil.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  cardVeil.scrollTop = y;
+
+  cardSheet.querySelectorAll('[data-care]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const need = btn.dataset.care;
+      const result = careFor(state, pet, need);
+      toast(result.message);
+      if (need === 'food') playFeed();
+      else if (need === 'fuss') playFuss();
+      else if (need === 'clean') playClean();
+      checkUnlocks(state);
+      checkAchievements(state);
+      save();
+      renderAll(state);
+      if (cardVeil.classList.contains('open') && openPetId === pet.id) {
+        openCard(state, pet.id, true);
+      }
+    });
+  });
+  document.getElementById('cardClose').addEventListener('click', closeCard);
+  document.getElementById('renameBtn').addEventListener('click', () => {
+    const next = prompt('New name for ' + pet.name, pet.name);
+    if (next && next.trim()) {
+      pet.name = next.trim().slice(0, 22);
+      save();
+      openCard(state, pet.id, true);
+      renderAll(state);
+    }
+  });
+  document.getElementById('rehomeBtn').addEventListener('click', () => {
+    if (!confirm('Rehome ' + pet.name + '? It does not come back.')) return;
+    state.pets = state.pets.filter(x => x.id !== pet.id);
+    state.slots = state.slots.map(s => s === pet.id ? null : s);
+    state.pets.forEach(o => { o.needs.fuss = clamp(o.needs.fuss - 9, 0, 100); });
+    addNote(state, pet.name + ' is gone. The others noticed immediately and said nothing.', 'the shelf', 'feud');
+    if (state.pets.length) {
+      addNote(state, pick([
+        'They have counted themselves twice since.',
+        'Nobody has taken the empty space. Nobody will.',
+        'One of them asked whether there is a list, and whether it is on it.'
+      ]), 'the shelf', 'angry');
+    }
+    save();
+    closeCard();
+    renderAll(state);
+  });
+}
+
+export function openPropCard(state, id) {
+  const pr = propById(state, id);
+  if (!pr) return;
+  const def = PROPS[pr.kind];
+  openPetId = null;
+  cardSheet.innerHTML =
+    '<div class="sheet-head"><div><h2>' + escapeHtml(def.name) + '</h2>' +
+    '<div class="card-meta">' + escapeHtml(def.desc) + '</div></div>' +
+    '<button class="btn btn-ghost btn-sm" id="cardClose">Close</button></div>' +
+    '<div class="card-top"><div class="card-portrait">' + PROP_ART[pr.kind] + '</div><div>' +
+    '<p class="bio">' + escapeHtml(pick(def.ambient)) + '</p></div></div>' +
+    '<div class="card-actions"><button class="btn btn-danger btn-sm" id="removeProp">Put it away</button></div>';
+  cardVeil.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('cardClose').addEventListener('click', closeCard);
+  document.getElementById('removeProp').addEventListener('click', () => {
+    state.props = state.props.filter(x => x.id !== pr.id);
+    state.slots = state.slots.map(x => x === pr.id ? null : x);
+    addNote(state, def.name + ' has been put away. Somebody has noticed.', 'the shelf', 'note');
+    save();
+    closeCard();
+    buildDecor(state);
+    renderAll(state);
+  });
+}
+
+export function closeCard() {
+  openPetId = null;
+  cardVeil.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// This module only owns cardVeil's own outside-click-to-close behavior — the
+// global Escape-key handler (which needs to know about every other veil in
+// the app) belongs to main.js (Task 14), not here.
+cardVeil.addEventListener('click', e => { if (e.target === cardVeil) closeCard(); });
+```
+
+- [ ] **Step 2: Syntax check**
+
+```bash
+cd ~/shelf-life
+node --check src/ui/card.js && echo "card.js OK"
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+cd ~/shelf-life
+git add src/ui/card.js
+git commit -m "Add ui/card.js: pet/prop detail sheet with grudge-stage display
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
+```
