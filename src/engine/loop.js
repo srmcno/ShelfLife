@@ -1,11 +1,12 @@
-import { tick, moodOf, worstNeed, isAsleep, hasTrait, neighborProps, neighborPets } from './tick.js';
+import { tick, moodOf, worstNeed, isAsleep, neighborProps, neighborPets } from './tick.js';
 import { activeFeuds, feudPairKey, stepFeudArc, checkGrudgeEscalation, checkinStreak } from './achievements.js';
 import { checkUnlocks } from './unlocks.js';
+import { runBehavior } from './behavior.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS } from '../content/props.js';
 import { COMPLAINTS, HAPPY_NOTES, EVENTS } from '../content/copy.js';
 import { MATURE_COMPLAINTS_EXTRA, MATURE_HAPPY_EXTRA, MATURE_EVENTS_EXTRA } from '../content/mature.js';
-import { pick, addNote, clamp, petById } from '../state.js';
+import { pick, addNote, petById } from '../state.js';
 
 export function petLine(state, pet) {
   const mood = moodOf(pet);
@@ -29,31 +30,11 @@ export function petLine(state, pet) {
   return { text: pick(trait.notes), kind: 'note' };
 }
 
-export function autonomy(state) {
-  state.pets.forEach(pet => {
-    const mood = moodOf(pet);
-    const i = state.slots.indexOf(pet.id);
-    if (i < 0) return;
-    if ((mood === 'furious' || hasTrait(pet, 'wanderer')) && Math.random() < (mood === 'furious' ? 0.45 : 0.2)) {
-      const nbrs = neighborPets(state, i);
-      if (nbrs.length) {
-        const other = pick(nbrs);
-        const j = state.slots.indexOf(other.id);
-        state.slots[i] = other.id;
-        state.slots[j] = pet.id;
-        addNote(state, 'Moved itself next to ' + other.name + '. Nobody was consulted.', pet.name, 'angry');
-      }
-    }
-    if (hasTrait(pet, 'thief') && pet.needs.food < 45) {
-      const nbrs = neighborPets(state, i);
-      if (nbrs.length) {
-        const victim = pick(nbrs);
-        victim.needs.food = clamp(victim.needs.food - 14, 0, 100);
-        pet.needs.food = clamp(pet.needs.food + 12, 0, 100);
-        addNote(state, 'Took food from ' + victim.name + '. ' + victim.name + ' is aware.', pet.name, 'feud');
-      }
-    }
-  });
+// Kept as the historical entry point. The random swap-with-a-neighbor and the
+// thief's snack raid both live in engine/behavior.js now, where they are one
+// motive among many rather than the only two things a pet ever does on its own.
+export function autonomy(state, now = Date.now()) {
+  return runBehavior(state, now, { force: true });
 }
 
 export function checkShelf(state, now = Date.now()) {
@@ -98,7 +79,7 @@ export function checkShelf(state, now = Date.now()) {
   let eventPool = EVENTS;
   if (state.settings.matureMode) eventPool = eventPool.concat(MATURE_EVENTS_EXTRA);
   if (Math.random() < 0.4) addNote(state, pick(eventPool), 'the shelf', 'note');
-  autonomy(state);
+  runBehavior(state, now, { force: true });
   checkinStreak(state, now);
   checkUnlocks(state);
 }

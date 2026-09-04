@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shelf Life — limbed sprite fixture</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+  body{padding:24px}
+  .fixture-cab{max-width:520px;margin:0 auto}
+  .fixture-cab .slots{grid-template-columns:repeat(3,1fr)}
+  .controls{max-width:520px;margin:24px auto 0;display:flex;gap:8px;flex-wrap:wrap}
+  .readout{max-width:520px;margin:14px auto 0;font-size:13px;color:var(--bone-dim);white-space:pre-wrap}
+</style>
+</head>
+<body>
+
+<!--
+  Hand-written stand-in for a generated creature, used to prove the limb half of
+  the animation system works before src/art/creatures.js exists.
+
+  It is also the executable spec for the data-part contract (see
+  src/art/anatomy.js): every limb is a <g data-part="..."> with an optional
+  data-index and data-pivot. Nothing here is animated by hand — the director
+  tags each part, gives it a phase, and CSS does the rest, exactly as it will
+  for real generated creatures.
+
+  Serve the repo and open /test/fixtures/limbed-sprite.html.
+-->
+
+<h1 style="font-size:26px">Limbed sprite fixture</h1>
+<p class="tagline">A hand-written creature carrying <code>data-part</code> limbs. Buttons drive the same
+classes and clips the director uses on the real shelf.</p>
+
+<main class="cabinet fixture-cab" id="cab">
+  <div class="shelf-row">
+    <div class="slots">
+      <div class="slot" data-slot="0">
+        <button class="pet piece" data-id="fixture" data-kind="pet" data-slot="0">
+          <div class="sprite sl2 sl-mood-content" data-pet="fixture"
+               style="--sl-breath:3.6s;--sl-phase:-1.2s;--sl-tilt0:1.2deg">
+            <div class="sprite-act">
+              <div class="sprite-figure">
+                <svg class="sprite-body" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                  <!-- wings behind the body; pivot is bbox-relative, at the edge
+                       where the wing meets the back -->
+                  <g data-part="wing" data-index="0" data-side="l" data-pivot="24 10" fill="#7FD8C0" opacity=".85">
+                    <path d="M32 34 L8 30 L14 50 L32 54 Z"/>
+                  </g>
+                  <g data-part="wing" data-index="1" data-side="r" data-pivot="0 10" fill="#7FD8C0" opacity=".85">
+                    <path d="M68 34 L92 30 L86 50 L68 54 Z"/>
+                  </g>
+                  <!-- tail: default origin for a tail is 0% 50%, its base -->
+                  <g data-part="tail" data-index="0" fill="none" stroke="#A32C3C" stroke-width="7" stroke-linecap="round">
+                    <path d="M74 62 Q90 60 92 46"/>
+                  </g>
+                  <!-- legs: default origin 50% 0%, the hip at the top of the bbox -->
+                  <g data-part="leg" data-index="0" data-side="l" fill="#5C3A47">
+                    <rect x="39" y="70" width="7" height="24" rx="3.5"/>
+                  </g>
+                  <g data-part="leg" data-index="1" data-side="r" fill="#5C3A47">
+                    <rect x="54" y="70" width="7" height="24" rx="3.5"/>
+                  </g>
+                  <!-- arms: default origin 50% 0%, the shoulder -->
+                  <g data-part="arm" data-index="0" data-side="l" fill="#5C3A47">
+                    <rect x="19" y="44" width="6" height="22" rx="3"/>
+                  </g>
+                  <g data-part="arm" data-index="1" data-side="r" fill="#5C3A47">
+                    <rect x="75" y="44" width="6" height="22" rx="3"/>
+                  </g>
+                  <!-- ears: default origin 50% 100%, the base -->
+                  <g data-part="ear" data-index="0" fill="#FF8FB8">
+                    <path d="M36 34 L32 14 L46 28 Z"/>
+                  </g>
+                  <g data-part="ear" data-index="1" fill="#FF8FB8">
+                    <path d="M64 34 L68 14 L54 28 Z"/>
+                  </g>
+                  <ellipse cx="50" cy="52" rx="26" ry="24" fill="#FF8FB8"/>
+                  <ellipse cx="42" cy="48" rx="5" ry="6" fill="#F2E9DC"/>
+                  <ellipse cx="58" cy="48" rx="5" ry="6" fill="#F2E9DC"/>
+                  <circle cx="42.5" cy="49" r="2.4" fill="#1A1220"/>
+                  <circle cx="58.5" cy="49" r="2.4" fill="#1A1220"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <span class="nameplate">Fixture</span>
+          <span class="pips"></span>
+        </button>
+      </div>
+      <div class="slot" data-slot="1"></div>
+      <div class="slot" data-slot="2"></div>
+    </div>
+    <div class="plank"></div>
+  </div>
+</main>
+
+<div class="controls">
+  <button class="btn btn-sm" data-clip="sl2-sneak" data-body="sl-sneaking" data-ms="2900">Sneak</button>
+  <button class="btn btn-sm" data-clip="sl2-hang" data-body="sl-hanging" data-ms="4200">Hang</button>
+  <button class="btn btn-sm" data-clip="sl2-flutter" data-body="sl-flapping" data-ms="1700">Flap</button>
+  <button class="btn btn-sm" data-clip="sl2-stomp" data-body="sl-stepping" data-ms="1250">Stomp</button>
+  <button class="btn btn-sm" id="moveBtn">Walk to next slot</button>
+  <button class="btn btn-sm" id="careBtn">Feed it</button>
+</div>
+<div class="readout" id="readout">…</div>
+
+<script type="module">
+import { initAnimator, reactTo, captureShelfPositions, playShelfMoves } from '../../src/art/animator.js';
+import { resolveMotion } from '../../src/art/anatomy.js';
+
+// The creature generator will supply this block on the pet itself; here it is
+// hand-written so the resolver has something to report.
+const FIXTURE_PET = {
+  id: 'fixture',
+  traits: [],
+  anatomy: { hasLegs: true, legCount: 2, hasArms: true, armCount: 2, hasWings: true, wingCount: 2, hasTail: true }
+};
+
+initAnimator({ getPet: id => (id === 'fixture' ? FIXTURE_PET : null) });
+
+const cab = document.getElementById('cab');
+const sprite = document.querySelector('.sprite.sl2');
+
+document.querySelectorAll('[data-clip]').forEach(b => {
+  b.addEventListener('click', () => {
+    const act = sprite.querySelector('.sprite-act');
+    const ms = Number(b.dataset.ms);
+    act.style.animation = 'none';
+    void act.offsetWidth;
+    act.style.animation = b.dataset.clip + ' ' + ms + 'ms cubic-bezier(.45,0,.3,1) 1';
+    sprite.classList.add(b.dataset.body);
+    setTimeout(() => { sprite.classList.remove(b.dataset.body); act.style.animation = ''; }, ms);
+  });
+});
+
+document.getElementById('moveBtn').addEventListener('click', () => {
+  const before = captureShelfPositions(cab);
+  const pet = cab.querySelector('.pet');
+  const slots = Array.from(cab.querySelectorAll('.slot'));
+  const at = slots.indexOf(pet.parentElement);
+  const to = (at + 1) % slots.length;
+  slots[to].appendChild(pet);
+  pet.dataset.slot = String(to);   // travel is keyed on a real change of slot
+  playShelfMoves(cab, before);
+});
+
+document.getElementById('careBtn').addEventListener('click', () => reactTo('fixture', 'food'));
+
+// Report what the resolver made of this body, and what the director tagged.
+setTimeout(() => {
+  const parts = {};
+  sprite.querySelectorAll('[data-part]').forEach(p => {
+    parts[p.dataset.part] = (parts[p.dataset.part] || 0) + 1;
+  });
+  document.getElementById('readout').textContent =
+    'resolveMotion: ' + JSON.stringify(resolveMotion(FIXTURE_PET)) +
+    '\ngait attribute: ' + sprite.dataset.slGait +
+    '\ncapability classes: ' + Array.from(sprite.classList).filter(c => c.indexOf('sl-can-') === 0).join(' ') +
+    '\nlimbs tagged .sl-part: ' + sprite.querySelectorAll('.sl-part').length + ' of ' + sprite.querySelectorAll('[data-part]').length +
+    '\nparts: ' + JSON.stringify(parts);
+}, 600);
+</script>
+</body>
+</html>

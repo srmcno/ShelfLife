@@ -373,6 +373,10 @@ footer{max-width:var(--shell);margin:40px auto 0;font-size:12px;color:var(--bone
 }
 @media (max-width:640px){
   body{padding-top:18px}
+  /* Phone-sized viewport, whatever the pointer reports: the small variants get
+     the same 44px target the (pointer:coarse) rules above give real touch. */
+  .btn-sm,.chip,.opt,.sw{min-height:44px}
+  .sw{width:44px}
   .cabinet{padding:12px 8px 6px}
   .slots{gap:5px;padding:0 2px}
   .shelf-row{--slot-h:104px;--plank-h:13px;--label-drop:34px}

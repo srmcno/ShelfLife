@@ -5,6 +5,7 @@ import { TRAITS, TRAIT_BY_ID } from './content/traits.js';
 import { ORIGINS, HABITS, CLOSERS, FALLBACK_NAMES } from './content/copy.js';
 import { tick } from './engine/tick.js';
 import { checkShelf, petLine } from './engine/loop.js';
+import { runBehavior, catchUpBehavior } from './engine/behavior.js';
 import { doRounds } from './engine/care.js';
 import { checkAchievements, ACHIEVEMENTS } from './engine/achievements.js';
 import { checkUnlocks, totalBond } from './engine/unlocks.js';
@@ -224,6 +225,7 @@ if (!Store.persistent) document.getElementById('storageWarn').hidden = false;
   applyDecor(state);
   const away = (Date.now() - state.lastTick) / HOUR;
   tick(state);
+  if (catchUpBehavior(state)) save();   // life went on while you were away
   renderAll(state);
   if (state.pets.length && away > 6) {
     const worst = state.pets.slice().sort((a, b) =>
@@ -239,9 +241,11 @@ if (!Store.persistent) document.getElementById('storageWarn').hidden = false;
 
 setInterval(() => {
   if (tick(state)) {
+    runBehavior(state);                 // self-rate-limited to PASS_INTERVAL_MS
     save();
     renderStatus(state);
     renderShelf(state);
+    renderNotes(state);
     const openId = getOpenPetId();
     if (openId) openCard(state, openId, true);
   }

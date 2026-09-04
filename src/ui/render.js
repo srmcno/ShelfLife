@@ -1,7 +1,8 @@
-import { moodOf, isAsleep, MOOD_WORD } from '../engine/tick.js';
+import { moodOf, isAsleep, hasTrait, MOOD_WORD } from '../engine/tick.js';
 import { activeFeuds, feudingIds } from '../engine/achievements.js';
 import { totalBond } from '../engine/unlocks.js';
-import { renderPetSprite, moodMotionClasses } from '../art/sprite.js';
+import { renderPetSprite, moodMotionClasses, MOTION_TRAIT_FLAGS } from '../art/sprite.js';
+import { captureShelfPositions, playShelfMoves } from '../art/animator.js';
 import { PROPS, PROP_ART } from '../content/props.js';
 
 const cabinet = document.getElementById('cabinet');
@@ -58,8 +59,12 @@ function petEl(state, pet, slotIndex) {
   btn.dataset.slot = slotIndex;
   btn.setAttribute('aria-label', 'Take care of ' + pet.name + ', currently ' + MOOD_WORD[mood]);
 
+  // Trait flags are resolved here rather than inside art/sprite.js so the art
+  // layer keeps its "no engine/content imports" rule; the animation director
+  // reads them back off the element to weight which idle behaviours a pet gets.
+  const traits = MOTION_TRAIT_FLAGS.filter(k => hasTrait(pet, k));
   const sprite = renderPetSprite(pet);
-  sprite.classList.add(...moodMotionClasses(pet, { mood, asleep, feudDirection }));
+  sprite.classList.add(...moodMotionClasses(pet, { mood, asleep, feudDirection, traits }));
   btn.appendChild(sprite);
 
   const nameplate = document.createElement('span');
@@ -89,6 +94,11 @@ function propEl(pr, slotIndex) {
 }
 
 export function renderShelf(state) {
+  // The cabinet is rebuilt from scratch every render, so a pet that changed
+  // slots is destroyed and recreated somewhere else — it would teleport. Snap
+  // the old positions first and hand them to the animator afterwards, which
+  // replays the difference as an actual walk across the shelf (FLIP).
+  const before = captureShelfPositions(cabinet);
   cabinet.innerHTML = '';
   const rows = state.slots.length / 6;
   for (let r = 0; r < rows; r++) {
@@ -132,6 +142,7 @@ export function renderShelf(state) {
     row.appendChild(plank);
     cabinet.appendChild(row);
   }
+  playShelfMoves(cabinet, before);
 }
 
 export function renderNotes(state) {
