@@ -490,7 +490,7 @@ Port the full original stylesheet from `~/Documents/shelf-life.html` (lines 11-1
 .stamp-preview-layer{position:absolute;inset:0;pointer-events:none}
 .stamp-preview-layer .sprite-stamp{position:absolute}
 
-.sprite{position:relative;width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;transform-origin:50% 100%}
+.sprite{position:relative;width:100%;max-height:78px;display:flex;align-items:flex-end;justify-content:center;transform-origin:50% 100%}
 .sprite-body{width:100%;max-height:78px;object-fit:contain;filter:drop-shadow(0 4px 5px rgba(0,0,0,.5));pointer-events:none;position:relative}
 .sprite-stamp{position:absolute;pointer-events:none;transform-origin:center center}
 .sprite-stamp svg{width:100%;height:100%;display:block}
