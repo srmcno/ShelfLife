@@ -602,11 +602,11 @@ export const TRAITS = [
     notes:['Announced its own demise. Recovered for dinner.','Performed a monologue about the injustice of Tuesdays.','Took a bow. Nobody was watching. Took another.','Is "workshopping some material" about you.'],
     social:['Made {n} its scene partner without asking.','Upstaged {n} during a nap.','Dedicated a performance to {n}. {n} did not want that.'] },
   { id:'nocturnal', name:'Nocturnal', blurb:'Awake at 3am. So are you now.',
-    stats:{mystique:3}, care:{fuss:1.5},
+    stats:{mystique:3}, care:{fuss:1.5}, nocturnal:true,
     notes:['Was very busy at 3am. Doing what is unclear.','Slept through the entire day out of spite.','Has opinions it saves specifically for 3am.','Woke you up to make sure you were still asleep.'],
     social:['Woke {n} up. Denies it. There is evidence.','Had a whole conversation with {n} at 3am. {n} does not remember.','Let {n} sleep, for once. Historic.'] },
   { id:'magpie', name:'Magpie', blurb:'Collects things. Some of them were yours.',
-    stats:{mystique:2,menace:1}, care:{},
+    stats:{mystique:2,menace:1}, care:{}, thief:true,
     notes:['Has a stash. Will not disclose contents.','Something shiny went missing. You have a guess.','Reorganized the stash by "importance."','Traded something to another pet. Terms unclear.'],
     social:['Took something from {n}. {n} noticed. {n} said nothing.','Traded {n} a shiny rock for something actually valuable.','Showed {n} the stash. Regretted it immediately.'] },
   { id:'unblinking', name:'Unblinking', blurb:'Has not blinked since the day it arrived.',
@@ -634,7 +634,7 @@ export const TRAITS = [
     notes:['Reverted to instinct over a dropped crumb.','Made a nest out of something that was not nest material.','Growled at the vacuum. The vacuum was off.','Has gone back to basics. The basics are chaos.'],
     social:['Challenged {n} to something. {n} did not accept. It happened anyway.','Taught {n} a feral habit. {n} picked it up fast.','Backed off from {n} for once. Historic. Do not ask why.'] },
   { id:'cult', name:'Cult Adjacent', blurb:'Has a candle, a schedule, and questions.',
-    stats:{mystique:5,menace:1}, care:{fuss:1.3},
+    stats:{mystique:5,menace:1}, care:{fuss:1.3}, wanderer:true,
     notes:['Held a small ceremony. Would not disclose the purpose.','Asked you to join something. Declined to say what.','Lit the candle at an unusual hour. On schedule, apparently.','Has recruited zero members and remains extremely optimistic.'],
     social:['Invited {n} to something. {n} should probably say no.','{n} attended the ceremony. {n} will not discuss it.','Has named {n} in the schedule. No further details given.'] },
   { id:'doom', name:'Doomsayer', blurb:'Certain it ends badly. Often correct.',
@@ -642,7 +642,7 @@ export const TRAITS = [
     notes:['Predicted disaster. There was a minor spill. It felt vindicated.','Has been "warning everyone" about something unspecified.','Said this was coming. This was dinner. Dinner was coming.','Updated its prophecy to be vaguer and therefore more accurate.'],
     social:['Warned {n} about something that has not happened.','Was right about {n}, for once, and will not let it go.','Comforted {n} about the coming doom. Badly.'] },
   { id:'clingy', name:'Emotionally Adjacent', blurb:'Always slightly closer than you left it.',
-    stats:{cute:2,menace:-1}, care:{fuss:1.6},
+    stats:{cute:2,menace:-1}, care:{fuss:1.6}, wanderer:true,
     notes:['Was exactly where you left it. Somehow closer.','Followed you with its eyes across the entire room.','Left a spot warm from waiting. It had been hours.','Asked, without words, to be picked up. You understood anyway.'],
     social:['Sat closer to {n} than personal space allows.','Got jealous of {n} for no clear reason.','Held a grudge against {n} for leaving the room.'] },
   { id:'taxidermy', name:'Taxidermy Curious', blurb:'Asks unusual questions about the others.',
@@ -842,6 +842,16 @@ test('trait ids are unique and TRAIT_BY_ID matches TRAITS', () => {
   const ids = TRAITS.map(t => t.id);
   assert.equal(new Set(ids).size, ids.length, 'duplicate trait id found');
   ids.forEach(id => assert.equal(TRAIT_BY_ID[id].id, id));
+});
+
+test('gameplay boolean flags are present on the traits the engine depends on', () => {
+  // hasTrait(pet,'nocturnal'|'thief'|'wanderer') checks a literal flag property on the
+  // trait definition, not the trait id — these four are load-bearing for engine/tick.js's
+  // isAsleep() and engine/loop.js's autonomy() (self-moving/food-stealing pets).
+  assert.equal(TRAIT_BY_ID.nocturnal.nocturnal, true);
+  assert.equal(TRAIT_BY_ID.magpie.thief, true);
+  assert.equal(TRAIT_BY_ID.cult.wanderer, true);
+  assert.equal(TRAIT_BY_ID.clingy.wanderer, true);
 });
 
 test('every FEUDS pair references two real, distinct trait ids', () => {
@@ -1496,3 +1506,350 @@ Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
 ```
 
 ---
+
+---
+
+### Task 8: engine/tick.js + engine/care.js
+
+**Files:**
+- Create: `src/engine/tick.js`
+- Create: `src/engine/care.js`
+- Test: `test/tick.test.mjs`
+- Test: `test/care.test.mjs`
+
+**Interfaces:**
+- Consumes: `TRAIT_BY_ID` (content/traits.js), `PROPS` (content/props.js), `DECAY`/`CARE_LINES`/`OVERFED`/`ASLEEP_LINES` (content/copy.js), `propById`/`clamp`/`pick`/`addNote`/`HOUR`/`MAX_OFFLINE_HOURS` (state.js).
+- Produces: everything under `engine/tick.js:` and `engine/care.js:` in Global contracts. Neither file touches the DOM, toasts, or calls `save()`/`renderAll()` — those are the caller's job (ui layer, Task 11/12, and `main.js`, Task 14), which is what keeps this pure and unit-testable.
+- Every exported function takes `state` explicitly (per Global Constraints) — no closures over the live singleton.
+
+- [ ] **Step 1: Write `src/engine/tick.js`**
+
+```js
+import { TRAIT_BY_ID } from '../content/traits.js';
+import { PROPS } from '../content/props.js';
+import { DECAY } from '../content/copy.js';
+import { propById, clamp, HOUR, MAX_OFFLINE_HOURS } from '../state.js';
+
+export const MOOD_WORD = { content: 'Content', fine: 'Fine', annoyed: 'Annoyed', furious: 'Furious' };
+
+export function hasTrait(pet, key) {
+  return pet.traits.some(id => TRAIT_BY_ID[id] && TRAIT_BY_ID[id][key]);
+}
+
+export function isNight(date = new Date()) {
+  const h = date.getHours();
+  return h >= 20 || h < 7;
+}
+
+export function isAsleep(pet, date = new Date()) {
+  return hasTrait(pet, 'nocturnal') && !isNight(date);
+}
+
+export function neighborSlots(index, slotCount) {
+  const out = [];
+  if (index % 6 > 0) out.push(index - 1);
+  if (index % 6 < 5) out.push(index + 1);
+  return out.filter(x => x >= 0 && x < slotCount);
+}
+
+export function neighborProps(state, index) {
+  return neighborSlots(index, state.slots.length)
+    .map(x => state.slots[x])
+    .filter(Boolean)
+    .map(id => propById(state, id))
+    .filter(Boolean);
+}
+
+export function decayRate(pet, need, state) {
+  let r = DECAY[need];
+  pet.traits.forEach(id => {
+    const c = (TRAIT_BY_ID[id] && TRAIT_BY_ID[id].care) || {};
+    if (c[need]) r *= c[need];
+  });
+  const i = state.slots.indexOf(pet.id);
+  if (i >= 0) {
+    const nbrs = neighborProps(state, i);
+    nbrs.forEach(pr => {
+      const a = (PROPS[pr.kind] && PROPS[pr.kind].aura) || {};
+      if (a[need]) r *= a[need];
+    });
+    if (hasTrait(pet, 'nocturnal') && nbrs.some(pr => pr.kind === 'lamp') && need === 'fuss') r *= 1.5;
+  }
+  return r;
+}
+
+export function tick(state, now = Date.now()) {
+  let hours = (now - state.lastTick) / HOUR;
+  if (hours <= 0) { state.lastTick = now; return false; }
+  hours = Math.min(hours, MAX_OFFLINE_HOURS);
+  state.pets.forEach(pet => {
+    ['food', 'fuss', 'clean'].forEach(k => {
+      pet.needs[k] = clamp(pet.needs[k] - decayRate(pet, k, state) * hours, 0, 100);
+    });
+  });
+  state.lastTick = now;
+  return true;
+}
+
+export function moodOf(pet) {
+  const avg = (pet.needs.food + pet.needs.fuss + pet.needs.clean) / 3;
+  if (avg >= 76) return 'content';
+  if (avg >= 50) return 'fine';
+  if (avg >= 26) return 'annoyed';
+  return 'furious';
+}
+
+export function worstNeed(pet) {
+  let k = 'food';
+  ['fuss', 'clean'].forEach(n => { if (pet.needs[n] < pet.needs[k]) k = n; });
+  return k;
+}
+```
+
+- [ ] **Step 2: Write `test/tick.test.mjs`**
+
+```js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { hasTrait, isNight, isAsleep, neighborSlots, neighborProps, decayRate, tick, moodOf, worstNeed } from '../src/engine/tick.js';
+import { blankState, defaultNeeds } from '../src/state.js';
+
+function localHour(h) { return new Date(2024, 0, 1, h, 0, 0).getTime(); }
+
+function makePet(overrides = {}) {
+  return { id: 'p1', name: 'Test', traits: ['damp'], needs: defaultNeeds(), bond: 0, cared: 0, grudges: 0, grudgeStage: 0, ...overrides };
+}
+
+test('hasTrait checks the trait pool, not a literal string match', () => {
+  assert.equal(hasTrait(makePet({ traits: ['nocturnal'] }), 'nocturnal'), true);
+  assert.equal(hasTrait(makePet({ traits: ['nocturnal'] }), 'clean'), false);
+});
+
+test('isNight is true 20:00-06:59, false 07:00-19:59', () => {
+  assert.equal(isNight(new Date(localHour(22))), true);
+  assert.equal(isNight(new Date(localHour(6))), true);
+  assert.equal(isNight(new Date(localHour(7))), false);
+  assert.equal(isNight(new Date(localHour(19))), false);
+  assert.equal(isNight(new Date(localHour(20))), true);
+});
+
+test('a nocturnal pet is asleep during the day and awake at night; others never sleep', () => {
+  const nocturnal = makePet({ traits: ['nocturnal'] });
+  assert.equal(isAsleep(nocturnal, new Date(localHour(12))), true);
+  assert.equal(isAsleep(nocturnal, new Date(localHour(22))), false);
+  const diurnal = makePet({ traits: ['damp'] });
+  assert.equal(isAsleep(diurnal, new Date(localHour(12))), false);
+  assert.equal(isAsleep(diurnal, new Date(localHour(22))), false);
+});
+
+test('neighborSlots respects row boundaries on a 6-wide grid', () => {
+  assert.deepEqual(neighborSlots(0, 18), [1]);
+  assert.deepEqual(neighborSlots(5, 18), [4]);
+  assert.deepEqual(neighborSlots(3, 18), [2, 4]);
+  assert.deepEqual(neighborSlots(6, 18), [7]);
+});
+
+test('neighborProps only returns occupied neighbor slots that hold props', () => {
+  const s = blankState();
+  const pet = makePet({ id: 'pA' });
+  s.pets.push(pet);
+  s.props.push({ id: 'd1', kind: 'lamp' });
+  s.slots[0] = 'pA';
+  s.slots[1] = 'd1';
+  assert.equal(neighborProps(s, 0).length, 1);
+  assert.equal(neighborProps(s, 0)[0].kind, 'lamp');
+  assert.equal(neighborProps(s, 5).length, 0);
+});
+
+test('decayRate applies trait care multiplier and prop aura multiplier', () => {
+  const s = blankState();
+  const dampPet = makePet({ id: 'pA', traits: ['damp'] });
+  s.pets.push(dampPet);
+  s.slots[0] = 'pA';
+  const baseline = decayRate(makePet({ traits: [] }), 'clean', s);
+  const withDampTrait = decayRate(dampPet, 'clean', s);
+  assert.ok(withDampTrait > baseline, 'damp trait should raise clean decay rate');
+
+  s.props.push({ id: 'd1', kind: 'lamp' });
+  s.slots[1] = 'd1';
+  const withoutLamp = decayRate(makePet({ id: 'pB', traits: ['nocturnal'] }), 'fuss', s);
+  s.pets.push(makePet({ id: 'pB', traits: ['nocturnal'] }));
+  s.slots[2] = 'pB';
+  const nocturnalNextToLamp = decayRate(s.pets.find(p => p.id === 'pB'), 'fuss', s);
+  assert.ok(nocturnalNextToLamp !== withoutLamp);
+});
+
+test('tick decays needs proportional to elapsed hours, capped at MAX_OFFLINE_HOURS, and no-ops for non-positive elapsed time', () => {
+  const s = blankState();
+  const pet = makePet({ id: 'pA', traits: [], needs: { food: 100, fuss: 100, clean: 100 } });
+  s.pets.push(pet);
+  s.slots[0] = 'pA';
+  s.lastTick = 0;
+  const changed = tick(s, HOUR_MS(2));
+  assert.equal(changed, true);
+  assert.ok(pet.needs.food < 100);
+
+  const before = { ...pet.needs };
+  const changedAgain = tick(s, HOUR_MS(2));
+  assert.equal(changedAgain, false);
+  assert.deepEqual(pet.needs, before);
+
+  function HOUR_MS(h) { return h * 3600000; }
+});
+
+test('moodOf buckets by average need at the documented thresholds', () => {
+  assert.equal(moodOf(makePet({ needs: { food: 90, fuss: 90, clean: 90 } })), 'content');
+  assert.equal(moodOf(makePet({ needs: { food: 60, fuss: 60, clean: 60 } })), 'fine');
+  assert.equal(moodOf(makePet({ needs: { food: 30, fuss: 30, clean: 30 } })), 'annoyed');
+  assert.equal(moodOf(makePet({ needs: { food: 10, fuss: 10, clean: 10 } })), 'furious');
+});
+
+test('worstNeed picks the lowest of food/fuss/clean', () => {
+  assert.equal(worstNeed(makePet({ needs: { food: 80, fuss: 20, clean: 90 } })), 'fuss');
+  assert.equal(worstNeed(makePet({ needs: { food: 10, fuss: 80, clean: 90 } })), 'food');
+});
+```
+
+- [ ] **Step 3: Run the tick tests**
+
+Run: `cd ~/shelf-life && node --test test/tick.test.mjs`
+Expected: all 8 tests PASS.
+
+- [ ] **Step 4: Write `src/engine/care.js`**
+
+```js
+import { tick, isAsleep } from './tick.js';
+import { ASLEEP_LINES, OVERFED, CARE_LINES } from '../content/copy.js';
+import { clamp, pick, addNote } from '../state.js';
+
+export const CARE_GAIN = { food: 34, fuss: 38, clean: 42 };
+
+export function careFor(state, pet, need, now = Date.now()) {
+  tick(state, now);
+  const before = pet.needs[need];
+  let gain = CARE_GAIN[need];
+  let line;
+  if (isAsleep(pet, new Date(now))) {
+    gain = Math.round(gain * 0.5);
+    line = pick(ASLEEP_LINES);
+  } else if (before > 78) {
+    gain = Math.round(gain * 0.25);
+    line = pick(OVERFED[need]);
+  } else {
+    line = pick(CARE_LINES[need]);
+  }
+  pet.needs[need] = clamp(before + gain, 0, 100);
+  let bondGained = false;
+  if (before < 72) {
+    pet.cared++;
+    if (pet.cared % 3 === 0) {
+      pet.bond = clamp(pet.bond + 1, 0, 25);
+      bondGained = true;
+    }
+  }
+  return { message: pet.name + ': ' + line, bondGained };
+}
+
+const ROUNDS_NOTES = [
+  'You did the rounds. They can all tell it was the rounds.',
+  'Everyone was seen to. Nobody was seen.',
+  'You went down the line. They noticed the order.'
+];
+const ROUNDS_TOASTS = [
+  'Rounds done. Nobody feels special.',
+  'Everyone fed. Everyone unimpressed.',
+  'Efficient. They hated it.'
+];
+
+export function doRounds(state, now = Date.now()) {
+  tick(state, now);
+  if (!state.pets.length) return null;
+  state.pets.forEach(pet => {
+    ['food', 'fuss', 'clean'].forEach(k => { pet.needs[k] = clamp(pet.needs[k] + 13, 0, 100); });
+  });
+  addNote(state, pick(ROUNDS_NOTES), 'the shelf', 'note');
+  return { message: pick(ROUNDS_TOASTS) };
+}
+```
+
+- [ ] **Step 5: Write `test/care.test.mjs`**
+
+```js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { careFor, doRounds, CARE_GAIN } from '../src/engine/care.js';
+import { blankState, defaultNeeds } from '../src/state.js';
+
+function localHour(h) { return new Date(2024, 0, 1, h, 0, 0).getTime(); }
+
+function makePet(overrides = {}) {
+  return { id: 'p1', name: 'Test', traits: [], needs: defaultNeeds(), bond: 0, cared: 0, grudges: 0, grudgeStage: 0, ...overrides };
+}
+
+test('careFor raises the targeted need and returns a message prefixed with the pet name', () => {
+  const s = blankState();
+  const pet = makePet({ needs: { food: 40, fuss: 40, clean: 40 } });
+  s.pets.push(pet); s.slots[0] = pet.id; s.lastTick = localHour(12);
+  const result = careFor(s, pet, 'food', localHour(12));
+  assert.equal(pet.needs.food, 40 + CARE_GAIN.food);
+  assert.ok(result.message.startsWith('Test: '));
+});
+
+test('careFor grants reduced gain when the need is already high (overfed path)', () => {
+  const s = blankState();
+  const pet = makePet({ needs: { food: 85, fuss: 40, clean: 40 } });
+  s.pets.push(pet); s.slots[0] = pet.id; s.lastTick = localHour(12);
+  careFor(s, pet, 'food', localHour(12));
+  assert.equal(pet.needs.food, 85 + Math.round(CARE_GAIN.food * 0.25));
+});
+
+test('careFor grants reduced gain for a sleeping nocturnal pet', () => {
+  const s = blankState();
+  const pet = makePet({ traits: ['nocturnal'], needs: { food: 40, fuss: 40, clean: 40 } });
+  s.pets.push(pet); s.slots[0] = pet.id; s.lastTick = localHour(12);
+  careFor(s, pet, 'food', localHour(12)); // daytime -> nocturnal pet is asleep
+  assert.equal(pet.needs.food, 40 + Math.round(CARE_GAIN.food * 0.5));
+});
+
+test('careFor awards bond exactly every third care below the 72 threshold', () => {
+  const s = blankState();
+  const pet = makePet({ needs: { food: 10, fuss: 40, clean: 40 } });
+  s.pets.push(pet); s.slots[0] = pet.id; s.lastTick = localHour(12);
+  let gains = [];
+  for (let i = 0; i < 3; i++) {
+    pet.needs.food = 10;
+    gains.push(careFor(s, pet, 'food', localHour(12)).bondGained);
+  }
+  assert.deepEqual(gains, [false, false, true]);
+  assert.equal(pet.bond, 1);
+});
+
+test('doRounds returns null with no pets, otherwise bumps every need and adds a note', () => {
+  const empty = blankState();
+  assert.equal(doRounds(empty, localHour(12)), null);
+
+  const s = blankState();
+  const pet = makePet({ needs: { food: 50, fuss: 50, clean: 50 } });
+  s.pets.push(pet); s.slots[0] = pet.id; s.lastTick = localHour(12);
+  const result = doRounds(s, localHour(12));
+  assert.equal(pet.needs.food, 63);
+  assert.ok(typeof result.message === 'string' && result.message.length > 0);
+  assert.equal(s.notes.length, 1);
+});
+```
+
+- [ ] **Step 6: Run the care tests**
+
+Run: `cd ~/shelf-life && node --test test/care.test.mjs`
+Expected: all 5 tests PASS.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cd ~/shelf-life
+git add src/engine/tick.js src/engine/care.js test/tick.test.mjs test/care.test.mjs
+git commit -m "Add engine/tick.js and engine/care.js with full node:test coverage
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
+```

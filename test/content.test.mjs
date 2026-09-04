@@ -20,6 +20,16 @@ test('trait ids are unique and TRAIT_BY_ID matches TRAITS', () => {
   ids.forEach(id => assert.equal(TRAIT_BY_ID[id].id, id));
 });
 
+test('gameplay boolean flags are present on the traits the engine depends on', () => {
+  // hasTrait(pet,'nocturnal'|'thief'|'wanderer') checks a literal flag property on the
+  // trait definition, not the trait id — these four are load-bearing for engine/tick.js's
+  // isAsleep() and engine/loop.js's autonomy() (self-moving/food-stealing pets).
+  assert.equal(TRAIT_BY_ID.nocturnal.nocturnal, true);
+  assert.equal(TRAIT_BY_ID.magpie.thief, true);
+  assert.equal(TRAIT_BY_ID.cult.wanderer, true);
+  assert.equal(TRAIT_BY_ID.clingy.wanderer, true);
+});
+
 test('every FEUDS pair references two real, distinct trait ids', () => {
   assert.ok(FEUDS.length >= 20, `expected >=20 feud pairs, got ${FEUDS.length}`);
   FEUDS.forEach(([a, b]) => {
