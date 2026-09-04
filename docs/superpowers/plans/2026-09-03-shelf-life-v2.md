@@ -544,7 +544,7 @@ button{font-family:var(--body);font-size:15px;cursor:pointer;border:none;backgro
 .pet .nameplate{font-size:10px;color:var(--bone-dim);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pet.furious .nameplate{color:var(--blood);font-weight:700}
 .pet.feuding .nameplate{color:var(--blood)}
-.pet.dragging{opacity:.25}
+.pet.dragging,.prop.dragging{opacity:.25}
 .pips{display:flex;gap:3px;height:7px;align-items:center}
 .pip{width:6px;height:6px;border-radius:50%}
 .pip.food{background:var(--amber)}
