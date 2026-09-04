@@ -45,8 +45,40 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Network-first for this app's own code, cache-first for everything else.
+//
+// Cache-first on our own JS/CSS/HTML was actively harmful: after a new version
+// shipped, a returning player kept getting the OLD cached code and would not see
+// fixes at all (the fresh copy only landed on the visit AFTER next). For a game
+// still changing, silently serving stale code is worse than a brief network wait.
+// Offline still works — we fall back to cache whenever the network fails.
+const APP_CODE = /\.(?:js|css|html|webmanifest)$/i;
+
+function isAppCode(request) {
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return false;
+  return APP_CODE.test(url.pathname) || url.pathname === '/' || url.pathname.endsWith('/');
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  if (isAppCode(event.request)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Static assets (icons, fonts, images): cache-first with background refresh.
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const network = fetch(event.request)

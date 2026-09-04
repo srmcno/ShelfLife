@@ -5,6 +5,7 @@ import { checkAchievements, grudgeStageFor, GRUDGE_STAGE_AT } from '../engine/ac
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS, PROP_ART } from '../content/props.js';
 import { renderPetSprite } from '../art/sprite.js';
+import { reactTo } from '../art/animator.js';
 import { renderAll, escapeHtml } from './render.js';
 import { toast } from './toast.js';
 import { buildDecor } from './decorUI.js';
@@ -104,20 +105,63 @@ export function openCard(state, id, keepScroll) {
       if (cardVeil.classList.contains('open') && openPetId === pet.id) {
         openCard(state, pet.id, true);
       }
+      // After the re-render, not before: renderAll throws away the element the
+      // reaction has to play on. reactTo finds the pet again by id, on the
+      // shelf and in the portrait at once.
+      reactTo(pet.id, need);
     });
   });
   document.getElementById('cardClose').addEventListener('click', closeCard);
+  // Rename and Rehome deliberately do NOT use the native prompt()/confirm().
+  // Chrome silently makes both return null/false forever once the user ticks
+  // "Prevent this page from creating additional dialogs" (which appears after a
+  // few dialogs), so Rename appeared completely dead with no error in console.
+  // They're also unreliable inside installed PWAs and awkward on mobile, and this
+  // game is meant to be installed on a phone. In-page UI instead.
   document.getElementById('renameBtn').addEventListener('click', () => {
-    const next = prompt('New name for ' + pet.name, pet.name);
-    if (next && next.trim()) {
-      pet.name = next.trim().slice(0, 22);
+    const actions = document.querySelector('#cardSheet .card-actions');
+    if (!actions || document.getElementById('renameField')) return;
+    const row = document.createElement('div');
+    row.className = 'inline-prompt';
+    row.innerHTML =
+      '<label for="renameField">New name</label>' +
+      '<input type="text" id="renameField" maxlength="22" value="' + escapeHtml(pet.name) + '">' +
+      '<button class="btn btn-primary btn-sm" id="renameSave">Save</button>' +
+      '<button class="btn btn-ghost btn-sm" id="renameCancel">Cancel</button>';
+    actions.insertAdjacentElement('afterend', row);
+    const field = document.getElementById('renameField');
+    field.focus();
+    field.select();
+
+    function commit() {
+      const next = (field.value || '').trim();
+      if (!next) { row.remove(); return; }
+      pet.name = next.slice(0, 22);
       save();
       openCard(state, pet.id, true);
       renderAll(state);
     }
+    document.getElementById('renameSave').addEventListener('click', commit);
+    document.getElementById('renameCancel').addEventListener('click', () => row.remove());
+    field.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); row.remove(); }
+    });
   });
   document.getElementById('rehomeBtn').addEventListener('click', () => {
-    if (!confirm('Rehome ' + pet.name + '? It does not come back.')) return;
+    const btn = document.getElementById('rehomeBtn');
+    // Two-step confirm in-page: the first click arms it, the second commits.
+    if (btn.dataset.armed !== '1') {
+      btn.dataset.armed = '1';
+      btn.textContent = 'Really rehome? It does not come back.';
+      setTimeout(() => {
+        if (btn.isConnected && btn.dataset.armed === '1') {
+          btn.dataset.armed = '';
+          btn.textContent = 'Rehome';
+        }
+      }, 4000);
+      return;
+    }
     state.pets = state.pets.filter(x => x.id !== pet.id);
     state.slots = state.slots.map(s => s === pet.id ? null : s);
     state.pets.forEach(o => { o.needs.fuss = clamp(o.needs.fuss - 9, 0, 100); });
