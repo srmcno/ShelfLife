@@ -2,22 +2,32 @@
    Every SVG uses a fixed 0 0 60 60 viewBox (same convention as the original canvas-era
    props), with themeable parts referencing CSS custom properties (var(--wood),
    var(--wood-lip), var(--pink), var(--amber), var(--mint), var(--blood)) so the room/
-   wood/accent decor palette re-tints them automatically. */
+   wood/accent decor palette re-tints them automatically.
+
+   PROPS entries: `at` is the total-bond unlock threshold, `aura` multiplies the decay
+   rate of a neighboring pet's need (<1 = decays slower / helps, >1 = decays faster /
+   hurts). `lines` are bylined with the PROP's name and describe a specific pet via
+   {p}; `ambient` are bylined the same way but have no pet in them at all. */
 export const PROP_ART = {
   bowl: '<svg viewBox="0 0 60 60"><ellipse cx="30" cy="34" rx="20" ry="6" fill="var(--wood-lip)"/><path d="M10 34a20 12 0 0 0 40 0z" fill="var(--wood)"/><ellipse cx="30" cy="33" rx="14" ry="4" fill="var(--amber)"/></svg>',
   tub: '<svg viewBox="0 0 60 60"><rect x="10" y="26" width="40" height="20" rx="9" fill="#B9C6CC"/><rect x="14" y="29" width="32" height="9" rx="4" fill="var(--mint)"/><rect x="14" y="46" width="5" height="6" fill="#8A979D"/><rect x="41" y="46" width="5" height="6" fill="#8A979D"/></svg>',
   lamp: '<svg viewBox="0 0 60 60"><circle cx="30" cy="24" r="17" fill="var(--amber)" opacity=".22"/><path d="M18 26h24l-6-13H24z" fill="var(--amber)"/><rect x="28" y="26" width="4" height="20" fill="#8A7A5A"/><ellipse cx="30" cy="47" rx="11" ry="4" fill="#6E6046"/></svg>',
   yarn: '<svg viewBox="0 0 60 60"><circle cx="30" cy="33" r="15" fill="var(--pink)"/><path d="M18 27c8 6 16 8 24 4M17 36c9 5 19 5 26-2M22 44c6 3 13 2 18-2" stroke="rgba(0,0,0,.28)" stroke-width="2" fill="none"/></svg>',
+  mat: '<svg viewBox="0 0 60 60"><rect x="5" y="29" width="50" height="21" rx="3" fill="#6E5236"/><rect x="8" y="32" width="44" height="15" rx="2" fill="#A5824F"/><path d="M11 35.5h38M11 39.5h38M11 43.5h38" stroke="#7A5C3B" stroke-width="1" opacity=".55"/><rect x="14" y="37" width="13" height="5" rx="1.5" fill="#3A2A20" opacity=".8"/><rect x="30" y="37" width="16" height="5" rx="1.5" fill="#3A2A20" opacity=".8"/><path d="M12 39.5h17" stroke="var(--blood)" stroke-width="2.2" stroke-linecap="round"/></svg>',
   musicbox: '<svg viewBox="0 0 60 60"><rect x="12" y="30" width="36" height="17" rx="2" fill="#7A4C2B"/><path d="M12 30l6-8h30l-6 8z" fill="#98603A"/><circle cx="42" cy="20" r="3" fill="var(--bone-dim)"/><path d="M42 20v-7h6" stroke="var(--bone-dim)" stroke-width="2" fill="none"/></svg>',
   candle: '<svg viewBox="0 0 60 60"><path d="M30 8c4 6 6 9 6 12a6 6 0 0 1-12 0c0-3 2-6 6-12z" fill="var(--amber)"/><rect x="24" y="24" width="12" height="22" fill="#2B2430"/><ellipse cx="30" cy="46" rx="11" ry="4" fill="#514659"/></svg>',
   fern: '<svg viewBox="0 0 60 60"><path d="M30 40c-2-12-10-18-18-20 4 12 8 18 18 20zM30 40c2-12 10-18 18-20-4 12-8 18-18 20z" fill="#3E7A4A"/><path d="M18 40h24l-3 12H21z" fill="#8A5A3B"/></svg>',
   mirror: '<svg viewBox="0 0 60 60"><ellipse cx="30" cy="28" rx="16" ry="21" fill="#B9C6CC"/><ellipse cx="30" cy="28" rx="12" ry="17" fill="#D8E3E7"/><path d="M24 12l6 14-5 8 8 12" stroke="#8A979D" stroke-width="1.6" fill="none"/><rect x="26" y="48" width="8" height="6" fill="var(--wood)"/></svg>',
+  clock: '<svg viewBox="0 0 60 60"><rect x="13" y="45" width="34" height="6" rx="2" fill="var(--wood-lip)"/><circle cx="30" cy="27" r="18" fill="var(--wood)"/><circle cx="30" cy="27" r="14" fill="#EFE6D4"/><circle cx="30" cy="27" r="14" fill="none" stroke="#8A7A5A" stroke-width="1.2"/><circle cx="30" cy="14.5" r="1" fill="#8A7A5A"/><circle cx="42.5" cy="27" r="1" fill="#8A7A5A"/><circle cx="30" cy="39.5" r="1" fill="#8A7A5A"/><circle cx="17.5" cy="27" r="1" fill="#8A7A5A"/><path d="M30 27V17M30 27l7 5" stroke="#2B2028" stroke-width="2" stroke-linecap="round"/><circle cx="30" cy="27" r="1.9" fill="#2B2028"/></svg>',
   skull: '<svg viewBox="0 0 60 60"><path d="M30 12c11 0 17 8 17 16 0 6-3 9-3 13 0 3-5 5-14 5s-14-2-14-5c0-4-3-7-3-13 0-8 6-16 17-16z" fill="#E8E0CE"/><ellipse cx="23" cy="30" rx="5" ry="6" fill="#2B2028"/><ellipse cx="37" cy="30" rx="5" ry="6" fill="#2B2028"/><path d="M30 36l-3 6h6z" fill="#2B2028"/></svg>',
   coffinbed: '<svg viewBox="0 0 60 60"><path d="M22 22h16l7 12-7 14H22l-7-14z" fill="#4B3350"/><path d="M25 26h10l5 8-5 10H25l-5-10z" fill="var(--pink)" opacity=".55"/></svg>',
+  phone: '<svg viewBox="0 0 60 60"><path d="M8 49h44l-4-17H12z" fill="#3A343F"/><path d="M12 32h36l-3-6H15z" fill="#57505E"/><circle cx="30" cy="41" r="8" fill="#22202A"/><circle cx="30" cy="41" r="6.2" fill="#D8CFC0"/><circle cx="30" cy="37.4" r="1.05" fill="#22202A"/><circle cx="33.4" cy="39" r="1.05" fill="#22202A"/><circle cx="33.9" cy="42.8" r="1.05" fill="#22202A"/><circle cx="30.6" cy="44.8" r="1.05" fill="#22202A"/><circle cx="26.8" cy="43.8" r="1.05" fill="#22202A"/><circle cx="25.9" cy="40" r="1.05" fill="#22202A"/><circle cx="30" cy="41" r="1.9" fill="#22202A"/><rect x="15" y="17" width="30" height="7" rx="3.5" fill="#57505E"/><rect x="9" y="13" width="13" height="12" rx="4.5" fill="#6A6272"/><rect x="38" y="13" width="13" height="12" rx="4.5" fill="#6A6272"/><path d="M9 24c-4 2-4 4 0 5s4 3 0 4" stroke="#6A6272" stroke-width="1.7" fill="none" stroke-linecap="round"/></svg>',
   bell: '<svg viewBox="0 0 60 60"><rect x="14" y="44" width="32" height="6" rx="2" fill="var(--wood)"/><path d="M18 44V30a12 12 0 0 1 24 0v14z" fill="#CFE0E5" opacity=".55" stroke="#A9BEC4" stroke-width="1.5"/><circle cx="30" cy="38" r="5" fill="var(--blood)" opacity=".8"/></svg>',
   globe: '<svg viewBox="0 0 60 60"><rect x="18" y="43" width="24" height="7" rx="2" fill="#5A3A46"/><circle cx="30" cy="29" r="16" fill="#CFE0E5" opacity=".5" stroke="#A9BEC4" stroke-width="1.5"/><circle cx="24" cy="24" r="1.6" fill="#fff"/><circle cx="34" cy="30" r="1.6" fill="#fff"/><circle cx="29" cy="36" r="1.6" fill="#fff"/><circle cx="36" cy="21" r="1.4" fill="#fff"/></svg>',
+  birdcage: '<svg viewBox="0 0 60 60"><ellipse cx="30" cy="49" rx="16" ry="4.5" fill="var(--wood)"/><path d="M15 49V29a15 15 0 0 1 30 0v20" fill="none" stroke="#A9BEC4" stroke-width="1.8"/><path d="M21 48V31M27 49V27M33 49V27M39 48V31" stroke="#A9BEC4" stroke-width="1.2"/><path d="M16 37h28" stroke="#A9BEC4" stroke-width="1.2"/><path d="M22 43h14" stroke="var(--wood-lip)" stroke-width="2.6" stroke-linecap="round"/><path d="M30 14v-5" stroke="#A9BEC4" stroke-width="1.8"/><circle cx="30" cy="7" r="3" fill="none" stroke="#A9BEC4" stroke-width="1.8"/><path d="M45 32l8 4v12l-8-4z" fill="none" stroke="#A9BEC4" stroke-width="1.5" stroke-linejoin="round"/><path d="M49 34.6v13" stroke="#A9BEC4" stroke-width="1"/></svg>',
   trophy: '<svg viewBox="0 0 60 60"><path d="M18 46l12 6 12-6-4-14H22z" fill="var(--wood)"/><ellipse cx="30" cy="26" rx="10" ry="9" fill="#C9B79A"/><path d="M22 20l-6-10M38 20l6-10M20 16l-8-6M40 16l8-6" stroke="#8A7A5A" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="26" cy="25" r="1.6" fill="#2B2028"/><circle cx="34" cy="25" r="1.6" fill="#2B2028"/></svg>',
   board: '<svg viewBox="0 0 60 60"><rect x="10" y="14" width="40" height="30" rx="2" fill="#241833"/><path d="M14 40a16 16 0 0 1 32 0" stroke="var(--amber)" stroke-width="1.4" fill="none"/><circle cx="18" cy="24" r="1.4" fill="var(--amber)"/><circle cx="24" cy="19" r="1.4" fill="var(--amber)"/><circle cx="30" cy="17" r="1.4" fill="var(--amber)"/><circle cx="36" cy="19" r="1.4" fill="var(--amber)"/><circle cx="42" cy="24" r="1.4" fill="var(--amber)"/><path d="M22 34l8-6 8 6-4 8h-8z" fill="var(--blood)" opacity=".7"/><circle cx="30" cy="33" r="2.4" fill="#F2E9DC"/></svg>',
+  urn: '<svg viewBox="0 0 60 60"><ellipse cx="30" cy="50" rx="12" ry="3.5" fill="#4A3E48"/><path d="M22 47c-5-6-6-13-2-18 2.5-4 6.5-5 10-5s7.5 1 10 5c4 5 3 12-2 18z" fill="#6E6046"/><path d="M24.5 45c-4-5-5-11-1.5-15 2-2.5 4.5-3.5 7-3.5s5 1 7 3.5c3.5 4 2.5 10-1.5 15z" fill="#A5926C"/><path d="M25 34h10" stroke="#6E6046" stroke-width="1.4" opacity=".8"/><rect x="19" y="21" width="22" height="4.5" rx="2.2" fill="#5A4E3C"/><path d="M25 21v-3.5a5 5 0 0 1 10 0V21z" fill="#8A7A5A"/><circle cx="30" cy="14" r="2.4" fill="#5A4E3C"/></svg>',
   box: '<svg viewBox="0 0 60 60"><rect x="14" y="26" width="32" height="22" rx="2" fill="var(--wood)"/><rect x="21" y="20" width="18" height="7" rx="1" fill="var(--wood-lip)"/><rect x="24" y="16" width="3" height="10" fill="#F2E9DC"/><rect x="29" y="14" width="3" height="12" fill="#F2E9DC"/><rect x="34" y="17" width="3" height="9" fill="#F2E9DC"/><rect x="20" y="48" width="20" height="3" fill="#3A2A20"/></svg>',
   plant: '<svg viewBox="0 0 60 60"><path d="M30 40c-1-10-6-16-13-19 2 3 4 9 7 13-3 1-6 0-9-2 3 6 9 9 15 8z" fill="#3E7A4A"/><path d="M30 40c1-11 7-17 15-19-3 4-5 10-8 14 3 0 6-1 8-3-4 6-9 9-15 8z" fill="#345F3B"/><ellipse cx="27" cy="30" rx="2" ry="3" fill="var(--blood)" opacity=".6"/><rect x="21" y="40" width="18" height="10" rx="2" fill="var(--wood)"/><path d="M22 50q8 4 16 0" stroke="#2B2028" stroke-width="1" fill="none" opacity=".4"/></svg>'
 };
@@ -30,11 +40,14 @@ export const PROPS = {
     lines: ['{p} got in the tub voluntarily. Everyone is unsettled.', '{p} bathed and has been insufferable since.', '{p} refused the tub, then used it at 3am when nobody was looking.'],
     ambient: ['The water in the tub has changed color. Nobody will say why.', 'There are wet prints leading away from the tub and none leading back.'] },
   lamp: { name: 'Dim Lamp', at: 0, aura: { fuss: 0.8 }, desc: 'A little company. Nocturnal pets resent it.',
-    lines: ['{p} sat under the lamp for hours doing nothing.', '{p} has claimed the lamp. There is no sharing arrangement.', '{p} says the light is fine. {p} moved it two inches anyway.'],
+    lines: ['{p} sat under the lamp for four hours. It is not a warm lamp.', '{p} has claimed the lamp. There is no sharing arrangement.', '{p} says the light is fine. {p} moved it two inches anyway.'],
     ambient: ['The lamp flickered at the same time three nights running.', 'The bulb is warm and nobody has touched it.'] },
   yarn: { name: 'Ball of Yarn', at: 0, aura: { fuss: 0.75 }, desc: 'Something to destroy. Keeps boredom down.',
     lines: ['{p} unraveled the whole thing and blamed the room.', '{p} has been wrestling the yarn since Tuesday. The yarn is winning.', '{p} tied something up with the yarn. It will not say what.'],
     ambient: ['The yarn is in a different room. Nobody carried it there.', 'There is a string running under the shelf. It leads somewhere.'] },
+  mat: { name: 'Welcome Mat', at: 6, aura: { fuss: 0.85 }, desc: 'It says WELCOME. Somebody has scratched out most of it.',
+    lines: ['{p} wiped its feet on the way in. {p} does not have feet.', '{p} has been sitting on the mat facing the door. For an hour.', '{p} scratched out another letter. There are four left.'],
+    ambient: ['The mat has been turned to face the other way.', 'There is a footprint on the mat that arrived and did not leave.'] },
   musicbox: { name: 'Music Box', at: 6, aura: { fuss: 0.62 }, desc: 'Keeps everyone entertained. Mostly.',
     lines: ['{p} wound the music box and sat through the whole thing.', '{p} plays it on repeat. The others have asked it to stop.', '{p} says the tune has words. It sang them once. Once.'],
     ambient: ['The music box played for eleven seconds at 4am.', 'The lid was closed. It is open now.'] },
@@ -47,28 +60,40 @@ export const PROPS = {
   mirror: { name: 'Cracked Mirror', at: 12, aura: { fuss: 1.18 }, desc: 'Beautiful. Makes everyone slightly worse.',
     lines: ['{p} spent an hour at the mirror and came back different.', '{p} says its reflection blinked first.', '{p} has stopped using the mirror. It will not explain.'],
     ambient: ['The crack is longer today.', 'Something moved in the mirror while the shelf was empty.'] },
+  clock: { name: 'Stopped Clock', at: 12, aura: {}, desc: 'No practical use. It is right twice a day and wrong on purpose.',
+    lines: ['{p} has been winding the clock. The clock has not moved since March.', '{p} waits by the clock at the same wrong time every day.', '{p} says the clock is fine and everything else is fast.'],
+    ambient: ['The hands have moved four minutes. In the wrong direction.', 'The clock struck once. It has no chime.'] },
   skull: { name: 'Uncle', at: 20, aura: {}, desc: 'A small skull. He came with the house.',
     lines: ['{p} has been telling Uncle about your day.', '{p} moved Uncle so he faces the door. Uncle prefers it.', '{p} says Uncle agrees with it. Uncle has no comment.'],
     ambient: ['Uncle is facing a different way.', 'Uncle was on the top shelf this morning.'] },
   coffinbed: { name: 'Coffin Bed', at: 20, aura: { food: 0.85, fuss: 0.82, clean: 0.85 }, desc: 'Very comfortable. Slows everything down a little.',
-    lines: ['{p} slept fourteen hours and woke up rude.', '{p} will not get out of the bed. It has been days.', '{p} has started charging others to nap in it.'],
+    lines: ['{p} slept fourteen hours and woke up rude.', '{p} will not get out of the bed. It has been days.', '{p} has started charging the others to nap in it.'],
     ambient: ['The bed was made this morning. Nobody makes the bed.', 'There is a dent in the pillow and everyone is accounted for.'] },
+  phone: { name: 'Rotary Phone', at: 20, aura: { fuss: 0.7 }, desc: 'Somebody to talk to. It is not connected to anything.',
+    lines: ['{p} answered the phone. The phone had not rung.', '{p} has been on the phone for an hour. The cord ends in the wall.', '{p} took a message for you. The message is one word.'],
+    ambient: ['The phone rang twice at 4am and stopped.', 'The receiver is off the hook. It was on the hook last night.'] },
   bell: { name: 'Bell Jar', at: 32, aura: { clean: 0.68 }, desc: 'Keeps the dust off. Keeps other things in.',
     lines: ['{p} got under the bell jar and would not come out.', '{p} put something under the jar. It is best left there.', '{p} taps the glass whenever it walks past.'],
     ambient: ['The jar has fogged from the inside.', 'Whatever is under the jar has moved to the other side.'] },
   globe: { name: 'Snow Globe', at: 32, aura: {}, desc: 'Purely decorative. They are obsessed with it.',
     lines: ['{p} shook the globe forty times in a row.', '{p} says there is somebody in the globe. There is a small figure in the globe.', '{p} watched the snow settle and then did it again.'],
     ambient: ['The snow in the globe is still falling. It has been hours.', 'The little figure is facing outward now.'] },
+  birdcage: { name: 'Empty Birdcage', at: 32, aura: { fuss: 1.15 }, desc: 'The door has always been open. Neighbors get restless anyway.',
+    lines: ['{p} sat in the cage with the door open and would not discuss it.', '{p} closed the cage door. Somebody has opened it again.', '{p} has been talking to the cage. The cage is empty. That was the arrangement.'],
+    ambient: ['The perch is swinging. Nothing has touched it.', 'There is a single feather in the cage. There has never been a bird.'] },
   trophy: { name: 'Taxidermy Trophy', at: 40, aura: {}, desc: 'A little menace for the shelf. Nobody asks where it came from.',
     lines: ['{p} has been talking shop with the trophy. Career advice, probably.', '{p} salutes the trophy every morning. The trophy does not salute back.', '{p} asked what happened to the rest of it. Nobody answered.'],
-    ambient: ['The trophy is facing a different direction than it was yesterday.', 'Something about the trophy is looking fresher than taxidermy should.'] },
+    ambient: ['The trophy is facing a different direction than it was yesterday.', 'The trophy looks fresher than it did last month. That is the wrong direction.'] },
   board: { name: 'Spirit Board', at: 40, aura: {}, desc: 'No practical use. They ask it things anyway.',
     lines: ['{p} asked the board a yes-or-no question. It answered in cursive.', '{p} spent an hour on the board and came back oddly formal.', '{p} says the board is "just for fun." The board disagrees.'],
     ambient: ['The planchette has moved two inches since last night.', 'Someone has been asking questions. The board has been answering.'] },
+  urn: { name: 'The Urn', at: 40, aura: {}, desc: 'Nobody has asked whose. Everybody has a theory.',
+    lines: ['{p} apologized to the urn. Nobody knows what for.', '{p} has started leaving a little food out for the urn.', '{p} says the urn is family. {p} arrived three weeks ago.'],
+    ambient: ['The lid is on straight this morning. It was not straight last night.', 'The urn is warm. Nothing on this shelf is warm.'] },
   box: { name: 'Complaint Box', at: 50, aura: { fuss: 0.66 }, desc: 'Give them somewhere to file it. They complain less everywhere else.',
     lines: ['{p} filed something in the box. The box is nearly full.', '{p} checks the box daily for a response. There is no response.', '{p} has started filing complaints about the box itself.'],
     ambient: ['The box is heavier than it should be for how few papers are in it.', 'A slip of paper worked its way out overnight. Nobody wrote it down again.'] },
   plant: { name: 'Weeping Fig', at: 50, aura: { clean: 0.7 }, desc: 'Thrives on grime nobody can identify. Neighbors stay tidier near it.',
     lines: ['{p} has been crying near the fig. The fig started it.', '{p} waters the fig with something that is not water.', '{p} insists the fig "understands" it. Concerning, either way.'],
-    ambient: ['The soil is damp in a way the plant should not need.', 'The fig has grown noticeably overnight. Nobody waters it that well.'] }
+    ambient: ['The soil is damp in a way the plant should not need.', 'There is a leaf on the floor with a bite taken out of it.'] }
 };

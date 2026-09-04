@@ -4589,3 +4589,70 @@ git commit -m "Add main.js: boot sequence and full toolbar/veil/audio wiring
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
 ```
+
+### Phase 2C: content expansion
+
+Scope: `src/content/*.js` + `test/content.test.mjs` / `test/copy.test.mjs` only.
+
+Mid-task the brief changed from "expand" to "ruthless quality rewrite" — the owner's note
+was that the humor "either doesn't make much sense or just isn't very good, scrape and
+revise." So this pass is a rewrite first and an expansion second: roughly a third of the
+existing lines were cut or reworded, and every new archetype had to earn a distinct comic
+angle rather than pad a count.
+
+**The bar applied to every line**
+- It must parse correctly in the sentence position the engine actually puts it in. Each
+  content file now carries a header comment documenting where its pools land (byline,
+  placeholder, and whether the string is substituted or rendered raw), because that was
+  the single biggest source of lines that didn't make sense.
+- Cut: quirky noun phrases with no turn; lines that explain their own joke ("...which is
+  concerning", "The silence was loud"); lines that read identically for any pet; weird
+  without funny.
+- Kept: understated, specific, punchline implied. "Aunt Vera has started a list with your
+  name at the top." is the target.
+
+**Counts**
+- TRAITS 46 -> 65. Every trait now has >=4 notes and >=3 social lines (was >=3 / >=2).
+- FEUDS 26 -> 62 pairs.
+- FEUD_LINES 10->14, ESCALATION_LINES 8->12, TRUCE_LINES 8->10.
+- COMPLAINTS 8/10 -> 10/12 per need per mood. CARE_LINES 10->12, OVERFED 6->7 per need.
+- HAPPY_NOTES 16->19, ASLEEP_LINES 8->10, EVENTS 24->36.
+- FALLBACK_NAMES 63->64, ORIGINS 30->35, HABITS 24->27, CLOSERS 20->22.
+- GRUDGE_LINES 6->7 per stage. STREAK_LINES 10.
+- PROPS 16->21 (Welcome Mat, Stopped Clock, Rotary Phone, Empty Birdcage, The Urn), each
+  with hand-drawn 60x60 SVG art matching the existing set, slotted into the existing bond
+  thresholds (6/12/20/32/40) rather than inventing new tiers.
+- Mature overlay: 6->7 per complaint need, 7 happy, 7->8 events, 6 per grudge stage.
+
+**Notable rewrites (not additions)**
+- `theatrical` and `terminal` were telling the same joke — both announced their own
+  demise and recovered by dinner. `theatrical` is now about entrances, exits and pauses;
+  `terminal` keeps the deathbed material.
+- `prophet` and `doom` overlapped on "updated the prophecy to match what happened."
+  `prophet` is now built around the special prophecy voice; `doom` keeps the pessimism.
+- Ids were rewritten, never removed, so existing saves that reference a trait id still
+  resolve in `TRAIT_BY_ID`.
+
+**New gameplay flag**: `sleepwalker` carries `wanderer:true`, so it self-relocates via
+`engine/loop.js` autonomy() — the trait's flavor and its mechanics agree.
+
+**Tests**: 60 -> 69. New floors for every pool, plus new invariants that catch the
+"doesn't make sense" class of bug directly:
+- social lines must contain `{n}`; trait notes must not (an unsubstituted brace renders
+  literally). Same check for prop `lines` vs `ambient`, and for every raw-rendered pool.
+- ORIGINS/HABITS/CLOSERS must be capitalised and terminally punctuated, because main.js
+  concatenates them into one paragraph.
+- No duplicate line anywhere in the trait pool or across the copy pools.
+- No duplicate FEUDS pair in either direction (activeFeuds matches both orders).
+- Trait `stats`/`care` keys and ranges validated.
+- `PROP_ART` strings are checked for strict element-only XML well-formedness — they are
+  injected as innerHTML, so a malformed one fails silently as a blank icon.
+
+All five new props were also rendered in a browser and eyeballed; the Rotary Phone and
+Empty Birdcage were redrawn after the first pass read as mush at icon size.
+
+**Note for the behavior/animation agent**: `src/engine/behavior.js` keys
+`TRAIT_PROP_AFFINITY` / `SOCIAL_PULL` / `ROOTEDNESS` by trait id and currently covers only
+the original 46. Nothing breaks (unknown ids fall through to defaults, verified by a 40-pass
+sim), but the 19 new archetypes won't participate in prop affinity or social pull until
+entries are added for them.
