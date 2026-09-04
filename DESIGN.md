@@ -49,5 +49,10 @@ Must be served over http(s) — ES modules + the service worker do not run from 
 - Save version bump. On load, old single-image pets are wrapped as `{ art: { body: <old img>, stamps: [] } }` so old shelves keep working.
 - Storage stays localStorage via the existing `Store` abstraction (already degrades gracefully when storage is unavailable).
 
-## 6. Verification
+## 7. Sound & narrator
+- **SFX** (`audio/sound.js`): short procedural tones/noise bursts via the Web Audio API — no audio asset files. Distinct cues for feed/fuss/clean, note-arrival tick, feud dissonance, unlock fanfare, achievement sting. A single master mute toggle in the toolbar.
+- **Narrator** (`audio/narrator.js`): reads new notes aloud via the browser's built-in SpeechSynthesis API. Picks the best available `en-GB` voice heuristically (falls back gracefully — many mobile browsers only expose one generic system voice; rate/pitch are tuned for a clipped, "uppity" delivery regardless of which voice is actually available). Independent toolbar toggle from the SFX mute. Both modules self-register against a generic `onNote` hook exposed by `state.js`, so `state.js` stays dependency-free (no import of audio code) while audio reacts to every note without every note-producing call site needing to know audio exists.
+- Both require a user gesture before playing (browser autoplay policy) — satisfied naturally since every trigger in this game is a button click.
+
+## 8. Verification
 No JS test framework in scope (would conflict with the "no build step" choice). Manual smoke test via local static server: draw a layered pet and confirm animation, run the decay/feud/care loop, confirm save/reload, confirm offline reload + install prompt, check a mobile viewport in devtools. Flagged explicitly if anything is left unverified.

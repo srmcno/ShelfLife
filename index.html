@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#33203D">
+<title>Shelf Life</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Karla:ital,wght@0,400;0,600;0,700;1,400&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="wall"></div>
+
+<header class="masthead">
+  <div class="wordmark">
+    <h1>Shelf<span class="tail">&nbsp;Life</span></h1>
+    <p class="tagline">Small creatures with needs, opinions, and long memories. They cannot die. They have looked into it.</p>
+  </div>
+  <div class="toolbar">
+    <button class="btn btn-primary" id="newPetBtn">Make a pet</button>
+    <button class="btn" id="roundsBtn">Do the rounds</button>
+    <button class="btn" id="checkBtn">Check the shelf</button>
+    <button class="btn" id="decorBtn">Decorate</button>
+    <button class="btn btn-ghost btn-sm" id="incidentsBtn">Incidents</button>
+    <button class="btn btn-ghost btn-sm" id="muteBtn" aria-pressed="false">🔊 Sound</button>
+    <button class="btn btn-ghost btn-sm" id="narratorBtn" aria-pressed="true">🗣️ Narrator</button>
+    <button class="btn btn-ghost btn-sm" id="matureBtn" aria-pressed="false" title="Adds swearing and cruder jokes to notes. Off by default.">🔞 Mature: Off</button>
+    <button class="btn btn-ghost btn-sm" id="exportBtn">Back up</button>
+    <button class="btn btn-ghost btn-sm" id="importBtn">Restore</button>
+    <input type="file" id="importFile" accept="application/json" hidden>
+  </div>
+</header>
+
+<div class="storage-warn" id="storageWarn" hidden>
+  Saving is off in this preview window. Download the file or open the hosted link and your shelf will stick around.
+</div>
+
+<div class="status" id="statusBar"></div>
+<main class="cabinet" id="cabinet"></main>
+
+<div class="notes-head">
+  <h2>What they left you</h2>
+  <button class="btn btn-ghost btn-sm" id="clearNotes">Clear notes</button>
+</div>
+<section class="notes" id="notes"></section>
+
+<footer>They get hungry, bored and filthy in real time, whether the game is open or not. Drag a pet to move it. Tap a pet to take care of it. Who they stand next to matters.</footer>
+
+<div class="veil" id="studioVeil">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h2>Make a pet</h2>
+        <div class="card-meta">Draw it, stamp it, name it. It takes over from there.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="studioClose">Close</button>
+    </div>
+    <div class="pad-wrap"><canvas id="pad"></canvas><div id="stampLayer" class="stamp-preview-layer"></div></div>
+    <div class="tool-block">
+      <div class="tool-label">Color</div>
+      <div class="swatches" id="swatches"></div>
+    </div>
+    <div class="tool-block">
+      <div class="tool-label">Brush</div>
+      <div class="chiprow" id="sizes">
+        <button class="chip" data-size="6">Thin</button>
+        <button class="chip" data-size="16" aria-pressed="true">Medium</button>
+        <button class="chip" data-size="34">Fat</button>
+        <button class="chip" id="eraserChip" data-erase="1">Eraser</button>
+      </div>
+    </div>
+    <div class="tool-block">
+      <div class="tool-label">Stamps: pick one, then tap the canvas</div>
+      <div class="chiprow" id="stamps"></div>
+    </div>
+    <div class="tool-block">
+      <div class="chiprow">
+        <button class="chip" id="undoBtn">Undo</button>
+        <button class="chip" id="clearBtn">Start over</button>
+      </div>
+    </div>
+    <div class="tool-block">
+      <div class="tool-label">Name</div>
+      <input type="text" id="petName" maxlength="22" placeholder="Bartholomew, Gnash, Miss Teeth...">
+      <div class="hint">Leave it blank and one gets picked for you. You may regret that.</div>
+    </div>
+    <div class="studio-actions">
+      <button class="btn btn-ghost" id="cancelPet">Cancel</button>
+      <button class="btn btn-primary" id="savePet">Move it in</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="decorVeil">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div><h2>Decorate</h2><div class="card-meta">The room, the shelf, and the things that live on it.</div></div>
+      <button class="btn btn-ghost btn-sm" id="decorClose">Close</button>
+    </div>
+    <div class="decor-section"><h3>Room</h3><div class="opt-row" id="roomOpts"></div></div>
+    <div class="decor-section"><h3>Wall</h3><div class="opt-row" id="wallOpts"></div></div>
+    <div class="decor-section"><h3>Shelf</h3><div class="opt-row" id="woodOpts"></div></div>
+    <div class="decor-section"><h3>Trim</h3><div class="opt-row" id="accentOpts"></div></div>
+    <div class="decor-section"><h3>Things for the shelf</h3><div class="prop-tray" id="propTray"></div></div>
+  </div>
+</div>
+
+<div class="veil" id="cardVeil"><div class="sheet" id="cardSheet"></div></div>
+<div class="veil" id="incidentsVeil"><div class="sheet" id="incidentsSheet"></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

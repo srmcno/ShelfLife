@@ -1,0 +1,48 @@
+export const FEUDS = [
+  ['gossip','spiteful'],['magpie','loadbearing'],['unblinking','nocturnal'],
+  ['taxidermy','terminal'],['management','complaints'],['glitter','clean'],
+  ['feral','clingy'],['ancient','amnesiac'],['cult','doom'],
+  ['damp','clean'],['sugar','magpie'],['theatrical','management'],
+  ['litigious','landlord'],['narcissist','critic'],['paranoid','influencer'],
+  ['hoarder','minimalist'],['martyr','nihilist'],['revisionist','witness'],
+  ['closer','timeshare'],['steward','landlord'],['prophet','cursed'],
+  ['socialite','method'],['napoleon','steward'],['doomscroll','astrology'],
+  ['cryptid','witness'],['freegan','critic']
+];
+
+export const FEUD_LINES = [
+  '{a} and {b} are not speaking.',
+  "{a} has moved {b}'s things. {b} has noticed.",
+  '{a} says {b} started it. {b} is not commenting.',
+  '{a} and {b} have drawn a line down the shelf.',
+  '{a} wants {b} moved. Immediately. Permanently.',
+  '{b} says {a} knows what it did.',
+  '{a} has been sharpening something. {b} has been watching.',
+  '{a} and {b} have agreed to disagree. Neither meant it.',
+  '{b} slept badly. {a} slept excellently.',
+  '{a} has stopped saying {b} out loud. Uses a gesture now.'
+];
+
+// Used when a feud arc escalates (engine/achievements.js stepFeudArc)
+export const ESCALATION_LINES = [
+  '{a} rearranged the shelf overnight. {b} is now facing the wall.',
+  "{a} took something of {b}'s. {b} has not said anything. Yet.",
+  '{a} and {b} stopped speaking through a third party. There is no third party. They still stopped.',
+  '{a} left a note for {b}. The note is one sentence and it is devastating.',
+  '{a} has recruited two others against {b}. {b} does not know yet.',
+  "{a} moved into {b}'s spot while {b} was asleep. {b} will notice.",
+  "{a} has stopped saying {b}'s name entirely. Uses a long pause instead.",
+  "Something of {b}'s is missing. {a} is whistling."
+];
+
+// Rare, used when a feud arc resolves into a truce
+export const TRUCE_LINES = [
+  '{a} and {b} are speaking again. Nobody knows what changed. Neither will say.',
+  '{a} apologized to {b}. It was three words and it cost {a} everything.',
+  '{a} and {b} shared a spot on the shelf without incident. Historians are stunned.',
+  '{a} and {b} have called it even. The ledger has been quietly destroyed.',
+  '{a} did something small for {b}. {b} pretended not to notice. Both know.',
+  'Whatever happened between {a} and {b} is over now. It is somehow worse, actually — they get along.',
+  '{a} and {b} have a truce. It has terms. The terms are secret.',
+  '{a} and {b} sat together all day. It was, against every odd, fine.'
+];

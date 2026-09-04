@@ -1,0 +1,48 @@
+.streak-badge{font-size:12px;color:var(--amber)}
+#incidentsSheet .incident{border-top:1px solid var(--rule);padding:10px 0}
+#incidentsSheet .incident b{color:var(--amber);font-size:14px}
+#incidentsSheet .incident p{margin:4px 0 0;font-size:13px;color:var(--bone-dim)}
+#incidentsSheet .incident-empty{font-family:var(--hand);font-size:20px;color:#6C5A7A}
+
+.stamp-preview-layer{position:absolute;inset:0;pointer-events:none}
+.stamp-preview-layer .sprite-stamp{position:absolute}
+
+.sprite{position:relative;width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;transform-origin:50% 100%}
+.sprite-body{width:100%;max-height:78px;object-fit:contain;filter:drop-shadow(0 4px 5px rgba(0,0,0,.5));pointer-events:none;position:relative}
+.sprite-stamp{position:absolute;pointer-events:none;transform-origin:center center}
+.sprite-stamp svg{width:100%;height:100%;display:block}
+
+@keyframes sl-bob{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(-3px) scaleY(1.025)}}
+@keyframes sl-shake{0%,100%{transform:translateX(0) rotate(0)}25%{transform:translateX(-2px) rotate(-1.5deg)}75%{transform:translateX(2px) rotate(1.5deg)}}
+@keyframes sl-jitter{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
+@keyframes sl-lean-left{0%,100%{transform:rotate(0)}50%{transform:rotate(-5deg)}}
+@keyframes sl-lean-right{0%,100%{transform:rotate(0)}50%{transform:rotate(5deg)}}
+@keyframes sl-blink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+@keyframes sl-blink-slow{0%,96%,100%{transform:scaleY(1)}98%{transform:scaleY(.08)}}
+@keyframes sl-sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+@keyframes sl-sway-slow{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+@keyframes sl-undulate{0%,100%{transform:translateX(0) rotate(0)}33%{transform:translateX(1.5px) rotate(4deg)}66%{transform:translateX(-1.5px) rotate(-4deg)}}
+@keyframes sl-twitch{0%,88%,100%{transform:rotate(0)}90%{transform:rotate(-7deg)}92%{transform:rotate(5deg)}94%{transform:rotate(0)}}
+@keyframes sl-halo{0%{transform:rotate(0) translateY(0)}50%{transform:rotate(180deg) translateY(-2px)}100%{transform:rotate(360deg) translateY(0)}}
+
+.motion-bob{animation:sl-bob 3.4s ease-in-out infinite}
+.motion-furious{animation:sl-shake .5s ease-in-out infinite}
+.motion-jitter{animation:sl-jitter 1.1s ease-in-out infinite}
+.motion-asleep{animation:sl-bob 7s ease-in-out infinite}
+.motion-lean-left{animation:sl-lean-left 4.5s ease-in-out infinite}
+.motion-lean-right{animation:sl-lean-right 4.5s ease-in-out infinite}
+
+.anim-blink{animation:sl-blink 4.2s ease-in-out infinite}
+.anim-blink-slow{animation:sl-blink-slow 6.5s ease-in-out infinite}
+.anim-sway{animation:sl-sway 3.1s ease-in-out infinite}
+.anim-sway-slow{animation:sl-sway-slow 5.2s ease-in-out infinite}
+.anim-undulate{animation:sl-undulate 2.6s ease-in-out infinite}
+.anim-twitch{animation:sl-twitch 3.8s ease-in-out infinite}
+.anim-halo{animation:sl-halo 6s linear infinite}
+.anim-bob{animation:sl-bob 2.8s ease-in-out infinite}
+
+@media (prefers-reduced-motion:reduce){
+  .sprite,.sprite-body,.sprite-stamp,.motion-bob,.motion-furious,.motion-jitter,.motion-asleep,
+  .motion-lean-left,.motion-lean-right,.anim-blink,.anim-blink-slow,.anim-sway,.anim-sway-slow,
+  .anim-undulate,.anim-twitch,.anim-halo,.anim-bob{animation:none!important}
+}
