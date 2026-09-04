@@ -1853,3 +1853,739 @@ git commit -m "Add engine/tick.js and engine/care.js with full node:test coverag
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
 ```
+
+---
+
+### Task 4: content/copy.js + content/props.js + content/decor.js + content/mature.js
+
+**Files:**
+- Create: `src/content/copy.js`
+- Create: `src/content/props.js`
+- Create: `src/content/decor.js`
+- Create: `src/content/mature.js`
+- Test: `test/copy.test.mjs`
+
+**Interfaces:**
+- Produces: everything under `content/copy.js:`, `content/props.js:`, `content/decor.js:`, `content/mature.js:` in the Global contracts section above. `engine/tick.js`/`engine/care.js` (Task 8) read `NEED_LABEL`/`DECAY`/`COMPLAINTS`/`CARE_LINES`/`OVERFED`/`ASLEEP_LINES`; `engine/loop.js`/`engine/achievements.js` (Task 9) read `HAPPY_NOTES`/`EVENTS`/`GRUDGE_LINES`/`STREAK_LINES` and mix in `MATURE_*_EXTRA` from `content/mature.js` only when `state.settings.matureMode` is true; the pet-creation flow (Task 7/14) composes a bio as `pick(ORIGINS)+' '+pick(HABITS)+' '+trait.blurb+' '+pick(CLOSERS)` and falls back to `pick(FALLBACK_NAMES)` when no name is given; `ui/decorUI.js` (Task 13) reads `PROPS`/`PROP_ART`/`ROOMS`/`WALLS`/`WOODS`/`ACCENTS` to render the decorate sheet and prop tray.
+- This is pure data — no imports needed in any of the four files.
+
+Voice matches Task 3: deadpan, passive-aggressive, dark-comic, spooky-cute menace. Never graphic, never a real threat, never targeting real people, protected groups, or real mental-health conditions. `content/mature.js` is the sole opt-in exception to the profanity-free rule — its lines are additive extras (not replacements) and are only mixed into the base pools when the player has explicitly turned on Mature mode (off by default).
+
+- [ ] **Step 1: Write `src/content/copy.js`**
+
+Ports `NEED_LABEL`, `DECAY`, `COMPLAINTS`, `CARE_LINES`, `OVERFED`, `HAPPY_NOTES`, `ASLEEP_LINES`, `EVENTS`, `FALLBACK_NAMES`, `ORIGINS`, `HABITS`, `CLOSERS` from `~/Documents/shelf-life.html` lines 419-467, roughly doubling each pool and pushing `EVENTS` darker/weirder, then adds two new pools: `GRUDGE_LINES` (keyed by grudge escalation stage 1/2/3, `{n}` = pet name) and `STREAK_LINES` (`{d}` = consecutive check-in day count).
+
+```js
+/* ================= CARE COPY ================= */
+export const NEED_LABEL = { food: 'Fed', fuss: 'Fussed', clean: 'Clean' };
+export const DECAY = { food: 5.2, fuss: 4.4, clean: 3.4 };
+
+export const COMPLAINTS = {
+  food: {
+    annoyed: [
+      'Has not eaten. Is being brave about it.',
+      'Asked when dinner is. Dinner was yesterday.',
+      'Has been staring at the kitchen. Pointedly.',
+      'Is chewing the shelf. Slowly. Meaningfully.',
+      'Checked the bowl four times this hour. Optimism, mostly.',
+      'Has started rationing. There was nothing to ration.',
+      'Sighed audibly near the empty bowl.',
+      'Says it is "not hungry, just disappointed." It is hungry.'
+    ],
+    furious: [
+      'Has started eyeing the others.',
+      'Says it will eat the shelf. It might.',
+      'Ate something structural. You will find out which part later.',
+      'Has drawn up a menu. The others are on it.',
+      'Says hunger is temporary and grudges are forever.',
+      'Has begun taking inventory of anything that could be food.',
+      'Chewed through something that was not meant to be chewed.',
+      'Has stopped asking. That is worse.',
+      'Looked at your hand like it was an appetizer.',
+      'Filed dinner under "unresolved." The file is thick.'
+    ]
+  },
+  fuss: {
+    annoyed: [
+      'Waited by the door. You walked past twice.',
+      'Says you have been busy. Says it in that voice.',
+      'Has been sighing at a volume you were meant to hear.',
+      'Asked the others whether you had mentioned it. You had not.',
+      'Left a spot warm for you. You did not sit in it.',
+      'Practiced a conversation with you that did not happen.',
+      'Has started a countdown. It will not say to what.',
+      'Watched the door for a while. The door did not open.'
+    ],
+    furious: [
+      'Has stopped waiting. Wants you to know it stopped.',
+      'Has decided it does not need anyone. It is lying.',
+      'Turned to face the wall. It has been hours.',
+      'Has written you out of something. There was nothing to be written out of.',
+      'Says it is fine. Nothing about it is fine.',
+      'Has unlearned your name on purpose.',
+      'Practiced getting along without you. Badly.',
+      'Told the others it never liked you anyway.',
+      'Has drafted a goodbye it has no intention of sending. Yet.',
+      'Stopped saving you a spot. The spot is gone now.'
+    ]
+  },
+  clean: {
+    annoyed: [
+      'Something is growing on it. It has named the something.',
+      'Is sticky and will not explain why.',
+      'Left a mark. The mark is spreading.',
+      'Has begun attracting flies. Considers them company.',
+      'Smells faintly of something you cannot place. Yet.',
+      'Has developed a texture. It is proud of the texture.',
+      'Left a print somewhere it should not have been.',
+      'Is collecting dust like it is a hobby.'
+    ],
+    furious: [
+      'Has achieved a new texture. Do not touch it.',
+      'Is no longer entirely one color.',
+      'The shelf smells. It says that is not its problem.',
+      'Something has moved in with it and started charging rent.',
+      'You will need gloves. Possibly a bag.',
+      'Has begun to shine, in a way that concerns everyone.',
+      'Left a trail. The trail is still moving.',
+      'Something under it has developed a heartbeat. Probably.',
+      'Has stopped being a color and started being a warning.',
+      'Requires a hazmat approach and a moment of silence.'
+    ]
+  }
+};
+
+export const CARE_LINES = {
+  food: [
+    'Ate. Said nothing.',
+    'Ate it. Wanted a different one.',
+    'Inhaled it. Looked at the bowl. Looked at you.',
+    'Ate, then asked what the next one is.',
+    'Chewed slowly while maintaining eye contact.',
+    'Finished it in one bite and pretended it took longer.',
+    'Ate half. Saved the rest. For spite, probably.',
+    'Sniffed it first. Approved, reluctantly.',
+    'Ate without looking away from the door.',
+    'Licked the bowl clean and rated it "adequate."'
+  ],
+  fuss: [
+    'Allowed it. Briefly.',
+    'Pretended not to enjoy that.',
+    'Leaned in. Will deny leaning in.',
+    'Purred, then acted like nothing happened.',
+    'Says it merely tolerated that. It did not merely tolerate that.',
+    'Closed its eyes for exactly four seconds. A record.',
+    'Let you get close. Filed it under "an exception."',
+    'Made a small sound. Refuses to repeat it.',
+    'Softened, visibly, then caught itself.',
+    'Accepted the attention like it was doing you a favor.'
+  ],
+  clean: [
+    'Tolerated the wipe. Barely.',
+    'Is clean. Is furious about being clean.',
+    'Smells like nothing now. It preferred smelling like something.',
+    'Held very still. Made it weird.',
+    'Watched you the entire time without blinking.',
+    'Emerged pristine and immediately went looking for something to ruin that.',
+    'Sat through it with the dignity of someone being wrongly arrested.',
+    'Is shiny now. Resents being shiny.',
+    'Allowed the cleaning under written protest. There is no writing. There is protest.',
+    'Came out smelling like nothing, which it considers a personality loss.'
+  ]
+};
+
+export const OVERFED = {
+  food: [
+    'Was not hungry. Ate anyway. Consequences pending.',
+    'Turned it down. Nobody turns down food. Something is wrong.',
+    'Is full. Took it anyway. For the stash.',
+    'Ate out of spite, not hunger. Same result.',
+    'Says it is stuffed. Is already eyeing the next one.',
+    'Has reached capacity and kept going regardless.'
+  ],
+  fuss: [
+    'Has had enough attention for one day.',
+    'Wriggled away. You are the clingy one now.',
+    'Says this is getting needy. It means you.',
+    'Has had its fill of affection and is filing a complaint about the surplus.',
+    'Requested space. Received it. Immediately missed the attention.',
+    'Is overstimulated and blaming you for it, specifically.'
+  ],
+  clean: [
+    'Is already clean. This is harassment.',
+    'Was clean. Is now damp. Well done.',
+    'Says you are scrubbing off its personality.',
+    'Has been cleaned enough to lose a layer of mystique.',
+    'Squeaks now. Did not squeak before. Does not want to discuss it.',
+    'Is too clean to function and holds you personally responsible.'
+  ]
+};
+
+export const HAPPY_NOTES = [
+  'Everything is fine. It is suspicious about that.',
+  'Has no complaints today and wants that noted as unusual.',
+  'Sat on your thing. Considers this affection.',
+  'Slept somewhere warm and will not admit whose fault that was.',
+  'Is content. Do not make it weird.',
+  'Said something almost nice, then took it back.',
+  'Has decided to keep you. For now.',
+  'Is in a good mood. The others find this unsettling.',
+  'Hummed something. Stopped the second you noticed.',
+  'Left the good spot for you. Will deny it was on purpose.',
+  'Had a fine day and is furious about how fine it was.',
+  'Smiled. It was brief. It happened.',
+  'Told the others you are "acceptable." High praise, apparently.',
+  'Napped in full view of everyone. Vulnerability, on its terms.',
+  'Is, against all evidence and effort, happy.',
+  'Kept a good mood going all day and blamed nobody for it, which is new.'
+];
+
+export const ASLEEP_LINES = [
+  'Was asleep. Is now awake and unimpressed.',
+  'You woke it. It will remember.',
+  'It is daytime. It is nocturnal. Do the math.',
+  'Opened one eye, closed it. That was your answer.',
+  'Was mid-dream. You will never know about what. Neither will it.',
+  'Grumbled something in its sleep. It was about you.',
+  'Surfaced just enough to register the disappointment, then went back under.',
+  'Is technically awake now. Emotionally, still asleep.'
+];
+
+export const EVENTS = [
+  'Something fell off the shelf in the night. Nothing was near the edge.',
+  'A tooth was found on the floor. Nobody is missing one.',
+  'They were all facing the same direction this morning. Nobody moved them.',
+  'There is one more shadow than there are pets. Probably the lighting.',
+  'A name has been scratched into the wood. It is not one of theirs.',
+  'The house was very quiet at 4am. Too quiet, according to three of them.',
+  'Something has been buried in a houseplant. It is best left there.',
+  'They have voted on something. The result was not shared with you.',
+  'The pile of teeth is growing. They are calling it a collection.',
+  'One of them was on the top shelf this morning. It cannot climb.',
+  'Everyone was exactly one inch to the left. Every single one.',
+  'A small hole has appeared in the wall. It is at their height.',
+  'The clock in the other room stopped at the same time three nights running.',
+  'Something was singing very quietly after midnight. It knew the words.',
+  'A second set of small footprints appeared next to the usual ones. They stop mid-stride.',
+  'Every mirror on the shelf was turned to face the wall this morning. Nobody will say who started it.',
+  'There is a list taped under the shelf. Your name is on it twice.',
+  'The temperature dropped for exactly six minutes at 3am. It has been noted.',
+  'Something drew a door on the wall. It has no handle. Nobody has tried it. Yet.',
+  'A jar that was empty last night is not empty anymore.',
+  'They all went quiet at once, for no reason anyone will name.',
+  'One of the shadows on the shelf does not match anything currently on the shelf.',
+  'A single candle was lit and extinguished by morning. Nobody owns a lighter.',
+  'Something has been counting. The counting stopped exactly at your name.'
+];
+
+/* ================= NAMING + BIO ================= */
+export const FALLBACK_NAMES = [
+  'Bartholomew', 'Gnash', 'Miss Teeth', 'Pudding', 'The Reverend', 'Snaggle', 'Doreen', 'Wretch',
+  'Buttons', 'Mildew', 'Sir Nibbles', 'Grandma', 'Tuesday', 'Hex', 'Marshmallow', 'Custard',
+  'The Landlord', 'Prudence', 'Gob', 'Winifred', 'Sock', 'Beverly', 'The Widow', 'Gravy',
+  'Nubbins', 'Small Kevin', 'Aunt Vera', 'Chompy', 'Poultice', 'Dread Nancy', 'Bisque', 'Moth',
+  'Gristle', 'Peaches', 'Uncle Bramble', 'Sister Margaret', 'The Auditor', 'Roach', 'Vellum',
+  'Nubby', 'The Understudy', 'Cutlet', 'Miss Fortune', 'Gizzard', 'The Sublet', 'Old Nan',
+  'Weevil', 'The Deposit', 'Corncob', 'Sourdough', 'The Notary', 'Bramwell', 'Mothball',
+  'The Intern', 'Chives', 'Reverend Tuesday', 'Gnat', 'The Estate', 'Buttercream', 'Doily',
+  'The Codicil', 'Sprocket', 'Aunt Ruth', 'Barnacle'
+];
+
+export const ORIGINS = [
+  'Found at a yard sale in a town nobody names.',
+  'Arrived in a box marked "do not".',
+  'Traded for half a sandwich.',
+  'Was in the walls. Now it is not.',
+  'Came free with something else. That something is gone.',
+  'Left on a porch. Not this porch.',
+  'Won in a bet nobody remembers making.',
+  'Was already here when you moved in.',
+  'Rescued, allegedly.',
+  'Fell out of a coat pocket. Not yours.',
+  'Dug up, cleaned off, mostly.',
+  'Returned to the store twice. Came back anyway.',
+  'Inherited. The will was oddly specific about it.',
+  'Found in a storage unit with the light still on.',
+  'A gift from someone who moved away shortly afterward.',
+  'Delivered to the wrong address. Kept anyway.',
+  'Won at a raffle nobody remembers entering.',
+  'Followed you home. You let it.',
+  'Confiscated from a yard sale before it could be sold to someone worse.',
+  'Appeared during a power outage. Has never explained the timing.',
+  'Purchased "as is." As is turned out to be a lot.',
+  'Was left in the mailbox with no note and no stamp.',
+  'Emerged from a box marked FRAGILE. Was not fragile.',
+  'Swapped for something you liked better at the time.',
+  'Found under the porch, mid-argument with something unseen.',
+  'Came with the apartment. The lease did not mention it.',
+  'Salvaged from a dumpster behind somewhere that closed suddenly.',
+  'Handed over by a stranger who seemed relieved to be rid of it.',
+  'Turned up at the door during a storm and never left.',
+  'Acquired in a trade that felt fair at the time.'
+];
+
+export const HABITS = [
+  'Keeps its own hours.',
+  'Answers to its name roughly half the time.',
+  'Not for sale. It has made that clear.',
+  'Prefers the left side of everything.',
+  'Does not photograph well and knows it.',
+  'Has strong opinions about the curtains.',
+  'Sits where it likes, which is where you were.',
+  'Will not be rushed.',
+  'Holds grudges longer than it has been alive.',
+  'Sleeps facing the door.',
+  'Does not like being counted.',
+  'Has never once been where you left it.',
+  'Refuses to be photographed from the left.',
+  'Counts things. Will not say what or why.',
+  'Naps in fifteen-minute increments, on the hour, without fail.',
+  'Has never once said thank you and never will.',
+  'Keeps something hidden and checks on it nightly.',
+  'Refuses all beverages except the one you are drinking.',
+  'Insists on the last word, even when there is no argument.',
+  'Has a designated sulking corner.',
+  'Will not enter a room second.',
+  'Tracks the weather better than any app.',
+  'Only eats in front of an audience.',
+  'Maintains a private feud with the vacuum cleaner.'
+];
+
+export const CLOSERS = [
+  'Good luck.',
+  'It has been very patient with you.',
+  'Do not leave food out.',
+  'Loved, technically.',
+  'Ask it nothing after dark.',
+  'Warranty void.',
+  'Handle with mild suspicion.',
+  'No refunds. It checked.',
+  'Keep it away from the good curtains.',
+  'It knows where you sleep. That is probably fine.',
+  'Do not let it near the good yarn.',
+  'It is watching you read this.',
+  'Feed it on schedule. It is keeping track.',
+  'You agreed to this. There are witnesses.',
+  'It does not forgive. It archives.',
+  'Batteries not included. There are no batteries.',
+  'Terms and conditions apply, mostly to you.',
+  'It has already decided how this ends.',
+  'Store away from open flame and open arguments.',
+  'This is now permanent. Congratulations, probably.'
+];
+
+/* ================= GRUDGES + STREAK ================= */
+// Keyed by grudge escalation stage: 1 = mild (5+ grudges), 2 = serious (12+), 3 = terminal (20+).
+export const GRUDGE_LINES = {
+  1: [
+    '{n} has started a list with your name at the top.',
+    "{n} moved your things two inches to the left. Just to see if you'd notice.",
+    '{n} is being extremely polite to you. This is not a good sign.',
+    '{n} has stopped making eye contact. It is on purpose.',
+    '{n} left something unpleasant exactly where you would find it.',
+    '{n} has begun referring to you in the third person while you are in the room.'
+  ],
+  2: [
+    '{n} has recruited two others against you. You are the last to know.',
+    '{n} has stopped eating in front of you. It eats fine when you leave.',
+    '{n} has drawn up something that looks a lot like a formal grievance, with your name on it.',
+    '{n} rearranged the shelf overnight so nothing faces you.',
+    '{n} has been telling the others a version of events that is not flattering to you.',
+    '{n} has taken something of yours and is not hiding it especially well.'
+  ],
+  3: [
+    '{n} has stopped speaking to you entirely. The silence has a schedule.',
+    '{n} has named a small, ominous jar after you. Nobody knows what is in the jar.',
+    '{n} held a ceremony. You were not invited, but you were definitely the subject.',
+    '{n} has begun leaving notes that are just your name, underlined, with no further explanation.',
+    '{n} has started keeping a shrine. It is not a nice shrine.',
+    '{n} is being suspiciously, aggressively kind to you now. This is the worst sign yet.'
+  ]
+};
+
+// {d} = consecutive check-in day count.
+export const STREAK_LINES = [
+  "Oh. You're back. Day {d}.",
+  'Day {d}. They noticed. They will not say they noticed.',
+  '{d} days running. Somewhere between habit and hostage situation.',
+  'Day {d} of you showing up. Nobody is impressed. Everybody noticed.',
+  '{d} days. That is either dedication or a controlled experiment. Unclear which.',
+  'Back again. Day {d}. The shelf keeps better records than you do.',
+  'Day {d}. This is either the beginning of something or a very long habit.',
+  '{d} days straight. They have started to expect you, which is worse than needing you.',
+  'Day {d}. Somewhere, quietly, this is being counted as loyalty.',
+  '{d} days. Nobody said it out loud, but they would miss you. Do not bring this up.'
+];
+```
+
+- [ ] **Step 2: Write `src/content/props.js`**
+
+Ports all 12 original props (`bowl`, `tub`, `lamp`, `yarn`, `musicbox`, `candle`, `fern`, `mirror`, `skull`, `coffinbed`, `bell`, `globe`) with their exact `aura`/`at` mechanical values and SVG art from `~/Documents/shelf-life.html` lines 489-570, then adds 4 new props in the same shape (`trophy`, `board`, `box`, `plant`) with matching hand-drawn-style `PROP_ART` SVGs on the same `viewBox="0 0 60 60"` convention.
+
+```js
+/* ================= PROPS =================
+   Every SVG uses a fixed 0 0 60 60 viewBox (same convention as the original canvas-era
+   props), with themeable parts referencing CSS custom properties (var(--wood),
+   var(--wood-lip), var(--pink), var(--amber), var(--mint), var(--blood)) so the room/
+   wood/accent decor palette re-tints them automatically. */
+export const PROP_ART = {
+  bowl: '<svg viewBox="0 0 60 60"><ellipse cx="30" cy="34" rx="20" ry="6" fill="var(--wood-lip)"/><path d="M10 34a20 12 0 0 0 40 0z" fill="var(--wood)"/><ellipse cx="30" cy="33" rx="14" ry="4" fill="var(--amber)"/></svg>',
+  tub: '<svg viewBox="0 0 60 60"><rect x="10" y="26" width="40" height="20" rx="9" fill="#B9C6CC"/><rect x="14" y="29" width="32" height="9" rx="4" fill="var(--mint)"/><rect x="14" y="46" width="5" height="6" fill="#8A979D"/><rect x="41" y="46" width="5" height="6" fill="#8A979D"/></svg>',
+  lamp: '<svg viewBox="0 0 60 60"><circle cx="30" cy="24" r="17" fill="var(--amber)" opacity=".22"/><path d="M18 26h24l-6-13H24z" fill="var(--amber)"/><rect x="28" y="26" width="4" height="20" fill="#8A7A5A"/><ellipse cx="30" cy="47" rx="11" ry="4" fill="#6E6046"/></svg>',
+  yarn: '<svg viewBox="0 0 60 60"><circle cx="30" cy="33" r="15" fill="var(--pink)"/><path d="M18 27c8 6 16 8 24 4M17 36c9 5 19 5 26-2M22 44c6 3 13 2 18-2" stroke="rgba(0,0,0,.28)" stroke-width="2" fill="none"/></svg>',
+  musicbox: '<svg viewBox="0 0 60 60"><rect x="12" y="30" width="36" height="17" rx="2" fill="#7A4C2B"/><path d="M12 30l6-8h30l-6 8z" fill="#98603A"/><circle cx="42" cy="20" r="3" fill="var(--bone-dim)"/><path d="M42 20v-7h6" stroke="var(--bone-dim)" stroke-width="2" fill="none"/></svg>',
+  candle: '<svg viewBox="0 0 60 60"><path d="M30 8c4 6 6 9 6 12a6 6 0 0 1-12 0c0-3 2-6 6-12z" fill="var(--amber)"/><rect x="24" y="24" width="12" height="22" fill="#2B2430"/><ellipse cx="30" cy="46" rx="11" ry="4" fill="#514659"/></svg>',
+  fern: '<svg viewBox="0 0 60 60"><path d="M30 40c-2-12-10-18-18-20 4 12 8 18 18 20zM30 40c2-12 10-18 18-20-4 12-8 18-18 20z" fill="#3E7A4A"/><path d="M18 40h24l-3 12H21z" fill="#8A5A3B"/></svg>',
+  mirror: '<svg viewBox="0 0 60 60"><ellipse cx="30" cy="28" rx="16" ry="21" fill="#B9C6CC"/><ellipse cx="30" cy="28" rx="12" ry="17" fill="#D8E3E7"/><path d="M24 12l6 14-5 8 8 12" stroke="#8A979D" stroke-width="1.6" fill="none"/><rect x="26" y="48" width="8" height="6" fill="var(--wood)"/></svg>',
+  skull: '<svg viewBox="0 0 60 60"><path d="M30 12c11 0 17 8 17 16 0 6-3 9-3 13 0 3-5 5-14 5s-14-2-14-5c0-4-3-7-3-13 0-8 6-16 17-16z" fill="#E8E0CE"/><ellipse cx="23" cy="30" rx="5" ry="6" fill="#2B2028"/><ellipse cx="37" cy="30" rx="5" ry="6" fill="#2B2028"/><path d="M30 36l-3 6h6z" fill="#2B2028"/></svg>',
+  coffinbed: '<svg viewBox="0 0 60 60"><path d="M22 22h16l7 12-7 14H22l-7-14z" fill="#4B3350"/><path d="M25 26h10l5 8-5 10H25l-5-10z" fill="var(--pink)" opacity=".55"/></svg>',
+  bell: '<svg viewBox="0 0 60 60"><rect x="14" y="44" width="32" height="6" rx="2" fill="var(--wood)"/><path d="M18 44V30a12 12 0 0 1 24 0v14z" fill="#CFE0E5" opacity=".55" stroke="#A9BEC4" stroke-width="1.5"/><circle cx="30" cy="38" r="5" fill="var(--blood)" opacity=".8"/></svg>',
+  globe: '<svg viewBox="0 0 60 60"><rect x="18" y="43" width="24" height="7" rx="2" fill="#5A3A46"/><circle cx="30" cy="29" r="16" fill="#CFE0E5" opacity=".5" stroke="#A9BEC4" stroke-width="1.5"/><circle cx="24" cy="24" r="1.6" fill="#fff"/><circle cx="34" cy="30" r="1.6" fill="#fff"/><circle cx="29" cy="36" r="1.6" fill="#fff"/><circle cx="36" cy="21" r="1.4" fill="#fff"/></svg>',
+  trophy: '<svg viewBox="0 0 60 60"><path d="M18 46l12 6 12-6-4-14H22z" fill="var(--wood)"/><ellipse cx="30" cy="26" rx="10" ry="9" fill="#C9B79A"/><path d="M22 20l-6-10M38 20l6-10M20 16l-8-6M40 16l8-6" stroke="#8A7A5A" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="26" cy="25" r="1.6" fill="#2B2028"/><circle cx="34" cy="25" r="1.6" fill="#2B2028"/></svg>',
+  board: '<svg viewBox="0 0 60 60"><rect x="10" y="14" width="40" height="30" rx="2" fill="#241833"/><path d="M14 40a16 16 0 0 1 32 0" stroke="var(--amber)" stroke-width="1.4" fill="none"/><circle cx="18" cy="24" r="1.4" fill="var(--amber)"/><circle cx="24" cy="19" r="1.4" fill="var(--amber)"/><circle cx="30" cy="17" r="1.4" fill="var(--amber)"/><circle cx="36" cy="19" r="1.4" fill="var(--amber)"/><circle cx="42" cy="24" r="1.4" fill="var(--amber)"/><path d="M22 34l8-6 8 6-4 8h-8z" fill="var(--blood)" opacity=".7"/><circle cx="30" cy="33" r="2.4" fill="#F2E9DC"/></svg>',
+  box: '<svg viewBox="0 0 60 60"><rect x="14" y="26" width="32" height="22" rx="2" fill="var(--wood)"/><rect x="21" y="20" width="18" height="7" rx="1" fill="var(--wood-lip)"/><rect x="24" y="16" width="3" height="10" fill="#F2E9DC"/><rect x="29" y="14" width="3" height="12" fill="#F2E9DC"/><rect x="34" y="17" width="3" height="9" fill="#F2E9DC"/><rect x="20" y="48" width="20" height="3" fill="#3A2A20"/></svg>',
+  plant: '<svg viewBox="0 0 60 60"><path d="M30 40c-1-10-6-16-13-19 2 3 4 9 7 13-3 1-6 0-9-2 3 6 9 9 15 8z" fill="#3E7A4A"/><path d="M30 40c1-11 7-17 15-19-3 4-5 10-8 14 3 0 6-1 8-3-4 6-9 9-15 8z" fill="#345F3B"/><ellipse cx="27" cy="30" rx="2" ry="3" fill="var(--blood)" opacity=".6"/><rect x="21" y="40" width="18" height="10" rx="2" fill="var(--wood)"/><path d="M22 50q8 4 16 0" stroke="#2B2028" stroke-width="1" fill="none" opacity=".4"/></svg>'
+};
+
+export const PROPS = {
+  bowl: { name: 'Snack Bowl', at: 0, aura: { food: 0.62 }, desc: 'Neighbors get hungry more slowly.',
+    lines: ['{p} has been at the bowl again. The bowl is empty again.', '{p} says it did not touch the bowl. The bowl disagrees.', '{p} guarded the bowl all night. From nobody.'],
+    ambient: ['The bowl was full this morning. It is not now.', 'Something has been licked clean. Twice.'] },
+  tub: { name: 'Tin Bathtub', at: 0, aura: { clean: 0.58 }, desc: 'Neighbors stay clean longer.',
+    lines: ['{p} got in the tub voluntarily. Everyone is unsettled.', '{p} bathed and has been insufferable since.', '{p} refused the tub, then used it at 3am when nobody was looking.'],
+    ambient: ['The water in the tub has changed color. Nobody will say why.', 'There are wet prints leading away from the tub and none leading back.'] },
+  lamp: { name: 'Dim Lamp', at: 0, aura: { fuss: 0.8 }, desc: 'A little company. Nocturnal pets resent it.',
+    lines: ['{p} sat under the lamp for hours doing nothing.', '{p} has claimed the lamp. There is no sharing arrangement.', '{p} says the light is fine. {p} moved it two inches anyway.'],
+    ambient: ['The lamp flickered at the same time three nights running.', 'The bulb is warm and nobody has touched it.'] },
+  yarn: { name: 'Ball of Yarn', at: 0, aura: { fuss: 0.75 }, desc: 'Something to destroy. Keeps boredom down.',
+    lines: ['{p} unraveled the whole thing and blamed the room.', '{p} has been wrestling the yarn since Tuesday. The yarn is winning.', '{p} tied something up with the yarn. It will not say what.'],
+    ambient: ['The yarn is in a different room. Nobody carried it there.', 'There is a string running under the shelf. It leads somewhere.'] },
+  musicbox: { name: 'Music Box', at: 6, aura: { fuss: 0.62 }, desc: 'Keeps everyone entertained. Mostly.',
+    lines: ['{p} wound the music box and sat through the whole thing.', '{p} plays it on repeat. The others have asked it to stop.', '{p} says the tune has words. It sang them once. Once.'],
+    ambient: ['The music box played for eleven seconds at 4am.', 'The lid was closed. It is open now.'] },
+  candle: { name: 'Black Candle', at: 6, aura: {}, desc: 'No practical use. They love it.',
+    lines: ['{p} has been staring into the candle for two hours.', '{p} lit the candle. Nobody gave it matches.', '{p} says the flame leans toward whoever is lying.'],
+    ambient: ['The candle is shorter than it was and has never been lit.', 'Wax has run in a straight line toward the door.'] },
+  fern: { name: 'Suspicious Fern', at: 12, aura: { clean: 1.22 }, desc: 'Lovely. Also, things get buried in it.',
+    lines: ['{p} buried something in the fern. The fern is thriving.', '{p} has been talking to the fern. The fern has been listening.', '{p} says the fern moved. The fern did move.'],
+    ambient: ['The soil has been disturbed again.', 'The fern has grown noticeably since last week. Nobody waters it.'] },
+  mirror: { name: 'Cracked Mirror', at: 12, aura: { fuss: 1.18 }, desc: 'Beautiful. Makes everyone slightly worse.',
+    lines: ['{p} spent an hour at the mirror and came back different.', '{p} says its reflection blinked first.', '{p} has stopped using the mirror. It will not explain.'],
+    ambient: ['The crack is longer today.', 'Something moved in the mirror while the shelf was empty.'] },
+  skull: { name: 'Uncle', at: 20, aura: {}, desc: 'A small skull. He came with the house.',
+    lines: ['{p} has been telling Uncle about your day.', '{p} moved Uncle so he faces the door. Uncle prefers it.', '{p} says Uncle agrees with it. Uncle has no comment.'],
+    ambient: ['Uncle is facing a different way.', 'Uncle was on the top shelf this morning.'] },
+  coffinbed: { name: 'Coffin Bed', at: 20, aura: { food: 0.85, fuss: 0.82, clean: 0.85 }, desc: 'Very comfortable. Slows everything down a little.',
+    lines: ['{p} slept fourteen hours and woke up rude.', '{p} will not get out of the bed. It has been days.', '{p} has started charging others to nap in it.'],
+    ambient: ['The bed was made this morning. Nobody makes the bed.', 'There is a dent in the pillow and everyone is accounted for.'] },
+  bell: { name: 'Bell Jar', at: 32, aura: { clean: 0.68 }, desc: 'Keeps the dust off. Keeps other things in.',
+    lines: ['{p} got under the bell jar and would not come out.', '{p} put something under the jar. It is best left there.', '{p} taps the glass whenever it walks past.'],
+    ambient: ['The jar has fogged from the inside.', 'Whatever is under the jar has moved to the other side.'] },
+  globe: { name: 'Snow Globe', at: 32, aura: {}, desc: 'Purely decorative. They are obsessed with it.',
+    lines: ['{p} shook the globe forty times in a row.', '{p} says there is somebody in the globe. There is a small figure in the globe.', '{p} watched the snow settle and then did it again.'],
+    ambient: ['The snow in the globe is still falling. It has been hours.', 'The little figure is facing outward now.'] },
+  trophy: { name: 'Taxidermy Trophy', at: 40, aura: {}, desc: 'A little menace for the shelf. Nobody asks where it came from.',
+    lines: ['{p} has been talking shop with the trophy. Career advice, probably.', '{p} salutes the trophy every morning. The trophy does not salute back.', '{p} asked what happened to the rest of it. Nobody answered.'],
+    ambient: ['The trophy is facing a different direction than it was yesterday.', 'Something about the trophy is looking fresher than taxidermy should.'] },
+  board: { name: 'Spirit Board', at: 40, aura: {}, desc: 'No practical use. They ask it things anyway.',
+    lines: ['{p} asked the board a yes-or-no question. It answered in cursive.', '{p} spent an hour on the board and came back oddly formal.', '{p} says the board is "just for fun." The board disagrees.'],
+    ambient: ['The planchette has moved two inches since last night.', 'Someone has been asking questions. The board has been answering.'] },
+  box: { name: 'Complaint Box', at: 50, aura: { fuss: 0.66 }, desc: 'Give them somewhere to file it. They complain less everywhere else.',
+    lines: ['{p} filed something in the box. The box is nearly full.', '{p} checks the box daily for a response. There is no response.', '{p} has started filing complaints about the box itself.'],
+    ambient: ['The box is heavier than it should be for how few papers are in it.', 'A slip of paper worked its way out overnight. Nobody wrote it down again.'] },
+  plant: { name: 'Weeping Fig', at: 50, aura: { clean: 0.7 }, desc: 'Thrives on grime nobody can identify. Neighbors stay tidier near it.',
+    lines: ['{p} has been crying near the fig. The fig started it.', '{p} waters the fig with something that is not water.', '{p} insists the fig "understands" it. Concerning, either way.'],
+    ambient: ['The soil is damp in a way the plant should not need.', 'The fig has grown noticeably overnight. Nobody waters it that well.'] }
+};
+```
+
+- [ ] **Step 3: Write `src/content/decor.js`**
+
+Ports `ROOMS`, `WALLS`, `WOODS`, `ACCENTS` verbatim from `~/Documents/shelf-life.html` lines 489-497 — no expansion needed, faithful porting only.
+
+```js
+/* ================= DECOR CATALOGS =================
+   Ported verbatim from the original prototype (~/Documents/shelf-life.html lines 489-497). */
+export const ROOMS = {
+  aubergine: { name: 'Aubergine', swatch: '#33203D', vars: { '--room-a': '#33203D', '--room-b': '#1A1220', '--panel-a': '#2C1D35', '--panel-b': '#241830', '--line': '#4A3557', '--rule': '#3A2A47', '--surface': '#241833', '--surface-hi': '#372748', '--field': '#1C1327', '--bone': '#F2E9DC', '--bone-dim': '#C9BCAE', '--wall-ink': 'rgba(242,233,220,.14)' } },
+  mortuary: { name: 'Mortuary Mint', swatch: '#8FB5A4', vars: { '--room-a': '#A8C9B9', '--room-b': '#7FA492', '--panel-a': '#E4EDE4', '--panel-b': '#D2E0D4', '--line': '#8CA697', '--rule': '#A9BFB0', '--surface': '#DCE7DD', '--surface-hi': '#CBDACD', '--field': '#EDF3ED', '--bone': '#23302A', '--bone-dim': '#4E6357', '--wall-ink': 'rgba(30,50,40,.12)' } },
+  nursery: { name: 'Haunted Nursery', swatch: '#D9A7B0', vars: { '--room-a': '#E7BFC6', '--room-b': '#C08D98', '--panel-a': '#F3E2E4', '--panel-b': '#E5CED3', '--line': '#B98F98', '--rule': '#CFA9B1', '--surface': '#EEDCDF', '--surface-hi': '#E2C8CD', '--field': '#F7ECEE', '--bone': '#33202A', '--bone-dim': '#61454F', '--wall-ink': 'rgba(60,30,40,.12)' } },
+  basement: { name: 'Blacklight Basement', swatch: '#1B0B2E', vars: { '--room-a': '#2E0F52', '--room-b': '#0C0616', '--panel-a': '#1D0C33', '--panel-b': '#130823', '--line': '#4A208A', '--rule': '#33146B', '--surface': '#1C0B34', '--surface-hi': '#2C1252', '--field': '#150826', '--bone': '#E8DBFF', '--bone-dim': '#A98FD4', '--wall-ink': 'rgba(180,120,255,.16)' } },
+  parlor: { name: 'Bone Parlor', swatch: '#E8DFCE', vars: { '--room-a': '#F4EDDF', '--room-b': '#DCD2BE', '--panel-a': '#EFE7D6', '--panel-b': '#E2D8C4', '--line': '#BCAE95', '--rule': '#CFC3AB', '--surface': '#E7DECB', '--surface-hi': '#DBD0B9', '--field': '#F6F1E5', '--bone': '#2B2318', '--bone-dim': '#5D5241', '--wall-ink': 'rgba(60,48,30,.10)' } },
+  midnight: { name: 'Midnight', swatch: '#0E1526', vars: { '--room-a': '#17233F', '--room-b': '#080C16', '--panel-a': '#131C31', '--panel-b': '#0C1322', '--line': '#2C3D63', '--rule': '#22314F', '--surface': '#141E36', '--surface-hi': '#1F2C4B', '--field': '#0F1728', '--bone': '#DDE6F5', '--bone-dim': '#93A3C2', '--wall-ink': 'rgba(190,210,255,.12)' } }
+};
+
+export const WALLS = { none: 'Bare', stripes: 'Stripes', dots: 'Dots', grid: 'Grid', web: 'Cobwebs', diamond: 'Diamonds' };
+
+export const WOODS = {
+  rosewood: { name: 'Rosewood', wood: '#5C3A47', lip: '#7A4C5B' },
+  charcoal: { name: 'Charcoal', wood: '#2F2E33', lip: '#474650' },
+  bone: { name: 'Bone', wood: '#CFC3AC', lip: '#E6DCC8' },
+  bubblegum: { name: 'Bubblegum', wood: '#C4708F', lip: '#E28FAC' },
+  moss: { name: 'Moss', wood: '#44573F', lip: '#5E7455' },
+  oxblood: { name: 'Oxblood', wood: '#5A1E23', lip: '#7A2C33' },
+  gilt: { name: 'Gilt', wood: '#8A6B22', lip: '#C4972F' }
+};
+
+export const ACCENTS = {
+  bubblegum: { name: 'Bubblegum', c: '#FF8FB8' },
+  mint: { name: 'Mint', c: '#7FD8C0' },
+  amber: { name: 'Amber', c: '#F2B441' },
+  blood: { name: 'Blood', c: '#C4414F' },
+  violet: { name: 'Violet', c: '#B183F0' },
+  acid: { name: 'Acid', c: '#B8E634' }
+};
+```
+
+- [ ] **Step 4: Write `src/content/mature.js`**
+
+Opt-in extra-profane lines mixed into the normal `content/copy.js` pools by `engine/loop.js` only when `state.settings.matureMode` is true (default OFF, explicit toggle in the UI). Real mild-to-moderate profanity for comedic emphasis, in the same deadpan voice — not slurs, not sexual content, not targeting real people or protected groups.
+
+```js
+/* ================= MATURE MODE OVERLAY =================
+   Opt-in extra lines mixed into the normal copy.js pools by engine/loop.js only when
+   state.settings.matureMode is true (default OFF, explicit toggle in the UI). Mild-to-
+   moderate profanity for comedic emphasis, same deadpan "small monster with a grudge"
+   voice as the rest of the content — never slurs, never targeting real people or
+   protected groups, never sexual content. These are additions, not replacements. */
+
+export const MATURE_COMPLAINTS_EXTRA = {
+  food: [
+    'Says the bowl is empty and this is bullshit, frankly.',
+    'Is hungry as hell and taking it personally.',
+    'Announced, loudly, that this is "some shit," regarding dinner.',
+    'Has decided starvation is your fault specifically, goddammit.',
+    'Said "where the hell is dinner" in a voice clearly meant to be heard.',
+    'Is one skipped meal away from eating something it will regret, and does not give a damn.'
+  ],
+  fuss: [
+    'Says you have been a real ass about the attention thing lately.',
+    'Is done waiting around like some kind of idiot, and said so.',
+    'Muttered "screw this" and turned to face the wall.',
+    'Has decided you do not give a damn, and is telling everyone.',
+    'Called the whole situation bullshit and went to sulk about it professionally.',
+    'Called you a stubborn bitch. Fondly. Ish.'
+  ],
+  clean: [
+    'Smells like actual hell and has strong feelings about being told so.',
+    'Says the mess is not that bad, which is a flat-out lie.',
+    'Has gone full swamp creature and is weirdly proud of it, the little shit.',
+    'Is sticky as hell and blaming the room for it.',
+    'Says cleaning is bullshit and dignity is optional anyway.',
+    'Has achieved a smell that could be legally classified as a weapon, goddamn it.'
+  ]
+};
+
+export const MATURE_HAPPY_EXTRA = [
+  'Had a genuinely good day and is pissed about how good it was.',
+  'Admitted, once, quietly, that today did not suck.',
+  'Said "fine, this is actually pretty damn nice" and immediately regretted saying it out loud.',
+  'Is in a good mood and daring anyone to say a goddamn word about it.',
+  "Told the mirror you're \"not the worst,\" which, for this one, is basically a love letter.",
+  'Had a decent day and is furious there is no one to blame for that.',
+  'Said today "didn\'t completely suck," which is the nicest thing it has said all month.'
+];
+
+export const MATURE_EVENTS_EXTRA = [
+  'Someone wrote "this shelf is bullshit" on the wall in something that is hopefully paint.',
+  'A voice at 3am said one word, clearly, and the word was profane. Nobody claimed it.',
+  'Something knocked a single item off the shelf and left a note that just said "oops, my bad."',
+  'There was swearing in the walls last night. Confirmed by three witnesses. Denied by all three in the morning.',
+  'A jar labeled "do not open, for fuck\'s sake" has appeared. It has not been opened. Yet.',
+  'Someone held a small, profane funeral for a dropped snack.',
+  'Something scratched a single curse word into the underside of the shelf. Spelling questionable. Sentiment clear.'
+];
+
+export const MATURE_GRUDGE_EXTRA = {
+  1: [
+    '{n} called you a little bit of an ass under its breath.',
+    '{n} muttered "screw this guy" and went back to what it was doing.',
+    '{n} said this whole thing was bullshit and wrote it down anyway.',
+    '{n} is giving you the silent treatment and swearing about it internally, loudly.',
+    '{n} said "damn it" at you specifically, which is new.',
+    '{n} has started a list. The list has a swear word for a title.'
+  ],
+  2: [
+    '{n} told the others you\'re "kind of an asshole about this," and they agreed.',
+    '{n} said, flatly, "I\'m done with this shit," and rearranged the shelf to prove it.',
+    '{n} has recruited backup and used a lot of profanity doing it.',
+    '{n} left a note that just says "screw you" and walked away, satisfied.',
+    '{n} is telling everyone within earshot that you\'re "the actual worst," with feeling.',
+    '{n} filed a complaint that opens with "this is bullshit" and gets worse from there.'
+  ],
+  3: [
+    '{n} has a jar with your name on it and a label that says "for later, you bastard."',
+    '{n} held a small, extremely profane ceremony and you were definitely the subject.',
+    '{n} said, very calmly, "I am not going to swear about this," and then swore about it at length.',
+    '{n} has started being suspiciously nice, and every kindness comes with a muttered "for now."',
+    '{n} wrote your name on something in what might be permanent marker, might be worse, and added "asshole" underneath.',
+    '{n} has stopped yelling entirely, which everyone agrees is the scariest goddamn thing it has ever done.'
+  ]
+};
+```
+
+- [ ] **Step 5: Write `test/copy.test.mjs`**
+
+```js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  NEED_LABEL, DECAY, COMPLAINTS, CARE_LINES, OVERFED, HAPPY_NOTES,
+  ASLEEP_LINES, EVENTS, FALLBACK_NAMES, ORIGINS, HABITS, CLOSERS,
+  GRUDGE_LINES, STREAK_LINES
+} from '../src/content/copy.js';
+import { PROPS, PROP_ART } from '../src/content/props.js';
+import { ROOMS, WALLS, WOODS, ACCENTS } from '../src/content/decor.js';
+import {
+  MATURE_COMPLAINTS_EXTRA, MATURE_HAPPY_EXTRA, MATURE_EVENTS_EXTRA, MATURE_GRUDGE_EXTRA
+} from '../src/content/mature.js';
+
+const NEEDS = ['food', 'fuss', 'clean'];
+
+test('NEED_LABEL and DECAY have the three need keys with the right shapes', () => {
+  NEEDS.forEach(k => {
+    assert.equal(typeof NEED_LABEL[k], 'string');
+    assert.ok(NEED_LABEL[k].length > 0);
+    assert.equal(typeof DECAY[k], 'number');
+    assert.ok(DECAY[k] > 0);
+  });
+  assert.equal(DECAY.food, 5.2);
+  assert.equal(DECAY.fuss, 4.4);
+  assert.equal(DECAY.clean, 3.4);
+});
+
+test('COMPLAINTS has annoyed/furious pools per need, each at/above the size floor', () => {
+  NEEDS.forEach(k => {
+    assert.ok(Array.isArray(COMPLAINTS[k].annoyed) && COMPLAINTS[k].annoyed.length >= 8, `${k}.annoyed too small`);
+    assert.ok(Array.isArray(COMPLAINTS[k].furious) && COMPLAINTS[k].furious.length >= 10, `${k}.furious too small`);
+    COMPLAINTS[k].annoyed.concat(COMPLAINTS[k].furious).forEach(line => {
+      assert.equal(typeof line, 'string');
+      assert.ok(line.length > 0);
+    });
+  });
+});
+
+test('CARE_LINES has >=10 lines per need', () => {
+  NEEDS.forEach(k => {
+    assert.ok(Array.isArray(CARE_LINES[k]) && CARE_LINES[k].length >= 10, `CARE_LINES.${k} too small`);
+  });
+});
+
+test('OVERFED has >=6 lines per need', () => {
+  NEEDS.forEach(k => {
+    assert.ok(Array.isArray(OVERFED[k]) && OVERFED[k].length >= 6, `OVERFED.${k} too small`);
+  });
+});
+
+test('HAPPY_NOTES, ASLEEP_LINES, EVENTS meet their size floors', () => {
+  assert.ok(HAPPY_NOTES.length >= 16, `HAPPY_NOTES too small: ${HAPPY_NOTES.length}`);
+  assert.ok(ASLEEP_LINES.length >= 8, `ASLEEP_LINES too small: ${ASLEEP_LINES.length}`);
+  assert.ok(EVENTS.length >= 24, `EVENTS too small: ${EVENTS.length}`);
+});
+
+test('bio-composition pools meet their size floors and are non-empty strings', () => {
+  assert.ok(FALLBACK_NAMES.length >= 30, `FALLBACK_NAMES too small: ${FALLBACK_NAMES.length}`);
+  assert.ok(ORIGINS.length >= 30, `ORIGINS too small: ${ORIGINS.length}`);
+  assert.ok(HABITS.length >= 24, `HABITS too small: ${HABITS.length}`);
+  assert.ok(CLOSERS.length >= 20, `CLOSERS too small: ${CLOSERS.length}`);
+  [FALLBACK_NAMES, ORIGINS, HABITS, CLOSERS].forEach(pool => {
+    pool.forEach(line => {
+      assert.equal(typeof line, 'string');
+      assert.ok(line.length > 0);
+    });
+  });
+});
+
+test('GRUDGE_LINES has keys 1/2/3, each with >=5 lines using {n}', () => {
+  [1, 2, 3].forEach(stage => {
+    const pool = GRUDGE_LINES[stage];
+    assert.ok(Array.isArray(pool) && pool.length >= 5, `GRUDGE_LINES[${stage}] too small`);
+    pool.forEach(line => assert.ok(line.includes('{n}'), `missing {n} in: ${line}`));
+  });
+});
+
+test('STREAK_LINES has >=8 entries, all including {d}', () => {
+  assert.ok(STREAK_LINES.length >= 8, `STREAK_LINES too small: ${STREAK_LINES.length}`);
+  STREAK_LINES.forEach(line => assert.ok(line.includes('{d}'), `missing {d} in: ${line}`));
+});
+
+test('PROPS has >=16 entries, each with a matching PROP_ART entry and the required shape', () => {
+  const ids = Object.keys(PROPS);
+  assert.ok(ids.length >= 16, `expected >=16 props, got ${ids.length}`);
+  ids.forEach(id => {
+    const p = PROPS[id];
+    assert.equal(typeof p.name, 'string');
+    assert.equal(typeof p.at, 'number');
+    assert.equal(typeof p.aura, 'object');
+    assert.equal(typeof p.desc, 'string');
+    assert.ok(Array.isArray(p.lines) && p.lines.length > 0, `${id} needs lines`);
+    assert.ok(Array.isArray(p.ambient) && p.ambient.length > 0, `${id} needs ambient`);
+    assert.ok(PROP_ART[id] && PROP_ART[id].includes('<svg'), `missing/invalid PROP_ART for ${id}`);
+    assert.ok(PROP_ART[id].includes('viewBox="0 0 60 60"'), `PROP_ART.${id} should use the 0 0 60 60 viewBox convention`);
+  });
+});
+
+test('ROOMS/WALLS/WOODS/ACCENTS are non-empty objects with the expected sub-shapes', () => {
+  assert.ok(Object.keys(ROOMS).length > 0, 'ROOMS is empty');
+  Object.values(ROOMS).forEach(r => {
+    assert.equal(typeof r.name, 'string');
+    assert.equal(typeof r.swatch, 'string');
+    assert.equal(typeof r.vars, 'object');
+    assert.ok(Object.keys(r.vars).length > 0);
+  });
+  assert.ok(Object.keys(WALLS).length > 0, 'WALLS is empty');
+  Object.values(WALLS).forEach(v => assert.equal(typeof v, 'string'));
+
+  assert.ok(Object.keys(WOODS).length > 0, 'WOODS is empty');
+  Object.values(WOODS).forEach(w => {
+    assert.equal(typeof w.name, 'string');
+    assert.equal(typeof w.wood, 'string');
+    assert.equal(typeof w.lip, 'string');
+  });
+
+  assert.ok(Object.keys(ACCENTS).length > 0, 'ACCENTS is empty');
+  Object.values(ACCENTS).forEach(a => {
+    assert.equal(typeof a.name, 'string');
+    assert.equal(typeof a.c, 'string');
+  });
+});
+
+test('mature-mode overlay pools meet their size floors', () => {
+  NEEDS.forEach(k => {
+    assert.ok(Array.isArray(MATURE_COMPLAINTS_EXTRA[k]) && MATURE_COMPLAINTS_EXTRA[k].length >= 6, `MATURE_COMPLAINTS_EXTRA.${k} too small`);
+  });
+  assert.ok(MATURE_HAPPY_EXTRA.length >= 6, `MATURE_HAPPY_EXTRA too small: ${MATURE_HAPPY_EXTRA.length}`);
+  assert.ok(MATURE_EVENTS_EXTRA.length >= 6, `MATURE_EVENTS_EXTRA too small: ${MATURE_EVENTS_EXTRA.length}`);
+  [1, 2, 3].forEach(stage => {
+    const pool = MATURE_GRUDGE_EXTRA[stage];
+    assert.ok(Array.isArray(pool) && pool.length >= 6, `MATURE_GRUDGE_EXTRA[${stage}] too small`);
+    pool.forEach(line => assert.ok(line.includes('{n}'), `missing {n} in: ${line}`));
+  });
+});
+
+test('mature overlay pools are additive extras only (disjoint from the base pools)', () => {
+  NEEDS.forEach(k => {
+    MATURE_COMPLAINTS_EXTRA[k].forEach(line => {
+      assert.ok(!COMPLAINTS[k].annoyed.includes(line) && !COMPLAINTS[k].furious.includes(line));
+    });
+  });
+  MATURE_HAPPY_EXTRA.forEach(line => assert.ok(!HAPPY_NOTES.includes(line)));
+  MATURE_EVENTS_EXTRA.forEach(line => assert.ok(!EVENTS.includes(line)));
+});
+```
+
+- [ ] **Step 6: Run the tests**
+
+Run: `cd ~/shelf-life && node --test test/copy.test.mjs`
+Expected: all 12 tests PASS.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cd ~/shelf-life
+git add src/content/copy.js src/content/props.js src/content/decor.js src/content/mature.js test/copy.test.mjs docs/superpowers/plans/2026-09-03-shelf-life-v2.md
+git commit -m "Add copy/props/decor content and opt-in mature-mode overlay
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
+```
