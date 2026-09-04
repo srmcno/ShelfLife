@@ -103,7 +103,7 @@ content/mature.js:       MATURE_COMPLAINTS_EXTRA, MATURE_HAPPY_EXTRA, MATURE_EVE
                           only when state.settings.matureMode is true — crude language/swearing for
                           comedic emphasis, not sexual content; default OFF, explicit toggle in the UI)
 
-art/stamps.js:           BASE_STAMPS, UNLOCK_STAMPS, STAMP_LABELS, STAMP_SVG,
+art/stamps.js:           CANVAS_SIZE (=640), BASE_STAMPS, UNLOCK_STAMPS, STAMP_LABELS, STAMP_SVG,
                           STAMP_ANIM_CLASS, DEFAULT_STAMP_SIZE
 art/sprite.js:            renderPetSprite(pet), moodMotionClasses(pet, {mood, asleep, feuding})
 art/studio.js:            initStudio({ onSave }) -> { open(unlockedBond), close(),
@@ -894,6 +894,12 @@ Every stamp SVG is a hand-converted equivalent of the original canvas-drawn `STA
 - [ ] **Step 1: Write `src/art/stamps.js`**
 
 ```js
+// Studio canvas is a fixed 640x640 square (see art/studio.js). A placed stamp's
+// x/y/size are stored in that same pixel space; art/sprite.js converts them to
+// percentages of this constant when rendering, so a stamp lands in the same
+// relative spot on the shelf (rendered much smaller) as it was drawn in the studio.
+export const CANVAS_SIZE = 640;
+
 export const BASE_STAMPS = ['blob','eyes','bigeye','deadeyes','ears','horns','grin','tail','wing','bow','halo','stitches','spots'];
 export const UNLOCK_STAMPS = [
   { at:20, stamps:['thirdeye','antlers'], label:'a third eye and antlers' },
