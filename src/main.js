@@ -1,5 +1,5 @@
 import {
-  state, save, addNote, pick, clamp, defaultNeeds, normalizeState, HOUR, Store
+  state, save, addNote, pick, clamp, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store
 } from './state.js';
 import { TRAITS, TRAIT_BY_ID } from './content/traits.js';
 import { ORIGINS, HABITS, CLOSERS, FALLBACK_NAMES } from './content/copy.js';
@@ -51,6 +51,10 @@ function makeBio(traitIds) {
 // ---------- studio (pet creation) ----------
 
 const studio = initStudio({
+  // `art` arrives in one of the studio's two shapes — `{ creature }` from the
+  // Grow tab, `{ body, stamps }` from the Draw tab. normalizePetArt reconciles
+  // them into the one stored shape (see the art-model note in state.js), so
+  // everything downstream of here is identical for both kinds of pet.
   onSave: (art, name) => {
     const slot = state.slots.indexOf(null);
     if (slot === -1) { toast('The shelf is full. Rehome someone first.'); return; }
@@ -59,7 +63,7 @@ const studio = initStudio({
     const pet = {
       id: 'p' + (state.seq++) + '_' + Date.now().toString(36),
       name: finalName,
-      art,
+      art: normalizePetArt(art),
       traits,
       stats: rollStats(traits),
       bio: makeBio(traits),
@@ -257,3 +261,16 @@ setInterval(() => {
     if (openId) openCard(state, openId, true);
   }
 }, 30000);
+
+// ---------- service worker ----------
+// Without this the manifest still makes the game "installable", but there is no
+// offline support and no caching at all — service-worker.js was dead code.
+// Registered last so a failure here can never block the game from booting.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {
+      // Offline support is a bonus, not a requirement. A registration failure
+      // (file:// origin, private mode, unsupported browser) must stay silent.
+    });
+  });
+}

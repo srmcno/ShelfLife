@@ -60,10 +60,19 @@ export function initDrag(state) {
     const slot = under && under.closest ? under.closest('.slot') : null;
     if (!slot) return;
     const to = Number(slot.dataset.slot);
-    if (to === d.from) return;
+    // Re-derive the source slot at drop time instead of trusting the index
+    // captured at pointerdown. Pets relocate themselves on a 30s timer
+    // (runBehavior, grudge escalation, prop hoarding), so during a slow drag the
+    // captured index can go stale — and blindly writing to it erased whichever
+    // pet had moved into the old slot, leaving one pet duplicated in two slots
+    // and another gone entirely. normalizeState cannot repair that, because it
+    // only rebuilds slots when the array length is wrong.
+    const from = state.slots.indexOf(d.id);
+    if (from === -1) return;   // it was removed mid-drag; drop is void
+    if (to === from) return;
     const tmp = state.slots[to];
     state.slots[to] = d.id;
-    state.slots[d.from] = tmp;
+    state.slots[from] = tmp;
     save();
     renderAll(state);
   });
