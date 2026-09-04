@@ -1230,3 +1230,156 @@ git commit -m "Add procedural SFX (Web Audio) and speaking narrator (SpeechSynth
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
 ```
+
+---
+
+### Task 15: PWA — manifest.webmanifest, service-worker.js, icons
+
+**Files:**
+- Create: `icons/icon.svg`
+- Create: `icons/icon-192.png`, `icons/icon-512.png`, `icons/icon-180.png` (generated from the SVG, not hand-authored)
+- Create: `manifest.webmanifest`
+- Create: `service-worker.js`
+
+**Interfaces:**
+- Consumes: nothing. Structurally independent of every other task.
+- Produces: the manifest and icons referenced by `index.html` (Task 2, already links `manifest.webmanifest` and `icons/icon-192.png`); `main.js` (Task 14) registers `service-worker.js`.
+
+- [ ] **Step 1: Write `icons/icon.svg`**
+
+```html
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#33203D"/>
+  <rect x="40" y="40" width="432" height="432" rx="64" fill="#1A1220"/>
+  <ellipse cx="256" cy="270" rx="150" ry="130" fill="#FF8FB8"/>
+  <ellipse cx="205" cy="250" rx="34" ry="40" fill="#F2E9DC"/>
+  <ellipse cx="315" cy="250" rx="34" ry="40" fill="#F2E9DC"/>
+  <circle cx="197" cy="258" r="16" fill="#1A1220"/>
+  <circle cx="325" cy="258" r="16" fill="#1A1220"/>
+  <path d="M180 330 Q256 380 332 330 L318 360 L294 336 L270 366 L246 336 L222 366 L198 336 Z" fill="#F2E9DC"/>
+  <path d="M150 165 L175 230 L120 215 Z" fill="#FF8FB8"/>
+  <path d="M362 165 L337 230 L392 215 Z" fill="#FF8FB8"/>
+</svg>
+```
+
+- [ ] **Step 2: Rasterize the icon to the required PNG sizes**
+
+```bash
+cd ~/shelf-life
+rsvg-convert -w 192 -h 192 icons/icon.svg -o icons/icon-192.png
+rsvg-convert -w 512 -h 512 icons/icon.svg -o icons/icon-512.png
+rsvg-convert -w 180 -h 180 icons/icon.svg -o icons/icon-180.png
+file icons/icon-192.png icons/icon-512.png icons/icon-180.png
+```
+Expected: `file` reports each as "PNG image data" with the matching dimensions. (If `rsvg-convert` isn't available in the environment executing this task, fall back to `magick icons/icon.svg -resize 192x192 icons/icon-192.png` etc. — both `rsvg-convert` and `magick`/`convert` were confirmed installed on this machine.)
+
+- [ ] **Step 3: Write `manifest.webmanifest`**
+
+```json
+{
+  "name": "Shelf Life",
+  "short_name": "Shelf Life",
+  "description": "Small creatures with needs, opinions, and long memories. They cannot die. They have looked into it.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1A1220",
+  "theme_color": "#33203D",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
+```
+
+- [ ] **Step 4: Write `service-worker.js`**
+
+App-shell cache-first strategy: on install, precache the static shell; on fetch, serve from cache first and fall back to network, updating the cache in the background (stale-while-revalidate) so an online visit picks up new deploys without breaking offline play. Cache name is versioned so bumping `CACHE_VERSION` invalidates old caches on activate.
+
+```js
+const CACHE_VERSION = 'shelflife-v1';
+const SHELL = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './css/style.css',
+  './src/main.js',
+  './src/state.js',
+  './src/content/traits.js',
+  './src/content/feuds.js',
+  './src/content/copy.js',
+  './src/content/props.js',
+  './src/content/decor.js',
+  './src/content/mature.js',
+  './src/engine/tick.js',
+  './src/engine/care.js',
+  './src/engine/unlocks.js',
+  './src/engine/achievements.js',
+  './src/engine/loop.js',
+  './src/art/stamps.js',
+  './src/art/sprite.js',
+  './src/art/studio.js',
+  './src/audio/sound.js',
+  './src/audio/narrator.js',
+  './src/ui/render.js',
+  './src/ui/toast.js',
+  './src/ui/card.js',
+  './src/ui/decorUI.js',
+  './src/ui/drag.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_VERSION).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const network = fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => cached);
+      return cached || network;
+    })
+  );
+});
+```
+
+- [ ] **Step 5: Structural verification**
+
+```bash
+cd ~/shelf-life
+python3 -c "import json; json.load(open('manifest.webmanifest')); print('manifest.webmanifest is valid JSON')"
+node --check service-worker.js && echo "service-worker.js OK"
+```
+Expected: both print their success line, no errors.
+
+- [ ] **Step 6: Commit**
+
+```bash
+cd ~/shelf-life
+git add icons/icon.svg icons/icon-192.png icons/icon-512.png icons/icon-180.png manifest.webmanifest service-worker.js
+git commit -m "Add PWA manifest, service worker, and app icons
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WE6ff2D84iY6JvjjyjqCZB"
+```
