@@ -1669,6 +1669,18 @@ test('neighborProps only returns occupied neighbor slots that hold props', () =>
   assert.equal(neighborProps(s, 5).length, 0);
 });
 
+test('neighborPets mirrors neighborProps for pet-occupied neighbor slots', () => {
+  const s = blankState();
+  const a = makePet({ id: 'pA' });
+  const b = makePet({ id: 'pB' });
+  s.pets.push(a, b);
+  s.slots[0] = 'pA';
+  s.slots[1] = 'pB';
+  assert.equal(neighborPets(s, 0).length, 1);
+  assert.equal(neighborPets(s, 0)[0].id, 'pB');
+  assert.equal(neighborPets(s, 5).length, 0);
+});
+
 test('decayRate applies trait care multiplier and prop aura multiplier', () => {
   const s = blankState();
   const dampPet = makePet({ id: 'pA', traits: ['damp'] });

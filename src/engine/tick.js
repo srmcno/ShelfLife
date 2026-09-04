@@ -1,7 +1,7 @@
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS } from '../content/props.js';
 import { DECAY } from '../content/copy.js';
-import { propById, clamp, HOUR, MAX_OFFLINE_HOURS } from '../state.js';
+import { propById, petById, clamp, HOUR, MAX_OFFLINE_HOURS } from '../state.js';
 
 export const MOOD_WORD = { content: 'Content', fine: 'Fine', annoyed: 'Annoyed', furious: 'Furious' };
 
@@ -30,6 +30,14 @@ export function neighborProps(state, index) {
     .map(x => state.slots[x])
     .filter(Boolean)
     .map(id => propById(state, id))
+    .filter(Boolean);
+}
+
+export function neighborPets(state, index) {
+  return neighborSlots(index, state.slots.length)
+    .map(x => state.slots[x])
+    .filter(Boolean)
+    .map(id => petById(state, id))
     .filter(Boolean);
 }
 

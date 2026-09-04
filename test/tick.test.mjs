@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hasTrait, isNight, isAsleep, neighborSlots, neighborProps, decayRate, tick, moodOf, worstNeed } from '../src/engine/tick.js';
+import { hasTrait, isNight, isAsleep, neighborSlots, neighborProps, neighborPets, decayRate, tick, moodOf, worstNeed } from '../src/engine/tick.js';
 import { blankState, defaultNeeds } from '../src/state.js';
 
 function localHour(h) { return new Date(2024, 0, 1, h, 0, 0).getTime(); }
@@ -48,6 +48,18 @@ test('neighborProps only returns occupied neighbor slots that hold props', () =>
   assert.equal(neighborProps(s, 0).length, 1);
   assert.equal(neighborProps(s, 0)[0].kind, 'lamp');
   assert.equal(neighborProps(s, 5).length, 0);
+});
+
+test('neighborPets mirrors neighborProps for pet-occupied neighbor slots', () => {
+  const s = blankState();
+  const a = makePet({ id: 'pA' });
+  const b = makePet({ id: 'pB' });
+  s.pets.push(a, b);
+  s.slots[0] = 'pA';
+  s.slots[1] = 'pB';
+  assert.equal(neighborPets(s, 0).length, 1);
+  assert.equal(neighborPets(s, 0)[0].id, 'pB');
+  assert.equal(neighborPets(s, 5).length, 0);
 });
 
 test('decayRate applies trait care multiplier and prop aura multiplier', () => {
