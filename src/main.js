@@ -10,6 +10,7 @@ import { doRounds } from './engine/care.js';
 import { checkAchievements, ACHIEVEMENTS } from './engine/achievements.js';
 import { checkUnlocks, totalBond } from './engine/unlocks.js';
 import { initStudio } from './art/studio.js';
+import { initAnimator, reactShelf } from './art/animator.js';
 import { applyDecor, initDecorUI } from './ui/decorUI.js';
 import { initDrag } from './ui/drag.js';
 import { renderAll, renderStatus, renderShelf, renderNotes, escapeHtml } from './ui/render.js';
@@ -94,6 +95,9 @@ document.getElementById('roundsBtn').addEventListener('click', () => {
   checkAchievements(state);
   save();
   renderAll(state);
+  // Staggered left to right, so doing the rounds reads as you going down the
+  // line rather than the whole shelf twitching at once.
+  reactShelf(state.slots.filter(Boolean), 'rounds');
 });
 
 document.getElementById('checkBtn').addEventListener('click', () => {
@@ -203,6 +207,9 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 
 initDecorUI(state);
 initDrag(state);
+// One shared director for every pet on the shelf. getPet lets it read a pet's
+// traits for thought-bubble copy without art/ importing state.js.
+initAnimator({ getPet: id => state.pets.find(p => p.id === id) || null });
 initNarrator();
 initNarratorUI();
 initSoundNoteHook();
