@@ -28,6 +28,7 @@ const EDGE_MAX = 16;      // px per frame at the very edge
 
 export function initDrag(state) {
   const cabinet = document.getElementById('cabinet');
+  const scrollRun = cabinet.closest('.stage') || cabinet;
   cabinet.addEventListener('click', e => {
     if (e.detail !== 0) return;
     const piece = e.target.closest('.piece');
@@ -52,15 +53,15 @@ export function initDrag(state) {
   function step() {
     raf = 0;
     if (!drag || !drag.engaged) return;
-    if (vx) cabinet.scrollLeft += vx;
+    if (vx) scrollRun.scrollLeft += vx;
     if (vy) window.scrollBy(0, vy);
     if (vx || vy) raf = requestAnimationFrame(step);
   }
 
   function aim(x, y) {
     vx = 0; vy = 0;
-    const r = cabinet.getBoundingClientRect();
-    if (cabinet.scrollWidth - cabinet.clientWidth > 2) {
+    const r = scrollRun.getBoundingClientRect();
+    if (scrollRun.scrollWidth - scrollRun.clientWidth > 2) {
       if (x < r.left + EDGE) vx = -Math.min(EDGE_MAX, (r.left + EDGE - x) / 3);
       else if (x > r.right - EDGE) vx = Math.min(EDGE_MAX, (x - (r.right - EDGE)) / 3);
     }

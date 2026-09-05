@@ -222,6 +222,7 @@ export function normalizeState(raw) {
   s.seq = Math.floor(finite(s.seq, ids.length + 1, 1));
   s.lastTick = finite(s.lastTick, now, 1, now);
   s.started = finite(s.started, now, 1, now);
+  s.lastRounds = finite(s.lastRounds, 0, 0, now);
   s.notes = (Array.isArray(s.notes) ? s.notes : []).filter(n => record(n) && typeof n.text === 'string')
     .slice(0, 40).map(n => ({ ...n, text: n.text.slice(0, 10000), from: typeof n.from === 'string' ? n.from : 'the shelf',
       kind: typeof n.kind === 'string' && /^[a-z-]+$/.test(n.kind) ? n.kind : 'note', at: finite(n.at, now) }));
@@ -271,6 +272,8 @@ export function normalizeState(raw) {
     p.name = typeof p.name === 'string' && p.name.trim() ? p.name.trim().slice(0, 22) : 'Someone';
     p.bio = typeof p.bio === 'string' ? p.bio.slice(0, 3000) : 'It arrived without references.';
     p.born = finite(p.born, s.started, 1, now);
+    p.lastPlayed = finite(p.lastPlayed, 0, 0, now);
+    for (const key of ['handshakes', 'dustPatrols', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
     p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];
     p.stats = record(p.stats) ? p.stats : {};
     ['cute', 'menace', 'damp', 'mystique'].forEach(k => { p.stats[k] = finite(p.stats[k], 5, 1, 10); });

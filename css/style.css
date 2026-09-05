@@ -1218,3 +1218,120 @@ select.voice-select{width:100%}
   .sl-bubble,.sl-zzz,.care-motes{display:none}
   .sl2 .sprite-figure,.pet.furious .sprite-figure,.pet.asleep .sprite-figure,.pet:hover .sprite-figure{filter:drop-shadow(2px 3px 2px rgba(0,0,0,.5))!important}
 }
+
+/* The living-room edition: a readable invitation above a tactile miniature stage. */
+.shelf-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:2px 0 18px}
+.shelf-heading h1{font:400 clamp(25px,3vw,36px)/1.18 var(--display);margin:7px 0 0;letter-spacing:-.035em}
+.shelf-heading .eyebrow{font-size:9px;color:var(--mint)}
+.room-live{font-size:10px;color:var(--ink-2);white-space:nowrap;display:flex;align-items:center;gap:7px}
+.room-live i{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 10px var(--mint)}
+.shelf-brief{display:flex;gap:12px;align-items:center;padding:12px 15px;background:linear-gradient(110deg,color-mix(in srgb,var(--mint) 10%,var(--night-2)),var(--night-2));border:1px solid color-mix(in srgb,var(--mint) 25%,transparent);border-radius:14px;margin-bottom:16px}
+.brief-icon{font:28px var(--display);color:var(--mint)}
+.shelf-brief>div{flex:1;min-width:0}.shelf-brief b{font-size:14px;display:block}.shelf-brief span:not(.brief-icon){display:block;color:var(--ink-2);font-size:12px;margin-top:3px}.shelf-brief .btn{min-height:44px;flex:none}
+.actions .btn{position:relative}.actions #roundsBtn{flex-wrap:wrap;gap:3px 7px}.actions small{display:block;font-size:9px;font-weight:400;color:var(--ink-2);flex-basis:100%}
+.shelf-pan-hint{display:none}
+.cabinet{counter-reset:sl-row;background-color:var(--case-lit)}
+.cabinet::before{background:radial-gradient(80% 64% at var(--key-x) 2%,transparent 28%,rgba(0,0,0,.2) 74%,rgba(0,0,0,.48) 100%)}
+.slot .sprite{--pet-h:min(var(--pet-size),calc(var(--pitch) * 1.06))}
+.pet:focus-visible{outline:2px solid var(--mint);outline-offset:-3px;border-radius:10px}
+.care-explainer{font-size:12px;color:var(--ink-2);line-height:1.5;margin:10px 0 14px}
+.play-invite{width:100%;display:flex;align-items:center;justify-content:space-between;text-align:left;padding:14px 16px;border:1px solid color-mix(in srgb,var(--pink) 40%,transparent);border-radius:12px;background:linear-gradient(110deg,color-mix(in srgb,var(--pink) 13%,var(--night-2)),var(--night-2));color:var(--ink);gap:14px}
+.play-invite b{display:block;font-family:var(--display);font-size:20px;font-weight:400}.play-invite small{display:block;font-size:12px;color:var(--ink-2);margin-top:5px}.play-invite>span:last-child{font-size:26px;color:var(--pink)}
+.care-float{position:absolute;z-index:9;left:50%;top:15%;white-space:nowrap;font:bold 20px var(--body);color:var(--mint);text-shadow:0 2px 8px #000;animation:care-rise 1.4s ease-out forwards;pointer-events:none}
+.care-float.food{color:var(--amber)}.care-float.fuss{color:var(--pink)}
+@keyframes care-rise{0%{opacity:0;transform:translate(-50%,15px) scale(.7)}20%{opacity:1;transform:translate(-50%,0) scale(1.1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-38px)}}
+.sheet-play{max-width:480px}.play-theatre{position:relative;text-align:center;padding:8px 0 18px;border-radius:16px;background:radial-gradient(ellipse at 50% 100%,color-mix(in srgb,var(--pink) 16%,transparent),transparent 70%);overflow:hidden}
+#playPortrait{height:120px;display:flex;justify-content:center;align-items:end}#playPortrait .sprite{--pet-h:120px;width:120px}
+#playCue{display:block;font:500 24px/1.3 var(--hand);margin-top:10px;min-height:32px}.play-sparks{position:absolute;inset:20px 20px auto;color:var(--amber);font-size:28px;letter-spacing:20px;pointer-events:none;opacity:.5}
+.play-rounds{display:flex;align-items:center;gap:7px;margin-top:16px}.play-rounds>span:first-child{margin-right:auto;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}.play-step{width:22px;height:5px;border-radius:3px;background:var(--glass-2)}.play-step.done{background:var(--mint)}
+#playStatus{font-size:14px;line-height:1.5;min-height:42px;color:var(--ink-2);margin:12px 0}
+.gesture-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.gesture{--gesture:var(--amber);display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 4px;border-radius:16px;border:1px solid color-mix(in srgb,var(--gesture) 40%,transparent);background:color-mix(in srgb,var(--gesture) 8%,var(--night-2));color:var(--gesture);min-height:96px;transition:transform .12s,background .12s,box-shadow .12s}
+.gesture:nth-child(2){--gesture:var(--pink)}.gesture:nth-child(3){--gesture:var(--mint)}.gesture:nth-child(4){--gesture:#BCACED}.gesture svg{width:36px;height:36px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.gesture span{font-size:12px;font-weight:700}.gesture.lit,.gesture[aria-disabled=false]:active{background:var(--gesture);color:var(--night);transform:translateY(-5px);box-shadow:0 6px 28px color-mix(in srgb,var(--gesture) 35%,transparent)}.gesture[aria-disabled=true]{cursor:default}
+.play-controls{display:flex;justify-content:center;margin:20px 0 12px}.play-controls .btn{width:100%;min-height:48px}.sheet-play .hint{text-align:center;font-size:12px}.celebrate{animation:club-bounce .7s ease-in-out}
+@keyframes club-bounce{25%{transform:translateY(-18px) rotate(-8deg)}60%{transform:rotate(8deg)}85%{transform:translateY(-6px)}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:1040px) and (min-width:721px){.room-live{display:none}}
+@media(max-width:720px){
+  .shelf-heading{margin:7px 4px 16px}.shelf-heading h1{font-size:28px}.room-live{display:none}
+  .shelf-brief{margin-bottom:16px;padding:10px 12px}.shelf-brief b{font-size:13px}.shelf-brief span:not(.brief-icon){font-size:11px}
+  .stage{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:var(--wood-lip) var(--night);border-radius:12px;margin:0}
+  .cabinet-wrap{min-width:610px;--shelf-w:610px;--rail:582px;--return-w:9px;--case-pad:5px;border-radius:12px}
+  .cabinet{padding-top:32px}.shelf-row{--pitch:97px;--pet-size:108px;--slot-h:120px;--plank-h:30px;--label-drop:18px}.slots{padding:0}
+  .pet .nameplate,.prop .nameplate{font-size:10px;line-height:12px;letter-spacing:.025em;white-space:nowrap;top:calc(100% + 10px)}
+  .shelf-pan-hint{display:block;color:var(--ink-2);font-size:11px;line-height:1.5;margin:8px 3px 0}
+  body:has(.empty-shelf) .cabinet-wrap{min-width:0;--shelf-w:calc(100vw - 20px);--rail:calc(100vw - 48px)}
+  body:has(.empty-shelf) .shelf-pan-hint{display:none}
+  .actions{gap:6px}.actions #roundsBtn{gap:3px;flex-wrap:nowrap}.actions .btn{font-size:11px}.actions small{font-size:8px;flex-basis:auto}
+  .card-hero{grid-template-columns:92px minmax(0,1fr);text-align:left;align-items:center;gap:12px}.card-portrait{width:92px;height:112px;padding:4px}.card-portrait .sprite{--pet-h:100px}.needs{width:100%}.need{grid-template-columns:42px 1fr 24px;gap:5px;font-size:11px}.bondline{font-size:10px}.care-row{position:sticky;bottom:0;z-index:5;background:var(--night-2);padding:10px 0;margin-bottom:8px;border-radius:12px}.care-row .btn{min-height:54px;font-size:12px}.care-row .btn small{font-size:9px}
+  .sheet-play .sheet-head{margin-bottom:8px}.play-theatre{padding-bottom:8px}#playPortrait{height:92px}#playPortrait .sprite{--pet-h:92px;width:92px}.gesture{min-height:88px}.gesture-grid{gap:7px}
+}
+@media(prefers-reduced-motion:reduce){.care-float{animation:none;transform:translateX(-50%)}.celebrate{animation:none}.gesture{transition:none}.gesture.lit{transform:none}}
+
+/* Case papers, visiting step, and the museum share the cabinet's materials. */
+.story-card{padding:22px;border:1px solid var(--hair-lit);border-radius:16px;margin-bottom:14px;background:linear-gradient(145deg,var(--night-3),var(--night-2));color:var(--ink);overflow:hidden;position:relative}
+.story-card h2{font:400 25px/1.2 var(--display);margin:12px 0}.story-card p{font-size:14px;line-height:1.65;color:var(--ink-2)}.story-card small{font-size:11px;line-height:1.6;color:var(--ink-2);display:block}.story-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.file-stamp{font:700 10px var(--body);letter-spacing:.12em;padding:5px 7px;border:1px solid var(--amber);color:var(--amber);transform:rotate(4deg)}
+.case-card{border-top:3px solid var(--amber);background:radial-gradient(ellipse at 100% 0,color-mix(in srgb,var(--amber) 10%,transparent),transparent 65%),var(--night-2)}.case-track{display:flex;gap:5px;margin:16px 0}.case-track i{height:4px;flex:1;background:var(--glass-2);border-radius:4px}.case-track i.done{background:var(--amber)}.case-hint{padding:10px 12px;border-left:2px solid var(--amber);background:var(--glass);font-size:12px!important}.case-choices{display:flex;flex-direction:column;gap:8px;margin:14px 0}.case-choices .btn{font-size:13px;min-height:44px}
+.visitor-card{border-color:color-mix(in srgb,var(--pink) 30%,transparent)}.guest-portrait{float:right;width:100px;height:100px;display:flex;align-items:end;justify-content:center;margin:10px -10px 4px 6px}.guest-portrait .sprite{--pet-h:100px;width:100px}.guest-title{font:500 18px var(--hand);color:var(--pink)}.visitor-host{display:block;font-size:11px;color:var(--ink-2);clear:both;margin:12px 0}.visitor-host select{display:block;width:100%;min-height:44px;margin-top:6px;padding:8px 10px;border:1px solid var(--hair-lit);border-radius:9px;background:var(--night-3);color:var(--ink);font-size:16px}.request-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.request-actions .btn{min-height:44px;font-size:11px;flex:1 1 110px;white-space:normal}.accepted{font-size:12px;color:var(--mint)!important}
+.museum-door{display:flex;align-items:center;gap:12px;text-align:left;width:100%;padding:15px 18px;background:var(--glass);color:var(--ink);border:1px solid var(--hair-lit);border-radius:12px;margin:14px 0}.museum-door>span{font-size:24px;color:var(--amber)}.museum-door>div{flex:1}.museum-door b{display:block;font:400 20px var(--display)}.museum-door small{display:block;font-size:11px;color:var(--ink-2);margin-top:5px}
+.daily-card{display:flex;gap:15px;align-items:center;padding:16px;margin-top:12px;background:linear-gradient(110deg,color-mix(in srgb,var(--amber) 10%,var(--night-2)),var(--night-2));border:1px solid var(--hair-lit);border-radius:12px}.daily-card>div{min-width:0;flex:1}.daily-card b{display:block;font:400 20px var(--display);margin:7px 0}.daily-card span:not(.eyebrow){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:500 17px/1.3 var(--hand);color:var(--ink-2)}.daily-card .btn{flex:none;min-height:44px}
+.resident-request{margin:18px 0;padding:16px;border:1px solid color-mix(in srgb,var(--amber) 30%,transparent);border-radius:12px;background:color-mix(in srgb,var(--amber) 6%,var(--night-2))}.resident-request p{font:500 22px/1.3 var(--hand);margin:8px 0}.resident-request small{font-size:11px;color:var(--ink-2)}
+.anatomy-cards{display:grid;gap:8px}.anatomy-cards>div{padding:12px 14px;background:var(--glass);border-radius:10px;border-left:2px solid var(--pink)}.anatomy-cards b{font-size:13px}.anatomy-cards p{font-size:12px;line-height:1.6;color:var(--ink-2);margin:6px 0 0}
+.relationship-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.relationship-list article{padding:14px;border:1px solid var(--hair-lit);border-radius:10px}.relationship-list b{display:block;font:400 18px var(--display);margin:6px 0}.relationship-tag{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--pink)}.relationship-list p{font-size:12px;line-height:1.5;color:var(--ink-2)}
+.sheet-museum{max-width:720px}.sheet-museum h3{font:400 22px var(--display);margin:26px 0 12px}.sheet-museum h3 small{font:400 11px var(--body);display:block;margin-top:6px;color:var(--ink-2)}.museum-intro{font:500 23px var(--hand);color:var(--ink-2)}.collection-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.collection-grid article{padding:18px 12px;border:1px solid var(--hair-lit);border-radius:12px;text-align:center;background:radial-gradient(ellipse at 50% 0,color-mix(in srgb,var(--amber) 9%,transparent),transparent)}.collection-grid article>span{display:block;font-size:32px;color:var(--amber);margin-bottom:10px}.collection-grid b{font-size:13px;display:block}.collection-grid small{font-size:10px;display:block;line-height:1.4;color:var(--ink-2);margin-top:8px}.uncollected{opacity:.6}.album{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.album figure{margin:0}.album img{width:100%;border-radius:8px;display:block}.album figcaption{font:500 16px/1.3 var(--hand);margin-top:8px}.album small{display:block;font:10px var(--body);margin-top:4px;color:var(--ink-2)}.memorials{display:flex;gap:10px;flex-wrap:wrap}.memorials article{border:1px solid var(--hair-lit);border-radius:10px;padding:14px;flex:1 1 140px}.memorials p{font-size:13px;color:var(--ink-2)}.memorials small{font-size:11px;color:var(--ink-2)}.memory-row{padding:12px 0;border-bottom:1px solid var(--hair);display:flex;flex-wrap:wrap;gap:6px 15px;font-size:13px}.memory-row span{color:var(--ink-2)}.memory-row small{flex-basis:100%;color:var(--ink-2)}.memory-timeline{border-left:1px solid var(--hair-lit);padding-left:18px}.memory-timeline article{position:relative;padding:8px 0 18px}.memory-timeline article::before{content:'';position:absolute;width:7px;height:7px;left:-22px;top:13px;border-radius:50%;background:var(--amber)}.memory-timeline small{font-size:10px;color:var(--ink-2)}.memory-timeline b{display:block;font-size:14px;margin-top:8px}.memory-timeline p{font:500 20px/1.35 var(--hand);color:var(--ink-2);margin:6px 0}
+@media(min-width:1041px){.pane-plots{max-height:calc(100dvh - 100px);overflow-y:auto;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--edge) transparent;overscroll-behavior-y:contain}}
+@media(max-width:720px){.daily-card{padding:12px;gap:10px}.daily-card .btn{font-size:11px;padding:8px}.daily-card b{font-size:18px}.story-card{padding:20px}.story-card h2{font-size:27px}.collection-grid{gap:6px}.collection-grid article{padding:12px 7px}.collection-grid b{font-size:11px}.album{grid-template-columns:repeat(2,minmax(0,1fr))}}
+[hidden]{display:none!important}
+.pane-plots>*{flex-shrink:0}.pane-plots .story-card,.pane-plots .museum-door{margin:0}
+.play-modes{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:12px}.play-modes .chip{font-size:11px;min-height:38px}.play-modes label{font-size:11px;color:var(--ink-2);display:flex;align-items:center;gap:5px;margin-left:auto;min-height:38px}.play-modes input{accent-color:var(--mint);width:17px;height:17px}
+.dust-glyph{font-size:34px!important;line-height:36px}.dust-mode .gesture{opacity:.5}.dust-mode .gesture.lit{opacity:1}.dust-mode .gesture-grid{grid-template-columns:repeat(2,1fr)}.dust-mode #playPortrait{height:70px}.dust-mode #playPortrait .sprite{--pet-h:70px;width:70px}
+@media(max-width:720px){.dust-mode .gesture{min-height:70px;flex-direction:row;justify-content:center}.play-modes{margin-bottom:4px}.play-modes label{margin-left:0}}
+.update-banner{display:flex;align-items:center;justify-content:center;gap:15px;padding:12px;background:var(--mint);color:#10281F;font-size:13px}.update-banner .btn{color:#10281F;border-color:#397462}
+.pet-arrival .sprite{animation:resident-arrives .7s cubic-bezier(.2,.8,.3,1.1) both}
+@keyframes resident-arrives{0%{opacity:0;transform:translateY(-35px) rotate(-8deg) scale(.8)}55%{opacity:1;transform:translateY(3px) scale(1.08,.9)}78%{transform:translateY(-5px) scale(.98,1.04)}100%{transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.pet-arrival .sprite{animation:none}}
+
+/* Articulated residents: a shoulder/hip and a separate elbow/knee. Mirrored
+   SVG mounts need their rotation sign reversed once, independently of phase. */
+.cr-joint{transform-box:view-box;transform-origin:0 0}
+.sl2:where(:not(.sl-asleep):not(.sl-still)) .cr-joint[data-joint="elbow"]{animation:elbow-rest 4.2s ease-in-out calc(var(--sl-ph,0) * 4.2s) infinite}
+.sl2.sl-vector:not(.sl-asleep):not(.sl-still):not(.sl-travel):not(.sl-sauntering):not(.sl-sneaking):not(.sl-flapping):not(.sl-hanging) .sprite-figure{animation:none}
+.sl2.sl-vector:where(:not(.sl-asleep):not(.sl-still)) .cr-torso{animation:torso-breathe var(--sl-breath,3.8s) ease-in-out var(--sl-phase,0s) infinite;transform-origin:0 32px;transform-box:view-box}
+.sl2:not(.sl-travel):not(.sl-sauntering):not(.sl-sneaking):not(.sl-stepping):not(.sl-hanging) .sl-part[data-part="leg"]{animation:none}
+@keyframes torso-breathe{0%,100%{translate:0 0;scale:1 1}50%{translate:0 -.65px;scale:1.015 1.025}}
+@keyframes elbow-rest{0%,100%{rotate:calc(6deg * var(--sl-pose,1))}40%{rotate:calc(23deg * var(--sl-pose,1))}70%{rotate:calc(11deg * var(--sl-pose,1))}}
+@keyframes armswing{0%,100%{rotate:calc(-7deg * var(--sl-mirror,1))}50%{rotate:calc(9deg * var(--sl-mirror,1))}}
+.sl2.sl-sauntering{--sl-gait-dur:560ms}
+.sl2:is(.sl-gait-walk,.sl-gait-scuttle,.sl-sauntering,.sl-sneaking) .sprite-figure{animation:none}
+.sl2:is(.sl-gait-walk,.sl-gait-scuttle,.sl-sauntering,.sl-sneaking) .cr-torso{animation:torso-walk var(--sl-gait-dur,660ms) ease-in-out infinite}
+.sl2.sl-sauntering .sl-part[data-part="leg"]{animation:legwalk var(--sl-gait-dur) linear calc(var(--sl-ph,0) * var(--sl-gait-dur)) infinite}
+.sl2.sl-sauntering .sl-part[data-part="arm"]{animation:armwalk var(--sl-gait-dur) ease-in-out calc((var(--sl-ph,0) - .5) * var(--sl-gait-dur)) infinite}
+.sl2:is(.sl-travel,.sl-sauntering,.sl-sneaking,.sl-stepping) .cr-joint[data-joint="knee"]{animation:knee-step var(--sl-gait-dur,660ms) linear calc(var(--sl-ph,0) * var(--sl-gait-dur,660ms)) infinite}
+.sl2:is(.sl-travel,.sl-sauntering,.sl-sneaking) .cr-joint[data-joint="elbow"]{animation:elbow-step var(--sl-gait-dur,660ms) ease-in-out calc((var(--sl-ph,0) - .5) * var(--sl-gait-dur,660ms)) infinite}
+.sl2.sl-gait-flap .cr-joint[data-joint="knee"]{animation:knee-tuck 1.1s ease-in-out calc(var(--sl-ph,0) * 1.1s) infinite}
+.sl2.sl-gait-hop .cr-joint[data-joint="knee"]{animation:knee-tuck var(--sl-gait-dur,560ms) ease-in-out infinite}
+.sl2.sl-gait-ooze .cr-joint[data-joint="knee"]{animation:knee-tuck 1.2s ease-in-out calc(var(--sl-ph,0) * 1.2s) infinite}
+@keyframes legwalk{0%,100%{rotate:calc(-24deg * var(--sl-mirror,1));translate:0 0}52%{rotate:calc(24deg * var(--sl-mirror,1));translate:0 0}72%{rotate:calc(3deg * var(--sl-mirror,1));translate:0 -2.4px}90%{rotate:calc(-25deg * var(--sl-mirror,1));translate:0 -.8px}}
+@keyframes legscuttle{0%,100%{rotate:calc(-30deg * var(--sl-mirror,1));translate:0 0}50%{rotate:calc(30deg * var(--sl-mirror,1));translate:0 -1.5px}}
+@keyframes legsneak{0%,100%{rotate:calc(-28deg * var(--sl-mirror,1));translate:0 0}50%{rotate:calc(28deg * var(--sl-mirror,1));translate:0 -3px}}
+@keyframes armwalk{0%,100%{rotate:calc(-28deg * var(--sl-mirror,1))}50%{rotate:calc(28deg * var(--sl-mirror,1))}}
+@keyframes knee-step{0%,100%{rotate:calc(6deg * var(--sl-mirror,1))}45%{rotate:calc(10deg * var(--sl-mirror,1))}66%{rotate:calc(65deg * var(--sl-mirror,1))}82%{rotate:calc(28deg * var(--sl-mirror,1))}94%{rotate:0deg}}
+@keyframes elbow-step{0%,100%{rotate:calc(12deg * var(--sl-mirror,1))}38%{rotate:calc(52deg * var(--sl-mirror,1))}72%{rotate:calc(24deg * var(--sl-mirror,1))}}
+@keyframes knee-tuck{0%,100%{rotate:calc(12deg * var(--sl-mirror,1))}50%{rotate:calc(48deg * var(--sl-mirror,1))}}
+@keyframes torso-walk{0%,50%,100%{translate:0 .7px;rotate:0deg;scale:1.015 .99}25%{translate:0 -1.2px;rotate:-1.8deg;scale:.995 1.015}75%{translate:0 -1.2px;rotate:1.8deg;scale:.995 1.015}}
+@keyframes sl2-saunter{0%,100%{transform:none}8%{transform:translateX(calc(-2% * var(--sl-dir,1)))}45%,53%{transform:translateX(calc(13% * var(--sl-dir,1)))}92%{transform:translateX(calc(-1% * var(--sl-dir,1)))}}
+/* A gesture travels through the shoulder first; the hand follows at its elbow. */
+.sl2:is(.sl-waving,.sl-stretching,.sl-care-fuss) .sl-part[data-part="arm"]{animation:arm-lift 1s ease-in-out both}
+.sl2:is(.sl-waving,.sl-stretching,.sl-care-fuss) .cr-joint[data-joint="elbow"]{animation:elbow-wave .38s ease-in-out 3}
+.sl2.sl-reaching .cr-joint[data-joint="elbow"]{animation:elbow-reach .9s ease-in-out both}
+.sl2.sl-care-food .sl-part[data-part="arm"]{animation:arm-feed 1s ease-in-out both}
+.sl2.sl-care-food .cr-joint[data-joint="elbow"]{animation:elbow-feed .28s ease-in-out 4}
+.sl2.sl-care-clean .sl-part[data-part="arm"]{animation:armwalk .22s ease-in-out calc(var(--sl-ph,0) * .22s) 5}
+.sl2.sl-care-clean .cr-joint[data-joint="elbow"]{animation:elbow-wave .22s ease-in-out calc(var(--sl-ph,0) * .22s - .06s) 5}
+@keyframes arm-lift{0%,100%{rotate:0deg}30%,70%{rotate:calc(110deg * var(--sl-pose,1))}}
+@keyframes elbow-wave{0%,100%{rotate:calc(-18deg * var(--sl-pose,1))}50%{rotate:calc(42deg * var(--sl-pose,1))}}
+@keyframes elbow-reach{0%,100%{rotate:calc(16deg * var(--sl-pose,1))}35%{rotate:calc(-38deg * var(--sl-pose,1))}65%{rotate:0deg}}
+@keyframes arm-feed{0%,100%{rotate:0deg}25%,80%{rotate:calc(-34deg * var(--sl-pose,1))}}
+@keyframes elbow-feed{0%,100%{rotate:calc(-70deg * var(--sl-pose,1))}50%{rotate:calc(-115deg * var(--sl-pose,1))}}
+.portrait-stage{display:flex;flex-direction:column;align-items:center;min-width:0}
+.motion-preview{min-height:44px;white-space:nowrap;padding:6px 8px}
+@media(prefers-reduced-motion:reduce){.sl2 .cr-joint,.sl2 .cr-torso,.sl2 .sl-part,.sl2 .sprite-figure{animation:none!important;rotate:none!important;translate:none!important;scale:none!important}.motion-preview,#genMotion{display:none}}

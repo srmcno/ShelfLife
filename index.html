@@ -35,12 +35,15 @@
   </div>
 </header>
 
+<div class="update-banner" id="updateBanner" hidden><span>A fresh edition of the shelf is ready.</span><button class="btn btn-sm" id="refreshGame">Save & refresh</button></div>
 <div class="storage-warn" id="recoveryWarn" hidden>Your previous save could not be read. Its original contents are kept in a recovery file under More. You can also restore a backup.</div>
 <div class="storage-warn" id="storageWarn" hidden>Your latest changes are only in memory: browser storage is unavailable or full. Use More → Back up before closing this page.</div>
 
 <main class="app">
   <!-- ---- the shelf ------------------------------------------------------- -->
   <section class="pane pane-shelf" id="paneShelf" aria-label="Your residents">
+    <div class="shelf-heading"><div><span class="eyebrow">A small world, badly supervised</span><h1>Your shelf. Their rules.</h1></div><span class="room-live"><i></i> Alive & opinionated</span></div>
+    <div id="shelfBrief" class="shelf-brief"></div>
     <div class="stage">
       <!-- .cabinet-wrap draws the carcass; #cabinet is the run of shelves inside it. -->
       <div class="cabinet-wrap" id="cabinetWrap">
@@ -50,6 +53,7 @@
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5H7l1.2-1.6h3.6L13 6h2.5A1.5 1.5 0 0 1 17 7.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="11" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
       </button>
     </div>
+    <p class="shelf-pan-hint">Swipe the cabinet to explore all six spaces. Tap a resident to care or play.</p>
     <div class="actions" id="actions">
       <button class="btn btn-check" id="checkBtn">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5h14M3 10h14M3 14.5h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="6" cy="5.5" r="1.6" fill="currentColor"/><circle cx="13" cy="10" r="1.6" fill="currentColor"/><circle cx="8" cy="14.5" r="1.6" fill="currentColor"/></svg>
@@ -57,7 +61,7 @@
       </button>
       <button class="btn" id="roundsBtn">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 11.5a6 6 0 0 0 11.3 1.8M16 8.5A6 6 0 0 0 4.7 6.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15.5 5v4h-4M4.5 15v-4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>Do the rounds</span>
+        <span>Do the rounds</span><small>+13 to every need</small>
       </button>
       <button class="btn btn-primary" id="newPetBtn">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
@@ -69,12 +73,16 @@
       <span class="teaser-text"></span>
       <span class="teaser-from"><span class="teaser-by"></span><b>Read the notes</b></span>
     </button>
+    <div id="dailyCard" class="daily-card" hidden></div>
     <div class="shelf-progress" id="shelfProgress"></div>
   </section>
 
   <!-- ---- plots: the live conspiracy, and the side doors ------------------- -->
   <section class="pane pane-plots" id="panePlots" aria-label="Small conspiracies">
+    <article id="caseCard" class="story-card case-card" tabindex="-1" aria-label="Weekly case file"></article>
+    <article id="visitorCard" class="story-card visitor-card" aria-label="Temporary visitor"></article>
     <aside class="scheme-card" id="schemeCard" tabindex="-1" aria-label="Small conspiracies"></aside>
+    <button class="museum-door" data-proxy="museumBtn"><span aria-hidden="true">✦</span><div><b>Memory museum</b><small id="museumCount">The evidence is accumulating.</small></div><span aria-hidden="true">↗</span></button>
     <div class="side-doors">
       <button class="door" type="button" data-proxy="incidentsBtn">
         <span class="door-kicker">The record</span>
@@ -145,6 +153,7 @@
     <button class="btn tray-item" id="helpBtn"><span>How to play</span><small>A short field guide</small></button>
     <button class="btn tray-item" id="decorBtn"><span>Decorate</span><small>Room, shelf, furniture</small></button>
     <button class="btn tray-item" id="incidentsBtn"><span>Incidents</span><small>What has happened so far</small></button>
+    <button class="btn tray-item" id="museumBtn"><span>Memory museum</span><small>Cases, visitors, names and postcards</small></button>
     <button class="btn tray-item" id="postcardBtn"><span>Postcard</span><small>Share a picture of the shelf</small></button>
     <button class="btn tray-item" id="muteBtn" aria-pressed="false"><span>Sound</span><small>Small noises</small></button>
     <button class="btn tray-item" id="narratorBtn" aria-pressed="true"><span>Narrator</span><small>Reads the notes aloud</small></button>
@@ -187,7 +196,8 @@
       <div class="gen-stage"><div class="gen-mount" id="genMount"></div></div>
       <p class="gen-desc" id="genDesc"></p>
       <div class="tool-block">
-        <button class="btn btn-wide" id="genSurprise">Surprise me</button>
+        <button class="btn" id="genSurprise">Surprise me</button>
+        <button class="btn btn-ghost" id="genMotion">See it move</button>
       </div>
       <div class="tool-block">
         <div class="tool-label">Change one thing</div>
@@ -285,6 +295,9 @@
     <li><h3>Read the room.</h3><p>Check the shelf for notes, arguments, and small developments. Individual care builds trust, unlocking drawing tools and furniture in Decorate.</p></li>
     <li><h3>Reconsider the neighbours.</h3><p>Drag to rearrange. On a phone, hold first. Or open a resident’s card and choose a shelf position. Furniture affects the creatures beside it; some neighbours feud. Watch them: they nudge, whisper, glare and steal from whoever is next to them.</p></li>
     <li><h3>Encourage a terrible idea.</h3><p>Small conspiracies offer choices with visible costs and rewards. Help, redirect, or leave the residents to their own devices. They act after three minutes; another plan follows five minutes later. Nobody dies. Sometimes the raisin does.</p></li>
+    <li><h3>Make a little history.</h3><p>Plots holds a six-beat weekly case and temporary visitors. Follow the evidence through care, placement and choices. A case waits until you finish it. Visitors stay six hours and leave museum curiosities when welcomed.</p></li>
+    <li><h3>Keep your promises.</h3><p>Accept a resident’s request in its card, then fulfil it within twelve hours for trust. Refusing costs one trust and adds a grievance. Friends form after fifteen minutes beside each other with trust on both sides. Rivals can reach a truce once both trust you at level three.</p></li>
+    <li><h3>Learn their secret handshake.</h3><p>A short untimed memory game lives in each resident’s card. Repeat three patterns for attention and trust. Wrong taps cost nothing; replay the pattern. Rewards recharge every five minutes per resident; practice whenever you like.</p></li>
   </ol>
   <p class="guide-footnote">Needs change while you are away, up to two days at a time. They cannot die. You can take a break. Your shelf saves on this device; More → Back up keeps a copy you can restore elsewhere.</p>
   <p class="guide-footnote">Keyboard: Tab through controls, Enter or Space to activate, Escape to close a sheet. The game respects your device’s reduced-motion preference.</p>
@@ -311,6 +324,7 @@
     <div class="postcard-actions">
       <button class="btn btn-primary" id="postcardShare" hidden>Share</button>
       <button class="btn" id="postcardSave">Save picture</button>
+      <button class="btn" id="postcardKeep">Keep in museum</button>
       <button class="btn btn-ghost" id="postcardAgain">Another</button>
     </div>
     <p class="hint" id="postcardHint"></p>
@@ -318,6 +332,22 @@
 </div>
 
 <div class="veil" id="incidentsVeil"><div class="sheet" id="incidentsSheet"></div></div>
+<div class="veil" id="museumVeil"><div class="sheet sheet-museum"><div class="sheet-head"><div><span class="eyebrow">Long memories, short legs</span><h2>Memory museum</h2></div><button class="btn btn-ghost btn-sm" id="museumClose">Close</button></div><div id="museumContent"></div></div></div>
+<div class="veil" id="playVeil"><div class="sheet sheet-play">
+  <div class="sheet-head"><div><span class="eyebrow" id="playName">A small secret</span><h2 id="playTitle">Secret handshake</h2></div><button class="btn btn-ghost btn-sm" id="playClose">Close</button></div>
+  <div class="play-modes"><button class="chip" data-play-mode="memory" aria-pressed="true">Handshake</button><button class="chip" data-play-mode="dust" aria-pressed="false">Dust patrol</button><label><input type="checkbox" id="playRelaxed"> Relaxed play</label></div>
+  <div class="play-theatre"><div id="playPortrait"></div><span id="playCue">They have been rehearsing.</span><div class="play-sparks" aria-hidden="true">✦ · ✧ · ✦</div></div>
+  <div class="play-rounds"><span id="playProgress">Round 1 of 3</span><span class="play-step"></span><span class="play-step"></span><span class="play-step"></span></div>
+  <p id="playStatus" role="status">Remember their gestures, then repeat them.</p><span id="playAnnouncement" class="sr-only" aria-live="polite"></span>
+  <div class="gesture-grid" aria-label="Handshake gestures">
+    <button class="gesture" data-gesture="0"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 35V19a4 4 0 0 1 8 0v9-15a4 4 0 0 1 8 0v15-8a4 4 0 0 1 8 0v13c0 8-5 10-12 10s-12-4-12-8Z"/><path d="M8 12 5 8m5 17H4m10-21v4"/></svg><span>Knock</span></button>
+    <button class="gesture" data-gesture="1"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 34c0-18 8-27 16-18s16 0 16-10M8 42c0-18 8-27 16-18s16 0 16-10"/></svg><span>Wiggle</span></button>
+    <button class="gesture" data-gesture="2"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 24s8-13 19-13 19 13 19 13-8 13-19 13S5 24 5 24Z"/><circle cx="24" cy="24" r="6"/></svg><span>Blink</span></button>
+    <button class="gesture" data-gesture="3"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="26" r="10"/><path d="M24 3v7M7 9l5 5m29-5-5 5M4 28h6m28 0h6"/></svg><span>Boop</span></button>
+  </div>
+  <div class="play-controls"><button class="btn btn-primary" id="playStart">Learn the handshake</button><button class="btn" id="playReplay" hidden>Replay pattern</button></div>
+  <p class="hint" id="playReward">Finish all 3 rounds · up to +24 attention and +1 trust.</p>
+</div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script type="module" src="src/main.js"></script>

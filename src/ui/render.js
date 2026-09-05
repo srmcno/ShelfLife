@@ -1,5 +1,10 @@
+import { advanceStories } from '../engine/stories.js';
+import { renderStories } from './stories.js';
+import { save } from '../state.js';
+import { roundsWait } from '../engine/care.js';
+import { playWait } from '../engine/play.js';
 import { renderScheme } from './schemes.js';
-import { moodOf, isAsleep, hasTrait, MOOD_WORD } from '../engine/tick.js';
+import { moodOf, isAsleep, hasTrait, worstNeed, MOOD_WORD } from '../engine/tick.js';
 import { activeFeuds, feudingIds, ACHIEVEMENTS } from '../engine/achievements.js';
 import { totalBond } from '../engine/unlocks.js';
 import { renderPetSprite, moodMotionClasses, MOTION_TRAIT_FLAGS } from '../art/sprite.js';
@@ -11,15 +16,20 @@ const notesEl = document.getElementById('notes');
 const statusBar = document.getElementById('statusBar');
 let expandedNotes = false;
 let notesState = null;
+let shelfSeen = null;
 document.getElementById('notesMore').addEventListener('click', () => { expandedNotes = !expandedNotes; if (notesState) renderNotes(notesState); });
 
 export function renderAll(state) {
+  advanceStories(state);
   renderStatus(state);
   renderShelf(state);
   renderNotes(state);
   renderScheme(state);
   renderProgress(state);
   renderDoors(state);
+  renderBrief(state);
+  renderStories(state);
+  save();
 }
 
 // Three figures, and a fourth only when something is wrong. The mood census is
@@ -51,7 +61,7 @@ export function renderStatus(state) {
   const feuds = activeFeuds(state).length;
   const unrest = counts.furious + feuds;
   const moon = moonPhase();
-  document.getElementById('roundsBtn').disabled = !state.pets.length;
+  syncRounds(state);
   statusBar.innerHTML =
     '<span class="day">Day <b>' + days + '</b></span>' +
     '<span class="pop">Living here <b>' + state.pets.length + '</b><span class="of">of ' + state.slots.length + '</span></span>' +
@@ -88,7 +98,9 @@ function petEl(state, pet, slotIndex) {
   btn.dataset.kind = 'pet';
   btn.dataset.slot = slotIndex;
   btn.dataset.mood = mood;
-  btn.setAttribute('aria-label', 'Take care of ' + pet.name + ', currently ' + MOOD_WORD[mood]);
+  const needs = Object.keys(needWords).filter(k => pet.needs[k] < 42).map(k => needWords[k]);
+  btn.setAttribute('aria-label', 'Take care of ' + pet.name + ', currently ' + MOOD_WORD[mood] + (needs.length ? ', ' + needs.join(', ') : ''));
+  btn.title = pet.name + ' · ' + (needs.join(', ') || MOOD_WORD[mood]);
 
   // Trait flags are resolved here rather than inside art/sprite.js so the art
   // layer keeps its "no engine/content imports" rule; the animation director
@@ -153,7 +165,11 @@ export function renderShelf(state) {
       const id = state.slots[i];
       if (id) {
         const pet = state.pets.find(p => p.id === id);
-        if (pet) slot.appendChild(petEl(state, pet, i));
+        if (pet) {
+          const el = petEl(state, pet, i);
+          if (shelfSeen && !shelfSeen.has(pet.id)) el.classList.add('pet-arrival');
+          slot.appendChild(el);
+        }
         else {
           const pr = (state.props || []).find(x => x.id === id);
           if (pr) slot.appendChild(propEl(pr, i));
@@ -178,6 +194,7 @@ export function renderShelf(state) {
     row.appendChild(plank);
     cabinet.appendChild(row);
   }
+  shelfSeen = new Set(state.pets.map(p => p.id));
   playShelfMoves(cabinet, before);
   if (focusedId) Array.from(cabinet.querySelectorAll('.piece')).find(el => el.dataset.id === focusedId)?.focus({ preventScroll: true });
 }
@@ -279,4 +296,28 @@ function renderDoors(state) {
   sub.textContent = n
     ? n + ' of ' + ACHIEVEMENTS.length + ' on record' + (streak > 1 ? ' · ' + streak + ' days running' : '')
     : 'Nothing on file. Give it time.';
+}
+
+let briefState;
+const needWords = { food: 'hungry', fuss: 'lonely', clean: 'grubby' };
+function syncRounds(state) {
+  const button = document.getElementById('roundsBtn'), remaining = roundsWait(state);
+  button.disabled = !state.pets.length || remaining > 0;
+  button.querySelector('span').textContent = remaining ? 'Restocking · ' + Math.ceil(remaining / 1000) + 's' : 'Do the rounds';
+}
+setInterval(() => { if (briefState) syncRounds(briefState); }, 1000);
+function renderBrief(state) {
+  briefState = state;
+  const host = document.getElementById('shelfBrief');
+  if (!host) return;
+  const sorted = [...state.pets].sort((a, b) => a.needs[worstNeed(a)] - b.needs[worstNeed(b)]);
+  const needy = sorted.find(p => p.needs[worstNeed(p)] < 60);
+  const playful = state.pets.find(p => !isAsleep(p) && !playWait(p)) || state.pets[0];
+  const pet = needy || playful;
+  if (!pet) {
+    host.innerHTML = '<span class="brief-icon" aria-hidden="true">✦</span><div><b>Make something wonderfully odd.</b><span>Care. Conspire. Collect the evidence.</span></div>';
+    return;
+  }
+  host.innerHTML = '<span class="brief-icon" aria-hidden="true">' + (needy ? '!' : '✦') + '</span><div><b>' + escapeHtml(needy ? pet.name + ' is feeling ' + needWords[worstNeed(pet)] + '.' : 'A little time together?') + '</b><span>' + (needy ? 'Tap to help. Individual care builds trust.' : 'Try a secret handshake with ' + escapeHtml(pet.name) + '.') + '</span></div><button class="btn btn-sm">' + (needy ? 'Care' : 'Play') + ' ↗</button>';
+  host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent(needy ? 'shelflife:care' : 'shelflife:play', { detail: { petId: pet.id } })));
 }

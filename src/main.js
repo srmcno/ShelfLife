@@ -1,3 +1,5 @@
+import { artPersonality } from './engine/personality.js';
+import { initStories } from './ui/stories.js';
 import {
   state, save, addNote, pick, clamp, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store, RECOVERY_KEY, loadFailed
 } from './state.js';
@@ -10,11 +12,12 @@ import { doRounds } from './engine/care.js';
 import { checkAchievements, ACHIEVEMENTS } from './engine/achievements.js';
 import { checkUnlocks, totalBond } from './engine/unlocks.js';
 import { advanceSchemes } from './engine/schemes.js';
+import { initPlay } from './ui/play.js';
 import { initSchemeUI } from './ui/schemes.js';
 import { initDialogs } from './ui/dialogs.js';
 import { initPostcard } from './ui/postcard.js';
 import { initStudio } from './art/studio.js';
-import { initAnimator, reactShelf } from './art/animator.js';
+import { initAnimator, reactShelf, previewMotion } from './art/animator.js';
 import { applyDecor, initDecorUI } from './ui/decorUI.js';
 import { initDrag } from './ui/drag.js';
 import { renderAll, renderStatus, renderShelf, renderNotes, escapeHtml } from './ui/render.js';
@@ -55,6 +58,7 @@ function makeBio(traitIds) {
 // ---------- studio (pet creation) ----------
 
 initDialogs();
+document.getElementById('genMotion').addEventListener('click', () => previewMotion(document.getElementById('genMount')));
 const studio = initStudio({
   // `art` arrives in one of the studio's two shapes — `{ creature }` from the
   // Grow tab, `{ body, stamps }` from the Draw tab. normalizePetArt reconciles
@@ -73,7 +77,7 @@ const studio = initStudio({
       stats: rollStats(traits),
       bio: makeBio(traits),
       born: Date.now(),
-      needs: defaultNeeds(),
+      needs: { food: 58, fuss: 54, clean: 66 },
       bond: 0, cared: 0, grudges: 0, grudgeStage: 0
     };
     state.pets.push(pet);
@@ -84,6 +88,8 @@ const studio = initStudio({
       'It tried to look taller for the introductions.',
       'It has unpacked. There was a crumb.'
     ]), 'the shelf', 'arrival');
+    const anatomy = artPersonality(pet);
+    if (anatomy.horns || anatomy.halo || anatomy.motion.canFlap) addNote(state, finalName + ': ' + anatomy.features[0].text, 'made this way', 'note');
     checkAchievements(state);
     advanceSchemes(state);
     save();
@@ -101,6 +107,7 @@ document.getElementById('newPetBtn').addEventListener('click', () => {
 document.getElementById('roundsBtn').addEventListener('click', () => {
   const result = doRounds(state);
   toast(result ? result.message : 'There is nobody to do rounds for.');
+  if (result?.cooling) return;
   checkUnlocks(state);
   checkAchievements(state);
   save();
@@ -278,6 +285,9 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 // ---------- wire the remaining self-contained widgets ----------
 
 initSchemeUI(state, () => renderAll(state));
+initPlay(state, () => renderAll(state));
+initStories(state, () => renderAll(state), id => openCard(state, id, true));
+window.addEventListener('shelflife:care', e => openCard(state, e.detail?.petId));
 initDecorUI(state);
 initDrag(state);
 // One shared director for every pet on the shelf. getPet lets it read a pet's
@@ -365,9 +375,18 @@ window.addEventListener('pagehide', () => save());
 // Registered last so a failure here can never block the game from booting.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {
-      // Offline support is a bonus, not a requirement. A registration failure
-      // (file:// origin, private mode, unsupported browser) must stay silent.
+    const wasControlled = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (wasControlled) document.getElementById('updateBanner').hidden = false;
+    });
+    navigator.serviceWorker.register('service-worker.js').then(registration => registration.update()).catch(() => {
+      // Offline first visits may not have an update available.
     });
   });
 }
+
+document.getElementById('refreshGame').addEventListener('click', () => {
+  if (document.querySelector('.veil.open')) { toast('Finish this little interaction first, then refresh.'); return; }
+  if (!save()) { toast('Back up your shelf before refreshing: this browser could not save.'); return; }
+  window.location.reload();
+});

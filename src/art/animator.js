@@ -51,11 +51,14 @@ const ROW = 6;                  // slots per shelf row (matches ui/render.js)
 // `gaze` sends the pupils somewhere for the clip: 'dir' looks the way the clip
 // leans, 'up' at the ceiling, 'you' straight out at the player.
 const ACTS = [
+  { id: 'saunter', name: 'sl2-saunter', ms: 2400, ease: 'linear', face: true,
+    req: 'walk', body: 'sl-sauntering', dir: true, gaze: 'dir',
+    w: { content: 6, fine: 5, annoyed: 2, furious: 1, asleep: 0 }, t: { wanderer: 5 } },
   { id: 'look',     name: 'sl2-look',     ms: 1150, ease: 'cubic-bezier(.4,0,.2,1)', gaze: 'dir',
     dir: true,  w: { content: 3, fine: 4, annoyed: 3, furious: 2, asleep: 0 }, t: { thief: 3, wanderer: 1 } },
   { id: 'hop',      name: 'sl2-hop',      ms: 760,  ease: 'cubic-bezier(.3,.75,.4,1)',
     w: { content: 4, fine: 2, annoyed: 0, furious: 0, asleep: 0 }, t: { wanderer: 2 } },
-  { id: 'stretch',  name: 'sl2-stretch',  ms: 1500, ease: 'cubic-bezier(.45,0,.3,1)', gaze: 'up',
+  { id: 'stretch',  name: 'sl2-stretch',  ms: 1500, ease: 'cubic-bezier(.45,0,.3,1)', gaze: 'up', body: 'sl-stretching',
     w: { content: 3, fine: 2, annoyed: 1, furious: 0, asleep: 1 } },
   { id: 'shiver',   name: 'sl2-shiver',   ms: 620,  ease: 'linear',
     w: { content: 0, fine: 1, annoyed: 3, furious: 5, asleep: 0 } },
@@ -67,7 +70,7 @@ const ACTS = [
     dir: true,  w: { content: 3, fine: 3, annoyed: 1, furious: 0, asleep: 1 }, t: { wanderer: 2 } },
   { id: 'wobble',   name: 'sl2-wobble',   ms: 1000, ease: 'cubic-bezier(.3,1.25,.5,1)',
     w: { content: 2, fine: 2, annoyed: 2, furious: 1, asleep: 0 } },
-  { id: 'skitter',  name: 'sl2-skitter',  ms: 900,  ease: 'cubic-bezier(.3,0,.2,1)', face: true,
+  { id: 'skitter',  name: 'sl2-skitter',  ms: 900,  ease: 'cubic-bezier(.3,0,.2,1)', face: true, body: 'sl-sauntering',
     dir: true,  w: { content: 1, fine: 1, annoyed: 1, furious: 1, asleep: 0 }, t: { wanderer: 6 } },
   { id: 'snatch',   name: 'sl2-snatch',   ms: 840,  ease: 'cubic-bezier(.2,0,.15,1)', gaze: 'dir', body: 'sl-reaching',
     dir: true,  w: { content: 1, fine: 1, annoyed: 1, furious: 1, asleep: 0 }, t: { thief: 6 } },
@@ -344,6 +347,9 @@ function prepSprite(el) {
         ? Number(p.dataset.index) : (seen[kind] || 0);
       seen[kind] = (seen[kind] || 0) + 1;
       p.classList.add('sl-part');
+      const right = p.dataset.side === 'right' || p.dataset.side === 'r';
+      const mirrored = p.style.getPropertyValue('--sl-mirror') === '-1';
+      p.style.setProperty('--sl-pose', right && !mirrored ? '-1' : '1');
       p.style.setProperty('--sl-ph', String(limbPhase(kind, i, counts[kind])));
       // data-pivot-x/y means the part's own origin already IS the joint (the
       // creature generator's convention); CSS handles those with
@@ -371,7 +377,7 @@ function prepSprite(el) {
 // flyer lifts into a high arc and flaps, a scuttler darts flat and twitchy, and
 // an ooze stretches forward and hauls the rest of itself after.
 
-const GAIT_PACE = { walk: 2.1, scuttle: 1.4, flap: 1.9, hop: 2.4, ooze: 3.3 };
+const GAIT_PACE = { walk: 8, scuttle: 4, flap: 3.5, hop: 4.5, ooze: 5 };
 
 export function captureShelfPositions(root) {
   const map = new Map();
@@ -413,7 +419,7 @@ function travelKeyframes(gait, dx, dy, dist) {
     easing: easing || 'ease-in-out'
   });
   at(0, 0, 0, null, 'ease-out');
-  at(T0, 0, 0, null, 'cubic-bezier(.5,0,.25,1)');
+  at(T0, 0, 0, null, gait === 'walk' ? 'linear' : 'cubic-bezier(.5,0,.25,1)');
   if (gait === 'hop') {
     const n = Math.max(2, Math.min(5, Math.round(dist / 70)));
     const arc = Math.min(26, 12 + dist * 0.06);
@@ -442,10 +448,9 @@ function travelKeyframes(gait, dx, dy, dist) {
     at(0.78, 0.96, 1, null, 'linear');
     at(T1, 1, 0, null, 'ease-out');
   } else {
-    at(0.34, 0.28, 3, '.98,1.02', 'ease-in-out');
-    at(0.52, 0.52, 0, '1.03,.97', 'ease-in-out');
-    at(0.7, 0.76, 3, '.98,1.02', 'ease-in-out');
-    at(T1, 1, 0, null, 'cubic-bezier(.3,1.35,.5,1)');
+    // Constant travel speed lets the planted foot read as a stance phase.
+    // Weight shifts belong to the torso rig, not the whole pair of feet.
+    at(T1, 1, 0, null, 'ease-out');
   }
   at(1, 1, 0, null, 'ease-out');
   return kf;
@@ -458,8 +463,9 @@ function travel(el, dx, dy) {
   // yet, and travel needs its gait, so prep it now if nobody has.
   if (sprite && !sprite.dataset.slPrep) prepSprite(sprite);
   const dist = Math.hypot(dx, dy);
-  const gait = (sprite && sprite.dataset.slGait) || 'hop';
-  const dur = Math.min(2400, Math.max(560, 430 + dist * (GAIT_PACE[gait] || 2.1)));
+  const gait = sprite?.classList.contains('sl-can-flap') && (Math.abs(dy) > 20 || dist > 160)
+    ? 'flap' : (sprite && sprite.dataset.slGait) || 'hop';
+  const dur = Math.min(5500, Math.max(900, 300 + dist * (GAIT_PACE[gait] || 5)));
   const gaitCls = 'sl-gait-' + gait;
   // dx is old-minus-new, so a negative dx means the pet ended up further right.
   const dir = dx < 0 ? 1 : -1;
@@ -467,7 +473,7 @@ function travel(el, dx, dy) {
   if (sprite) {
     setDir(sprite, dir);
     if (Math.abs(dx) > 6) face(sprite, dir, dur + 700);
-    const step = Math.min(430, Math.max(150, dur / Math.max(3, Math.round(dist / 26))));
+    const step = Math.min(620, Math.max(380, dur * .76 / Math.max(2, Math.round(dist / 48))));
     sprite.style.setProperty('--sl-gait-dur', Math.round(gait === 'scuttle' ? step * 0.55 : step) + 'ms');
     sprite.style.setProperty('--sl-travel-dur', Math.round(dur) + 'ms');
     const act = sprite.querySelector('.sprite-act');
@@ -781,6 +787,7 @@ function pass() {
 function stop() {
   if (timer !== null) { clearInterval(timer); timer = null; }
   document.querySelectorAll('.sl-bubble,.sl-zzz').forEach(b => b.remove());
+  document.querySelectorAll('.pet, .sprite.sl-travel').forEach(el => el.getAnimations().forEach(a => a.cancel()));
 }
 
 function start() {
@@ -803,6 +810,35 @@ export function initAnimator(opts) {
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) pass(); });
   start();
+}
+
+// The same anatomy and gait used on the shelf, available in the studio/card.
+// Translation, limb cycles, torso weight and facing remain separate layers.
+export function previewMotion(host) {
+  if (!host || reduced?.matches) return false;
+  const el = host.querySelector('.sprite.sl2');
+  if (!el || el.classList.contains('sl-travel') || el.classList.contains('sl-asleep')) return false;
+  prepSprite(el);
+  const gait = el.classList.contains('sl-can-flap') ? 'flap' : el.dataset.slGait || 'hop';
+  const cls = 'sl-gait-' + gait;
+  const ms = 3200, clock = clockFor(el.dataset.pet, Date.now());
+  clock.busy = Date.now() + ms; clock.act = clock.busy + 1200;
+  const act = el.querySelector('.sprite-act');
+  if (act) act.style.animation = '';
+  el.style.setProperty('--sl-gait-dur', gait === 'scuttle' ? '280ms' : '560ms');
+  el.style.setProperty('--sl-travel-dur', ms + 'ms');
+  el.classList.add('sl-travel', cls);
+  face(el, 1, ms);
+  const turn = setTimeout(() => { if (el.isConnected) face(el, -1, ms / 2); }, ms / 2);
+  const animation = el.animate([
+    { translate: '0px 0px', offset: 0 },
+    { translate: '20px 0px', offset: .46 },
+    { translate: '20px 0px', offset: .54 },
+    { translate: '0px 0px', offset: 1 }
+  ], { duration: ms, easing: 'linear' });
+  const done = () => { clearTimeout(turn); el.classList.remove('sl-travel', cls); el.style.removeProperty('--sl-face'); };
+  animation.onfinish = done; animation.oncancel = done;
+  return true;
 }
 
 // Make one specific pet visibly react to being cared for. `need` is

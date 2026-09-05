@@ -1,9 +1,10 @@
+import { articulateLimb } from './joints.js';
+
 /* =============================================================================
    creatures.js — the designed creature generator for Shelf Life
    =============================================================================
 
-   Pure data + pure functions. NO DOM access, NO imports from the rest of the
-   app, no side effects. Everything here is safe to `import` from a test, a
+   Pure data + pure functions. NO DOM access, no engine imports, no side effects. Everything here is safe to `import` from a test, a
    worker, or a preview harness.
 
    -----------------------------------------------------------------------------
@@ -1294,7 +1295,9 @@ function legAnchorsFor(body, legStyle) {
   if (!def || legStyle === 'none') return [];
   const many = def.tags.indexOf('many') !== -1;
   const list = many ? (body.anchors.manyLegs || []) : (body.anchors.legs || []);
-  return list;
+  // Each style has a different shin length. Keep the soles at the common
+  // shelf line instead of letting long legs disappear through the wood.
+  return list.map(anchor => ({ ...anchor, y: BASELINE - def.length }));
 }
 
 /**
@@ -1530,6 +1533,7 @@ function mount(o, inner) {
   if (o.index !== undefined) attrs.push(`data-index="${o.index}"`);
   if (o.side) attrs.push(`data-side="${o.side}"`);
   if (o.variant) attrs.push(`data-variant="${esc(o.variant)}"`);
+  attrs.push(`style="--sl-mirror:${o.flipX ? -1 : 1}"`);
   attrs.push(`data-pivot-x="${num(o.x)}"`, `data-pivot-y="${num(o.y)}"`);
   return `<g class="cr-mount"${mountTransform(o.x, o.y, o.angle || 0, o.scale === undefined ? 1 : o.scale, !!o.flipX)}>`
     + `<g ${attrs.join(' ')}>${inner}</g></g>`;
@@ -1559,7 +1563,7 @@ export function renderCreatureSVG(creature, opts = {}) {
   const legDef = LEGS[P.legs];
   if (P.legs !== 'none') {
     const anchors = legAnchorsFor(body, P.legs);
-    const inner = shapesMarkup(legDef.shapes, colors);
+    const inner = articulateLimb(shapesMarkup(legDef.shapes, colors), 'leg', P.legs, colors);
     anchors.forEach((an, i) => {
       legMarkup += mount({ part:'leg', index:i, side: an.x < 0 ? 'left' : 'right', variant:P.legs,
         x:an.x, y:an.y, angle:an.angle || 0, flipX: an.x > 0 && legDef.mirror }, inner);
@@ -1589,7 +1593,7 @@ export function renderCreatureSVG(creature, opts = {}) {
   let armMarkup = '';
   if (P.arms !== 'none') {
     const def = ARMS[P.arms];
-    const inner = shapesMarkup(def.shapes, colors);
+    const inner = articulateLimb(shapesMarkup(def.shapes, colors), 'arm', P.arms, colors);
     (a.arms || []).forEach((an, i) => {
       armMarkup += mount({ part:'arm', index:i, side: an.x < 0 ? 'left' : 'right', variant:P.arms,
         x:an.x, y:an.y, angle:an.angle || 0, flipX: an.x > 0 }, inner);
@@ -1682,7 +1686,11 @@ export function renderCreatureSVG(creature, opts = {}) {
     + wingMarkup + tailMarkup + armMarkup + topMarkup + earMarkup
     + bodyMarkup + detailMarkup + blushMarkup + eyeMarkup + mouthMarkup
     + `</g>`;
-  const figure = `<g class="cr-figure">${shadingDefs(colors)}${legMarkup}${torso}</g>`;
+  const hips = legAnchorsFor(body, P.legs);
+  const torsoScale = hips.length ? Math.min(1, (hips[0].y + 3 + 40) / (body.base + 40)) : 1;
+  // Make room for the full stride below the belly, keeping the head in frame.
+  const standingTorso = `<g transform="translate(0 -40) scale(1 ${num(torsoScale)}) translate(0 40)">${torso}</g>`;
+  const figure = `<g class="cr-figure">${shadingDefs(colors)}${legMarkup}${standingTorso}</g>`;
   SHADE_ID = null;
 
   if (opts.inner) return figure;

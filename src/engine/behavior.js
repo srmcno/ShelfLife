@@ -1,3 +1,5 @@
+import { artPersonality } from './personality.js';
+import { relationship } from './stories.js';
 /* ================= BEHAVIOUR =================
    The simulation-depth layer: what the pets do when nobody is telling them to.
 
@@ -704,6 +706,9 @@ function needPull(state, pet, prop, now) {
 
 export function pairScore(state, pet, other) {
   let s = 0;
+  if (artPersonality(other).horns && (pet.stats?.menace || 0) < 5) s -= 1.5;
+  const relation = relationship(state, pet, other);
+  if (relation.appeal > 0) s += relation.appeal;
   if (petsFeud(pet, other)) {
     const arc = state.feudArcs && state.feudArcs[feudPairKey(pet.id, other.id)];
     if (arc && arc.truce) s += 1;
@@ -721,6 +726,7 @@ export function pairScore(state, pet, other) {
 export function slotScore(state, pet, index, now = Date.now(), slots = state.slots) {
   if (!pet || index < 0 || index >= slots.length) return -Infinity;
   let score = 0;
+  const request = state.stories?.requests?.[pet.id];
   let petNeighbors = 0;
   neighborSlots(index, slots.length).forEach(x => {
     const id = slots[x];
@@ -729,11 +735,13 @@ export function slotScore(state, pet, index, now = Date.now(), slots = state.slo
     if (other) {
       if (!petsFeud(pet, other)) petNeighbors++;    // an enemy does not count as company
       score += pairScore(state, pet, other);
+      if (request?.status === 'accepted' && request.kind === 'neighbor' && request.target === other.id) score += 4;
       return;
     }
     const prop = propById(state, id);
     if (!prop) return;
     let w = affinityFor(pet, prop.kind) * PROP_WEIGHT;
+    if (request?.status === 'accepted' && request.kind === 'prop' && request.target === prop.kind) w += 4;
     const holder = claimantOf(state, prop.id, now);
     if (w > 0 && holder && holder.id !== pet.id) w *= 0.35;   // hogged: much less appealing
     score += w + needPull(state, pet, prop, now);

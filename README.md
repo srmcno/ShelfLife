@@ -75,19 +75,26 @@ never saw updates.
 
 - **Make a pet** — grow a creature from designed parts, or draw one freehand. The drawing studio has a live animated preview, full-resolution ink, and independently animated arm and leg stamps. Transparent margins are fitted automatically, including on older drawings.
 - **Check the shelf** — advances the world and produces notes. This is where the writing lives.
-- **Do the rounds** — top everyone up at once. Efficient. They notice it was the rounds.
+- **Do the rounds** — add 13 to every need, with a one-minute trolley restock. Rounds build no trust. Individual care shows its actual gain, including sleep, saturation, and the meter cap. New arrivals need a little care so the first trust point is within reach.
 - **Tap a pet** — its card: needs, bond, grievances on file, traits, and the care buttons.
 - **Watch them.** Residents blink, glance at each other, face the way they walk, and cross the shelf in the gait their body allows (walkers plod, hoppers bounce, flyers arc, oozes stretch). Neighbours whisper, shove, sniff, glare across a feud line and wake each other up; furniture gets poked and rocks. Short thought bubbles come from `src/content/bubbles.js`.
 - **Move a resident** — drag it, or use the position selector in its card. On phones, hold before dragging. Adjacency drives feuds and furniture effects.
 - **Decorate** — six room themes, wall patterns, shelf woods, trim colours, and furniture that has
   actual mechanical effects on the pets standing next to it.
+- **Weekly case files.** Six-beat household mysteries live in Plots. File clues, care for a witness, move it to B1 for a reconstruction, and earn confidence through a handshake or useful care. Listening and keeping residents comfortable leads to a cooperative ending; dismissing evidence leads to a different resolution. An unfinished file never expires. Three cases rotate weekly.
+- **Temporary visitors.** Three unusual guests rotate through a separate visiting step, including on solo or full shelves. Welcome one within six hours to collect its souvenir in the museum. Another arrives a day after departure. No notification permission or account is needed.
+- **Resident requests.** In a resident’s card, accept a specific request for food, a handshake, a bowl, a neighbour or a room. Fulfil it within twelve hours for +1 trust. Refusing costs up to one trust and adds a grievance. Requests influence movement toward the promised neighbour or prop.
+- **Relationship cards.** Time beside one another builds friendship when both residents have trust; two shared supervised plots make co-conspirators. Rivals can be mediated into uneasy allies once both have three trust. A truce removes active feud unrest.
+- **Made this way.** Wings affect travel and dust-game pace; horns intimidate gentle neighbours; halos slow neighbouring attention decay by 10%. Anatomy cards and arrival notes explain the effects for generated and stamped drawings.
+- **Play together.** A secret handshake challenges memory through 2-, 3- and 4-gesture rounds. Dust patrol asks you to catch six of twelve moving specks in about 12–17 seconds. Relaxed dust play waits for each tap. Mistakes never harm needs. Completion gives up to +24 attention or cleanliness and +1 trust, sharing a five-minute reward rest per resident. Practice is always available; sleeping residents play for practice.
+- **Memory museum.** Read completed cases, kept promises, visitors, truces, former residents, name histories and grievances. Keep up to six postcard thumbnails in its album; Back up includes the museum. This browser edition has no native OS widget or advertising.
 - **Small conspiracies.** A rotating set of plans with two choices and an unsupervised outcome. Choices visibly trade needs for trust. Residents act on their own after three minutes; the next plan arrives five minutes after resolution. A return from offline resolves at most one outstanding plan.
 - **Trust** — individual care and supervised schemes unlock furniture and drawing tools. The strip below the cabinet shows the next furnishing; trust is stored as `bond` in the save for compatibility.
 - **Incidents.** The achievements log, with a hint for everything still unearned.
-- **Postcard.** The camera in the corner of the case (or More, then Postcard) draws the shelf, a note and a caption to a 1080 by 1350 picture you can share or save.
+- **Postcard of the day.** A prominent shelf panel highlights discoveries, case endings and truces. The camera in the corner of the case (or More, then Postcard) draws the shelf, a note and a caption to a 1080 by 1350 picture you can share or save.
 - **Night.** After eight in the evening the room goes dark, the eyes catch the light, and the moon in the status line shows the real phase with a comment from the shelf.
 - **Notes board.** Filter chips for overheard scenes, complaints, paperwork and plots. On a phone the newest note also peeks onto the shelf tab.
-- **On a phone.** The app is a three-tab layout (Shelf, Plots, Notes) with a bottom bar and a More tray. Cards and sheets rise from the bottom and can be pulled down to close; the notes tab badges when a check of the shelf adds new notes.
+- **On a phone.** Pan the cabinet horizontally for larger creatures and distinct touch targets; the six-space rows retain their real adjacency. The app is a three-tab layout (Shelf, Plots, Notes) with a bottom bar and a More tray. Cards and sheets rise from the bottom and can be pulled down to close; the notes tab badges when a check of the shelf adds new notes.
 - **Mature** — off by default. Turns on cruder, sweary variants of the writing.
 - **Narrator** — reads notes aloud. See the note on voices below.
 
@@ -187,6 +194,8 @@ The automated suite includes save corruption and storage quota recovery, drawing
 hand-drawn limb capabilities, scheme outcomes and cooldowns, offline cache completeness, and cache
 isolation. GitHub Actions runs it on pushes and pull requests using Node 22.
 
+Returning players see a **Save & refresh** banner when a new worker takes control. An open interaction or a failed save prevents that refresh.
+
 Before publishing a changed release, bump `CACHE_VERSION` in `service-worker.js` and check that
 `SHELL` includes every production module and asset. The tests verify the module list. Serve the
 repository root over HTTPS for installation; localhost works for development.
@@ -194,3 +203,5 @@ repository root over HTTPS for installation; localhost works for development.
 Keyboard controls: Tab to move between controls; Enter or Space to activate; Escape to dismiss a
 sheet. Sheets trap focus and return it to the opener. Motion follows the operating system's
 reduced-motion preference. Clear notes has an undo until the page reloads.
+
+Creature motion uses separate hips, knees, shoulders, and elbows, including drawn limb stamps. Alternating foot plants, torso weight shifts, arm counter-swings, and gesture follow-through replace rigid limb rotations. Different anatomy walks, scuttles, flies, hops, or oozes; the studio and resident cards include **See it move**. Reduced-motion preferences disable these effects. Service-worker releases refill the shell from the network and offer **Save & refresh** when a newer version takes control.

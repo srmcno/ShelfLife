@@ -111,7 +111,7 @@ function worker() {
     const entries = stores.get(name);
     return { addAll: async paths => paths.forEach(p => entries.set(resolve(p), new Response('cached ' + p))), match: async r => entries.get(resolve(r))?.clone(), put: async (r, response) => entries.set(resolve(r), response) };
   };
-  const context = { URL, Response, AbortController, setTimeout, clearTimeout,
+  const context = { URL, Request, Response, AbortController, setTimeout, clearTimeout,
     self: { location: { origin: 'https://test.example' }, registration: { scope: 'https://test.example/game/' }, addEventListener: (name, fn) => { events[name] = fn; }, skipWaiting: async () => {}, clients: { claim: async () => {} } },
     caches: { open: async name => cache(name), keys: async () => [...stores.keys()], delete: async name => stores.delete(name) },
     fetch: async () => { throw Error('offline'); }
@@ -122,7 +122,7 @@ function worker() {
 test('offline shell includes every production module, and every cached asset exists', async () => {
   const { events, stores } = worker();
   await new Promise(resolve => events.install({ waitUntil: p => p.then(resolve) }));
-  const shell = [...stores.get('shelflife-v4').keys()].map(u => u.replace('https://test.example/game/', ''));
+  const shell = [...stores.get(sw.match(/const CACHE_VERSION = '([^']+)'/)[1]).keys()].map(u => u.replace('https://test.example/game/', ''));
   for (const file of fs.readdirSync(new URL('../src', import.meta.url), { recursive: true }).filter(p => p.endsWith('.js'))) assert.ok(shell.includes('src/' + file), file + ' missing offline');
   for (const file of shell) assert.ok(fs.existsSync(new URL('../' + file, import.meta.url)), file);
 });

@@ -1,5 +1,5 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v4';
+const CACHE_VERSION = 'shelflife-v5';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./",
@@ -11,6 +11,7 @@ const SHELL = [
   "./src/art/animator.js",
   "./src/art/creatures.js",
   "./src/art/drawing.js",
+  "./src/art/joints.js",
   "./src/art/sprite.js",
   "./src/art/stamps.js",
   "./src/art/studio.js",
@@ -26,10 +27,14 @@ const SHELL = [
   "./src/content/postcards.js",
   "./src/content/props.js",
   "./src/content/schemes.js",
+  "./src/content/stories.js",
   "./src/content/traits.js",
   "./src/engine/achievements.js",
   "./src/engine/behavior.js",
   "./src/engine/care.js",
+  "./src/engine/play.js",
+  "./src/engine/stories.js",
+  "./src/engine/personality.js",
   "./src/engine/dialogue.js",
   "./src/engine/loop.js",
   "./src/engine/schemes.js",
@@ -38,6 +43,8 @@ const SHELL = [
   "./src/main.js",
   "./src/state.js",
   "./src/ui/card.js",
+  "./src/ui/play.js",
+  "./src/ui/stories.js",
   "./src/ui/decorUI.js",
   "./src/ui/dialogs.js",
   "./src/ui/drag.js",
@@ -58,7 +65,7 @@ const SHELL = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_VERSION).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE_VERSION).then(cache => cache.addAll(SHELL.map(path => new Request(new URL(path, self.registration.scope), { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(
@@ -82,7 +89,7 @@ self.addEventListener('fetch', event => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
     try {
-      const response = await fetch(request, { signal: controller.signal });
+      const response = await fetch(request, { signal: controller.signal, cache: isCode ? 'no-cache' : 'default' });
       if (response.ok) {
         event.waitUntil(cache.put(request, response.clone()).catch(() => {}));
         return response;
