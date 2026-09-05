@@ -121,21 +121,21 @@ export function checkinStreak(state, now = Date.now()) {
 }
 
 export const ACHIEVEMENTS = [
-  { id: 'first-arrival', label: 'Move-In Day', desc: 'Made your first pet.', toastLine: 'First one. There will be more.', check: state => state.pets.length >= 1 },
-  { id: 'full-shelf', label: 'No Vacancy', desc: 'Filled every slot on the shelf.', toastLine: 'The shelf is full. So are your obligations.', check: state => state.slots.every(s => s !== null) },
-  { id: 'first-feud', label: 'Drama', desc: 'Witnessed your first feud.', toastLine: 'Someone is not speaking to someone else. Achievement unlocked.', check: state => activeFeuds(state).length >= 1 },
-  { id: 'first-grudge', label: 'On The List', desc: 'A pet started keeping score.', toastLine: 'It is counting now. It will not stop.', check: state => state.pets.some(p => p.grudges >= 1) },
-  { id: 'first-reckoning', label: 'The Reckoning', desc: 'A grudge finally escalated.', toastLine: 'That was a mistake. That was definitely a mistake.', check: state => state.pets.some(p => p.grudgeStage >= 1) },
-  { id: 'terminal-grudge', label: 'It Has A Folder Now', desc: 'A grudge reached its final stage.', toastLine: 'This is no longer about the sock.', check: state => state.pets.some(p => p.grudgeStage >= 3) },
-  { id: 'max-bond', label: 'Chosen', desc: 'A pet reached maximum bond.', toastLine: 'It has decided to keep you. Permanently, probably.', check: state => state.pets.some(p => p.bond >= 25) },
-  { id: 'bond-10', label: 'Trusted, Barely', desc: 'Reached 10 total bond.', toastLine: 'They trust you slightly more than the furniture.', check: state => totalBond(state) >= 10 },
-  { id: 'bond-30', label: 'Household Name', desc: 'Reached 30 total bond.', toastLine: 'You are, against all odds, beloved.', check: state => totalBond(state) >= 30 },
-  { id: 'bond-60', label: 'Cult Leader', desc: 'Reached 60 total bond.', toastLine: 'This is either love or a hostage situation.', check: state => totalBond(state) >= 60 },
-  { id: 'streak-3', label: 'Creature Of Habit', desc: 'Checked in three days running.', toastLine: 'Three days. They have noticed the pattern.', check: state => state.streak.count >= 3 },
-  { id: 'streak-7', label: 'They Expect You Now', desc: 'Checked in seven days running.', toastLine: 'A full week. This is a relationship now.', check: state => state.streak.count >= 7 },
-  { id: 'first-truce', label: 'Unlikely Peace', desc: 'A feud resolved into a truce.', toastLine: 'Nobody knows what changed. It is, somehow, fine now.', check: state => Object.values(state.feudArcs).some(a => a.truce) },
-  { id: 'menagerie', label: 'A Real Collection', desc: 'Ten or more pets living on the shelf at once.', toastLine: 'This is either a menagerie or a liability.', check: state => state.pets.length >= 10 },
-  { id: 'decorator', label: 'Furnished', desc: 'Placed five or more things on the shelf.', toastLine: 'The shelf has a personality now. It is not yours.', check: state => state.props.length >= 5 }
+  { id: 'first-arrival', hint: 'Make a pet. Any pet. It will not be grateful.', label: 'Move-In Day', desc: 'Made your first pet.', toastLine: 'First one. There will be more.', check: state => state.pets.length >= 1 },
+  { id: 'full-shelf', hint: 'Fill all eighteen slots. Nobody will thank you.', label: 'No Vacancy', desc: 'Filled every slot on the shelf.', toastLine: 'The shelf is full. So are your obligations.', check: state => state.slots.every(s => s !== null) },
+  { id: 'first-feud', hint: 'Put two creatures who cannot stand each other side by side.', label: 'Drama', desc: 'Witnessed your first feud.', toastLine: 'Someone is not speaking to someone else. Achievement unlocked.', check: state => activeFeuds(state).length >= 1 },
+  { id: 'first-grudge', hint: 'Let a need slide until somebody files something.', label: 'On The List', desc: 'A pet started keeping score.', toastLine: 'It is counting now. It will not stop.', check: state => state.pets.some(p => p.grudges >= 1) },
+  { id: 'first-reckoning', hint: 'Let a grudge climb to five. Consequences follow.', label: 'The Reckoning', desc: 'A grudge finally escalated.', toastLine: 'That was a mistake. That was definitely a mistake.', check: state => state.pets.some(p => p.grudgeStage >= 1) },
+  { id: 'terminal-grudge', hint: 'Twenty grievances from one creature. It has a folder.', label: 'It Has A Folder Now', desc: 'A grudge reached its final stage.', toastLine: 'This is no longer about the sock.', check: state => state.pets.some(p => p.grudgeStage >= 3) },
+  { id: 'max-bond', hint: 'Earn twenty-five trust from a single resident.', label: 'Chosen', desc: 'A pet reached maximum bond.', toastLine: 'It has decided to keep you. Permanently, probably.', check: state => state.pets.some(p => p.bond >= 25) },
+  { id: 'bond-10', hint: 'Ten trust across the shelf.', label: 'Trusted, Barely', desc: 'Reached 10 total bond.', toastLine: 'They trust you slightly more than the furniture.', check: state => totalBond(state) >= 10 },
+  { id: 'bond-30', hint: 'Thirty trust across the shelf.', label: 'Household Name', desc: 'Reached 30 total bond.', toastLine: 'You are, against all odds, beloved.', check: state => totalBond(state) >= 30 },
+  { id: 'bond-60', hint: 'Sixty trust across the shelf. Concerning, frankly.', label: 'Cult Leader', desc: 'Reached 60 total bond.', toastLine: 'This is either love or a hostage situation.', check: state => totalBond(state) >= 60 },
+  { id: 'streak-3', hint: 'Check the shelf three days running.', label: 'Creature Of Habit', desc: 'Checked in three days running.', toastLine: 'Three days. They have noticed the pattern.', check: state => state.streak.count >= 3 },
+  { id: 'streak-7', hint: 'Check the shelf seven days running.', label: 'They Expect You Now', desc: 'Checked in seven days running.', toastLine: 'A full week. This is a relationship now.', check: state => state.streak.count >= 7 },
+  { id: 'first-truce', hint: 'Wait a feud out. Very occasionally, it ends.', label: 'Unlikely Peace', desc: 'A feud resolved into a truce.', toastLine: 'Nobody knows what changed. It is, somehow, fine now.', check: state => Object.values(state.feudArcs).some(a => a.truce) },
+  { id: 'menagerie', hint: 'Ten residents at once.', label: 'A Real Collection', desc: 'Ten or more pets living on the shelf at once.', toastLine: 'This is either a menagerie or a liability.', check: state => state.pets.length >= 10 },
+  { id: 'decorator', hint: 'Five pieces of furniture on the shelf.', label: 'Furnished', desc: 'Placed five or more things on the shelf.', toastLine: 'The shelf has a personality now. It is not yours.', check: state => state.props.length >= 5 }
 ];
 
 export function checkAchievements(state) {

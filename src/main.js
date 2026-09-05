@@ -110,10 +110,15 @@ document.getElementById('roundsBtn').addEventListener('click', () => {
 });
 
 document.getElementById('checkBtn').addEventListener('click', () => {
+  const before = state.noteCount || 0;
   checkShelf(state); // already calls checkUnlocks internally
   checkAchievements(state);
   save();
   renderAll(state);
+  // The shelf reacts before the notes are read: everyone glances up at once,
+  // staggered, the way a room does when the door opens.
+  reactShelf(state.slots.filter(Boolean), 'notice');
+  window.dispatchEvent(new CustomEvent('shelflife:checked', { detail: { added: (state.noteCount || 0) - before } }));
 });
 
 let clearedNotes = null;
@@ -252,14 +257,12 @@ function renderIncidents() {
     (streak ? ' &middot; checked in ' + streak + (streak === 1 ? ' day' : ' days') + ' running' : '') +
     '</div></div>' +
     '<button class="btn btn-ghost btn-sm" id="incidentsClose">Close</button></div>';
-  if (!unlocked.size) {
-    html += '<div class="incident-empty">No incidents logged. Give it time.</div>';
-  } else {
-    ACHIEVEMENTS.forEach(a => {
-      if (!unlocked.has(a.id)) return;
-      html += '<div class="incident"><b>' + escapeHtml(a.label) + '</b><p>' + escapeHtml(a.desc) + '</p></div>';
-    });
-  }
+  if (!unlocked.size) html += '<div class="incident-empty">No incidents logged. Give it time. They are working on it.</div>';
+  ACHIEVEMENTS.forEach(a => {
+    const has = unlocked.has(a.id);
+    html += '<div class="incident' + (has ? '' : ' locked') + '"><div><b>' + escapeHtml(has ? a.label : 'Not yet') + '</b><p>' +
+      escapeHtml(has ? a.desc : a.hint || 'Something has not happened here yet.') + '</p></div></div>';
+  });
   incidentsSheet.innerHTML = html;
   document.getElementById('incidentsClose').addEventListener('click', closeIncidents);
 }

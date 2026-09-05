@@ -1,5 +1,5 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v3';
+const CACHE_VERSION = 'shelflife-v4';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./",
@@ -16,6 +16,7 @@ const SHELL = [
   "./src/art/studio.js",
   "./src/audio/narrator.js",
   "./src/audio/sound.js",
+  "./src/content/bubbles.js",
   "./src/content/care.js",
   "./src/content/copy.js",
   "./src/content/decor.js",
@@ -39,7 +40,7 @@ const SHELL = [
   "./src/ui/decorUI.js",
   "./src/ui/dialogs.js",
   "./src/ui/drag.js",
-  "./src/ui/mobileNav.js",
+  "./src/ui/nav.js",
   "./src/ui/render.js",
   "./src/ui/schemes.js",
   "./src/ui/toast.js",

@@ -122,7 +122,7 @@ function worker() {
 test('offline shell includes every production module, and every cached asset exists', async () => {
   const { events, stores } = worker();
   await new Promise(resolve => events.install({ waitUntil: p => p.then(resolve) }));
-  const shell = [...stores.get('shelflife-v3').keys()].map(u => u.replace('https://test.example/game/', ''));
+  const shell = [...stores.get('shelflife-v4').keys()].map(u => u.replace('https://test.example/game/', ''));
   for (const file of fs.readdirSync(new URL('../src', import.meta.url), { recursive: true }).filter(p => p.endsWith('.js'))) assert.ok(shell.includes('src/' + file), file + ' missing offline');
   for (const file of shell) assert.ok(fs.existsSync(new URL('../' + file, import.meta.url)), file);
 });
