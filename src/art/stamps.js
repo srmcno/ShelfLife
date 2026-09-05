@@ -24,12 +24,12 @@ export const DEFAULT_STAMP_SIZE = 40;
 // space is a fixed -30..30 (60x60) box, same convention as PROP_ART.
 export const STAMP_SVG = {
   arms: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
-  <g transform="translate(-10 -6)"><g data-part="arm" data-index="0" data-side="l" data-pivot-x="-10" data-pivot-y="-6"><path d="M0 0Q-9 4-8 14M-8 14l-5 1m5-1l-1 5m1-5l4 3"/></g></g>
-  <g transform="translate(10 -6)"><g data-part="arm" data-index="1" data-side="r" data-pivot-x="10" data-pivot-y="-6"><path d="M0 0Q9 4 8 14M8 14l5 1m-5-1l1 5m-1-5l-4 3"/></g></g>
+  <g transform="translate(-10 -6)"><g data-part="arm" data-index="0" data-side="l" data-pivot-x="-10" data-pivot-y="-6"><path d="M0 0Q-4 1-6 6"/><g transform="translate(-6 6)"><g class="cr-joint" data-joint="elbow"><path d="M0 0Q-3 4-2 8M-2 8l-5 1m5-1l-1 5m1-5l4 3"/></g></g></g></g>
+  <g transform="translate(10 -6)"><g data-part="arm" data-index="1" data-side="r" data-pivot-x="10" data-pivot-y="-6"><path d="M0 0Q4 1 6 6"/><g transform="translate(6 6)"><g class="cr-joint" data-joint="elbow"><path d="M0 0Q3 4 2 8M2 8l5 1m-5-1l1 5m-1-5l-4 3"/></g></g></g></g>
 </svg>`,
   legs: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-  <g transform="translate(-7 -8)"><g data-part="leg" data-index="0" data-side="l" data-pivot-x="-7" data-pivot-y="-8"><path d="M0 0Q-3 10-1 21l-7 1"/></g></g>
-  <g transform="translate(7 -8)"><g data-part="leg" data-index="1" data-side="r" data-pivot-x="7" data-pivot-y="-8"><path d="M0 0Q3 10 1 21l7 1"/></g></g>
+  <g transform="translate(-7 -8)"><g data-part="leg" data-index="0" data-side="l" data-pivot-x="-7" data-pivot-y="-8"><path d="M0 0Q-2 4-1.5 10"/><g transform="translate(-1.5 10)"><g class="cr-joint" data-joint="knee"><path d="M0 0Q0 5 .5 11l-7 1"/></g></g></g></g>
+  <g transform="translate(7 -8)"><g data-part="leg" data-index="1" data-side="r" data-pivot-x="7" data-pivot-y="-8"><path d="M0 0Q2 4 1.5 10"/><g transform="translate(1.5 10)"><g class="cr-joint" data-joint="knee"><path d="M0 0Q0 5-.5 11l7 1"/></g></g></g></g>
 </svg>`,
 
   blob: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="currentColor">

@@ -1,11 +1,14 @@
+import { residentStory } from './stories.js';
+import { storyState, remember } from '../engine/stories.js';
 import { moodOf, isAsleep, MOOD_WORD } from '../engine/tick.js';
-import { careFor, CARE_GAIN } from '../engine/care.js';
+import { careFor, previewCare } from '../engine/care.js';
+import { playWait } from '../engine/play.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 import { checkAchievements, grudgeStageFor, GRUDGE_STAGE_AT } from '../engine/achievements.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS, PROP_ART } from '../content/props.js';
 import { renderPetSprite, moodMotionClasses } from '../art/sprite.js';
-import { reactTo } from '../art/animator.js';
+import { reactTo, previewMotion } from '../art/animator.js';
 import { renderAll, escapeHtml } from './render.js';
 import { toast } from './toast.js';
 import { buildDecor } from './decorUI.js';
@@ -89,16 +92,21 @@ export function openCard(state, id, keepScroll) {
     '<div class="card-meta">Moved in ' + dateStr + (slot >= 0 ? ' · slot ' + slotName(slot) : '') + (asleep ? ' · asleep right now' : '') + '</div>' +
     '<span class="mood-tag mood-' + mood + '">' + MOOD_WORD[mood] + '</span></div>' +
     '<button class="btn btn-ghost btn-sm" id="cardClose">Close</button></div>';
-  html += '<div class="card-hero"><div class="card-portrait" id="cardPortraitHost"></div><div class="needs">' +
+  html += '<div class="card-hero"><div class="portrait-stage"><div class="card-portrait" id="cardPortraitHost"></div><button class="btn btn-ghost btn-sm motion-preview" id="petMotion" aria-label="See this resident move">See it move</button></div><div class="needs">' +
     needRow(pet, 'food', 'Fed') + needRow(pet, 'fuss', 'Fussed') + needRow(pet, 'clean', 'Clean') +
     '<div class="bondline"><b>Trust ' + pet.bond + ' of 25.</b> ' + grievanceLine(pet) +
     (stage ? ' Grudge stage ' + stage + ' of ' + GRUDGE_STAGE_AT.length + '.' : '') +
     '<span class="bond-bar"><span style="width:' + (pet.bond / 25 * 100) + '%"></span></span></div>' +
     '</div></div>';
-  html += '<div class="care-row">' +
-    '<button class="btn care-food" data-care="food">Feed it<small>fed +' + CARE_GAIN.food + '</small></button>' +
-    '<button class="btn care-fuss" data-care="fuss">Fuss over it<small>fussed +' + CARE_GAIN.fuss + '</small></button>' +
-    '<button class="btn care-clean" data-care="clean">Clean it up<small>clean +' + CARE_GAIN.clean + '</small></button></div>';
+  const careNames = { food: 'Feed it', fuss: 'Fuss over it', clean: 'Clean it up' };
+  html += '<div class="care-row">' + Object.keys(careNames).map(need => {
+    const preview = previewCare(pet, need);
+    return '<button class="btn care-' + need + '" data-care="' + need + '"' + (preview.gain <= .01 ? ' disabled' : '') + '>' + careNames[need] + '<small>+' + Math.round(preview.gain) + ' · ' + (preview.useful ? 'trust care' : asleep ? 'sleepy' : 'top-up') + '</small></button>';
+  }).join('') + '</div>';
+  html += '<p class="care-explainer">' + (pet.bond >= 25 ? 'Trust is full. The attachment is permanent.' : (3 - (pet.cared % 3)) + ' useful care actions until +1 trust. Care below 72 counts.') + (asleep ? ' Asleep: care has half effect.' : '') + '</p>';
+  html += '<button class="play-invite" id="playPet"><span><b>Play together</b><small>' + (playWait(pet) || asleep ? 'A quick memory game · practice available' : 'Handshake or dust patrol · needs + trust') + '</small></span><span aria-hidden="true">↗</span></button>';
+  html += positionControl(state, pet.id);
+  html += residentStory(state, pet);
   html += '<p class="bio">' + escapeHtml(pet.bio) + '</p>';
   html += '<div class="card-section-title">On file</div>' + onFile(state, pet);
   html += '<div class="card-section-title">Particulars</div>';
@@ -111,7 +119,7 @@ export function openCard(state, id, keepScroll) {
     html += '<li><strong>' + escapeHtml(t.name) + '</strong><em>' + escapeHtml(t.blurb) + '</em></li>';
   });
   html += '</ul>';
-  html += positionControl(state, pet.id);
+
   html += '<div class="card-actions"><button class="btn btn-danger btn-sm" id="rehomeBtn">Rehome</button>' +
     '<button class="btn btn-sm" id="renameBtn">Rename</button></div>';
 
@@ -129,6 +137,8 @@ export function openCard(state, id, keepScroll) {
   if (focused?.care) cardSheet.querySelector('[data-care="' + focused.care + '"]')?.focus({ preventScroll: true });
   else if (focused?.id) document.getElementById(focused.id)?.focus({ preventScroll: true });
 
+  document.getElementById('petMotion').disabled = asleep;
+  document.getElementById('petMotion').addEventListener('click', () => previewMotion(document.getElementById('cardPortraitHost')));
   wirePosition(state, pet.id);
   if (pendingPosition != null) document.getElementById('residentPosition').value = pendingPosition;
   cardSheet.querySelectorAll('[data-care]').forEach(btn => {
@@ -151,8 +161,14 @@ export function openCard(state, id, keepScroll) {
       // has to play on. reactTo finds the pet again by id, on the shelf and in
       // the portrait at once.
       reactTo(pet.id, need);
+      const feedback = document.createElement('span');
+      feedback.className = 'care-float ' + need;
+      feedback.textContent = '+' + Math.round(result.gain) + (result.bondGained ? ' · +1 trust' : '');
+      document.getElementById('cardPortraitHost')?.appendChild(feedback);
+      setTimeout(() => feedback.remove(), 1400);
     });
   });
+  document.getElementById('playPet')?.addEventListener('click', () => { closeCard(); window.dispatchEvent(new CustomEvent('shelflife:play', { detail: { petId: pet.id } })); });
   document.getElementById('cardClose').addEventListener('click', closeCard);
   // Rename and Rehome deliberately do NOT use the native prompt()/confirm():
   // Chrome silently suppresses them after "Prevent this page from creating
@@ -201,6 +217,10 @@ export function openCard(state, id, keepScroll) {
       }, 4000);
       return;
     }
+    const memories = storyState(state);
+    memories.residents.unshift({ id: pet.id, name: pet.name, at: Date.now(), names: pet.names || [], grudges: pet.grudges, bond: pet.bond });
+    memories.residents = memories.residents.slice(0, 36);
+    remember(state, 'An empty space', pet.name + ' was rehomed. Its ' + pet.grudges + ' grievances remain in the museum.', Date.now(), 'resident');
     state.pets = state.pets.filter(x => x.id !== pet.id);
     state.slots = state.slots.map(s => s === pet.id ? null : s);
     state.pets.forEach(o => { o.needs.fuss = clamp(o.needs.fuss - 9, 0, 100); });

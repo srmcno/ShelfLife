@@ -1,3 +1,4 @@
+import { artPersonality } from './personality.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS } from '../content/props.js';
 import { DECAY } from '../content/copy.js';
@@ -49,6 +50,7 @@ export function decayRate(pet, need, state) {
   });
   const i = state.slots.indexOf(pet.id);
   if (i >= 0) {
+    if (need === 'fuss' && neighborPets(state, i).some(p => artPersonality(p).halo)) r *= .9;
     const nbrs = neighborProps(state, i);
     nbrs.forEach(pr => {
       const a = (PROPS[pr.kind] && PROPS[pr.kind].aura) || {};

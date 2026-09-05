@@ -44,7 +44,7 @@ export function initDialogs() {
   panels.forEach(panel => {
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'true');
-    panel.setAttribute('aria-label', ({ studioVeil: 'Make a pet', cardVeil: 'Resident details', decorVeil: 'Decorate', voiceVeil: 'Narrator voice', incidentsVeil: 'Incidents', helpVeil: 'A small field guide', restoreVeil: 'Restore a shelf', moreTray: 'Everything else' })[panel.id]);
+    panel.setAttribute('aria-label', ({ museumVeil: 'Memory museum', playVeil: 'Play together', studioVeil: 'Make a pet', cardVeil: 'Resident details', decorVeil: 'Decorate', voiceVeil: 'Narrator voice', incidentsVeil: 'Incidents', helpVeil: 'A small field guide', restoreVeil: 'Restore a shelf', moreTray: 'Everything else' })[panel.id]);
     new MutationObserver(sync).observe(panel, { attributes: true, attributeFilter: ['class'] });
   });
   document.addEventListener('keydown', e => {

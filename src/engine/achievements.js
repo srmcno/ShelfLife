@@ -1,3 +1,4 @@
+import { remember } from './stories.js';
 import { FEUDS, FEUD_LINES, ESCALATION_LINES, TRUCE_LINES } from '../content/feuds.js';
 import { GRUDGE_LINES, STREAK_LINES } from '../content/copy.js';
 import { MATURE_GRUDGE_EXTRA } from '../content/mature.js';
@@ -12,7 +13,7 @@ export function activeFeuds(state) {
     const a = petById(state, id);
     if (!a) return;
     neighborPets(state, i).forEach(b => {
-      if (b.id <= a.id) return;
+      if (b.id <= a.id || state.feudArcs?.[feudPairKey(a.id, b.id)]?.truce) return;
       for (const [x, y] of FEUDS) {
         if ((a.traits.includes(x) && b.traits.includes(y)) || (a.traits.includes(y) && b.traits.includes(x))) {
           found.push([a, b]);
@@ -43,6 +44,7 @@ export function stepFeudArc(state, pairKey, a, b) {
   const roll = Math.random();
   if (arc.level >= 2 && roll < 0.12) {
     arc.truce = true;
+    remember(state, 'An uneasy peace', a.name + ' and ' + b.name + ' have agreed to stop. Neither has agreed to explain.', Date.now(), 'relationship');
     addNote(state, pick(TRUCE_LINES).replace(/\{a\}/g, a.name).replace(/\{b\}/g, b.name), 'observed', 'note');
     return 'truce';
   }
@@ -70,6 +72,7 @@ export function checkGrudgeEscalation(state, pet) {
   const newStage = grudgeStageFor(pet.grudges);
   if (newStage <= pet.grudgeStage) return false;
   pet.grudgeStage = newStage;
+  remember(state, 'A thicker file', pet.name + ' has reached grievance stage ' + newStage + ' with ' + pet.grudges + ' complaints on record.', Date.now(), 'grudge');
   // Mature mode has to be mixed in HERE too, not just in engine/loop.js. It was
   // missed originally, so all 18 MATURE_GRUDGE_EXTRA lines were unreachable: the
   // mode quietly upgraded complaints, happy notes and events but left grudge

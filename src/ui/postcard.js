@@ -2,7 +2,8 @@
 // player can send the residents somewhere they cannot follow. Everything is
 // drawn from the same sources the shelf uses (the creature renderer, the
 // stamp art, the prop art), so the picture matches what is on screen.
-import { state } from '../state.js';
+import { storyState } from '../engine/stories.js';
+import { state, save } from '../state.js';
 import { PROPS, PROP_ART } from '../content/props.js';
 import { POSTCARD_CAPTIONS } from '../content/postcards.js';
 import { MOOD_BUBBLES } from '../content/bubbles.js';
@@ -30,6 +31,7 @@ const hint = document.getElementById('postcardHint');
 let lastBlob = null;
 let lastUrl = null;
 let lastCaption = '';
+let lastThumb = null;
 let rendering = false;
 
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -294,12 +296,19 @@ export async function renderPostcard(caption) {
 async function present() {
   if (rendering) return;
   rendering = true;
+  lastThumb = null; lastBlob = null;
+  saveBtn.disabled = true;
+  document.getElementById('postcardKeep').disabled = true;
   lastCaption = pick(POSTCARD_CAPTIONS);
   meta.textContent = lastCaption;
   frame.classList.add('busy');
   img.removeAttribute('src');
   try {
     const canvas = await renderPostcard(lastCaption);
+    const thumbnail = document.createElement('canvas');
+    thumbnail.width = 324; thumbnail.height = 405;
+    thumbnail.getContext('2d').drawImage(canvas, 0, 0, 324, 405);
+    lastThumb = thumbnail.toDataURL('image/jpeg', .72);
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
     if (lastUrl) URL.revokeObjectURL(lastUrl);
     lastBlob = blob;
@@ -310,6 +319,8 @@ async function present() {
   } finally {
     frame.classList.remove('busy');
     rendering = false;
+    saveBtn.disabled = !lastBlob;
+    document.getElementById('postcardKeep').disabled = !lastThumb;
   }
 }
 
@@ -346,6 +357,13 @@ export function initPostcard() {
   if (!veil) return;
   document.getElementById('snapBtn')?.addEventListener('click', openPostcard);
   document.getElementById('postcardBtn')?.addEventListener('click', openPostcard);
+  document.getElementById('postcardKeep').addEventListener('click', () => {
+    if (!lastThumb) return;
+    const album = storyState(state).postcards;
+    if (!album.some(p => p.image === lastThumb)) album.unshift({ image: lastThumb, caption: lastCaption, at: Date.now() });
+    state.stories.postcards = album.slice(0, 6);
+    save(); toast('Kept in the museum. The residents dispute the likeness.');
+  });
   closeBtn.addEventListener('click', closePostcard);
   veil.addEventListener('click', e => { if (e.target === veil) closePostcard(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && veil.classList.contains('open')) closePostcard(); });
