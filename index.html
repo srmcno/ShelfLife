@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#33203D">
+<title>Shelf Life — small creatures, long memories</title>
+<meta name="description" content="Grow or draw peculiar little pets. Feed them, rearrange their shelf, and read the complaints. A free, offline-friendly creature game.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#cabinet">Skip to the shelf</a>
+<noscript><p class="storage-warn">Shelf Life needs JavaScript to wake the creatures. Please enable it and reload.</p></noscript>
+<div id="wall"></div>
+
+<header class="masthead">
+  <div class="wordmark">
+    <h1>Shelf<span class="tail">&nbsp;Life</span></h1>
+    <p class="tagline">Small creatures with needs, opinions, and long memories. They cannot die. They have looked into it.</p>
+  </div>
+  <!-- Two groups, one toolbar. On a desktop both wrappers are `display:contents`
+       so this lays out exactly as the flat row always did. On a phone the first
+       group becomes the fixed thumb-reach dock and the second becomes a bottom
+       sheet — the same DOM nodes and ids either way, relocated by CSS only. -->
+  <div class="toolbar">
+    <div class="tb-primary">
+      <button class="btn btn-primary" id="newPetBtn">Make a pet</button>
+      <button class="btn" id="roundsBtn">Do the rounds</button>
+      <button class="btn" id="checkBtn">Check the shelf</button>
+      <button class="btn tb-more" id="moreBtn" aria-expanded="false" aria-controls="moreTray">More</button>
+    </div>
+    <div class="tb-rest" id="moreTray">
+      <div class="tray-head">
+        <h2>Everything else</h2>
+        <button class="btn btn-ghost btn-sm" id="moreClose">Close</button>
+      </div>
+      <button class="btn" id="helpBtn">How to play</button>
+      <button class="btn" id="decorBtn">Decorate</button>
+      <button class="btn btn-ghost btn-sm" id="incidentsBtn">Incidents</button>
+      <button class="btn btn-ghost btn-sm" id="muteBtn" aria-pressed="false">Sound</button>
+      <button class="btn btn-ghost btn-sm" id="narratorBtn" aria-pressed="true">Narrator</button>
+      <button class="btn btn-ghost btn-sm" id="voiceBtn" title="Choose who reads the notes out loud.">Voice</button>
+      <button class="btn btn-ghost btn-sm" id="matureBtn" aria-pressed="false" title="Adds swearing and cruder jokes to notes. Off by default.">Mature: Off</button>
+      <button class="btn btn-ghost btn-sm" id="exportBtn">Back up</button>
+      <button class="btn btn-ghost btn-sm" id="importBtn">Restore</button>
+      <button class="btn btn-ghost btn-sm" id="recoveryBtn" hidden>Download recovery file</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+  </div>
+</header>
+<div class="tray-scrim" id="trayScrim" hidden></div>
+
+<div class="storage-warn" id="recoveryWarn" hidden>Your previous save could not be read. Its original contents are kept in a recovery file under More. You can also restore a backup.</div>
+<div class="storage-warn" id="storageWarn" hidden>
+  Your latest changes are only in memory: browser storage is unavailable or full. Use More → Back up before closing this page.
+</div>
+
+<!-- .stage exists so the phone can put the tally UNDER the shelf (CSS `order`)
+     without moving either node in the DOM. The creatures are the product; nine
+     figures are a footnote, and on a phone a footnote does not go first. -->
+<div class="game-layout"><div class="residents-column">
+<div class="cabinet-heading"><div><span class="eyebrow">A cabinet of poor decisions</span><h2>Your residents</h2></div><button class="btn btn-ghost btn-sm" id="quickHelp">Field guide</button></div>
+<div class="stage">
+  <div class="status" id="statusBar"></div>
+  <!-- The frame is furniture: .cabinet-wrap draws the two wooden side stiles, and
+       #cabinet is the run of shelves standing between them. Nothing here scrolls
+       sideways at any width — the six columns always fit the screen. -->
+  <div class="cabinet-wrap" id="cabinetWrap">
+    <main class="cabinet" id="cabinet" tabindex="-1" aria-label="Your creature shelf"></main>
+  </div>
+</div>
+
+<div class="shelf-progress" id="shelfProgress"></div>
+</div><aside class="scheme-card" id="schemeCard" tabindex="-1" aria-label="Small conspiracies"></aside></div>
+<div class="play-area">
+  <div class="correspondence">
+    <div class="notes-head"><h2>The complaint department</h2><button class="btn btn-ghost btn-sm" id="clearNotes">Clear notes</button></div>
+    <section class="notes" id="notes" aria-label="Notes from your residents"></section>
+    <button class="btn btn-ghost btn-sm" id="notesMore" hidden>Read older notes</button>
+  </div>
+</div>
+<div class="voice-hint" id="voiceHint" hidden>
+  <p id="voiceHintText"></p>
+  <div class="voice-hint-actions"><button class="btn btn-ghost btn-sm" id="voiceHintOpen">Choose a voice</button><button class="btn btn-ghost btn-sm" id="voiceHintDismiss">No thanks</button></div>
+</div>
+<footer>They get hungry, bored and filthy in real time, whether the game is open or not. Drag a pet to move it. Tap a pet to take care of it. Who they stand next to matters.<span class="phone-only"> On a phone, press and hold a creature to pick it up, then drag it where you want it.</span></footer>
+
+<div class="veil" id="studioVeil">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h2>Make a pet</h2>
+        <div class="card-meta" id="studioBlurb">Grow one, or draw one. Name it. It takes over from there.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="studioClose">Close</button>
+    </div>
+
+    <div class="studio-tabs" role="tablist" aria-label="How to make a pet">
+      <button class="studio-tab" id="tabGenerate" role="tab" aria-selected="true" aria-controls="genPanel">
+        <span class="studio-tab-name">Grow one</span>
+        <span class="studio-tab-sub">Roll a body and nudge it</span>
+      </button>
+      <button class="studio-tab" id="tabDraw" role="tab" aria-selected="false" aria-controls="drawPanel">
+        <span class="studio-tab-name">Draw one</span>
+        <span class="studio-tab-sub">Freehand, by your own hand</span>
+      </button>
+    </div>
+
+    <div class="studio-panel" id="genPanel" role="tabpanel" aria-labelledby="tabGenerate">
+      <div class="gen-stage"><div class="gen-mount" id="genMount"></div></div>
+      <p class="gen-desc" id="genDesc"></p>
+      <div class="tool-block">
+        <button class="btn btn-primary btn-wide" id="genSurprise">Surprise me</button>
+      </div>
+      <div class="tool-block">
+        <div class="tool-label">Change one thing</div>
+        <div class="chiprow" id="genParts"></div>
+      </div>
+      <div class="tool-block">
+        <div class="tool-label">Colour</div>
+        <div class="swatches gen-palette" id="genPalette"></div>
+      </div>
+    </div>
+
+    <div class="studio-panel" id="drawPanel" role="tabpanel" aria-labelledby="tabDraw" hidden>
+      <div class="drawing-workbench">
+        <div class="drawing-paper"><div class="pad-wrap"><canvas id="pad" aria-label="Draw your creature using a pointer"></canvas><div id="stampLayer" class="stamp-preview-layer"></div></div><p class="drawing-caption">Your ink. Their problem.</p></div>
+        <div class="drawing-live"><span class="tool-label">Alive on arrival</span><div id="drawPreview" class="draw-preview"></div><button class="btn btn-ghost btn-sm" id="drawWiggle">Try a wiggle</button><p class="hint">Eyes blink. Arms reach. Legs sneak. Give your doodle something to work with.</p></div>
+      </div>
+      <div class="tool-block">
+        <div class="tool-label">Color</div>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <div class="tool-block">
+        <div class="tool-label">Brush</div>
+        <div class="chiprow" id="sizes">
+          <button class="chip" data-size="6">Thin</button>
+          <button class="chip" data-size="16" aria-pressed="true">Medium</button>
+          <button class="chip" data-size="34">Fat</button>
+          <button class="chip" id="eraserChip" data-erase="1">Eraser</button>
+        </div>
+      </div>
+      <div class="tool-block">
+        <div class="tool-label">Stamps: pick one, then tap the canvas</div>
+        <div class="chiprow" id="stamps"></div>
+      </div>
+      <div class="tool-block">
+        <div class="chiprow">
+          <button class="chip" id="undoBtn">Undo</button>
+          <button class="chip" id="clearBtn">Start over</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-block">
+      <label class="tool-label" for="petName">Name</label>
+      <input type="text" id="petName" maxlength="22" placeholder="Bartholomew, Gnash, Miss Teeth...">
+      <div class="hint">Leave it blank and one gets picked for you. You may regret that.</div>
+    </div>
+    <div class="studio-actions">
+      <button class="btn btn-ghost" id="cancelPet">Cancel</button>
+      <button class="btn btn-primary" id="savePet">Move it in</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="decorVeil">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div><h2>Decorate</h2><div class="card-meta">The room, the shelf, and the things that live on it.</div></div>
+      <button class="btn btn-ghost btn-sm" id="decorClose">Close</button>
+    </div>
+    <div class="decor-section"><h3>Room</h3><div class="opt-row" id="roomOpts"></div></div>
+    <div class="decor-section"><h3>Wall</h3><div class="opt-row" id="wallOpts"></div></div>
+    <div class="decor-section"><h3>Shelf</h3><div class="opt-row" id="woodOpts"></div></div>
+    <div class="decor-section"><h3>Trim</h3><div class="opt-row" id="accentOpts"></div></div>
+    <div class="decor-section"><h3>Things for the shelf</h3><div class="prop-tray" id="propTray"></div></div>
+  </div>
+</div>
+
+<div class="veil" id="voiceVeil">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div><h2>The narrator</h2><div class="card-meta">Whoever reads the notes out loud. They did not audition.</div></div>
+      <button class="btn btn-ghost btn-sm" id="voiceClose">Close</button>
+    </div>
+    <div class="tool-block">
+      <div class="tool-label">Voice</div>
+      <select id="voiceSelect" class="voice-select" aria-label="Narrator voice"></select>
+      <div class="hint" id="voiceMeta"></div>
+    </div>
+    <div class="tool-block">
+      <div class="chiprow">
+        <button class="btn btn-sm" id="voicePreview">Hear it</button>
+        <button class="btn btn-ghost btn-sm" id="voiceAuto">Pick for me</button>
+      </div>
+    </div>
+    <div class="voice-upgrade" id="voiceUpgrade" hidden></div>
+  </div>
+</div>
+
+<div class="veil" id="helpVeil"><div class="sheet field-guide">
+  <div class="sheet-head"><div><h2>A small field guide</h2><p class="card-meta">Nobody here came with instructions. These are our best guesses.</p></div><button class="btn btn-ghost btn-sm" id="helpClose">Close</button></div>
+  <ol class="guide-steps">
+    <li><h3>Make someone peculiar.</h3><p>Grow a creature and change its parts, or draw one and give it moving stamps. Name it. Move it in.</p></li>
+    <li><h3>Keep it fed, fussed, and clean.</h3><p>Tap a creature to care for it. Helping when a need is below 72 earns care credit; every three credits adds a trust point. Rounds help everyone a little, but build no trust.</p></li>
+    <li><h3>Read the room.</h3><p>Check the shelf for notes, arguments, and small developments. Individual care builds trust, unlocking drawing tools and furniture in Decorate. The progress strip shows your next discovery.</p></li>
+    <li><h3>Reconsider the neighbours.</h3><p>Drag to rearrange. On a phone, hold first. Or open a resident’s card and choose a shelf position. Furniture affects the creatures beside it; some neighbours feud.</p></li>
+    <li><h3>Encourage a terrible idea.</h3><p>Small conspiracies offer choices with visible costs and rewards. Help, redirect, or leave the residents to their own devices. They act after three minutes; another plan follows five minutes later. Nobody dies. Sometimes the raisin does.</p></li>
+  </ol>
+  <p class="guide-footnote">Needs change while you are away, up to two days at a time. They cannot die. You can take a break. Your shelf saves on this device; More → Back up keeps a copy you can restore elsewhere.</p>
+  <p class="guide-footnote">Keyboard: Tab through controls, Enter or Space to activate, Escape to close a sheet. The game respects your device’s reduced-motion preference.</p>
+</div></div>
+<div class="veil" id="restoreVeil"><div class="sheet">
+  <div class="sheet-head"><h2>Replace this shelf?</h2></div>
+  <p id="restoreSummary"></p><p class="hint">Keep a backup of your current residents if you might want them back.</p>
+  <div class="studio-actions"><button class="btn btn-ghost" id="restoreCancel">Cancel</button><button class="btn" id="restoreBackup">Back up current shelf</button><button class="btn btn-primary" id="restoreConfirm">Replace shelf</button></div>
+</div></div>
+<div class="veil" id="cardVeil"><div class="sheet" id="cardSheet"></div></div>
+<div class="veil" id="incidentsVeil"><div class="sheet" id="incidentsSheet"></div></div>
+<button class="to-shelf" id="toShelfBtn" hidden>Back to the shelf</button>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="src/main.js"></script>
+<script type="module" src="src/ui/mobileNav.js"></script>
+</body>
+</html>
