@@ -1,5 +1,7 @@
 # Shelf Life
 
+**[Play the tester build](https://srmcno.github.io/ShelfLife/)** · **[Report a bug or leave feedback](https://github.com/srmcno/ShelfLife/issues/new/choose)**
+
 Small creatures with needs, opinions, and long memories. They cannot die. They have looked into it.
 
 A dark-comedy tamagotchi that runs entirely in the browser. You make little monsters, they live on a
@@ -12,6 +14,13 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 ---
 
 ## Running it
+
+For testers, open the link above. No installation or account is needed. Progress is saved in
+that browser on that device. Use **More → Back up** before clearing browser data or moving to
+another browser. The public site starts its own shelf; it does not inherit a localhost save.
+Narration uses each tester's available browser voices, so the accent and quality can vary.
+
+### Local development and the optional Mac app
 
 On this Mac, open **Shelf Life** in your user Applications folder. The launcher starts a
 server available only on this computer and opens the game in your default browser at
@@ -39,6 +48,18 @@ python3 -m http.server 8000
 
 Any static host works. Because there is no build step, deploying is just copying the directory —
 GitHub Pages, Netlify, S3, whatever.
+
+### GitHub Pages publishing
+
+Push to `main` to run the game and desktop tests, package the static assets, and publish the tester
+site through GitHub Actions. Pages must use **GitHub Actions** as its publishing source. The
+`Publish tester game` workflow deploys only `dist/`, produced by `python3 scripts/build_site.py`.
+Source, tests, documentation, and the optional Mac installer stay in this repository. The deployed
+site excludes Python tools, tests, git metadata, and development notes. Each release gets a unique
+offline cache version. `release.json` identifies the deployed commit.
+
+The public version has no voice backend and does not yet include prerecorded narration. Daniel
+(Enhanced) is a feature of the optional local Mac launcher, not a voice distributed by Pages.
 
 ### Installing it as an app
 

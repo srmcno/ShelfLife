@@ -1,0 +1,26 @@
+name: Tester feedback
+description: Report a bug, confusing interaction, or joke that fell flat.
+title: "[Feedback] "
+body:
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened?
+      description: Tell us what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How can we reproduce it?
+      placeholder: "1. Open the game…"
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: "iPhone / Safari, Windows / Chrome, Mac / Firefox…"
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: A screenshot or the exact note text can help.

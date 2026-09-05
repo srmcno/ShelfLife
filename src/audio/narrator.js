@@ -405,6 +405,13 @@ export function voiceQualityHint() {
     /mac/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent);
   if (!v) return null;
   if (ENHANCED.test(v.name)) return null;
+  if (typeof window !== 'undefined' && window.location.hostname !== '127.0.0.1') {
+    return {
+      id: 'browser-voices',
+      short: 'Narration uses the voices available in your browser.',
+      detail: 'British voices and their quality vary by device. Try the available voices above, or switch the narrator off and enjoy the notes on paper.'
+    };
+  }
   if (/^daniel\b/i.test(v.name)) {
     return {
       id: 'daniel-enhanced',
