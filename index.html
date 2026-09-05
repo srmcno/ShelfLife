@@ -4,16 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#33203D">
-<title>Shelf Life</title>
+<title>Shelf Life — small creatures, long memories</title>
+<meta name="description" content="Grow or draw peculiar little pets. Feed them, rearrange their shelf, and read the complaints. A free, offline-friendly creature game.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Karla:ital,wght@0,400;0,600;0,700;1,400&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<a class="skip-link" href="#cabinet">Skip to the shelf</a>
+<noscript><p class="storage-warn">Shelf Life needs JavaScript to wake the creatures. Please enable it and reload.</p></noscript>
 <div id="wall"></div>
 
 <header class="masthead">
@@ -37,6 +38,7 @@
         <h2>Everything else</h2>
         <button class="btn btn-ghost btn-sm" id="moreClose">Close</button>
       </div>
+      <button class="btn" id="helpBtn">How to play</button>
       <button class="btn" id="decorBtn">Decorate</button>
       <button class="btn btn-ghost btn-sm" id="incidentsBtn">Incidents</button>
       <button class="btn btn-ghost btn-sm" id="muteBtn" aria-pressed="false">Sound</button>
@@ -45,45 +47,46 @@
       <button class="btn btn-ghost btn-sm" id="matureBtn" aria-pressed="false" title="Adds swearing and cruder jokes to notes. Off by default.">Mature: Off</button>
       <button class="btn btn-ghost btn-sm" id="exportBtn">Back up</button>
       <button class="btn btn-ghost btn-sm" id="importBtn">Restore</button>
+      <button class="btn btn-ghost btn-sm" id="recoveryBtn" hidden>Download recovery file</button>
       <input type="file" id="importFile" accept="application/json" hidden>
     </div>
   </div>
 </header>
 <div class="tray-scrim" id="trayScrim" hidden></div>
 
+<div class="storage-warn" id="recoveryWarn" hidden>Your previous save could not be read. Its original contents are kept in a recovery file under More. You can also restore a backup.</div>
 <div class="storage-warn" id="storageWarn" hidden>
-  Saving is off in this preview window. Download the file or open the hosted link and your shelf will stick around.
+  Your latest changes are only in memory: browser storage is unavailable or full. Use More → Back up before closing this page.
 </div>
 
 <!-- .stage exists so the phone can put the tally UNDER the shelf (CSS `order`)
      without moving either node in the DOM. The creatures are the product; nine
      figures are a footnote, and on a phone a footnote does not go first. -->
+<div class="game-layout"><div class="residents-column">
+<div class="cabinet-heading"><div><span class="eyebrow">A cabinet of poor decisions</span><h2>Your residents</h2></div><button class="btn btn-ghost btn-sm" id="quickHelp">Field guide</button></div>
 <div class="stage">
   <div class="status" id="statusBar"></div>
   <!-- The frame is furniture: .cabinet-wrap draws the two wooden side stiles, and
        #cabinet is the run of shelves standing between them. Nothing here scrolls
        sideways at any width — the six columns always fit the screen. -->
   <div class="cabinet-wrap" id="cabinetWrap">
-    <main class="cabinet" id="cabinet"></main>
+    <main class="cabinet" id="cabinet" tabindex="-1" aria-label="Your creature shelf"></main>
   </div>
 </div>
 
-<!-- A one-time narrator nudge. It sits BELOW the shelf on purpose: it is a
-     footnote, and on a phone it used to push the creatures off the first screen. -->
+<div class="shelf-progress" id="shelfProgress"></div>
+</div><aside class="scheme-card" id="schemeCard" tabindex="-1" aria-label="Small conspiracies"></aside></div>
+<div class="play-area">
+  <div class="correspondence">
+    <div class="notes-head"><h2>The complaint department</h2><button class="btn btn-ghost btn-sm" id="clearNotes">Clear notes</button></div>
+    <section class="notes" id="notes" aria-label="Notes from your residents"></section>
+    <button class="btn btn-ghost btn-sm" id="notesMore" hidden>Read older notes</button>
+  </div>
+</div>
 <div class="voice-hint" id="voiceHint" hidden>
   <p id="voiceHintText"></p>
-  <div class="voice-hint-actions">
-    <button class="btn btn-ghost btn-sm" id="voiceHintOpen">Show me</button>
-    <button class="btn btn-ghost btn-sm" id="voiceHintDismiss">No thanks</button>
-  </div>
+  <div class="voice-hint-actions"><button class="btn btn-ghost btn-sm" id="voiceHintOpen">Choose a voice</button><button class="btn btn-ghost btn-sm" id="voiceHintDismiss">No thanks</button></div>
 </div>
-
-<div class="notes-head">
-  <h2>What they left you</h2>
-  <button class="btn btn-ghost btn-sm" id="clearNotes">Clear notes</button>
-</div>
-<section class="notes" id="notes"></section>
-
 <footer>They get hungry, bored and filthy in real time, whether the game is open or not. Drag a pet to move it. Tap a pet to take care of it. Who they stand next to matters.<span class="phone-only"> On a phone, press and hold a creature to pick it up, then drag it where you want it.</span></footer>
 
 <div class="veil" id="studioVeil">
@@ -124,7 +127,10 @@
     </div>
 
     <div class="studio-panel" id="drawPanel" role="tabpanel" aria-labelledby="tabDraw" hidden>
-      <div class="pad-wrap"><canvas id="pad"></canvas><div id="stampLayer" class="stamp-preview-layer"></div></div>
+      <div class="drawing-workbench">
+        <div class="drawing-paper"><div class="pad-wrap"><canvas id="pad" aria-label="Draw your creature using a pointer"></canvas><div id="stampLayer" class="stamp-preview-layer"></div></div><p class="drawing-caption">Your ink. Their problem.</p></div>
+        <div class="drawing-live"><span class="tool-label">Alive on arrival</span><div id="drawPreview" class="draw-preview"></div><button class="btn btn-ghost btn-sm" id="drawWiggle">Try a wiggle</button><p class="hint">Eyes blink. Arms reach. Legs sneak. Give your doodle something to work with.</p></div>
+      </div>
       <div class="tool-block">
         <div class="tool-label">Color</div>
         <div class="swatches" id="swatches"></div>
@@ -151,7 +157,7 @@
     </div>
 
     <div class="tool-block">
-      <div class="tool-label">Name</div>
+      <label class="tool-label" for="petName">Name</label>
       <input type="text" id="petName" maxlength="22" placeholder="Bartholomew, Gnash, Miss Teeth...">
       <div class="hint">Leave it blank and one gets picked for you. You may regret that.</div>
     </div>
@@ -197,6 +203,23 @@
   </div>
 </div>
 
+<div class="veil" id="helpVeil"><div class="sheet field-guide">
+  <div class="sheet-head"><div><h2>A small field guide</h2><p class="card-meta">Nobody here came with instructions. These are our best guesses.</p></div><button class="btn btn-ghost btn-sm" id="helpClose">Close</button></div>
+  <ol class="guide-steps">
+    <li><h3>Make someone peculiar.</h3><p>Grow a creature and change its parts, or draw one and give it moving stamps. Name it. Move it in.</p></li>
+    <li><h3>Keep it fed, fussed, and clean.</h3><p>Tap a creature to care for it. Helping when a need is below 72 earns care credit; every three credits adds a trust point. Rounds help everyone a little, but build no trust.</p></li>
+    <li><h3>Read the room.</h3><p>Check the shelf for notes, arguments, and small developments. Individual care builds trust, unlocking drawing tools and furniture in Decorate. The progress strip shows your next discovery.</p></li>
+    <li><h3>Reconsider the neighbours.</h3><p>Drag to rearrange. On a phone, hold first. Or open a resident’s card and choose a shelf position. Furniture affects the creatures beside it; some neighbours feud.</p></li>
+    <li><h3>Encourage a terrible idea.</h3><p>Small conspiracies offer choices with visible costs and rewards. Help, redirect, or leave the residents to their own devices. They act after three minutes; another plan follows five minutes later. Nobody dies. Sometimes the raisin does.</p></li>
+  </ol>
+  <p class="guide-footnote">Needs change while you are away, up to two days at a time. They cannot die. You can take a break. Your shelf saves on this device; More → Back up keeps a copy you can restore elsewhere.</p>
+  <p class="guide-footnote">Keyboard: Tab through controls, Enter or Space to activate, Escape to close a sheet. The game respects your device’s reduced-motion preference.</p>
+</div></div>
+<div class="veil" id="restoreVeil"><div class="sheet">
+  <div class="sheet-head"><h2>Replace this shelf?</h2></div>
+  <p id="restoreSummary"></p><p class="hint">Keep a backup of your current residents if you might want them back.</p>
+  <div class="studio-actions"><button class="btn btn-ghost" id="restoreCancel">Cancel</button><button class="btn" id="restoreBackup">Back up current shelf</button><button class="btn btn-primary" id="restoreConfirm">Replace shelf</button></div>
+</div></div>
 <div class="veil" id="cardVeil"><div class="sheet" id="cardSheet"></div></div>
 <div class="veil" id="incidentsVeil"><div class="sheet" id="incidentsSheet"></div></div>
 <button class="to-shelf" id="toShelfBtn" hidden>Back to the shelf</button>

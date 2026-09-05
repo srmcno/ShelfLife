@@ -471,7 +471,7 @@ export function initNarratorUI() {
     // Only ever reveal the bar once it actually has copy in it. A stale cached
     // narrator.js against fresh index.html markup once produced a visible hint
     // bar containing nothing but its two buttons.
-    const copy = [up.short, up.detail].filter(Boolean).join(' ').trim();
+    const copy = 'The narrator can sound better. Choose a voice that suits your shelf.';
     if (!copy) return;
     hintText.textContent = copy;
     hint.hidden = false;

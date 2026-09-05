@@ -76,7 +76,7 @@ export function buildDecor(state) {
     card.className = 'prop-card' + (locked ? ' locked' : '');
     const owned = state.props.filter(x => x.kind === kind).length;
     card.innerHTML = PROP_ART[kind] + '<b>' + escapeHtml(def.name) + '</b><small>' +
-      (locked ? 'Needs bond ' + def.at : escapeHtml(def.desc) + (owned ? '<br>On the shelf: ' + owned : '')) + '</small>';
+      (locked ? 'Needs trust ' + def.at : escapeHtml(def.desc) + (owned ? '<br>On the shelf: ' + owned : '')) + '</small>';
     if (locked) card.disabled = true;
     else card.addEventListener('click', () => placeProp(state, kind));
     tray.appendChild(card);

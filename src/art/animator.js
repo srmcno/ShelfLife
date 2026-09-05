@@ -343,6 +343,8 @@ function chooseAct(el, mood) {
     if (a.feud && !feuding) continue;
     if (a.req && !el.classList.contains('sl-can-' + a.req)) continue;
     let w = a.w[mood] || 0;
+    if (mood === 'asleep' && !w) continue;
+    if (mood !== 'asleep' && el.classList.contains('sl-plotting') && ['sneak', 'snatch', 'look'].includes(a.id)) w += 9;
     if (a.t) {
       for (const flag in a.t) if (el.classList.contains('sl-t-' + flag)) w += a.t[flag];
     }
@@ -389,7 +391,7 @@ function maybeBubble(el, id, mood, now) {
   const b = document.createElement('div');
   b.className = 'sl-bubble';
   b.setAttribute('aria-hidden', 'true');
-  b.textContent = shortLine(getPet(id), mood);
+  b.textContent = el.classList.contains('sl-plotting') && mood !== 'asleep' ? pickOne(['act natural.', 'you saw nothing.', 'entirely legal.', 'a minor undertaking.', 'where is the crumb?']) : shortLine(getPet(id), mood);
   slot.appendChild(b);
   setTimeout(() => { b.classList.add('out'); }, BUBBLE_LIFE_MS - 400);
   setTimeout(() => { b.remove(); }, BUBBLE_LIFE_MS);
@@ -489,6 +491,21 @@ export function reactTo(id, need, delay) {
       }
       if (!r) return;
       playAnim(el, r.name, r.ms, r.ease, r.dir);
+      holdClass(el, 'sl-care-' + need, r.ms);
+      if (need !== 'rounds') {
+        el.querySelectorAll('.care-motes').forEach(node => node.remove());
+        const motes = document.createElement('span');
+        motes.className = 'care-motes care-motes-' + need;
+        motes.setAttribute('aria-hidden', 'true');
+        for (let j = 0; j < 5; j++) {
+          const mote = document.createElement('i');
+          mote.style.setProperty('--mote-x', ((j - 2) * 19) + 'px');
+          mote.style.setProperty('--mote-delay', (j * 55) + 'ms');
+          motes.appendChild(mote);
+        }
+        el.appendChild(motes);
+        setTimeout(() => motes.remove(), 1300);
+      }
       const c = clocks.get(id);
       if (c) c.act = Date.now() + r.ms + rand(600, 1800);
     }

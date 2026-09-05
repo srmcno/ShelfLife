@@ -29,6 +29,8 @@
 
 // Stamp kinds that imply a limb, and what they imply.
 const STAMP_ANATOMY = {
+  arms:      { arms: 2 },
+  legs:      { legs: 2 },
   tentacles: { legs: 6, gait: 'ooze' },   // it doesn't walk, it pours
   wing:      { wings: 1 },
   tail:      { tails: 1 },
@@ -91,6 +93,7 @@ export function resolveMotion(pet) {
       if (!imp) return;
       source = 'stamps';
       if (imp.legs) parts.legs = Math.max(parts.legs, imp.legs);
+      if (imp.arms) parts.arms += imp.arms;
       if (imp.wings) parts.wings += imp.wings;
       if (imp.tails) parts.tails += imp.tails;
       if (imp.gait) declared = imp.gait;

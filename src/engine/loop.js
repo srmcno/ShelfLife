@@ -4,6 +4,7 @@ import { checkUnlocks } from './unlocks.js';
 import { runBehavior } from './behavior.js';
 import { pickDialogue, dialogueText } from './dialogue.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
+import { DRAWN_NOTES } from '../content/care.js';
 import { PROPS } from '../content/props.js';
 import {
   COMPLAINTS, NEIGHBOR_COMPLAINTS, HAPPY_NOTES, EVENTS, LIST_NOTES, SILENCE_NOTES,
@@ -216,7 +217,14 @@ function drawFrom(byForm, state, subs) {
   // The fallback is the candidate set itself: a block of prose must never widen
   // into 'doc' and pick up the typed-document treatment in ui/render.js.
   const form = chooseForm(state, cands, Math.random, cands);
-  const opt = pick(byForm[form] || byForm[cands[0]]);
+  const options = byForm[form] || byForm[cands[0]];
+  // Care responses and other off-board draws can exhaust the shared shuffle
+  // memory before forty notes have passed. Check the actual, filled-in board
+  // too, while keeping the chosen prose form and its rotation rules intact.
+  const visible = new Set((state.notes || []).map(note => note.text));
+  const fresh = options.map(opt => ({ ...opt, pool: opt.pool.filter(line => !visible.has(fill(line, subs))) }))
+    .filter(opt => opt.pool.length);
+  const opt = pick(fresh.length ? fresh : options);
   return { text: fill(pick(opt.pool), subs), kind: opt.kind, form: byForm[form] ? form : cands[0] };
 }
 
@@ -268,6 +276,7 @@ export function petLine(state, pet, ctx = {}) {
     offer(byForm, 'line', pool, subs, kind);
     if (neighbor) offer(byForm, 'react', NEIGHBOR_COMPLAINTS[need], subs, kind);
   } else {
+    if (pet.art && !pet.art.creature && pet.art.body) offer(byForm, 'line', DRAWN_NOTES, subs, kind);
     if (trait.notes) offer(byForm, 'line', trait.notes, subs, kind);
     if (mood === 'content') {
       let happy = HAPPY_NOTES;

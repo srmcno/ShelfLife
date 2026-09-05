@@ -22,6 +22,9 @@ import {
 } from './creatures.js';
 import { renderPetSprite } from './sprite.js';
 import { state } from '../state.js';
+import { drawingBounds, measureStampInk } from './drawing.js';
+import { reactTo } from './animator.js';
+import { toast } from '../ui/toast.js';
 
 // Ported verbatim from ~/Documents/shelf-life.html (lines ~475-480). Studio-only concern:
 // which brush colors are available at the shelf's current total bond.
@@ -98,7 +101,7 @@ export function initStudio({ onSave }) {
 
   // Single linear undo history covering both freehand strokes and stamp placements,
   // oldest-to-newest, matching the original's single-stack single-button UX.
-  //   { type: 'stroke', dataURL }  – canvas snapshot taken *before* the stroke started
+  //   { type: 'stroke', pixels }   – canvas snapshot taken before a stroke
   //   { type: 'stamp' }            – undoing just pops the last placed stamp
   let undoStack = [];
 
@@ -107,6 +110,22 @@ export function initStudio({ onSave }) {
   // live preview DOM nodes in #stampLayer, kept in lockstep so undo can remove the right one.
   let stamps = [];
   let stampEls = [];
+  const drawPreview = document.getElementById('drawPreview');
+  function drawingArt() {
+    return { body: padThumb(), stamps: stamps.map(s => ({ ...s })),
+      bounds: drawingBounds(ctx.getImageData(0, 0, pad.width, pad.height).data, pad.width, pad.height, stamps, measureStampInk(stamps)) };
+  }
+  function previewDrawing() {
+    if (isEmpty() && !stamps.length) {
+      drawPreview.innerHTML = '<span>Your drawing comes to life here.</span>';
+      return;
+    }
+    const sprite = renderPetSprite({ id: 'drawing-preview', art: drawingArt() });
+    sprite.classList.add('sl-mood-content');
+    drawPreview.replaceChildren(sprite);
+  }
+  document.getElementById('drawWiggle').addEventListener('click', () => reactTo('drawing-preview', 'fuss'));
+
 
   let drawing = false;
   let lastPt = null;
@@ -203,9 +222,12 @@ export function initStudio({ onSave }) {
     const gen = mode === 'generate';
     tabGenerate.setAttribute('aria-selected', String(gen));
     tabDraw.setAttribute('aria-selected', String(!gen));
+    tabGenerate.tabIndex = gen ? 0 : -1;
+    tabDraw.tabIndex = gen ? -1 : 0;
     genPanel.hidden = !gen;
     drawPanel.hidden = gen;
     studioBlurb.textContent = BLURB[mode];
+    if (!gen) previewDrawing();
   }
 
   tabGenerate.addEventListener('click', () => setMode('generate'));
@@ -238,7 +260,7 @@ export function initStudio({ onSave }) {
   }
 
   function pushStrokeUndo() {
-    try { undoStack.push({ type: 'stroke', dataURL: pad.toDataURL() }); } catch (e) {}
+    undoStack.push({ type: 'stroke', pixels: ctx.getImageData(0, 0, pad.width, pad.height) });
     if (undoStack.length > 12) undoStack.shift();
   }
 
@@ -266,6 +288,7 @@ export function initStudio({ onSave }) {
     const el = renderStampEl(s);
     stampEls.push(el);
     stampLayer.appendChild(el);
+    previewDrawing();
   }
 
   pad.addEventListener('pointerdown', e => {
@@ -284,11 +307,13 @@ export function initStudio({ onSave }) {
     strokeTo(lastPt, p);
     lastPt = p;
   });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => pad.addEventListener(ev, () => { drawing = false; lastPt = null; }));
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => pad.addEventListener(ev, () => { if (drawing) { drawing = false; lastPt = null; previewDrawing(); } }));
 
   sizeWrap.addEventListener('click', e => {
     const chip = e.target.closest('.chip');
     if (!chip) return;
+    brush.stamp = null;
+    stampPickerWrap.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
     sizeWrap.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
     chip.setAttribute('aria-pressed', 'true');
     if (chip.dataset.erase) brush.erase = true;
@@ -302,42 +327,40 @@ export function initStudio({ onSave }) {
       stamps.pop();
       const el = stampEls.pop();
       if (el && el.parentNode) el.parentNode.removeChild(el);
+      previewDrawing();
       return;
     }
-    if (!entry.dataURL) {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.clearRect(0, 0, pad.width, pad.height);
-      return;
+    if (entry.stamps) {
+      stamps = entry.stamps;
+      stampEls = stamps.map(renderStampEl);
+      stampLayer.replaceChildren(...stampEls);
     }
-    const img = new Image();
-    img.onload = () => {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.clearRect(0, 0, pad.width, pad.height);
-      ctx.drawImage(img, 0, 0);
-    };
-    img.src = entry.dataURL;
+    ctx.globalCompositeOperation = 'source-over';
+    if (entry.pixels) ctx.putImageData(entry.pixels, 0, 0);
+    previewDrawing();
   });
 
-  // "Start over" clears the freehand canvas only, exactly like the original prototype's
-  // clearBtn — it does not remove already-placed stamps. See report/judgment-call notes.
+  // Clear the entire drawing, with a single undo restoring body and stamps.
   clearBtn.addEventListener('click', () => {
     pushStrokeUndo();
+    undoStack[undoStack.length - 1].stamps = stamps.map(s => ({ ...s }));
+    stamps = [];
+    stampEls = [];
+    stampLayer.replaceChildren();
     ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, pad.width, pad.height);
+    previewDrawing();
   });
 
   function isEmpty() {
     const d = ctx.getImageData(0, 0, pad.width, pad.height).data;
-    for (let i = 3; i < d.length; i += 400) if (d[i] !== 0) return false;
+    for (let i = 3; i < d.length; i += 4) if (d[i] !== 0) return false;
     return true;
   }
 
   function padThumb() {
-    const out = document.createElement('canvas');
-    out.width = 320;
-    out.height = 320;
-    out.getContext('2d').drawImage(pad, 0, 0, 320, 320);
-    return out.toDataURL('image/png');
+    // Keep the original resolution for crisp ink on high-density displays.
+    return pad.toDataURL('image/png');
   }
 
   // `unlockedBond` is accepted for contract-shape parity with the caller (main.js may
@@ -408,6 +431,7 @@ export function initStudio({ onSave }) {
     // pass, and a closed studio should not leave a pet it has to keep animating.
     // open() rolls a fresh one anyway.
     genMount.innerHTML = '';
+    drawPreview.replaceChildren();
   }
 
   function isOpen() {
@@ -424,8 +448,8 @@ export function initStudio({ onSave }) {
       close();
       return;
     }
-    if (isEmpty()) return;
-    const art = { body: padThumb(), stamps: stamps.map(s => ({ ...s })) };
+    if (isEmpty() && !stamps.length) { toast('Draw a body or place a stamp first. It needs something to inhabit.'); return; }
+    const art = drawingArt();
     onSave(art, name);
     close();
   });

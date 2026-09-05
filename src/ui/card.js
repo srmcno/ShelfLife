@@ -4,7 +4,7 @@ import { checkUnlocks } from '../engine/unlocks.js';
 import { checkAchievements, grudgeStageFor, GRUDGE_STAGE_AT } from '../engine/achievements.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS, PROP_ART } from '../content/props.js';
-import { renderPetSprite } from '../art/sprite.js';
+import { renderPetSprite, moodMotionClasses } from '../art/sprite.js';
 import { reactTo } from '../art/animator.js';
 import { renderAll, escapeHtml } from './render.js';
 import { toast } from './toast.js';
@@ -16,6 +16,26 @@ const cardVeil = document.getElementById('cardVeil');
 const cardSheet = document.getElementById('cardSheet');
 
 let openPetId = null;
+
+function positionControl(state, id) {
+  return '<div class="position-control"><label for="residentPosition">Place on shelf</label><select id="residentPosition">' +
+    state.slots.map((occupant, i) => '<option value="' + i + '"' + (occupant === id ? ' selected' : '') + '>' +
+      String.fromCharCode(65 + Math.floor(i / 6)) + ' · ' + (i % 6 + 1) +
+      (occupant && occupant !== id ? ' — swap with ' + escapeHtml((petById(state, occupant) || {}).name || 'furniture') : occupant === id ? ' — here' : ' — empty') + '</option>').join('') +
+    '</select><button class="btn btn-sm" id="moveResident">Move</button></div>';
+}
+function wirePosition(state, id) {
+  document.getElementById('moveResident').addEventListener('click', () => {
+    const from = state.slots.indexOf(id), to = Number(document.getElementById('residentPosition').value);
+    if (from < 0 || from === to) { toast('Already there. It appreciates the certainty.'); return; }
+    [state.slots[from], state.slots[to]] = [state.slots[to], state.slots[from]];
+    save();
+    closeCard();
+    renderAll(state);
+    toast('Moved. The neighbours are reassessing.');
+  });
+}
+
 
 // Thresholds mirror engine/achievements.js's GRUDGE_STAGE_AT (5/12/20) rather
 // than the original prototype's hardcoded 4/10/20, so this stays in sync with
@@ -44,6 +64,8 @@ export function openCard(state, id, keepScroll) {
   const pet = petById(state, id);
   if (!pet) return;
   openPetId = id;
+  const focused = keepScroll && cardSheet.contains(document.activeElement) ? { id: document.activeElement.id, care: document.activeElement.dataset.care } : null;
+  const pendingPosition = keepScroll ? document.getElementById('residentPosition')?.value : null;
   const y = keepScroll ? cardVeil.scrollTop : 0;
   const mood = moodOf(pet);
   const asleep = isAsleep(pet);
@@ -57,7 +79,7 @@ export function openCard(state, id, keepScroll) {
     '<button class="btn btn-ghost btn-sm" id="cardClose">Close</button></div>';
   html += '<div class="card-top"><div class="card-portrait" id="cardPortraitHost"></div><div class="needs">' +
     needRow(pet, 'food', 'Fed') + needRow(pet, 'fuss', 'Fussed') + needRow(pet, 'clean', 'Clean') +
-    '<div class="bondline">Bond ' + pet.bond + ' of 25' +
+    '<div class="bondline">Trust ' + pet.bond + ' of 25' +
     '<br>' + grievanceLine(pet) +
     '<br>Grudge stage ' + stage + ' of ' + GRUDGE_STAGE_AT.length +
     '<span class="bond-bar"><span style="width:' + (pet.bond / 25 * 100) + '%"></span></span></div>' +
@@ -77,6 +99,7 @@ export function openCard(state, id, keepScroll) {
     html += '<li><strong>' + escapeHtml(t.name) + '</strong><em>' + escapeHtml(t.blurb) + '</em></li>';
   });
   html += '</ul>';
+  html += positionControl(state, pet.id);
   html += '<div class="card-actions"><button class="btn btn-danger btn-sm" id="rehomeBtn">Rehome</button>' +
     '<button class="btn btn-sm" id="renameBtn">Rename</button></div>';
 
@@ -84,12 +107,18 @@ export function openCard(state, id, keepScroll) {
   // The portrait is a live animated sprite (a real DOM element), not something
   // that can live inside the innerHTML string above — appended after the fact
   // into the empty host div that string left behind.
-  document.getElementById('cardPortraitHost').appendChild(renderPetSprite(pet));
+  const portrait = renderPetSprite(pet);
+  portrait.classList.add(...moodMotionClasses(pet, { mood, asleep }));
+  document.getElementById('cardPortraitHost').appendChild(portrait);
 
   cardVeil.classList.add('open');
   document.body.style.overflow = 'hidden';
   cardVeil.scrollTop = y;
+  if (focused?.care) cardSheet.querySelector('[data-care="' + focused.care + '"]')?.focus({ preventScroll: true });
+  else if (focused?.id) document.getElementById(focused.id)?.focus({ preventScroll: true });
 
+  wirePosition(state, pet.id);
+  if (pendingPosition != null) document.getElementById('residentPosition').value = pendingPosition;
   cardSheet.querySelectorAll('[data-care]').forEach(btn => {
     btn.addEventListener('click', () => {
       const need = btn.dataset.care;
@@ -182,18 +211,19 @@ export function openCard(state, id, keepScroll) {
 export function openPropCard(state, id) {
   const pr = propById(state, id);
   if (!pr) return;
-  const def = PROPS[pr.kind];
+  const def = PROPS[pr.kind] || { name: 'Unfamiliar furniture', desc: 'This belongs to a newer shelf.', ambient: ['It has not introduced itself.'] };
   openPetId = null;
   cardSheet.innerHTML =
     '<div class="sheet-head"><div><h2>' + escapeHtml(def.name) + '</h2>' +
     '<div class="card-meta">' + escapeHtml(def.desc) + '</div></div>' +
     '<button class="btn btn-ghost btn-sm" id="cardClose">Close</button></div>' +
-    '<div class="card-top"><div class="card-portrait">' + PROP_ART[pr.kind] + '</div><div>' +
+    '<div class="card-top"><div class="card-portrait">' + (PROP_ART[pr.kind] || '') + '</div><div>' +
     '<p class="bio">' + escapeHtml(pick(def.ambient)) + '</p></div></div>' +
-    '<div class="card-actions"><button class="btn btn-danger btn-sm" id="removeProp">Put it away</button></div>';
+    positionControl(state, pr.id) + '<div class="card-actions"><button class="btn btn-danger btn-sm" id="removeProp">Put it away</button></div>';
   cardVeil.classList.add('open');
   document.body.style.overflow = 'hidden';
   document.getElementById('cardClose').addEventListener('click', closeCard);
+  wirePosition(state, pr.id);
   document.getElementById('removeProp').addEventListener('click', () => {
     state.props = state.props.filter(x => x.id !== pr.id);
     state.slots = state.slots.map(x => x === pr.id ? null : x);

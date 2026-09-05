@@ -1229,11 +1229,12 @@ function eyeRig(c, body) {
 export function describeCreature(creature) {
   const c = normalizeCreature(creature);
   const an = c.anatomy;
-  const legs = an.hasLegs ? `${an.legCount} ${LEGS[an.legStyle].name.toLowerCase()} legs` : 'no legs';
-  const arms = an.hasArms ? `${ARMS[an.armStyle].name.toLowerCase()} arms` : 'no arms';
-  return `${PALETTES[c.palette].name} ${BODIES[c.body].name.toLowerCase()} — `
-    + `${EYES[c.parts.eyes].name.toLowerCase()} eyes, ${MOUTHS[c.parts.mouth].name.toLowerCase()}, ${legs}, ${arms}`
-    + `${an.hasWings ? ', winged' : ''}${an.hasTail ? ', tailed' : ''} (${an.gait})`;
+  const detail = an.hasWings ? 'Has wings. Is still expecting to be carried.'
+    : an.hasTentacles ? 'More of it moves than seems necessary.'
+    : an.legCount > 2 ? 'Plenty of legs. Nowhere urgent to be.'
+    : an.hasLegs ? 'Can walk away. Has chosen to stand here and judge.'
+    : 'No legs. Will make that your problem.';
+  return `${PALETTES[c.palette].name} ${BODIES[c.body].name.toLowerCase()}. ${detail}`;
 }
 
 /* =============================================================================

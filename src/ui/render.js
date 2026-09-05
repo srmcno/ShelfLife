@@ -1,3 +1,4 @@
+import { renderScheme } from './schemes.js';
 import { moodOf, isAsleep, hasTrait, MOOD_WORD } from '../engine/tick.js';
 import { activeFeuds, feudingIds } from '../engine/achievements.js';
 import { totalBond } from '../engine/unlocks.js';
@@ -8,11 +9,16 @@ import { PROPS, PROP_ART } from '../content/props.js';
 const cabinet = document.getElementById('cabinet');
 const notesEl = document.getElementById('notes');
 const statusBar = document.getElementById('statusBar');
+let expandedNotes = false;
+let notesState = null;
+document.getElementById('notesMore').addEventListener('click', () => { expandedNotes = !expandedNotes; if (notesState) renderNotes(notesState); });
 
 export function renderAll(state) {
   renderStatus(state);
   renderShelf(state);
   renderNotes(state);
+  renderScheme(state);
+  renderProgress(state);
 }
 
 // Three figures, and a fourth only when something is wrong.
@@ -32,10 +38,11 @@ export function renderStatus(state) {
   state.pets.forEach(p => counts[moodOf(p)]++);
   const feuds = activeFeuds(state).length;
   const unrest = counts.furious + feuds;
+  document.getElementById('roundsBtn').disabled = !state.pets.length;
   statusBar.innerHTML =
     '<span>Day <b>' + days + '</b></span>' +
     '<span>Living here <b>' + state.pets.length + '</b> of ' + state.slots.length + '</span>' +
-    '<span>Bond <b>' + totalBond(state) + '</b></span>' +
+    '<span>Trust <b>' + totalBond(state) + '</b></span>' +
     (unrest ? '<span class="bad">Unrest <b>' + unrest + '</b></span>' : '');
 }
 
@@ -56,12 +63,14 @@ function feudDirectionFor(state, pet, slotIndex) {
 function petEl(state, pet, slotIndex) {
   const mood = moodOf(pet);
   const asleep = isAsleep(pet);
+  const plotting = state.schemes?.active?.petId === pet.id;
   const feuding = feudingIds(state).has(pet.id);
   const feudDirection = feuding ? feudDirectionFor(state, pet, slotIndex) : null;
 
   const btn = document.createElement('button');
   btn.className = 'pet piece' + (feuding ? ' feuding' : '') + (mood === 'furious' ? ' furious' : '') + (asleep ? ' asleep' : '');
   btn.dataset.id = pet.id;
+  if (plotting) btn.classList.add('scheming');
   btn.dataset.kind = 'pet';
   btn.dataset.slot = slotIndex;
   btn.setAttribute('aria-label', 'Take care of ' + pet.name + ', currently ' + MOOD_WORD[mood]);
@@ -72,6 +81,7 @@ function petEl(state, pet, slotIndex) {
   const traits = MOTION_TRAIT_FLAGS.filter(k => hasTrait(pet, k));
   const sprite = renderPetSprite(pet);
   sprite.classList.add(...moodMotionClasses(pet, { mood, asleep, feudDirection, traits }));
+  if (plotting) sprite.classList.add('sl-plotting');
   btn.appendChild(sprite);
 
   const nameplate = document.createElement('span');
@@ -81,6 +91,7 @@ function petEl(state, pet, slotIndex) {
 
   const pips = document.createElement('span');
   pips.className = 'pips';
+  if (plotting && !asleep) pips.innerHTML += '<span class="pip plotting">plotting</span>';
   if (asleep) pips.innerHTML += '<span class="pip zzz">asleep</span>';
   ['food', 'fuss', 'clean'].forEach(k => { if (pet.needs[k] < 42) pips.innerHTML += '<span class="pip ' + k + '"></span>'; });
   btn.appendChild(pips);
@@ -89,7 +100,7 @@ function petEl(state, pet, slotIndex) {
 }
 
 function propEl(pr, slotIndex) {
-  const def = PROPS[pr.kind];
+  const def = PROPS[pr.kind] || { name: 'Unfamiliar furniture' };
   const btn = document.createElement('button');
   btn.className = 'prop piece';
   btn.dataset.id = pr.id;
@@ -101,7 +112,7 @@ function propEl(pr, slotIndex) {
   // an aura one. Everything else about props is unchanged.
   btn.dataset.prop = pr.kind;
   btn.setAttribute('aria-label', def.name);
-  btn.innerHTML = PROP_ART[pr.kind] + '<span class="nameplate">' + escapeHtml(def.name) + '</span>';
+  btn.innerHTML = (PROP_ART[pr.kind] || '') + '<span class="nameplate">' + escapeHtml(def.name) + '</span>';
   return btn;
 }
 
@@ -110,6 +121,7 @@ export function renderShelf(state) {
   // slots is destroyed and recreated somewhere else — it would teleport. Snap
   // the old positions first and hand them to the animator afterwards, which
   // replays the difference as an actual walk across the shelf (FLIP).
+  const focusedId = cabinet.contains(document.activeElement) ? document.activeElement.closest('.piece')?.dataset.id : null;
   const before = captureShelfPositions(cabinet);
   cabinet.innerHTML = '';
   const rows = state.slots.length / 6;
@@ -145,7 +157,11 @@ export function renderShelf(state) {
       slots.innerHTML = '';
       const msg = document.createElement('div');
       msg.className = 'empty-shelf';
-      msg.textContent = 'Nothing lives here yet. Make something.';
+      msg.innerHTML = '<span class="empty-kicker">Vacancy. Eighteen small rooms.</span>' +
+        '<strong>Someone should live here.</strong>' +
+        '<span>Grow a peculiar little creature, or draw your own. They cannot die. They can hold a grudge.</span>' +
+        '<button class="btn btn-primary" type="button">Make your first pet</button>';
+      msg.querySelector('button').addEventListener('click', () => document.getElementById('newPetBtn').click());
       slots.appendChild(msg);
     }
     row.appendChild(slots);
@@ -155,27 +171,49 @@ export function renderShelf(state) {
     cabinet.appendChild(row);
   }
   playShelfMoves(cabinet, before);
+  if (focusedId) Array.from(cabinet.querySelectorAll('.piece')).find(el => el.dataset.id === focusedId)?.focus({ preventScroll: true });
 }
 
 export function renderNotes(state) {
+  notesState = state;
+  const more = document.getElementById('notesMore');
+  more.hidden = state.notes.length <= 6;
+  more.textContent = expandedNotes ? 'Keep the latest six' : 'Read ' + (state.notes.length - 6) + (state.notes.length === 7 ? ' older note' : ' older notes');
+  more.setAttribute('aria-expanded', String(expandedNotes));
   notesEl.innerHTML = '';
+  document.getElementById('clearNotes').disabled = !state.notes.length && document.getElementById('clearNotes').dataset.undo !== 'true';
   if (!state.notes.length) {
     const d = document.createElement('div');
     d.className = 'notes-empty';
-    d.textContent = 'No notes yet. Press "Check the shelf" and see what turns up.';
+    d.textContent = state.pets.length ? 'Check the shelf to see what they have to say. Care for them individually to build trust and unlock new things.' : 'First, a creature. Then, the complaints.';
     notesEl.appendChild(d);
     return;
   }
-  state.notes.forEach(n => {
+  (expandedNotes ? state.notes : state.notes.slice(0, 6)).forEach(n => {
     const d = document.createElement('div');
     // Forms 2/4/6 carry real newlines and rely on .note{white-space:pre-line}.
     // A filled-in document additionally drops the handwriting for a typed face.
     d.className = 'note ' + n.kind + (n.form === 'doc' ? ' note--doc' : '');
     d.innerHTML = escapeHtml(n.text) + '<span class="from">' + escapeHtml(n.from) + '</span>';
+    const time = document.createElement('time');
+    const date = new Date(n.at);
+    if (Number.isFinite(date.getTime())) {
+      time.dateTime = date.toISOString();
+      time.className = 'note-time';
+      time.textContent = date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      d.appendChild(time);
+    }
     notesEl.appendChild(d);
   });
 }
 
 export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderProgress(state) {
+  const host = document.getElementById('shelfProgress');
+  const bond = totalBond(state);
+  const next = Object.values(PROPS).filter(p => p.at > bond).sort((a, b) => a.at - b.at)[0];
+  host.innerHTML = next ? '<div><span class="eyebrow">A little trust goes a long way</span><p><strong>' + escapeHtml(next.name) + '</strong> unlocks at ' + next.at + ' trust <span>· ' + (next.at - bond) + ' to go</span></p></div><meter min="0" max="' + next.at + '" value="' + bond + '" aria-label="Trust toward ' + escapeHtml(next.name) + '"></meter>' : '<div><span class="eyebrow">In far too deep</span><p>Every furnishing unlocked. They trust your judgment. An error, surely.</p></div>';
 }

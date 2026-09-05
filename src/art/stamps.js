@@ -11,18 +11,27 @@ export const CANVAS_SIZE = 640;
 // this same constant or the studio stops being WYSIWYG.
 export const STAMP_SCALE = 5;
 
-export const BASE_STAMPS = ['blob','eyes','bigeye','deadeyes','ears','horns','grin','tail','wing','bow','halo','stitches','spots'];
+export const BASE_STAMPS = ['blob','eyes','bigeye','deadeyes','ears','horns','grin','arms','legs','tail','wing','bow','halo','stitches','spots'];
 export const UNLOCK_STAMPS = [
   { at:20, stamps:['thirdeye','antlers'], label:'a third eye and antlers' },
   { at:45, stamps:['tentacles','crown'], label:'tentacles and a crown' }
 ];
-export const STAMP_LABELS = { blob:'Body', eyes:'Eyes', bigeye:'One eye', deadeyes:'X eyes', ears:'Ears', horns:'Horns', grin:'Teeth', tail:'Tail', wing:'Wing', bow:'Bow', halo:'Halo', stitches:'Stitches', spots:'Spots', thirdeye:'Third eye', antlers:'Antlers', tentacles:'Tentacles', crown:'Crown' };
+export const STAMP_LABELS = { blob:'Body', eyes:'Eyes', bigeye:'One eye', deadeyes:'X eyes', ears:'Ears', horns:'Horns', grin:'Teeth', arms:'Arms', legs:'Legs', tail:'Tail', wing:'Wing', bow:'Bow', halo:'Halo', stitches:'Stitches', spots:'Spots', thirdeye:'Third eye', antlers:'Antlers', tentacles:'Tentacles', crown:'Crown' };
 export const DEFAULT_STAMP_SIZE = 40;
 
 // Each SVG uses fill/stroke=currentColor for the tinted parts and a fixed off-white
 // (#F2E9DC) for eye-whites/teeth, matching the original canvas-drawn stamps. Coordinate
 // space is a fixed -30..30 (60x60) box, same convention as PROP_ART.
 export const STAMP_SVG = {
+  arms: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+  <g transform="translate(-10 -6)"><g data-part="arm" data-index="0" data-side="l" data-pivot-x="-10" data-pivot-y="-6"><path d="M0 0Q-9 4-8 14M-8 14l-5 1m5-1l-1 5m1-5l4 3"/></g></g>
+  <g transform="translate(10 -6)"><g data-part="arm" data-index="1" data-side="r" data-pivot-x="10" data-pivot-y="-6"><path d="M0 0Q9 4 8 14M8 14l5 1m-5-1l1 5m-1-5l-4 3"/></g></g>
+</svg>`,
+  legs: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+  <g transform="translate(-7 -8)"><g data-part="leg" data-index="0" data-side="l" data-pivot-x="-7" data-pivot-y="-8"><path d="M0 0Q-3 10-1 21l-7 1"/></g></g>
+  <g transform="translate(7 -8)"><g data-part="leg" data-index="1" data-side="r" data-pivot-x="7" data-pivot-y="-8"><path d="M0 0Q3 10 1 21l7 1"/></g></g>
+</svg>`,
+
   blob: `<svg viewBox="-30 -30 60 60" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
   <path d="M 0 -19.2 C 24 -18 22.8 19.2 0 20.4 C -22.8 19.2 -24 -18 0 -19.2 Z"/>
 </svg>`,
@@ -121,7 +130,7 @@ export const STAMP_SVG = {
 };
 
 export const STAMP_ANIM_CLASS = {
-  blob:'', eyes:'anim-blink', bigeye:'anim-blink', deadeyes:'anim-blink-slow', thirdeye:'anim-blink-slow',
+  blob:'', arms:'', legs:'', eyes:'anim-blink', bigeye:'anim-blink', deadeyes:'anim-blink-slow', thirdeye:'anim-blink-slow',
   ears:'anim-sway', wing:'anim-sway', tail:'anim-sway', antlers:'anim-sway-slow', tentacles:'anim-undulate',
   horns:'anim-twitch', stitches:'anim-twitch', halo:'anim-halo', crown:'anim-bob', bow:'anim-bob',
   grin:'', spots:''

@@ -1,5 +1,5 @@
 import {
-  state, save, addNote, pick, clamp, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store
+  state, save, addNote, pick, clamp, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store, RECOVERY_KEY, loadFailed
 } from './state.js';
 import { TRAITS, TRAIT_BY_ID } from './content/traits.js';
 import { ORIGINS, HABITS, CLOSERS, FALLBACK_NAMES } from './content/copy.js';
@@ -9,6 +9,9 @@ import { runBehavior, catchUpBehavior } from './engine/behavior.js';
 import { doRounds } from './engine/care.js';
 import { checkAchievements, ACHIEVEMENTS } from './engine/achievements.js';
 import { checkUnlocks, totalBond } from './engine/unlocks.js';
+import { advanceSchemes } from './engine/schemes.js';
+import { initSchemeUI } from './ui/schemes.js';
+import { initDialogs } from './ui/dialogs.js';
 import { initStudio } from './art/studio.js';
 import { initAnimator, reactShelf } from './art/animator.js';
 import { applyDecor, initDecorUI } from './ui/decorUI.js';
@@ -50,6 +53,7 @@ function makeBio(traitIds) {
 
 // ---------- studio (pet creation) ----------
 
+initDialogs();
 const studio = initStudio({
   // `art` arrives in one of the studio's two shapes — `{ creature }` from the
   // Grow tab, `{ body, stamps }` from the Draw tab. normalizePetArt reconciles
@@ -74,12 +78,13 @@ const studio = initStudio({
     state.pets.push(pet);
     state.slots[slot] = pet.id;
     addNote(state, finalName + ' has moved in. ' + TRAIT_BY_ID[traits[0]].blurb + ' ' + pick([
-      'The others have gone quiet.',
-      'Nobody welcomed it.',
-      'Something on the shelf already knows it.',
-      'The temperature dropped a little. Probably a draft.'
+      'It has inspected the edge. It will be staying.',
+      'It brought nothing. It has already lost something.',
+      'It tried to look taller for the introductions.',
+      'It has unpacked. There was a crumb.'
     ]), 'the shelf', 'arrival');
     checkAchievements(state);
+    advanceSchemes(state);
     save();
     renderAll(state);
   }
@@ -111,8 +116,21 @@ document.getElementById('checkBtn').addEventListener('click', () => {
   renderAll(state);
 });
 
+let clearedNotes = null;
 document.getElementById('clearNotes').addEventListener('click', () => {
-  state.notes = [];
+  const button = document.getElementById('clearNotes');
+  if (clearedNotes) {
+    state.notes = [...state.notes, ...clearedNotes].slice(0, 40);
+    clearedNotes = null;
+    button.dataset.undo = '';
+    button.textContent = 'Clear notes';
+    toast('Notes restored. They kept copies.');
+  } else {
+    clearedNotes = state.notes.slice();
+    state.notes = [];
+    button.dataset.undo = 'true';
+    button.textContent = 'Undo clear';
+  }
   save();
   renderNotes(state);
 });
@@ -127,22 +145,58 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 });
 
+let pendingRestore = null;
+const restoreVeil = document.getElementById('restoreVeil');
+function cancelRestore() { pendingRestore = null; restoreVeil.classList.remove('open'); }
+document.getElementById('restoreCancel').addEventListener('click', cancelRestore);
+restoreVeil.addEventListener('click', e => { if (e.target === restoreVeil) cancelRestore(); });
+document.getElementById('restoreBackup').addEventListener('click', () => document.getElementById('exportBtn').click());
+document.getElementById('restoreConfirm').addEventListener('click', () => {
+  if (!pendingRestore) return;
+  stopSpeech();
+  closeCard();
+  clearedNotes = null;
+  document.getElementById('clearNotes').dataset.undo = '';
+  document.getElementById('clearNotes').textContent = 'Clear notes';
+  Object.keys(state).forEach(k => delete state[k]);
+  Object.assign(state, pendingRestore);
+  tick(state);
+  catchUpBehavior(state);
+  advanceSchemes(state);
+  applyDecor(state);
+  save();
+  renderAll(state);
+  syncAudioButtons();
+  cancelRestore();
+  toast('Shelf restored. Everyone has an opinion about the journey.');
+});
+const recoveryBtn = document.getElementById('recoveryBtn');
+recoveryBtn.hidden = !Store.get(RECOVERY_KEY);
+document.getElementById('recoveryWarn').hidden = !loadFailed;
+recoveryBtn.addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([Store.get(RECOVERY_KEY)], { type: 'application/json' }));
+  a.download = 'shelf-life-recovery.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
 const importFile = document.getElementById('importFile');
 document.getElementById('importBtn').addEventListener('click', () => importFile.click());
 importFile.addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
+  if (file.size > 12 * 1024 * 1024) { toast('That backup is too large. Choose a Shelf Life JSON backup under 12 MB.'); e.target.value = ''; return; }
   const fr = new FileReader();
+  fr.onerror = () => { toast('That file could not be read. Try choosing it again.'); e.target.value = ''; };
   fr.onload = () => {
     try {
       const normalized = normalizeState(JSON.parse(fr.result));
       if (!normalized) throw new Error('bad save file');
-      Object.keys(state).forEach(k => delete state[k]);
-      Object.assign(state, normalized);
-      applyDecor(state);
-      save();
-      renderAll(state);
-      toast('Shelf restored.');
+      pendingRestore = normalized;
+      document.getElementById('restoreSummary').textContent =
+        'This backup contains ' + normalized.pets.length + ' pets and ' + normalized.props.length +
+        ' pieces of furniture. It will replace the ' + state.pets.length + ' pets on your current shelf.';
+      document.getElementById('restoreVeil').classList.add('open');
     } catch (err) {
       toast('That file did not load.');
     }
@@ -219,6 +273,7 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 
 // ---------- wire the remaining self-contained widgets ----------
 
+initSchemeUI(state, () => renderAll(state));
 initDecorUI(state);
 initDrag(state);
 // One shared director for every pet on the shelf. getPet lets it read a pet's
@@ -232,6 +287,8 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   closeCard();
   studio.close();
+  document.getElementById('helpVeil').classList.remove('open');
+  document.getElementById('restoreVeil').classList.remove('open');
   closeIncidents();
   document.getElementById('decorVeil').classList.remove('open');
   document.getElementById('voiceVeil').classList.remove('open');
@@ -240,13 +297,22 @@ document.addEventListener('keydown', e => {
 
 // ---------- boot ----------
 
-if (!Store.persistent) document.getElementById('storageWarn').hidden = false;
+function syncStorageWarning() { document.getElementById('storageWarn').hidden = Store.persistent; }
+window.addEventListener('shelflife:storage', syncStorageWarning);
+syncStorageWarning();
+const helpVeil = document.getElementById('helpVeil');
+document.getElementById('quickHelp').addEventListener('click', () => helpVeil.classList.add('open'));
+document.getElementById('helpBtn').addEventListener('click', () => helpVeil.classList.add('open'));
+document.getElementById('helpClose').addEventListener('click', () => helpVeil.classList.remove('open'));
+helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.classList.remove('open'); });
 
 (function boot() {
   applyDecor(state);
   const away = (Date.now() - state.lastTick) / HOUR;
   tick(state);
-  if (catchUpBehavior(state)) save();   // life went on while you were away
+  catchUpBehavior(state);
+  advanceSchemes(state);
+  save();   // life went on while you were away
   renderAll(state);
   if (state.pets.length && away > 6) {
     const worst = state.pets.slice().sort((a, b) =>
@@ -262,15 +328,25 @@ if (!Store.persistent) document.getElementById('storageWarn').hidden = false;
 
 setInterval(() => {
   if (tick(state)) {
+    advanceSchemes(state);
     runBehavior(state);                 // self-rate-limited to PASS_INTERVAL_MS
     save();
-    renderStatus(state);
-    renderShelf(state);
-    renderNotes(state);
+    renderAll(state);
     const openId = getOpenPetId();
-    if (openId) openCard(state, openId, true);
+    if (openId && !document.getElementById('renameField') && !document.querySelector('#rehomeBtn[data-armed="1"]')) openCard(state, openId, true);
   }
 }, 30000);
+
+// Catch up immediately after waking a sleeping phone or returning to the tab.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { save(); stopSpeech(); return; }
+  tick(state);
+  catchUpBehavior(state);
+  advanceSchemes(state);
+  save();
+  renderAll(state);
+});
+window.addEventListener('pagehide', () => save());
 
 // ---------- service worker ----------
 // Without this the manifest still makes the game "installable", but there is no

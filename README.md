@@ -7,11 +7,26 @@ shelf, and they get hungry, bored and filthy in real time whether the game is op
 stand next to matters — neighbours feud. So does how you treat them: they keep score, and the notes
 they leave you are the actual point of the game.
 
-No build step, no dependencies, no backend. Plain ES modules and one stylesheet.
+No build step, no runtime dependencies, no backend. Fonts and their licenses are included locally for consistent offline rendering. Plain ES modules and one stylesheet.
 
 ---
 
 ## Running it
+
+On this Mac, open **Shelf Life** in your user Applications folder. The launcher starts a
+server available only on this computer and opens the game in your default browser at
+`http://127.0.0.1:8766/`. Saves belong to the browser you play in; use **More → Back up**
+and **Restore** to move a shelf between browsers. The in-app preview uses the same address.
+
+To install or refresh the Mac application from this checkout:
+
+```bash
+python3 scripts/install_macos.py
+```
+
+The application includes its own copy of the game and uses the Python installation available
+when it was installed. No terminal needs to remain open while playing. After a restart,
+the local server starts again the next time you open Shelf Life.
 
 It must be served over `http(s)` — ES modules and the service worker do not work from `file://`, so
 double-clicking `index.html` will not work.
@@ -37,13 +52,15 @@ never saw updates.
 
 ## Playing
 
-- **Make a pet** — the studio. Generate a creature from designed parts, or draw one freehand.
+- **Make a pet** — grow a creature from designed parts, or draw one freehand. The drawing studio has a live animated preview, full-resolution ink, and independently animated arm and leg stamps. Transparent margins are fitted automatically, including on older drawings.
 - **Check the shelf** — advances the world and produces notes. This is where the writing lives.
 - **Do the rounds** — top everyone up at once. Efficient. They notice it was the rounds.
 - **Tap a pet** — its card: needs, bond, grievances on file, traits, and the care buttons.
-- **Drag a pet** — rearrange the shelf. Adjacency drives feuds, so this is a real decision.
+- **Move a resident** — drag it, or use the position selector in its card. On phones, hold before dragging. Adjacency drives feuds and furniture effects.
 - **Decorate** — six room themes, wall patterns, shelf woods, trim colours, and furniture that has
   actual mechanical effects on the pets standing next to it.
+- **Small conspiracies** — twelve rotating plans with two choices and an unsupervised outcome. Choices visibly trade needs for trust. Residents act on their own after three minutes; the next plan arrives five minutes after resolution. A return from offline resolves at most one outstanding plan.
+- **Trust** — individual care and supervised schemes unlock furniture and drawing tools. The strip below the cabinet shows the next furnishing; trust is stored as `bond` in the save for compatibility.
 - **Incidents** — the achievements log.
 - **Mature** — off by default. Turns on cruder, sweary variants of the writing.
 - **Narrator** — reads notes aloud. See the note on voices below.
@@ -62,19 +79,16 @@ css/style.css
 src/
   main.js             boot + all wiring
   state.js            save/load/migration; the only file touching localStorage
-  content/            traits, copy, feuds, props, decor, dialogue, mature-mode overlay
-  engine/             tick, care, unlocks, achievements, loop, behavior, dialogue
-  art/                stamps, creatures, sprite, animator, anatomy, studio
+  content/            traits, copy, care voices, conspiracies, feuds, props, decor, dialogue, mature-mode overlay
+  engine/             tick, care, schemes, unlocks, achievements, loop, behavior, dialogue
+  art/                stamps, creatures, sprite, animator, anatomy, drawing bounds, studio
   audio/              sound (Web Audio SFX), narrator (SpeechSynthesis)
-  ui/                 render, card, decorUI, drag, toast
+  ui/                 render, card, schemes, dialogs, decorUI, drag, toast
 test/                 node:test suites
 docs/                 design docs, comedy direction, implementation plan
 ```
 
-Imports point one way only: `state` → `content` → `engine` → `art`/`audio` → `ui` → `main`. Nothing
-imports back up the stack, which is what let a dozen parts of this be built in parallel without
-tangling. Every engine function takes `state` as an explicit first argument rather than reaching for a
-global, which is what makes them testable with throwaway fixture states.
+Gameplay engines receive `state` explicitly and can be tested with throwaway fixture shelves. Static content is kept separate from logic. The state loader uses the furniture registry to validate restores; the behaviour engine shares the drawing anatomy contract with the animator.
 
 Content is fully separated from logic: adding fifty traits never touches animation code.
 
@@ -123,7 +137,7 @@ preview it.
 ## Saves
 
 Everything lives in `localStorage` under `shelflife.v4`. **Back up** downloads a JSON file; **Restore**
-loads one. Saves from older versions are migrated forward on load, so upgrading never loses a shelf.
+previews a replacement before loading one. Damaged or duplicate slot assignments are repaired; unusable backups are rejected. Storage failures show a visible warning while retaining the latest changes in memory. An unreadable local save is preserved as a downloadable recovery file before a fresh shelf can overwrite it. Saves from older versions are migrated forward on load, so upgrading never loses a shelf.
 
 Pet art is stored as data in the save, so a shelf of eighteen creatures is meaningfully sized — vector
 creatures are compact, hand-drawn ones less so.
@@ -143,3 +157,17 @@ and a kill-list of failure modes. Its central rule, if you only keep one:
 Mature mode is opt-in, off by default, and adds profanity for comedic emphasis in the same deadpan
 register. It is crude in-fiction, aimed at the player and at other pets. It contains no slurs and no
 sexual content.
+
+## Release checks
+
+The automated suite includes save corruption and storage quota recovery, drawing bounds and framing,
+hand-drawn limb capabilities, scheme outcomes and cooldowns, offline cache completeness, and cache
+isolation. GitHub Actions runs it on pushes and pull requests using Node 22.
+
+Before publishing a changed release, bump `CACHE_VERSION` in `service-worker.js` and check that
+`SHELL` includes every production module and asset. The tests verify the module list. Serve the
+repository root over HTTPS for installation; localhost works for development.
+
+Keyboard controls: Tab to move between controls; Enter or Space to activate; Escape to dismiss a
+sheet. Sheets trap focus and return it to the opener. Motion follows the operating system's
+reduced-motion preference. Clear notes has an undo until the page reloads.

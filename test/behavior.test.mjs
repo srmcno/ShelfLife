@@ -566,6 +566,14 @@ test('mischiefPhase does something anatomy-appropriate and never nothing', () =>
 
 /* ---------------- the pass ---------------- */
 
+test('repeated lurking never reposts an observation still on the board', () => {
+  const s = shelf([makePet('quiet')]);
+  for (let i = 0; i < 50; i++) mischiefPhase(s, NOW + i * 3600000);
+  const texts = s.notes.map(note => note.text);
+  assert.ok(texts.length > 0);
+  assert.equal(new Set(texts).size, texts.length);
+});
+
 test('runBehavior refuses to run again inside its own interval unless forced', () => {
   const s = shelf([makePet('a')]);
   assert.ok(runBehavior(s, NOW));

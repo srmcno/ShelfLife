@@ -28,6 +28,13 @@ const EDGE_MAX = 16;      // px per frame at the very edge
 
 export function initDrag(state) {
   const cabinet = document.getElementById('cabinet');
+  cabinet.addEventListener('click', e => {
+    if (e.detail !== 0) return;
+    const piece = e.target.closest('.piece');
+    if (!piece) return;
+    if (piece.dataset.kind === 'pet') openCard(state, piece.dataset.id);
+    else openPropCard(state, piece.dataset.id);
+  });
   let drag = null;
   let raf = 0, vx = 0, vy = 0;
 
@@ -103,7 +110,7 @@ export function initDrag(state) {
 
   cabinet.addEventListener('pointerdown', e => {
     const piece = e.target.closest('.piece');
-    if (!piece || drag) return;
+    if (!piece || drag || e.button !== 0) return;
     const d = {
       id: piece.dataset.id, kind: piece.dataset.kind,
       el: piece, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY,

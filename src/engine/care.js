@@ -1,3 +1,4 @@
+import { TRAIT_CARE } from '../content/care.js';
 import { tick, isAsleep } from './tick.js';
 import { ASLEEP_LINES, OVERFED, CARE_LINES } from '../content/copy.js';
 import { clamp, pick, addNote, recordCare } from '../state.js';
@@ -16,7 +17,8 @@ export function careFor(state, pet, need, now = Date.now()) {
     gain = Math.round(gain * 0.25);
     line = pick(OVERFED[need]);
   } else {
-    line = pick(CARE_LINES[need]);
+    const specific = (pet.traits || []).flatMap(t => TRAIT_CARE[t]?.[need] || []);
+    line = pick(specific.length && Math.random() < .5 ? specific : CARE_LINES[need]);
   }
   pet.needs[need] = clamp(before + gain, 0, 100);
   // The only choke point where the game learns who you went to, in what order,

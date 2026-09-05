@@ -1,3 +1,4 @@
+import { drawingBounds, drawingFrame, measureStampInk } from './drawing.js';
 import { STAMP_SVG, STAMP_ANIM_CLASS, CANVAS_SIZE, STAMP_SCALE } from './stamps.js';
 import { renderCreatureSVG, normalizeCreature, BODIES, BASELINE, VIEW_MIN, VIEW_SIZE } from './creatures.js';
 
@@ -131,12 +132,38 @@ export function renderPetSprite(pet) {
     return wrap;
   }
 
+  wrap.classList.add('sl-handdrawn');
+  const drawing = box('sprite-drawing');
+  figure.appendChild(drawing);
+  function fit(bounds) {
+    const frame = drawingFrame(bounds);
+    if (!frame) return;
+    drawing.style.width = (frame.scale * 100) + '%';
+    drawing.style.height = (frame.scale * 100) + '%';
+    drawing.style.left = (frame.left * 100) + '%';
+    drawing.style.top = (frame.top * 100) + '%';
+  }
+  fit(pet.art.bounds);
   const img = document.createElement('img');
   img.className = 'sprite-body';
-  img.src = pet.art.body;
+  // Old saves have no bounds. Measure their local raster once and retain the
+  // result on the art object; the next ordinary save persists this migration.
+  img.onload = () => {
+    if (pet.art.bounds) return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      const bounds = drawingBounds(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, pet.art.stamps, measureStampInk(pet.art.stamps));
+      if (bounds) { pet.art.bounds = bounds; fit(bounds); }
+    } catch { /* A legacy external image can remain at its original framing. */ }
+  };
+  if (pet.art.body) img.src = pet.art.body;
+  else fit(pet.art.bounds || drawingBounds(null, 0, 0, pet.art.stamps, measureStampInk(pet.art.stamps)));
   img.alt = '';
   img.draggable = false;
-  figure.appendChild(img);
+  if (pet.art.body) drawing.appendChild(img);
 
   (pet.art.stamps || []).forEach((stamp, i) => {
     const layer = box('sprite-stamp');
@@ -163,7 +190,7 @@ export function renderPetSprite(pet) {
     art.style.setProperty('--sl-sj', lerp(0.82, 1.28, hash01(id + ':' + i, 71)).toFixed(3));
     art.innerHTML = STAMP_SVG[stamp.kind] || '';
     layer.appendChild(art);
-    figure.appendChild(layer);
+    drawing.appendChild(layer);
   });
 
   act.appendChild(figure);

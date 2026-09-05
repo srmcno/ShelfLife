@@ -1,14 +1,28 @@
+import { PROPS } from './content/props.js';
 export const Store = (function () {
-  let mem = {}, ok = true;
+  const mem = Object.create(null);
+  let ok = true;
   try { localStorage.setItem('__sl_test', '1'); localStorage.removeItem('__sl_test'); } catch (e) { ok = false; }
   return {
-    persistent: ok,
-    get(k) { try { return ok ? localStorage.getItem(k) : (k in mem ? mem[k] : null); } catch (e) { return k in mem ? mem[k] : null; } },
-    set(k, v) { try { if (ok) localStorage.setItem(k, v); else mem[k] = v; } catch (e) { mem[k] = v; } }
+    get persistent() { return ok; },
+    get(k) {
+      if (k in mem) return mem[k];
+      try { return localStorage.getItem(k); } catch { return null; }
+    },
+    set(k, v) {
+      mem[k] = v;
+      try { localStorage.setItem(k, v); ok = true; }
+      catch { ok = false; }
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('shelflife:storage'));
+      return ok;
+    }
   };
 })();
 
 export const SAVE_KEY = 'shelflife.v4';
+export const RECOVERY_KEY = SAVE_KEY + '.recovery';
+export let loadFailed = false;
+let recoveryRequired = false;
 export const SLOT_COUNT = 18;
 export const ROW_WIDTH = 6;
 export const HOUR = 3600000;
@@ -154,6 +168,8 @@ export function normalizePetArt(art) {
     stamps: Array.isArray(a.stamps) ? a.stamps : []
   };
   if (a.creature && typeof a.creature === 'object') out.creature = a.creature;
+  if (a.anatomy && typeof a.anatomy === 'object' && !Array.isArray(a.anatomy)) out.anatomy = { ...a.anatomy };
+  if (a.bounds && ['x', 'y', 'width', 'height'].every(k => Number.isFinite(a.bounds[k]))) out.bounds = { ...a.bounds };
   return out;
 }
 
@@ -182,7 +198,33 @@ export function migratePet(rawPet) {
 // migration/defaulting logic. Returns null if `raw` isn't a usable save shape.
 export function normalizeState(raw) {
   if (!raw || !Array.isArray(raw.pets)) return null;
-  const s = raw;
+  // Work on a copy: a failed restore must never partially mutate the live shelf.
+  let s;
+  try { s = JSON.parse(JSON.stringify(raw)); } catch { return null; }
+  const record = value => value && typeof value === 'object' && !Array.isArray(value);
+  const finite = (value, fallback, lo = 0, hi = Number.MAX_SAFE_INTEGER) =>
+    Number.isFinite(value) ? clamp(value, lo, hi) : fallback;
+  const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(id) &&
+    !['__proto__', 'constructor', 'prototype'].includes(id);
+  if (s.pets.some(p => !record(p) || !validId(p.id))) return null;
+  s.props = Array.isArray(s.props) ? s.props : [];
+  if (s.props.some(p => !record(p) || !validId(p.id) || typeof p.kind !== 'string' || !Object.hasOwn(PROPS, p.kind))) return null;
+  // Reject malformed history records before any gameplay can consume them.
+  for (const key of ['gone', 'visits']) {
+    if (Array.isArray(s[key]) && s[key].some(item => !record(item))) return null;
+  }
+  for (const key of ['feudArcs', 'roster']) {
+    if (record(s[key]) && Object.values(s[key]).some(item => !record(item))) return null;
+  }
+  const ids = [...s.pets, ...s.props].map(p => p.id);
+  if (ids.length > SLOT_COUNT || new Set(ids).size !== ids.length) return null;
+  const now = Date.now();
+  s.seq = Math.floor(finite(s.seq, ids.length + 1, 1));
+  s.lastTick = finite(s.lastTick, now, 1, now);
+  s.started = finite(s.started, now, 1, now);
+  s.notes = (Array.isArray(s.notes) ? s.notes : []).filter(n => record(n) && typeof n.text === 'string')
+    .slice(0, 40).map(n => ({ ...n, text: n.text.slice(0, 10000), from: typeof n.from === 'string' ? n.from : 'the shelf',
+      kind: typeof n.kind === 'string' && /^[a-z-]+$/.test(n.kind) ? n.kind : 'note', at: finite(n.at, now) }));
   s.v = 4;
   s.notes = Array.isArray(s.notes) ? s.notes : [];
   s.seq = s.seq || (s.pets.length + 1);
@@ -195,16 +237,21 @@ export function normalizeState(raw) {
   s.feudArcs = s.feudArcs && typeof s.feudArcs === 'object' ? s.feudArcs : {};
   s.streak = s.streak && typeof s.streak === 'object' ? Object.assign(defaultStreak(), s.streak) : defaultStreak();
   s.settings = s.settings && typeof s.settings === 'object' ? Object.assign(defaultSettings(), s.settings) : defaultSettings();
-  if (!Array.isArray(s.slots) || s.slots.length !== SLOT_COUNT) {
-    const slots = new Array(SLOT_COUNT).fill(null);
-    s.pets.forEach((p, i) => { if (i < SLOT_COUNT) slots[i] = p.id; });
-    s.slots = slots;
-  }
+  // Keep valid positions, remove stale/duplicate occupants, then seat missing ones.
+  const seated = new Set();
+  const oldSlots = Array.isArray(s.slots) ? s.slots : [];
+  s.slots = Array.from({ length: SLOT_COUNT }, (_, i) => {
+    const id = oldSlots[i];
+    if (!ids.includes(id) || seated.has(id)) return null;
+    seated.add(id);
+    return id;
+  });
+  ids.filter(id => !seated.has(id)).forEach(id => { s.slots[s.slots.indexOf(null)] = id; });
   // Comedy-direction state (v4.1). Every field is additive and defaulted here, so a
   // save written before any of this existed loads with empty histories rather than
   // undefined reads in the note templates.
-  s.gone = Array.isArray(s.gone) ? s.gone : [];
-  s.visits = Array.isArray(s.visits) ? s.visits : [];
+  s.gone = Array.isArray(s.gone) ? s.gone.filter(g => typeof g.name === 'string' && Number.isFinite(g.at)) : [];
+  s.visits = Array.isArray(s.visits) ? s.visits.filter(v => Number.isFinite(v.at)).slice(-20) : [];
   s.ledger = s.ledger && typeof s.ledger === 'object' ? Object.assign(defaultLedger(), s.ledger) : defaultLedger();
   if (!s.ledger.struck || typeof s.ledger.struck !== 'object') s.ledger.struck = {};
   s.roster = s.roster && typeof s.roster === 'object' ? s.roster : {};
@@ -214,8 +261,25 @@ export function normalizeState(raw) {
   s.lastGoneNote = typeof s.lastGoneNote === 'number' ? s.lastGoneNote : 0;
   s.notes.forEach(n => { if (n && FORMS.indexOf(n.form) < 0) n.form = 'line'; });
 
+  for (const key of ['muted', 'narratorOn', 'matureMode']) {
+    if (typeof s.settings[key] !== 'boolean') s.settings[key] = defaultSettings()[key];
+  }
+  s.streak.count = Math.floor(finite(s.streak.count, 0));
+  s.streak.lastCheckin = finite(s.streak.lastCheckin, 0);
   s.pets = s.pets.map(migratePet);
   s.pets.forEach(p => {
+    p.name = typeof p.name === 'string' && p.name.trim() ? p.name.trim().slice(0, 22) : 'Someone';
+    p.bio = typeof p.bio === 'string' ? p.bio.slice(0, 3000) : 'It arrived without references.';
+    p.born = finite(p.born, s.started, 1, now);
+    p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];
+    p.stats = record(p.stats) ? p.stats : {};
+    ['cute', 'menace', 'damp', 'mystique'].forEach(k => { p.stats[k] = finite(p.stats[k], 5, 1, 10); });
+    p.needs = record(p.needs) ? p.needs : {};
+    Object.entries(defaultNeeds()).forEach(([k, v]) => { p.needs[k] = finite(p.needs[k], v, 0, 100); });
+    p.bond = Math.floor(finite(p.bond, 0, 0, 25));
+    ['cared', 'grudges', 'grudgeStage'].forEach(k => { p[k] = Math.floor(finite(p[k], 0)); });
+    p.art = normalizePetArt(p.art);
+    p.art.stamps = p.art.stamps.filter(stamp => record(stamp) && typeof stamp.kind === 'string' && [stamp.x, stamp.y, stamp.size].every(Number.isFinite));
     if (!p.needs) p.needs = defaultNeeds();
     if (typeof p.bond !== 'number') p.bond = 0;
     if (typeof p.cared !== 'number') p.cared = 0;
@@ -227,7 +291,9 @@ export function normalizeState(raw) {
     if (typeof p.bestFuss !== 'number') p.bestFuss = 0;
     if (typeof p.fussRun !== 'number') p.fussRun = 0;
     if (!Array.isArray(p.names) || !p.names.length) p.names = [{ name: p.name, at: p.born || s.started }];
-    if (!Array.isArray(p.slotHist)) p.slotHist = [];
+    p.names = p.names.filter(n => record(n) && typeof n.name === 'string');
+    if (!p.names.length) p.names = [{ name: p.name, at: p.born }];
+    p.slotHist = Array.isArray(p.slotHist) ? p.slotHist.filter(h => record(h) && Number.isFinite(h.slot) && Number.isFinite(h.at)).slice(-8) : [];
   });
   return s;
 }
@@ -351,22 +417,37 @@ export function reconcile(state, now = Date.now()) {
   return state;
 }
 
+function preserveUnreadableSave(raw) {
+  loadFailed = true;
+  recoveryRequired = !Store.set(RECOVERY_KEY, raw);
+  return blankState();
+}
 export function load() {
+  let raw;
   try {
-    const raw = Store.get(SAVE_KEY) || Store.get('shelflife.v2') || Store.get('shelflife.v1');
+    raw = Store.get(SAVE_KEY) || Store.get('shelflife.v3') || Store.get('shelflife.v2') || Store.get('shelflife.v1');
     if (!raw) return blankState();
     const normalized = normalizeState(JSON.parse(raw));
-    if (!normalized) return blankState();
+    if (!normalized) return preserveUnreadableSave(raw);
     // Seed the shuffle bag from the corkboard, so reloading the page does not
     // let it re-tell a joke that is still visible on screen.
     normalized.notes.slice().reverse().forEach(n => { if (n && n.text) rememberPick(n.text); });
     return normalized;
-  } catch (e) { return blankState(); }
+  } catch { return raw ? preserveUnreadableSave(raw) : blankState(); }
 }
 
 export let state = load();
 export function setState(next) { state = next; }
-export function save() { try { Store.set(SAVE_KEY, JSON.stringify(state)); } catch (e) {} }
+export function save() {
+  try {
+    // Never overwrite an unreadable original until its recovery copy is safe.
+    if (recoveryRequired) {
+      if (!Store.set(RECOVERY_KEY, Store.get(RECOVERY_KEY))) return false;
+      recoveryRequired = false;
+    }
+    return Store.set(SAVE_KEY, JSON.stringify(state));
+  } catch { return false; }
+}
 
 let noteListeners = [];
 export function onNote(listener) { noteListeners.push(listener); }

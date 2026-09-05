@@ -86,7 +86,15 @@ function num(v, fallback) {
 
 export function anatomyOf(pet) {
   const art = pet && pet.art;
-  const raw = (art && (art.anatomy || (art.creature && art.creature.anatomy))) || (pet && pet.anatomy);
+  let raw = (art && (art.anatomy || (art.creature && art.creature.anatomy))) || (pet && pet.anatomy);
+  if (!raw && art && Array.isArray(art.stamps)) {
+    const kinds = new Set(art.stamps.map(s => s.kind));
+    if (['arms', 'legs', 'wing', 'tentacles'].some(k => kinds.has(k))) raw = {
+      hasArms: kinds.has('arms'), armCount: kinds.has('arms') ? 2 : 0,
+      hasLegs: kinds.has('legs') || kinds.has('tentacles'), legCount: kinds.has('tentacles') ? 6 : kinds.has('legs') ? 2 : 0,
+      hasWings: kinds.has('wing'), hasTail: kinds.has('tail'), hasTentacles: kinds.has('tentacles')
+    };
+  }
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_ANATOMY };
   const a = { ...DEFAULT_ANATOMY, ...raw };
   // A generator may describe a limb with the flag, the count, or both. Reconcile
@@ -451,7 +459,15 @@ const MISCHIEF_LINES = {
     'Is closer than you left it. It has not moved. It is closer.',
     'Has not moved all day and is nonetheless in a slightly different place.',
     'Was facing the wall this morning. Is facing you now. Nothing happened in between.',
-    'Has rotated ninety degrees since breakfast. Denies the existence of breakfast.'
+    'Has rotated ninety degrees since breakfast. Denies the existence of breakfast.',
+    'Practised looking innocent. Pulled a muscle it refuses to identify.',
+    'Drew a chalk outline around a crumb. The crumb got up and left.',
+    'Is stalking a dust bunny. Both parties have stopped for lunch.',
+    'Has hidden behind something smaller than itself. Confidence is doing most of the work.',
+    'Held a minute of silence for a biscuit. Could only manage twelve seconds.',
+    'Has a getaway route. It ends at the other end of the shelf.',
+    'Made a little grave for its last good idea. Left room beside it.',
+    'Tried to tiptoe without lifting anything. Somehow looked more suspicious.'
   ]
 };
 
@@ -1034,7 +1050,13 @@ export function mischiefPhase(state, now = Date.now()) {
   }
   if (act === 'knock') depleteProp(state, prop.id, now);
   pet.lastMischiefAt = now;
-  addNote(state, fill(pick(MISCHIEF_LINES[act]), { p: pet, q: prop && prop.kind }), pet.name, 'note');
+  const subs = { p: pet, q: prop && prop.kind };
+  const unseen = MISCHIEF_LINES[act].filter(line => !state.notes.some(note => note.text === fill(line, subs)));
+  // Lurking changes no needs or furniture. Once every observation is already
+  // on the board, let the resident carry on quietly instead of repeating it.
+  if (unseen.length || act !== 'lurk') {
+    addNote(state, fill(pick(unseen.length ? unseen : MISCHIEF_LINES[act]), subs), pet.name, 'note');
+  }
   return { act, pet: pet.id, prop: prop ? prop.id : null };
 }
 
