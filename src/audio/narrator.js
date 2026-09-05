@@ -52,9 +52,35 @@ let speaking = false;
 let poller = null;
 let pumpPending = false;
 let lastUtterance = null;
+let nativeVoice = null;
+let nativeAudio = null;
+let nativeURL = null;
+let nativeRequest = null;
+let speechEpoch = 0;
+
+function playbackStatus(text) {
+  if (typeof document === 'undefined') return;
+  const status = document.getElementById('voicePlayback');
+  if (status) status.textContent = text;
+}
+
+async function discoverNativeVoice() {
+  // Only the installed desktop game has this endpoint. Ordinary web hosting
+  // continues to use the browser's own voices with no remote speech service.
+  if (window.location.hostname !== '127.0.0.1') return;
+  try {
+    const response = await fetch('/api/voice', { cache: 'no-store', signal: AbortSignal.timeout(2000) });
+    if (!response.ok) return;
+    const info = await response.json();
+    if (!info.available || info.name !== 'Daniel (Enhanced)') return;
+    nativeVoice = { name: info.name, lang: 'en-GB', voiceURI: 'shelflife:daniel-enhanced', localService: true, native: true };
+    refreshVoices();
+    window.dispatchEvent(new Event('shelflife:voiceschanged'));
+  } catch { /* Browser voices remain available when the desktop server is absent. */ }
+}
 
 function refreshVoices() {
-  voices = synth ? synth.getVoices() || [] : [];
+  voices = [...(nativeVoice ? [nativeVoice] : []), ...(synth ? synth.getVoices() || [] : [])];
   if (voices.length && !resolved) {
     resolved = true;
     markReady();
@@ -71,6 +97,7 @@ function markReady() {
 
 export function initNarrator() {
   if (!synth) return;
+  discoverNativeVoice();
   refreshVoices();
   if (typeof synth.addEventListener === 'function') {
     synth.addEventListener('voiceschanged', refreshVoices);
@@ -113,6 +140,7 @@ export function scoreVoice(v) {
   else return 0; // never auto-select a voice that cannot read English
   if (ENGLISH_MALE.test(name) || /\bmale\b/i.test(name)) s += 150;
   if (ENHANCED.test(name)) s += 120;
+  if (v.native) s += 100;
   if (/^daniel\b/i.test(name)) s += 40; // the known-good British man on macOS
   // Enough to sink them below every serious voice, not enough to zero them:
   // a score of 0 means "not usable at all", and Boing is still a last resort.
@@ -186,9 +214,10 @@ export function prepareForSpeech(raw) {
 
 // ---------- speaking ----------
 
-export function buildUtterance(text) {
+export function buildUtterance(text, browserFallback = false) {
   const u = new SpeechSynthesisUtterance(text);
-  const voice = pickBestVoice();
+  let voice = pickBestVoice();
+  if (voice?.native || browserFallback) voice = voices.filter(v => !v.native).sort((a, b) => scoreVoice(b) - scoreVoice(a))[0] || null;
   if (voice) {
     u.voice = voice;
     if (voice.lang) u.lang = voice.lang;
@@ -236,7 +265,19 @@ function pump() {
     return;
   }
   const line = queue.shift();
+  if (pickBestVoice()?.native) {
+    speaking = true;
+    speakNative(line, speechEpoch);
+    return;
+  }
+  speakBrowser(line);
+}
+
+function speakBrowser(line) {
   const u = buildUtterance(line);
+  playbackStatus(pickBestVoice()?.native
+    ? 'Enhanced speech is unavailable right now. Using the browser voice.'
+    : 'Speaking with ' + (u.voice?.name || 'the browser voice') + '.');
   lastUtterance = u;
   speaking = true;
   u.onend = finish;
@@ -250,9 +291,47 @@ function pump() {
   watch(line);
 }
 
+async function speakNative(line, epoch) {
+  playbackStatus('Daniel is clearing his throat…');
+  const controller = new AbortController();
+  nativeRequest = controller;
+  const timeout = setTimeout(() => controller.abort(), 22000);
+  try {
+    const response = await fetch('/api/voice/speak', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: line }), signal: controller.signal,
+    });
+    if (!response.ok) throw new Error('Voice unavailable');
+    const blob = await response.blob();
+    if (epoch !== speechEpoch) return;
+    nativeURL = URL.createObjectURL(blob);
+    nativeAudio = new Audio(nativeURL);
+    nativeAudio.volume = PROSODY.volume;
+    nativeAudio.onended = finish;
+    nativeAudio.onerror = finish;
+    lastUtterance = { text: line, voice: nativeVoice, rate: 1, pitch: 1, volume: PROSODY.volume };
+    await nativeAudio.play();
+    if (epoch === speechEpoch) playbackStatus('Speaking with Daniel (Enhanced).');
+  } catch {
+    if (epoch === speechEpoch) { clearNativeAudio(); speakBrowser(line); }
+  } finally { clearTimeout(timeout); }
+}
+
+function clearNativeAudio() {
+  if (nativeAudio) {
+    nativeAudio.onended = nativeAudio.onerror = null;
+    nativeAudio.pause();
+    nativeAudio.removeAttribute('src');
+    nativeAudio = null;
+  }
+  if (nativeURL) { URL.revokeObjectURL(nativeURL); nativeURL = null; }
+}
+
 function finish() {
   if (!speaking) return;
+  playbackStatus('Last read by ' + (lastUtterance?.voice?.name || 'the browser voice') + '.');
   speaking = false;
+  clearNativeAudio();
   unwatch();
   if (queue.length) setTimeout(pump, GAP_MS);
 }
@@ -277,6 +356,11 @@ function unwatch() {
 }
 
 export function stopSpeech() {
+  playbackStatus('Narration stopped.');
+  speechEpoch++;
+  nativeRequest?.abort();
+  nativeRequest = null;
+  clearNativeAudio();
   queue.length = 0;
   unwatch();
   speaking = false;
@@ -410,7 +494,7 @@ export function initNarratorUI() {
     const auto = !state.settings.narratorVoiceURI;
     const p = prosodyFor(v);
     meta.textContent = (auto ? 'Chosen for you: ' : 'Your pick: ') + v.name + ' (' + (v.lang || '??') + '). ' +
-      'Rate ' + p.rate + ', pitch ' + p.pitch + '. ' +
+      (v.native ? 'Full-quality speech generated on your Mac. Works offline. ' : 'Browser voice. ') +
       (isNarratorOn() ? '' : 'The narrator is currently switched off.');
     const up = voiceQualityHint();
     if (upgrade) {
@@ -479,6 +563,10 @@ export function initNarratorUI() {
   if (typeof synth !== 'undefined' && synth && typeof synth.addEventListener === 'function') {
     synth.addEventListener('voiceschanged', () => { if (veil.classList.contains('open')) fillSelect(); });
   }
+  window.addEventListener('shelflife:voiceschanged', () => {
+    fillSelect();
+    if (nativeVoice && hint) hint.hidden = true;
+  });
 
   const hintOpen = document.getElementById('voiceHintOpen');
   if (hintOpen) hintOpen.addEventListener('click', open);

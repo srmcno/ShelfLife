@@ -119,18 +119,15 @@ import('/src/main.js?v=1').then(() => 'OK').catch(e => 'ERR: ' + e.message)
 
 ## The narrator voice
 
-The narrator uses the browser's built-in speech synthesis, so the available voices are whatever your
-OS has installed — the game cannot ship a voice.
+The installed Mac application automatically offers **Daniel (Enhanced)** when that voice is
+installed. The local launcher generates full-quality British speech using macOS, including in
+browsers that expose only the compact Daniel voice. Speech stays on this computer, works without
+an internet connection, and requires no account or subscription. Open **More → Voice → Hear it**
+to audition him. An explicit voice selection always takes priority over the automatic choice.
 
-On macOS the only British voice present by default is **Daniel**, in its low-quality *compact* form.
-The single biggest improvement available is installing the enhanced version:
-
-> System Settings → Accessibility → Spoken Content → System Voice → Manage Voices → English (UK) →
-> **Daniel (Enhanced)**
-
-Then reopen the page and pick him in the **Voice** panel. The game surfaces this hint itself rather
-than quietly sounding bad. A voice picker is provided so you can choose any installed voice and
-preview it.
+On ordinary web hosting, or if the local voice service is unavailable, the game uses browser
+speech synthesis. Voice downloads are managed in macOS Accessibility settings. Installing a voice
+does not guarantee every browser exposes it; the desktop launcher avoids that limitation.
 
 ---
 
