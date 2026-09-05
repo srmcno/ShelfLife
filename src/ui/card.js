@@ -104,7 +104,7 @@ export function openCard(state, id, keepScroll) {
     return '<button class="btn care-' + need + '" data-care="' + need + '"' + (preview.gain <= .01 ? ' disabled' : '') + '>' + careNames[need] + '<small>+' + Math.round(preview.gain) + ' · ' + (preview.useful ? 'trust care' : asleep ? 'sleepy' : 'top-up') + '</small></button>';
   }).join('') + '</div>';
   html += '<p class="care-explainer">' + (pet.bond >= 25 ? 'Trust is full. The attachment is permanent.' : (3 - (pet.cared % 3)) + ' useful care actions until +1 trust. Care below 72 counts.') + (asleep ? ' Asleep: care has half effect.' : '') + '</p>';
-  html += '<button class="play-invite" id="playPet"><span><b>Play together</b><small>' + (playWait(pet) || asleep ? 'A quick memory game · practice available' : 'Handshake or dust patrol · needs + trust') + '</small></span><span aria-hidden="true">↗</span></button>';
+  html += '<button class="play-invite" id="playPet"><span><b>Play together</b><small>' + (playWait(pet) || asleep ? 'Steer, hop and chase · practice available' : 'Crumb Chase or handshake · play + trust') + '</small></span><span aria-hidden="true">↗</span></button>';
   html += positionControl(state, pet.id);
   html += residentStory(state, pet);
   html += '<p class="bio">' + escapeHtml(pet.bio) + '</p>';

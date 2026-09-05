@@ -10,7 +10,7 @@ export const WEEK = 7 * DAY;
 const safeRecord = x => x && typeof x === 'object' && !Array.isArray(x);
 const cleanTime = x => Number.isFinite(x) && x >= 0 ? x : 0;
 const careCount = state => state.stories?.careActions || 0;
-const playCount = state => state.stories?.handshakes || 0;
+const playCount = state => (state.stories?.handshakes || 0) + (state.stories?.chases || 0);
 export function storyState(state) {
   if (!safeRecord(state.stories)) state.stories = {};
   const s = state.stories;
@@ -26,7 +26,7 @@ export function storyState(state) {
   if (s.visitor && (!safeRecord(s.visitor) || !VISITORS.some(v => v.id === s.visitor.kind) || !Number.isFinite(s.visitor.at))) s.visitor = null;
   s.lastVisit = cleanTime(s.lastVisit); s.visitCount = Math.max(0, Math.floor(Number(s.visitCount) || 0));
   s.lastRelations = cleanTime(s.lastRelations);
-  s.careActions = cleanTime(s.careActions); s.handshakes = cleanTime(s.handshakes);
+  s.careActions = cleanTime(s.careActions); s.handshakes = cleanTime(s.handshakes); s.chases = cleanTime(s.chases);
   for (const [key, r] of Object.entries(s.relationships)) {
     if (!safeRecord(r)) { delete s.relationships[key]; continue; }
     r.time = Math.max(0, Number(r.time) || 0); r.plots = Math.max(0, Math.floor(Number(r.plots) || 0));
@@ -83,9 +83,9 @@ export function caseText(state) {
 }
 export function caseGate(state) {
   const c = currentCase(state); if (!c || c.beat === 6) return { ready: false, hint: 'Case closed. A new file arrives next week.' };
-  if (c.beat === 1 && careCount(state) <= c.careStart) return { ready: false, hint: 'Give any resident individual care while that need is below 72.' };
+  if (c.beat === 1 && careCount(state) <= c.careStart && playCount(state) <= c.playStart) return { ready: false, hint: 'Give useful individual care below 72, or win a rewarded game together.' };
   if (c.beat === 2 && state.pets.some(p => p.id === c.cast[0]?.id) && state.slots[6] !== c.cast[0].id) return { ready: false, hint: 'Move ' + c.cast[0].name + ' to B1 using its Place on shelf selector.' };
-  if (c.beat === 4 && playCount(state) <= c.playStart && careCount(state) < c.careClue + 2) return { ready: false, hint: 'Finish a rewarded handshake, or perform two more useful care actions.' };
+  if (c.beat === 4 && playCount(state) <= c.playStart && careCount(state) < c.careClue + 2) return { ready: false, hint: 'Win a rewarded game together, or perform two more useful care actions.' };
   return { ready: true, hint: c.beat === 2 ? 'Witness in position. The reconstruction can begin.' : 'Evidence ready to file.' };
 }
 export function advanceCase(state, choice = 'listen', now = Date.now()) {

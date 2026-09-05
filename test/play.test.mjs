@@ -38,16 +38,3 @@ test('rounds have a persistent cooldown and cannot be spammed',()=>{
  const loaded=normalizeState(s);assert.equal(doRounds(loaded,now).cooling,true);
  assert.ok(!doRounds(s,now+ROUNDS_COOLDOWN).cooling);assert.ok(s.pets[0].needs.food>food);
 });
-
-import { newDustPatrol, nextDust, catchDust, finishDust } from '../src/engine/play.js';
-test('dust patrol offers 12 specks, prevents duplicate hits, and rewards cleanliness only on a win',()=>{
- const s=fixture(),p=s.pets[0],g=newDustPatrol(p);
- assert.equal(catchDust(g,-1),false);assert.equal(finishDust(g),false);
- for(let i=0;i<12;i++){assert.equal(nextDust(g,()=>.5),true);if(i<6){assert.equal(catchDust(g,g.target),true);assert.equal(catchDust(g,g.target),false);}}
- assert.equal(nextDust(g),false);assert.equal(finishDust(g),true);
- rewardHandshake(s,g,now);assert.equal(p.needs.clean,74);assert.equal(p.needs.fuss,50);assert.equal(p.dustPatrols,1);assert.equal(p.handshakes,undefined);
-});
-test('missing dust costs no needs and an unfinished patrol cannot claim a reward',()=>{
- const s=fixture(),g=newDustPatrol(s.pets[0]);for(let i=0;i<12;i++)nextDust(g);
- assert.equal(finishDust(g),false);assert.equal(rewardHandshake(s,g,now),null);assert.equal(s.pets[0].bond,0);
-});

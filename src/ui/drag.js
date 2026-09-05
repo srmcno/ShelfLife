@@ -28,7 +28,6 @@ const EDGE_MAX = 16;      // px per frame at the very edge
 
 export function initDrag(state) {
   const cabinet = document.getElementById('cabinet');
-  const scrollRun = cabinet.closest('.stage') || cabinet;
   cabinet.addEventListener('click', e => {
     if (e.detail !== 0) return;
     const piece = e.target.closest('.piece');
@@ -37,40 +36,33 @@ export function initDrag(state) {
     else openPropCard(state, piece.dataset.id);
   });
   let drag = null;
-  let raf = 0, vx = 0, vy = 0;
+  let raf = 0, vy = 0;
 
   // ---- auto-scroll ---------------------------------------------------------
   // Carrying a creature to a row that is off the bottom of the screen would
   // otherwise be impossible, because a drag in progress deliberately stops the
-  // page scrolling. Holding it near an edge walks the page (or, if the cabinet
-  // ever does overflow horizontally, the run) toward the drop.
+  // page scrolling. Holding it near a vertical edge walks the page toward the drop.
 
   function stopScrolling() {
     if (raf) cancelAnimationFrame(raf);
-    raf = 0; vx = 0; vy = 0;
+    raf = 0; vy = 0;
   }
 
   function step() {
     raf = 0;
     if (!drag || !drag.engaged) return;
-    if (vx) scrollRun.scrollLeft += vx;
     if (vy) window.scrollBy(0, vy);
-    if (vx || vy) raf = requestAnimationFrame(step);
+    if (vy) raf = requestAnimationFrame(step);
   }
 
   function aim(x, y) {
-    vx = 0; vy = 0;
-    const r = scrollRun.getBoundingClientRect();
-    if (scrollRun.scrollWidth - scrollRun.clientWidth > 2) {
-      if (x < r.left + EDGE) vx = -Math.min(EDGE_MAX, (r.left + EDGE - x) / 3);
-      else if (x > r.right - EDGE) vx = Math.min(EDGE_MAX, (x - (r.right - EDGE)) / 3);
-    }
-    // Only when there is actually cabinet off-screen to reach for.
+    vy = 0;
+    const r = cabinet.getBoundingClientRect();
     if (r.top < 0 || r.bottom > window.innerHeight) {
       if (y < EDGE) vy = -Math.min(EDGE_MAX, (EDGE - y) / 3);
       else if (y > window.innerHeight - EDGE) vy = Math.min(EDGE_MAX, (y - (window.innerHeight - EDGE)) / 3);
     }
-    if ((vx || vy) && !raf) raf = requestAnimationFrame(step);
+    if (vy && !raf) raf = requestAnimationFrame(step);
   }
 
   // ---- picking a creature up ----------------------------------------------
