@@ -110,7 +110,15 @@ export const PALETTES = {
   peach: { id:'peach', name:'Potted Peach',
     body:'#F0B79B', bodyDark:'#C68A6D', bodyLight:'#FBD8C4', accent:'#6E4A82', detail:'#8A4A32', ink:'#341C12', line:'#341C12', bone:BONE },
   lilac: { id:'lilac', name:'Séance Lilac',
-    body:'#C7A6E0', bodyDark:'#9E7DBB', bodyLight:'#E2CDF2', accent:'#A32C3C', detail:'#5E3E78', ink:'#241833', line:'#241833', bone:BONE }
+    body:'#C7A6E0', bodyDark:'#9E7DBB', bodyLight:'#E2CDF2', accent:'#A32C3C', detail:'#5E3E78', ink:'#241833', line:'#241833', bone:BONE },
+  slime: { id:'slime', name:'Pond Slime',
+    body:'#B9D648', bodyDark:'#829C2A', bodyLight:'#DDEB8E', accent:'#6E4A82', detail:'#4E6112', ink:'#1C2408', line:'#1C2408', bone:BONE },
+  bruise: { id:'bruise', name:'Fresh Bruise',
+    body:'#8A6FB0', bodyDark:'#5C4680', bodyLight:'#B9A3D6', accent:'#E9C24B', detail:'#3A2A55', ink:'#1A1226', line:'#1A1226', bone:BONE },
+  rust: { id:'rust', name:'Kettle Rust',
+    body:'#C56A3A', bodyDark:'#8E4522', bodyLight:'#E39A6E', accent:'#7FD8C0', detail:'#4A2211', ink:'#22100A', line:'#22100A', bone:BONE },
+  ecto: { id:'ecto', name:'Ectoplasm',
+    body:'#9FE6D2', bodyDark:'#5FB8A0', bodyLight:'#D4F5EB', accent:'#FF8FB8', detail:'#2C6B5A', ink:'#0F2E28', line:'#0F2E28', bone:BONE }
 };
 export const PALETTE_IDS = Object.keys(PALETTES);
 
@@ -467,23 +475,24 @@ export const BODY_IDS = Object.keys(BODIES);
 export const EYES = {
   pair: { id:'pair', name:'Pair', mirror:true, flip:false, tags:['plain'], shapes:[
     { k:'ellipse', cx:0, cy:0, rx:5.2, ry:6, fill:'bone' },
-    { k:'circle', cx:0.7, cy:1, r:2.7, fill:'ink' },
+    { k:'ellipse', cx:0, cy:0, rx:5.2, ry:6, fill:'none', stroke:'ink', sw:.7, op:.35 },
+    { k:'circle', cx:0.7, cy:1, r:2.7, fill:'ink', cls:'pupil' },
     { k:'circle', cx:1.6, cy:0.1, r:0.95, fill:'bone' }
   ]},
   beady: { id:'beady', name:'Beady', mirror:true, flip:false, tags:['small'], shapes:[
     { k:'path', d:'M -4.6 -5.8 Q 0 -8.2 4.4 -5.4', fill:'none', stroke:'line', sw:1.6, cap:'round' },
-    { k:'circle', cx:0, cy:0, r:3.3, fill:'ink' },
+    { k:'circle', cx:0, cy:0, r:3.3, fill:'ink', cls:'pupil' },
     { k:'circle', cx:1.1, cy:-1.1, r:1.05, fill:'bone' }
   ]},
   sleepy: { id:'sleepy', name:'Sleepy', mirror:true, flip:false, tags:['calm'], shapes:[
     { k:'ellipse', cx:0, cy:0, rx:5.2, ry:5.8, fill:'bone' },
-    { k:'circle', cx:0.4, cy:2.4, r:2.4, fill:'ink' },
+    { k:'circle', cx:0.4, cy:2.4, r:2.4, fill:'ink', cls:'pupil' },
     { k:'path', d:'M -5.4 0.4 A 5.3 5.9 0 0 1 5.4 0.4 Z', fill:'bodyDark' },
     { k:'path', d:'M -5.9 0.4 L 5.9 0.4', fill:'none', stroke:'ink', sw:1.3, cap:'round' }
   ]},
   slit: { id:'slit', name:'Slit', mirror:true, flip:false, tags:['sinister'], shapes:[
     { k:'path', d:'M -6 0 C -4.4 -5.6 4.4 -5.6 6 0 C 4.4 5.2 -4.4 5.2 -6 0 Z', fill:'bone' },
-    { k:'ellipse', cx:0.3, cy:0, rx:1.5, ry:4.4, fill:'ink' },
+    { k:'ellipse', cx:0.3, cy:0, rx:1.5, ry:4.4, fill:'ink', cls:'pupil' },
     { k:'circle', cx:1.6, cy:-1.8, r:0.8, fill:'bone' }
   ]},
   shut: { id:'shut', name:'Shut', mirror:true, flip:true, tags:['calm','blind'], shapes:[
@@ -496,44 +505,79 @@ export const EYES = {
   stalks: { id:'stalks', name:'Stalks', mirror:true, flip:true, tags:['odd'], shapes:[
     { k:'path', d:'M 0.6 4.4 C 0 1 -1.2 -1.6 -2.4 -4.6', fill:'none', stroke:'bodyDark', sw:2.4, cap:'round' },
     { k:'circle', cx:-3.2, cy:-7.4, r:4.8, fill:'bone' },
-    { k:'circle', cx:-2.7, cy:-6.8, r:2.3, fill:'ink' },
+    { k:'circle', cx:-2.7, cy:-6.8, r:2.3, fill:'ink', cls:'pupil' },
     { k:'circle', cx:-1.9, cy:-7.8, r:0.9, fill:'bone' }
   ]},
   manic: { id:'manic', name:'Manic', mirror:false, tags:['manic'], groups:[
     { id:'eye-left', shapes:[
       { k:'ellipse', cx:-9, cy:-0.4, rx:7.2, ry:7.6, fill:'bone' },
-      { k:'circle', cx:-8, cy:0.4, r:2.1, fill:'ink' },
+      { k:'circle', cx:-8, cy:0.4, r:2.1, fill:'ink', cls:'pupil' },
       { k:'path', d:'M -16 -8.6 Q -9 -11.8 -3 -9.2', fill:'none', stroke:'line', sw:1.7, cap:'round' }
     ]},
     { id:'eye-right', shapes:[
       { k:'ellipse', cx:8.4, cy:1.2, rx:5.2, ry:5.6, fill:'bone' },
-      { k:'circle', cx:9, cy:1.8, r:2.6, fill:'ink' },
+      { k:'circle', cx:9, cy:1.8, r:2.6, fill:'ink', cls:'pupil' },
       { k:'path', d:'M 3.4 -5.4 Q 9 -8 14 -5', fill:'none', stroke:'line', sw:1.6, cap:'round' }
     ]}
   ]},
   cyclops: { id:'cyclops', name:'Cyclops', mirror:false, tags:['single','odd'], groups:[
     { id:'eye', shapes:[
       { k:'ellipse', cx:0, cy:0, rx:11, ry:10.2, fill:'bone' },
-      { k:'circle', cx:0.6, cy:0.9, r:4.8, fill:'ink' },
+      { k:'ellipse', cx:0, cy:0, rx:11, ry:10.2, fill:'none', stroke:'ink', sw:.8, op:.35 },
+      { k:'circle', cx:0.6, cy:0.9, r:4.8, fill:'ink', cls:'pupil' },
       { k:'circle', cx:2.4, cy:-1.6, r:1.7, fill:'bone' },
       { k:'path', d:'M -11.6 -4.6 Q 0 -13.6 11.6 -4.6', fill:'none', stroke:'line', sw:1.9, cap:'round' }
     ]}
   ]},
   cluster: { id:'cluster', name:'Cluster', mirror:false, tags:['odd','many'], groups:[
-    { id:'eye-0', shapes:[{ k:'ellipse', cx:-9.4, cy:0.8, rx:4.4, ry:4.8, fill:'bone' }, { k:'circle', cx:-8.8, cy:1.4, r:2.1, fill:'ink' }] },
-    { id:'eye-1', shapes:[{ k:'ellipse', cx:0.4, cy:-1.6, rx:4.8, ry:5.2, fill:'bone' }, { k:'circle', cx:1, cy:-1, r:2.3, fill:'ink' }] },
-    { id:'eye-2', shapes:[{ k:'ellipse', cx:9.6, cy:1.4, rx:4, ry:4.4, fill:'bone' }, { k:'circle', cx:10.2, cy:2, r:1.9, fill:'ink' }] },
-    { id:'eye-3', shapes:[{ k:'ellipse', cx:-4.4, cy:8, rx:3.2, ry:3.4, fill:'bone' }, { k:'circle', cx:-4, cy:8.4, r:1.5, fill:'ink' }] },
-    { id:'eye-4', shapes:[{ k:'ellipse', cx:5.2, cy:8.6, rx:2.8, ry:3, fill:'bone' }, { k:'circle', cx:5.6, cy:9, r:1.3, fill:'ink' }] }
+    { id:'eye-0', shapes:[{ k:'ellipse', cx:-9.4, cy:0.8, rx:4.4, ry:4.8, fill:'bone' }, { k:'circle', cx:-8.8, cy:1.4, r:2.1, fill:'ink', cls:'pupil' }] },
+    { id:'eye-1', shapes:[{ k:'ellipse', cx:0.4, cy:-1.6, rx:4.8, ry:5.2, fill:'bone' }, { k:'circle', cx:1, cy:-1, r:2.3, fill:'ink', cls:'pupil' }] },
+    { id:'eye-2', shapes:[{ k:'ellipse', cx:9.6, cy:1.4, rx:4, ry:4.4, fill:'bone' }, { k:'circle', cx:10.2, cy:2, r:1.9, fill:'ink', cls:'pupil' }] },
+    { id:'eye-3', shapes:[{ k:'ellipse', cx:-4.4, cy:8, rx:3.2, ry:3.4, fill:'bone' }, { k:'circle', cx:-4, cy:8.4, r:1.5, fill:'ink', cls:'pupil' }] },
+    { id:'eye-4', shapes:[{ k:'ellipse', cx:5.2, cy:8.6, rx:2.8, ry:3, fill:'bone' }, { k:'circle', cx:5.6, cy:9, r:1.3, fill:'ink', cls:'pupil' }] }
   ]},
   triple: { id:'triple', name:'Triple', mirror:false, tags:['odd','many'], groups:[
-    { id:'eye-left', shapes:[{ k:'ellipse', cx:-8.6, cy:2.4, rx:4.8, ry:5.2, fill:'bone' }, { k:'circle', cx:-8, cy:3, r:2.3, fill:'ink' }] },
-    { id:'eye-right', shapes:[{ k:'ellipse', cx:8.6, cy:2.4, rx:4.8, ry:5.2, fill:'bone' }, { k:'circle', cx:9.2, cy:3, r:2.3, fill:'ink' }] },
+    { id:'eye-left', shapes:[{ k:'ellipse', cx:-8.6, cy:2.4, rx:4.8, ry:5.2, fill:'bone' }, { k:'circle', cx:-8, cy:3, r:2.3, fill:'ink', cls:'pupil' }] },
+    { id:'eye-right', shapes:[{ k:'ellipse', cx:8.6, cy:2.4, rx:4.8, ry:5.2, fill:'bone' }, { k:'circle', cx:9.2, cy:3, r:2.3, fill:'ink', cls:'pupil' }] },
     { id:'eye-third', shapes:[
       { k:'ellipse', cx:0, cy:-7.2, rx:4.6, ry:6, fill:'bone' },
-      { k:'ellipse', cx:0, cy:-7.2, rx:1.8, ry:4, fill:'ink' },
+      { k:'ellipse', cx:0, cy:-7.2, rx:1.8, ry:4, fill:'ink', cls:'pupil' },
       { k:'path', d:'M -7.4 -13.6 L -9.6 -17 M 0 -14.6 L 0 -18.6 M 7.4 -13.6 L 9.6 -17', fill:'none', stroke:'accent', sw:1.2, cap:'round' }
     ]}
+  ]},
+  lashes: { id:'lashes', name:'Lashes', mirror:true, flip:true, tags:['plain','vain'], shapes:[
+    { k:'ellipse', cx:0, cy:0, rx:5.4, ry:6.2, fill:'bone' },
+    { k:'circle', cx:-0.6, cy:1, r:2.8, fill:'ink', cls:'pupil' },
+    { k:'circle', cx:-1.6, cy:0, r:1, fill:'bone' },
+    { k:'path', d:'M -4.6 -4.4 L -7.2 -7.2 M -2.2 -5.8 L -3.6 -9 M 0.6 -6 L 0.8 -9.4', fill:'none', stroke:'line', sw:1.4, cap:'round' }
+  ]},
+  goggle: { id:'goggle', name:'Goggle', mirror:true, flip:false, tags:['odd','big'], shapes:[
+    { k:'circle', cx:0, cy:0, r:7.2, fill:'accent' },
+    { k:'circle', cx:0, cy:0, r:5.6, fill:'bone' },
+    { k:'circle', cx:0.8, cy:0.6, r:3.4, fill:'ink', cls:'pupil' },
+    { k:'circle', cx:2, cy:-0.9, r:1.2, fill:'bone' }
+  ]},
+  weepy: { id:'weepy', name:'Weepy', mirror:true, flip:false, tags:['sad'], shapes:[
+    { k:'ellipse', cx:0, cy:0, rx:5, ry:5.8, fill:'bone' },
+    { k:'circle', cx:0.4, cy:1.6, r:2.6, fill:'ink', cls:'pupil' },
+    { k:'path', d:'M -5.4 -2.2 Q 0 -6.2 5.4 -2.2', fill:'none', stroke:'line', sw:1.6, cap:'round' },
+    { k:'path', d:'M -2.2 5.6 C -2.6 8.2 -3.4 10.4 -3.8 12.6 C -4 14.2 -1.6 14.2 -1.8 12.6 C -2 10.4 -2.4 8.2 -2.2 5.6 Z', fill:'bodyLight', op:.9 }
+  ]},
+  wink: { id:'wink', name:'Wink', mirror:false, tags:['smug'], groups:[
+    { id:'eye-left', shapes:[
+      { k:'ellipse', cx:-8.6, cy:0, rx:5.2, ry:6, fill:'bone' },
+      { k:'circle', cx:-7.9, cy:1, r:2.7, fill:'ink', cls:'pupil' },
+      { k:'circle', cx:-7, cy:0, r:0.9, fill:'bone' }
+    ]},
+    { id:'eye-right', shapes:[
+      { k:'ellipse', cx:8.6, cy:0.8, rx:5.2, ry:2, fill:'none' },
+      { k:'path', d:'M 3.6 1.4 Q 8.6 -3 13.6 1.4', fill:'none', stroke:'line', sw:2, cap:'round' },
+      { k:'path', d:'M 6.6 3.6 L 6 5.4 M 8.8 4.2 L 8.8 6 M 11 3.6 L 11.6 5.4', fill:'none', stroke:'line', sw:1.2, cap:'round', op:.6 }
+    ]}
+  ]},
+  hollow: { id:'hollow', name:'Hollow', mirror:true, flip:false, tags:['sinister','blind'], shapes:[
+    { k:'ellipse', cx:0, cy:0, rx:5, ry:6, fill:'ink' },
+    { k:'ellipse', cx:0.6, cy:-1.2, rx:1.4, ry:1.8, fill:'accent', op:.85, cls:'pupil' }
   ]}
 };
 
@@ -584,6 +628,30 @@ export const MOUTHS = {
     { k:'path', d:'M -8 0.4 Q 0 3.4 8 0.4', fill:'none', stroke:'line', sw:1.7, cap:'round' },
     { k:'path', d:'M -6.6 1.4 C -8.6 -0.6 -8.4 -4.4 -6.4 -6.4 C -6.4 -3.4 -5.4 -0.6 -4.2 1.4 Z', fill:'bone' },
     { k:'path', d:'M 6.6 1.4 C 8.6 -0.6 8.4 -4.4 6.4 -6.4 C 6.4 -3.4 5.4 -0.6 4.2 1.4 Z', fill:'bone' }
+  ]},
+  zip: { id:'zip', name:'Zipped', tags:['sinister'], shapes:[
+    { k:'path', d:'M -9 0.6 L 9 0.6', fill:'none', stroke:'line', sw:2.2, cap:'round' },
+    { k:'path', d:'M -7 -1 L -7 2.2 M -4.6 -1 L -4.6 2.2 M -2.2 -1 L -2.2 2.2 M 0.2 -1 L 0.2 2.2 M 2.6 -1 L 2.6 2.2 M 5 -1 L 5 2.2', fill:'none', stroke:'bone', sw:1, cap:'round' },
+    { k:'path', d:'M 7.4 0.6 L 9.6 -2.4', fill:'none', stroke:'accent', sw:1.6, cap:'round' },
+    { k:'circle', cx:9.8, cy:-2.8, r:1.1, fill:'accent' }
+  ]},
+  moustache: { id:'moustache', name:'Moustache', tags:['smug','hair'], shapes:[
+    { k:'path', d:'M 0 1 C -3 -2.4 -7.6 -2.4 -10.4 0.4 C -8.4 2.4 -4 3 0 1 C 4 3 8.4 2.4 10.4 0.4 C 7.6 -2.4 3 -2.4 0 1 Z', fill:'bodyDark' },
+    { k:'path', d:'M -3.4 4.2 Q 0 6.4 3.4 4.2', fill:'none', stroke:'line', sw:1.5, cap:'round' }
+  ]},
+  drool: { id:'drool', name:'Drooling', tags:['loud','damp'], shapes:[
+    { k:'path', d:'M -6 -1.6 C -3 -3.4 3 -3.4 6 -1.6 C 6.4 3 3.6 6.6 0 6.6 C -3.6 6.6 -6.4 3 -6 -1.6 Z', fill:'ink' },
+    { k:'path', d:'M -3.4 6 C -3.4 4 3.4 4 3.4 6 C 2.4 6.6 -2.4 6.6 -3.4 6 Z', fill:'accent' },
+    { k:'path', d:'M 3.2 5.4 C 3.8 8.6 4.6 11 4.4 13.4 C 4.2 15.4 1.6 15.4 1.8 13.4 C 2 11 2.6 8.6 3.2 5.4 Z', fill:'bodyLight', op:.92 }
+  ]},
+  pout: { id:'pout', name:'Pout', tags:['sad','small'], shapes:[
+    { k:'ellipse', cx:0, cy:1.2, rx:3, ry:2.2, fill:'accent' },
+    { k:'path', d:'M -3 1 Q 0 -1 3 1', fill:'none', stroke:'line', sw:1.3, cap:'round' }
+  ]},
+  chatter: { id:'chatter', name:'Chattering', tags:['loud','teeth'], shapes:[
+    { k:'path', d:'M -8.4 -2 L 8.4 -2 L 8.4 5.4 L -8.4 5.4 Z', fill:'ink' },
+    { k:'path', d:'M -7.4 -2 L -7.4 0.6 L -4.6 0.6 L -4.6 -2 M -3.4 -2 L -3.4 0.6 L -0.6 0.6 L -0.6 -2 M 0.6 -2 L 0.6 0.6 L 3.4 0.6 L 3.4 -2 M 4.6 -2 L 4.6 0.6 L 7.4 0.6 L 7.4 -2', fill:'bone' },
+    { k:'path', d:'M -7.4 5.4 L -7.4 3 L -4.6 3 L -4.6 5.4 M -3.4 5.4 L -3.4 3 L -0.6 3 L -0.6 5.4 M 0.6 5.4 L 0.6 3 L 3.4 3 L 3.4 5.4 M 4.6 5.4 L 4.6 3 L 7.4 3 L 7.4 5.4', fill:'bone' }
   ]}
 };
 
@@ -633,6 +701,32 @@ export const TOPS = {
   ]},
   halo: { id:'halo', name:'Halo', mirror:false, tags:['light','float'], shapes:[
     { k:'ellipse', cx:0, cy:-13.4, rx:11, ry:3.6, fill:'none', stroke:'accent', sw:2.6 }
+  ]},
+  tophat: { id:'tophat', name:'Top Hat', mirror:false, tags:['hat','heavy'], shapes:[
+    { k:'path', d:'M -14 5 L 14 5 L 14 2 L -14 2 Z', fill:'ink' },
+    { k:'path', d:'M -9 2 L -8 -16 L 8 -16 L 9 2 Z', fill:'ink' },
+    { k:'path', d:'M -8.6 -2 L 8.6 -2 L 8.8 1 L -8.8 1 Z', fill:'accent' },
+    { k:'path', d:'M -6 -13 L -5.6 -5', fill:'none', stroke:'bone', sw:1, op:.25, cap:'round' }
+  ]},
+  flame: { id:'flame', name:'Little Flame', mirror:false, tags:['light','float'], shapes:[
+    { k:'path', d:'M 0 6 C -6 2 -7 -6 -2 -10 C -3 -6 0 -5 0.6 -8 C 3 -6 5 -2 4 2 C 3.4 5 2 6 0 6 Z', fill:'accent' },
+    { k:'path', d:'M 0 5 C -2.6 3 -3 -1 -0.6 -3 C -1 -1 0.6 -0.4 1 -2 C 2.4 -0.6 2.6 2 1.6 4 C 1.2 4.8 0.6 5 0 5 Z', fill:'bone', op:.85 }
+  ]},
+  mushroom: { id:'mushroom', name:'Mushroom', mirror:false, tags:['grime','light'], shapes:[
+    { k:'path', d:'M -2 5 L -1.6 -3 L 1.6 -3 L 2 5 Z', fill:'bone' },
+    { k:'path', d:'M -8 -2.4 C -8 -8 -4 -12 0 -12 C 4 -12 8 -8 8 -2.4 Z', fill:'detail' },
+    { k:'circle', cx:-3, cy:-7, r:1.3, fill:'bone', op:.8 },
+    { k:'circle', cx:3.4, cy:-5.4, r:1, fill:'bone', op:.8 },
+    { k:'path', d:'M 6 6 L 6.4 1 L 8.6 1 L 9 6 Z', fill:'bone' },
+    { k:'path', d:'M 3.4 1.6 C 3.4 -2 5.4 -4.4 7.6 -4.4 C 9.8 -4.4 11.8 -2 11.8 1.6 Z', fill:'detail' }
+  ]},
+  bandage: { id:'bandage', name:'Bandage', mirror:false, tags:['hat','light','sewn'], shapes:[
+    { k:'path', d:'M -13 -1 C -8 -5 8 -5 13 -1 L 13 4 C 8 0 -8 0 -13 4 Z', fill:'bone' },
+    { k:'path', d:'M -11 1.4 L -9.6 2.6 M -6.2 -0.8 L -4.8 0.6 M -1 -1.8 L 0.4 -0.4 M 4.4 -1.4 L 5.8 0 M 9.4 0.6 L 10.8 2', fill:'none', stroke:'detail', sw:1, op:.55, cap:'round' },
+    { k:'circle', cx:6, cy:1.4, r:1.6, fill:'accent', op:.55 }
+  ]},
+  bolt: { id:'bolt', name:'Lightning', mirror:false, tags:['horn','single','light'], shapes:[
+    { k:'path', d:'M -1 5 L 3.4 -6 L 0.4 -6 L 4 -15 L -2.6 -3.4 L 0.4 -3.4 Z', fill:'accent' }
   ]}
 };
 
@@ -660,6 +754,19 @@ export const EARS = {
   frill: { id:'frill', name:'Frill', mirror:true, tags:['fin','odd'], shapes:[
     { k:'path', d:'M 0 5 C -6 0 -12.4 -3.4 -17 -1.4 C -14.4 2 -14 6 -15.4 10.4 C -10 9.4 -3.4 9.4 0 7.4 Z', fill:'body' },
     { k:'path', d:'M -3.4 3.4 C -7.4 1 -11.4 -0.6 -14 0.4 M -3 6.4 C -7 5.6 -11 5.6 -13.6 6.4', fill:'none', stroke:'accent', sw:1.2, op:.8 }
+  ]},
+  bolts: { id:'bolts', name:'Neck Bolts', mirror:true, tags:['odd','sewn'], shapes:[
+    { k:'path', d:'M 0 2 L -9 2 L -9 8 L 0 8 Z', fill:'detail' },
+    { k:'circle', cx:-10, cy:5, r:3.6, fill:'detail' },
+    { k:'circle', cx:-10, cy:5, r:1.6, fill:'ink', op:.6 }
+  ]},
+  bat: { id:'bat', name:'Bat Ears', mirror:true, tags:['sharp','big'], shapes:[
+    { k:'path', d:'M 2 8 C -4 -2 -12 -12 -20 -20 C -20 -8 -16 4 -6 10 Z', fill:'body' },
+    { k:'path', d:'M -1 5 C -5 -1 -11 -8 -16 -14 C -16 -6 -13 2 -6 7 Z', fill:'accent', op:.8 }
+  ]},
+  antennae: { id:'antennae', name:'Feelers', mirror:true, tags:['bug','light'], shapes:[
+    { k:'path', d:'M 0 4 C -6 2 -12 -4 -14 -12', fill:'none', stroke:'bodyDark', sw:1.8, cap:'round' },
+    { k:'circle', cx:-14.6, cy:-13.6, r:2.6, fill:'accent' }
   ]}
 };
 
@@ -687,7 +794,20 @@ export const LEGS = {
     { k:'circle', cx:1.8, cy:8.6, r:2, fill:'accent' }
   ]},
   tentacles: { id:'tentacles', name:'Tentacles', mirror:true, tags:['many','ooze','sneak'], count:5, length:10, shapes:[
-    { k:'path', d:'M 0 -3 C 2.6 2 -2.6 5.6 1.6 10', fill:'none', stroke:'accent', sw:3.4, cap:'round' }
+    { k:'path', d:'M 0 -3 C 2.6 2 -2.6 5.6 1.6 10', fill:'none', stroke:'accent', sw:3.4, cap:'round' },
+    { k:'circle', cx:0.4, cy:2, r:0.9, fill:'bodyLight', op:.7 },
+    { k:'circle', cx:-0.6, cy:6, r:0.9, fill:'bodyLight', op:.7 }
+  ]},
+  boots: { id:'boots', name:'Little Boots', mirror:true, tags:['short','walk','heavy'], count:2, length:11, shapes:[
+    { k:'path', d:'M -3.4 -4 L -3.4 5 L 3.4 5 L 3.4 -4 Z', fill:'body' },
+    { k:'path', d:'M -4.2 4 L -4.2 9 C -4.2 10.4 -2.8 11 -1 11 L 5.4 11 C 6.6 11 7 10 6.2 9 L 4.2 6.6 L 4.2 4 Z', fill:'ink' },
+    { k:'path', d:'M -2.6 5.6 L 2.4 5.6', fill:'none', stroke:'accent', sw:1, cap:'round', op:.8 }
+  ]},
+  bony: { id:'bony', name:'Bony', mirror:true, tags:['long','walk','sneak','bone'], count:2, length:14, shapes:[
+    { k:'path', d:'M 0 -3 L -0.6 5', fill:'none', stroke:'bone', sw:2.4, cap:'round' },
+    { k:'circle', cx:-0.6, cy:5.6, r:1.6, fill:'bone' },
+    { k:'path', d:'M -0.6 6 L -1.6 12.4', fill:'none', stroke:'bone', sw:2.2, cap:'round' },
+    { k:'path', d:'M -5 13.6 L 2.4 13.6', fill:'none', stroke:'bone', sw:2.4, cap:'round' }
   ]}
 };
 
@@ -710,6 +830,16 @@ export const ARMS = {
   paddle: { id:'paddle', name:'Paddles', mirror:true, tags:['short','grab'], count:2, reach:16, shapes:[
     { k:'path', d:'M 1 -4 C -7 -2.6 -12 2 -13 8 C -14 14 -9 16.4 -5 12.4 C -1.4 9 1.4 2.6 1.4 -2.6 Z', fill:'bodyDark' },
     { k:'path', d:'M -9.4 5 C -10.4 8.4 -9.6 11.6 -7.4 13.4', fill:'none', stroke:'accent', sw:1.6 }
+  ]},
+  bones: { id:'bones', name:'Bones', mirror:true, tags:['long','grab','hang','bone'], count:2, reach:20, shapes:[
+    { k:'path', d:'M 0 0 L -6.4 7', fill:'none', stroke:'bone', sw:2.4, cap:'round' },
+    { k:'circle', cx:-6.6, cy:7.4, r:1.7, fill:'bone' },
+    { k:'path', d:'M -6.6 7.4 L -11 15', fill:'none', stroke:'bone', sw:2.2, cap:'round' },
+    { k:'path', d:'M -11 15 L -14.4 17.4 M -11 15 L -12 19 M -11 15 L -8 18', fill:'none', stroke:'bone', sw:1.5, cap:'round' }
+  ]},
+  mitts: { id:'mitts', name:'Mitts', mirror:true, tags:['short','grab'], count:2, reach:15, shapes:[
+    { k:'path', d:'M 0 -2 C -5 -1 -9 2 -10.4 7', fill:'none', stroke:'accent', sw:2.6, cap:'round' },
+    { k:'path', d:'M -7.4 5.6 C -12.4 5 -14.4 9.4 -12 12.4 C -10 14.6 -6.6 13.4 -6.2 10 C -4.4 9.4 -5 6.4 -7.4 5.6 Z', fill:'body' }
   ]}
 };
 
@@ -740,6 +870,18 @@ export const TAILS = {
     { k:'path', d:'M 0 -5.4 C 9.4 -6.4 16.4 -2 19.4 6 C 20.6 9.6 17.4 12 15.4 9.4 C 17.4 5.4 14.4 0.6 9.4 -0.4 C 5 -1.4 2 0.6 0 4 Z', fill:'body' },
     { k:'path', d:'M 7.4 -4.6 C 6.4 -1 6.4 2 7.4 4.4', fill:'none', stroke:'detail', sw:2, op:.75 },
     { k:'path', d:'M 14.4 -1.4 C 13.4 1.4 13.4 4.4 14.6 7.4', fill:'none', stroke:'detail', sw:2, op:.75 }
+  ]},
+  vertebrae: { id:'vertebrae', name:'Vertebrae', tags:['thin','sinister','bone'], length:22, shapes:[
+    { k:'path', d:'M 0 0 C 6 -1 11 -6 14 -12 C 15.6 -15.4 17.4 -17.4 19.4 -19', fill:'none', stroke:'bone', sw:1.6, cap:'round' },
+    { k:'ellipse', cx:4, cy:-1.2, rx:2.2, ry:1.6, fill:'bone' },
+    { k:'ellipse', cx:8.6, cy:-3.8, rx:2, ry:1.5, fill:'bone' },
+    { k:'ellipse', cx:12.4, cy:-8, rx:1.8, ry:1.4, fill:'bone' },
+    { k:'ellipse', cx:15.6, cy:-13, rx:1.6, ry:1.3, fill:'bone' },
+    { k:'circle', cx:19.6, cy:-19.4, r:1.6, fill:'bone' }
+  ]},
+  fin: { id:'fin', name:'Fin', tags:['thin','damp'], length:18, shapes:[
+    { k:'path', d:'M 0 -3 C 6 -3 10 -1 13 2 C 14.4 -4 17 -8 20 -10 C 19 -4 19 2 20 8 C 17 6 14 4 13 2 C 10 5 6 6 0 5 Z', fill:'accent' },
+    { k:'path', d:'M 14 0 L 18.4 -6 M 14.4 3 L 18.6 6', fill:'none', stroke:'ink', sw:.8, op:.35, cap:'round' }
   ]}
 };
 
@@ -765,6 +907,11 @@ export const WINGS = {
     { k:'path', d:'M 0 -3.4 C -9 -14.4 -22 -18.4 -28.4 -13.4 C -24.4 -10.4 -22 -6.4 -21.4 -2.4 C -14.4 -3.4 -6.4 -1 0 -3.4 Z', fill:'bodyLight' },
     { k:'path', d:'M -2 0.4 C -10.4 1 -18.4 4.4 -22.4 9.4 C -16.4 10.4 -9.4 8 -4.4 4.4 Z', fill:'body' },
     { k:'path', d:'M -21.4 -2.4 L -24.4 3.4 M -15.4 -2.4 L -17.4 4.4 M -9.4 -2.4 L -10.4 4.4', fill:'none', stroke:'bodyDark', sw:1.1, op:.5 }
+  ]},
+  skeletal: { id:'skeletal', name:'Skeletal', mirror:true, tags:['sharp','bone'], count:2, span:30, shapes:[
+    { k:'path', d:'M 0 -4 C -8 -12 -18 -20 -28 -22', fill:'none', stroke:'bone', sw:2, cap:'round' },
+    { k:'path', d:'M -12 -14 L -22 -8 M -19 -18 L -27 -12 M -6 -9 L -15 0', fill:'none', stroke:'bone', sw:1.6, cap:'round' },
+    { k:'path', d:'M -12 -14 L -6 -9 L -15 0 Z', fill:'bodyDark', op:.35 }
   ]}
 };
 
@@ -811,6 +958,29 @@ export const DETAILS = {
   scar: { id:'scar', name:'Scar', tags:['grime'], shapes:[
     { k:'path', d:'M -8.4 -8.4 L 8.4 8.4 M 8.4 -8.4 L -8.4 8.4', fill:'none', stroke:'detail', sw:2, cap:'round' },
     { k:'path', d:'M -5 -1.4 L -2.4 -4 M 3.4 2.4 L 6 -0.4', fill:'none', stroke:'detail', sw:1.2, cap:'round', op:.7 }
+  ]},
+  cracks: { id:'cracks', name:'Cracks', tags:['grime','fragile'], shapes:[
+    { k:'path', d:'M -12 -10 L -6 -3 L -8 3 L -2 8 M -6 -3 L 0 -6 L 4 -1 M 4 -1 L 10 2 M 4 -1 L 6 6', fill:'none', stroke:'detail', sw:1.3, cap:'round', join:'round' }
+  ]},
+  moss: { id:'moss', name:'Moss', tags:['grime','soft'], shapes:[
+    { k:'path', d:'M -12 4 C -12 -2 -6 -4 -2 0 C 2 -4 8 -2 8 4 C 8 8 2 9 -2 6 C -6 9 -12 8 -12 4 Z', fill:'detail', op:.6 },
+    { k:'circle', cx:-6, cy:2, r:1.4, fill:'bodyLight', op:.6 },
+    { k:'circle', cx:2, cy:1, r:1.1, fill:'bodyLight', op:.6 },
+    { k:'path', d:'M 6 -8 L 7 -12 M 9 -6 L 12 -9', fill:'none', stroke:'detail', sw:1.2, cap:'round' },
+    { k:'circle', cx:7.2, cy:-12.6, r:1.3, fill:'detail' },
+    { k:'circle', cx:12.4, cy:-9.4, r:1.1, fill:'detail' }
+  ]},
+  ribs: { id:'ribs', name:'Ribs', tags:['bone','sinister'], shapes:[
+    { k:'path', d:'M 0 -12 L 0 12', fill:'none', stroke:'bone', sw:1.6, cap:'round', op:.85 },
+    { k:'path', d:'M 0 -8 C -5 -8 -9 -6 -11 -3 M 0 -8 C 5 -8 9 -6 11 -3 M 0 -3 C -5 -3 -9 -1 -11 2 M 0 -3 C 5 -3 9 -1 11 2 M 0 2 C -5 2 -8 4 -10 7 M 0 2 C 5 2 8 4 10 7 M 0 7 C -4 7 -7 9 -8 11 M 0 7 C 4 7 7 9 8 11', fill:'none', stroke:'bone', sw:1.4, cap:'round', op:.85 }
+  ]},
+  plaster: { id:'plaster', name:'Plaster', tags:['sewn','light'], shapes:[
+    { k:'path', d:'M -10 -5 L 9 -9 L 11 3 L -8 7 Z', fill:'bone', op:.9 },
+    { k:'path', d:'M -4 -3.4 L 5 -5.4 L 6 0 L -3 2 Z', fill:'accent', op:.5 },
+    { k:'circle', cx:-7, cy:-1, r:.6, fill:'detail', op:.6 },
+    { k:'circle', cx:-6.4, cy:3, r:.6, fill:'detail', op:.6 },
+    { k:'circle', cx:8, cy:-5.6, r:.6, fill:'detail', op:.6 },
+    { k:'circle', cx:8.8, cy:-1.6, r:.6, fill:'detail', op:.6 }
   ]}
 };
 
@@ -891,9 +1061,10 @@ const has = (body, tag) => body.tags.indexOf(tag) !== -1;
 /** Eye variants that suit a body: small faces can't hold clusters. */
 function eyeChoices(body) {
   const small = has(body, 'smallFace');
-  const base = [['pair', 5], ['beady', 3], ['sleepy', 2.5], ['slit', 2], ['shut', 1.2], ['dead', 1.4], ['manic', 2]];
+  const base = [['pair', 5], ['beady', 3], ['sleepy', 2.5], ['slit', 2], ['shut', 1.2], ['dead', 1.4], ['manic', 2],
+    ['lashes', 1.6], ['weepy', 1.4], ['wink', 1.3], ['hollow', 1.1]];
   if (small) return base.concat([['stalks', 1.2]]);
-  return base.concat([['cyclops', 2.2], ['cluster', 1.6], ['triple', 1.6], ['stalks', 1.4]]);
+  return base.concat([['cyclops', 2.2], ['cluster', 1.6], ['triple', 1.6], ['stalks', 1.4], ['goggle', 1.5]]);
 }
 
 /** Mouths that read at the available scale, and that don't fight the eyes. */
@@ -901,22 +1072,24 @@ function mouthChoices(body, eyesId) {
   const eyes = EYES[eyesId];
   const busy = eyes.tags.indexOf('many') !== -1 || eyesId === 'cyclops';
   const small = has(body, 'smallFace');
-  let list = [['grin', 4], ['frown', 3], ['smirk', 3], ['fangs', 3], ['oh', 2.4], ['wavy', 2.2], ['stitched', 2], ['tusks', 1.6], ['beak', 2], ['gape', 2.4]];
+  let list = [['grin', 4], ['frown', 3], ['smirk', 3], ['fangs', 3], ['oh', 2.4], ['wavy', 2.2], ['stitched', 2], ['tusks', 1.6], ['beak', 2], ['gape', 2.4],
+    ['zip', 1.5], ['moustache', 1.4], ['drool', 1.4], ['pout', 1.6], ['chatter', 1.3]];
   // A cyclops or a five-eye cluster already owns the face — keep the mouth quiet.
-  if (busy) list = list.filter(m => ['frown', 'smirk', 'oh', 'wavy', 'stitched', 'fangs'].indexOf(m[0]) !== -1);
-  // A tiny head can't hold a gaping maw or a rack of tusks.
-  if (small) list = list.filter(m => ['gape', 'tusks'].indexOf(m[0]) === -1);
+  if (busy) list = list.filter(m => ['frown', 'smirk', 'oh', 'wavy', 'stitched', 'fangs', 'zip', 'pout'].indexOf(m[0]) !== -1);
+  // A tiny head can't hold a gaping maw, a rack of tusks or a moustache.
+  if (small) list = list.filter(m => ['gape', 'tusks', 'moustache', 'chatter'].indexOf(m[0]) === -1);
   // Blind eyes (X's, shut) pair well with an unbothered mouth.
   if (eyes.tags.indexOf('blind') !== -1) list = list.filter(m => m[0] !== 'gape');
   return list;
 }
 
 function topChoices(body) {
-  const list = [['none', 3], ['curled', 2.6], ['spiky', 2.6], ['antlers', 2.2], ['stub', 2], ['antennae', 2], ['nubs', 2], ['crown', 1.4], ['tuft', 2], ['crest', 2], ['halo', 1.1]];
+  const list = [['none', 3], ['curled', 2.6], ['spiky', 2.6], ['antlers', 2.2], ['stub', 2], ['antennae', 2], ['nubs', 2], ['crown', 1.4], ['tuft', 2], ['crest', 2], ['halo', 1.1],
+    ['tophat', 1.3], ['flame', 1.1], ['mushroom', 1.3], ['bandage', 1.2], ['bolt', 1]];
   // Top-heavy bodies already have a huge skull; a heavy rack tips them over.
-  if (has(body, 'topHeavy')) return list.filter(t => ['curled', 'crown'].indexOf(t[0]) === -1);
-  // Very small skulls can't carry a wide crown or crest.
-  if (has(body, 'smallFace')) return list.filter(t => ['crown', 'crest'].indexOf(t[0]) === -1);
+  if (has(body, 'topHeavy')) return list.filter(t => ['curled', 'crown', 'tophat'].indexOf(t[0]) === -1);
+  // Very small skulls can't carry a wide crown, crest or hat.
+  if (has(body, 'smallFace')) return list.filter(t => ['crown', 'crest', 'tophat', 'bandage'].indexOf(t[0]) === -1);
   return list;
 }
 
@@ -936,11 +1109,11 @@ function bodyPlan(rng, body) {
   } else if (crawler) {
     legs = pickWeighted(rng, [['many', 6], ['tentacles', 2], ['none', 1], ['spindly', 1.5]]);
   } else if (thin) {
-    legs = pickWeighted(rng, [['spindly', 5], ['bird', 4], ['stubby', 1], ['none', 1]]);
+    legs = pickWeighted(rng, [['spindly', 5], ['bird', 4], ['stubby', 1], ['none', 1], ['bony', 1.6]]);
   } else if (squat) {
-    legs = pickWeighted(rng, [['stubby', 5], ['many', 2], ['none', 2], ['hoof', 1.5]]);
+    legs = pickWeighted(rng, [['stubby', 5], ['many', 2], ['none', 2], ['hoof', 1.5], ['boots', 1.4]]);
   } else {
-    legs = pickWeighted(rng, [['stubby', 4], ['hoof', 2.5], ['bird', 2], ['spindly', 2], ['none', 2]]);
+    legs = pickWeighted(rng, [['stubby', 4], ['hoof', 2.5], ['bird', 2], ['spindly', 2], ['none', 2], ['boots', 1.4], ['bony', 1.2]]);
   }
   if ((legs === 'many' || legs === 'tentacles') && (body.anchors.manyLegs || []).length < 4) {
     legs = squat || sits ? 'none' : 'stubby';
@@ -949,16 +1122,16 @@ function bodyPlan(rng, body) {
   // --- ARMS -----------------------------------------------------------------
   // Long arms are what let a creature hang off the shelf edge, so they get a
   // real slice of the roll rather than being a rare novelty.
-  const arms = pickWeighted(rng, [['none', 4], ['stubby', 3], ['noodle', 3], ['claw', 2.2], ['paddle', 1.8]]);
+  const arms = pickWeighted(rng, [['none', 4], ['stubby', 3], ['noodle', 3], ['claw', 2.2], ['paddle', 1.8], ['bones', 1.6], ['mitts', 1.4]]);
 
   // --- WINGS ----------------------------------------------------------------
   let wings = 'none';
   if (!has(body, 'noWings') && chance(rng, 0.24)) {
-    wings = pickWeighted(rng, [['bat', 3], ['moth', 3], ['bug', 2], ['feather', 2.4]]);
+    wings = pickWeighted(rng, [['bat', 3], ['moth', 3], ['bug', 2], ['feather', 2.4], ['skeletal', 1.6]]);
   }
 
   // --- TAIL -----------------------------------------------------------------
-  const tail = pickWeighted(rng, [['none', 4], ['curl', 2.6], ['whip', 2], ['puff', 2.4], ['spade', 1.8], ['stub', 2], ['ringed', 1.6]]);
+  const tail = pickWeighted(rng, [['none', 4], ['curl', 2.6], ['whip', 2], ['puff', 2.4], ['spade', 1.8], ['stub', 2], ['ringed', 1.6], ['vertebrae', 1.3], ['fin', 1.2]]);
 
   return { legs, arms, wings, tail };
 }
@@ -1028,8 +1201,8 @@ export function generateCreature(opts = {}) {
   const topBusy = ['crown', 'crest'].indexOf(top) !== -1;
   let ears = forced.ears && EARS[forced.ears] ? forced.ears
     : pickWeighted(rng, topBusy
-        ? [['none', 6], ['round', 1.5], ['pointy', 1.5]]
-        : [['none', 2.6], ['pointy', 3], ['round', 3], ['droopy', 2.4], ['tufted', 2], ['frill', 1.6]]);
+        ? [['none', 6], ['round', 1.5], ['pointy', 1.5], ['bolts', 1]]
+        : [['none', 2.6], ['pointy', 3], ['round', 3], ['droopy', 2.4], ['tufted', 2], ['frill', 1.6], ['bolts', 1.4], ['bat', 1.6], ['antennae', 1.2]]);
 
   const plan = bodyPlan(rng, body);
   const legs = forced.legs && LEGS[forced.legs] ? forced.legs : plan.legs;
@@ -1041,8 +1214,9 @@ export function generateCreature(opts = {}) {
   const busyCount = (top !== 'none' ? 1 : 0) + (wings !== 'none' ? 1 : 0) + (ears !== 'none' ? 1 : 0);
   let detail = forced.detail && DETAILS[forced.detail] ? forced.detail
     : pickWeighted(rng, busyCount >= 2
-        ? [['none', 6], ['spots', 1.6], ['freckles', 1.6], ['stitches', 1.2]]
-        : [['none', 2.4], ['spots', 2.4], ['stitches', 2], ['patch', 1.8], ['drips', 1.6], ['stripes', 1.8], ['freckles', 1.6], ['scar', 1.2]]);
+        ? [['none', 6], ['spots', 1.6], ['freckles', 1.6], ['stitches', 1.2], ['cracks', 1], ['plaster', 1]]
+        : [['none', 2.4], ['spots', 2.4], ['stitches', 2], ['patch', 1.8], ['drips', 1.6], ['stripes', 1.8], ['freckles', 1.6], ['scar', 1.2],
+           ['cracks', 1.4], ['moss', 1.3], ['ribs', 1.1], ['plaster', 1.2]]);
 
   const tune = {
     eyeScale: round2(0.92 + rng() * 0.2),
@@ -1229,11 +1403,13 @@ function eyeRig(c, body) {
 export function describeCreature(creature) {
   const c = normalizeCreature(creature);
   const an = c.anatomy;
-  const detail = an.hasWings ? 'Has wings. Is still expecting to be carried.'
-    : an.hasTentacles ? 'More of it moves than seems necessary.'
-    : an.legCount > 2 ? 'Plenty of legs. Nowhere urgent to be.'
-    : an.hasLegs ? 'Can walk away. Has chosen to stand here and judge.'
-    : 'No legs. Will make that your problem.';
+  const rng = makeRng('desc:' + c.seed + c.body + c.parts.legs + c.parts.wings);
+  const options = an.hasWings ? ['Has wings. Is still expecting to be carried.', 'Has wings. Has never once been asked to use them.', 'Can fly. Prefers to be lifted, so you know it was your idea.']
+    : an.hasTentacles ? ['More of it moves than seems necessary.', 'Pours rather than walks. Leaves a line.', 'Has never been the same shape twice.']
+    : an.legCount > 2 ? ['Plenty of legs. Nowhere urgent to be.', 'Enough legs to leave. Uses them to get closer.', 'All those legs, and it still wants carrying.']
+    : an.hasLegs ? ['Can walk away. Has chosen to stand here and judge.', 'Two legs. Both of them for standing in doorways.', 'Walks. Not far, and never towards anything good.']
+    : ['No legs. Will make that your problem.', 'No legs. Still ends up where you least want it.', 'Legless, and somehow always on the good side of the shelf.'];
+  const detail = options[Math.floor(rng() * options.length)];
   return `${PALETTES[c.palette].name} ${BODIES[c.body].name.toLowerCase()}. ${detail}`;
 }
 
@@ -1270,14 +1446,22 @@ const XML_ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&
 const esc = s => String(s).replace(/[&<>"']/g, ch => XML_ESC[ch]);
 const num = n => (Math.round(n * 1000) / 1000);
 
+/* The ink line. Every shape filled with the body colour and carrying no stroke
+   of its own gets a thin outline in the body's shadow colour, which is what
+   turns a flat cut-out into something drawn. Parts that are strokes already
+   (spindly legs, whips, antlers) are left alone. */
+const OUTLINE_SW = 1.2;
+
 function paint(shape, colors) {
   let out = '';
   if (shape.fill !== undefined) out += ` fill="${shape.fill === 'none' ? 'none' : colors[shape.fill] || shape.fill}"`;
   if (shape.stroke !== undefined) out += ` stroke="${shape.stroke === 'none' ? 'none' : colors[shape.stroke] || shape.stroke}"`;
+  else if (shape.fill === 'body' && shape.k === 'path') out += ` stroke="${colors.bodyDark}" stroke-width="${OUTLINE_SW}" stroke-linejoin="round"`;
   if (shape.sw !== undefined) out += ` stroke-width="${num(shape.sw)}"`;
   if (shape.cap) out += ` stroke-linecap="${shape.cap}"`;
   if (shape.join) out += ` stroke-linejoin="${shape.join}"`;
   if (shape.op !== undefined) out += ` opacity="${num(shape.op)}"`;
+  if (shape.cls) out += ` class="cr-${esc(shape.cls)}"`;
   return out;
 }
 
@@ -1412,11 +1596,26 @@ export function renderCreatureSVG(creature, opts = {}) {
   }
 
   /* --- body ---------------------------------------------------------------- */
+  /* Fill, shade, then a soft highlight where the key light lands (above and to
+     the left of the face), a blush under the eyes, and the ink line last so it
+     sits over everything. */
+  const head = a.head;
   let bodyInner = '';
   if (body.back) bodyInner += `<path d="${body.back}" fill="${colors.bodyDark}"/>`;
   bodyInner += `<path d="${body.path}" fill="${colors.body}"/>`;
   if (body.shade) bodyInner += shapesMarkup(body.shade, colors);
+  bodyInner += `<ellipse cx="${num(head.x - head.r * 0.34)}" cy="${num(head.y - head.r * 0.46)}" rx="${num(head.r * 0.4)}" ry="${num(head.r * 0.24)}" fill="${colors.bodyLight}" opacity="0.38"/>`;
+  bodyInner += `<path d="${body.path}" fill="none" stroke="${colors.bodyDark}" stroke-width="${num(OUTLINE_SW * 1.25)}" stroke-linejoin="round"/>`;
   const bodyMarkup = mount({ part:'body', x:0, y:0 }, bodyInner);
+
+  /* --- blush (only faces that have the room, and never on a blind stare) ----- */
+  let blushMarkup = '';
+  if (!has(body, 'smallFace') && EYES[P.eyes].tags.indexOf('blind') === -1) {
+    const bx = a.eyes.spread * c.tune.eyeSpread * 1.28, by = a.eyes.y + 7.4 * a.eyes.scale, br = 2.4 * a.eyes.scale;
+    blushMarkup = mount({ part:'blush', x:a.eyes.x, y:by },
+      `<ellipse cx="${num(-bx)}" cy="0" rx="${num(br * 1.3)}" ry="${num(br * .8)}" fill="${colors.accent}" opacity="0.26"/>` +
+      `<ellipse cx="${num(bx)}" cy="0" rx="${num(br * 1.3)}" ry="${num(br * .8)}" fill="${colors.accent}" opacity="0.26"/>`);
+  }
 
   /* --- markings ------------------------------------------------------------ */
   let detailMarkup = '';
@@ -1452,7 +1651,7 @@ export function renderCreatureSVG(creature, opts = {}) {
 
   const torso = `<g class="cr-torso" transform="rotate(${num(c.tune.lean)} 0 ${BASELINE})">`
     + wingMarkup + tailMarkup + armMarkup + topMarkup + earMarkup
-    + bodyMarkup + detailMarkup + eyeMarkup + mouthMarkup
+    + bodyMarkup + detailMarkup + blushMarkup + eyeMarkup + mouthMarkup
     + `</g>`;
   const figure = `<g class="cr-figure">${legMarkup}${torso}</g>`;
 

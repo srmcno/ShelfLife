@@ -1,5 +1,5 @@
 import { moodOf, isAsleep, MOOD_WORD } from '../engine/tick.js';
-import { careFor } from '../engine/care.js';
+import { careFor, CARE_GAIN } from '../engine/care.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 import { checkAchievements, grudgeStageFor, GRUDGE_STAGE_AT } from '../engine/achievements.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
@@ -17,11 +17,15 @@ const cardSheet = document.getElementById('cardSheet');
 
 let openPetId = null;
 
+function slotName(i) {
+  return String.fromCharCode(65 + Math.floor(i / 6)) + (i % 6 + 1);
+}
+
 function positionControl(state, id) {
   return '<div class="position-control"><label for="residentPosition">Place on shelf</label><select id="residentPosition">' +
     state.slots.map((occupant, i) => '<option value="' + i + '"' + (occupant === id ? ' selected' : '') + '>' +
-      String.fromCharCode(65 + Math.floor(i / 6)) + ' · ' + (i % 6 + 1) +
-      (occupant && occupant !== id ? ' — swap with ' + escapeHtml((petById(state, occupant) || {}).name || 'furniture') : occupant === id ? ' — here' : ' — empty') + '</option>').join('') +
+      slotName(i) +
+      (occupant && occupant !== id ? ' · swap with ' + escapeHtml((petById(state, occupant) || {}).name || (PROPS[(propById(state, occupant) || {}).kind] || {}).name || 'furniture') : occupant === id ? ' · here' : ' · empty') + '</option>').join('') +
     '</select><button class="btn btn-sm" id="moveResident">Move</button></div>';
 }
 function wirePosition(state, id) {
@@ -36,10 +40,7 @@ function wirePosition(state, id) {
   });
 }
 
-
-// Thresholds mirror engine/achievements.js's GRUDGE_STAGE_AT (5/12/20) rather
-// than the original prototype's hardcoded 4/10/20, so this stays in sync with
-// the actual grudge-stage escalation logic.
+// Thresholds mirror engine/achievements.js's GRUDGE_STAGE_AT (5/12/20).
 function grievanceLine(pet) {
   const g = pet.grudges || 0;
   if (g === 0) return 'No grievances on file. Yet.';
@@ -60,36 +61,47 @@ function statRow(label, key, val) {
     '<span class="bar"><span style="width:' + (val * 10) + '%"></span></span><span class="num">' + val + '</span></div>';
 }
 
+// The last few things the board has said about this creature, in its own hand.
+function onFile(state, pet) {
+  const mine = (state.notes || []).filter(n => n.from === pet.name || (n.text && n.text.indexOf(pet.name) >= 0)).slice(0, 3);
+  if (!mine.length) return '<p class="on-file-empty">Nothing on file. It is early. It has plans.</p>';
+  return '<ul class="on-file">' + mine.map(n => {
+    const text = n.text.length > 150 ? n.text.slice(0, 147).trimEnd() + '…' : n.text;
+    return '<li class="' + escapeHtml(n.kind || 'note') + '">' + escapeHtml(text) + '</li>';
+  }).join('') + '</ul>';
+}
+
 export function openCard(state, id, keepScroll) {
   const pet = petById(state, id);
   if (!pet) return;
   openPetId = id;
   const focused = keepScroll && cardSheet.contains(document.activeElement) ? { id: document.activeElement.id, care: document.activeElement.dataset.care } : null;
   const pendingPosition = keepScroll ? document.getElementById('residentPosition')?.value : null;
-  const y = keepScroll ? cardVeil.scrollTop : 0;
+  const y = keepScroll ? (cardSheet.scrollTop || cardVeil.scrollTop) : 0;
   const mood = moodOf(pet);
   const asleep = isAsleep(pet);
   const dateStr = new Date(pet.born).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   const stage = grudgeStageFor(pet.grudges);
+  const slot = state.slots.indexOf(pet.id);
 
   let html = '';
   html += '<div class="sheet-head"><div><h2>' + escapeHtml(pet.name) + '</h2>' +
-    '<div class="card-meta">Moved in ' + dateStr + (asleep ? '. Asleep right now.' : '') + '</div>' +
+    '<div class="card-meta">Moved in ' + dateStr + (slot >= 0 ? ' · slot ' + slotName(slot) : '') + (asleep ? ' · asleep right now' : '') + '</div>' +
     '<span class="mood-tag mood-' + mood + '">' + MOOD_WORD[mood] + '</span></div>' +
     '<button class="btn btn-ghost btn-sm" id="cardClose">Close</button></div>';
-  html += '<div class="card-top"><div class="card-portrait" id="cardPortraitHost"></div><div class="needs">' +
+  html += '<div class="card-hero"><div class="card-portrait" id="cardPortraitHost"></div><div class="needs">' +
     needRow(pet, 'food', 'Fed') + needRow(pet, 'fuss', 'Fussed') + needRow(pet, 'clean', 'Clean') +
-    '<div class="bondline">Trust ' + pet.bond + ' of 25' +
-    '<br>' + grievanceLine(pet) +
-    '<br>Grudge stage ' + stage + ' of ' + GRUDGE_STAGE_AT.length +
+    '<div class="bondline"><b>Trust ' + pet.bond + ' of 25.</b> ' + grievanceLine(pet) +
+    (stage ? ' Grudge stage ' + stage + ' of ' + GRUDGE_STAGE_AT.length + '.' : '') +
     '<span class="bond-bar"><span style="width:' + (pet.bond / 25 * 100) + '%"></span></span></div>' +
     '</div></div>';
   html += '<div class="care-row">' +
-    '<button class="btn" data-care="food">Feed it</button>' +
-    '<button class="btn" data-care="fuss">Fuss over it</button>' +
-    '<button class="btn" data-care="clean">Clean it up</button></div>';
+    '<button class="btn care-food" data-care="food">Feed it<small>fed +' + CARE_GAIN.food + '</small></button>' +
+    '<button class="btn care-fuss" data-care="fuss">Fuss over it<small>fussed +' + CARE_GAIN.fuss + '</small></button>' +
+    '<button class="btn care-clean" data-care="clean">Clean it up<small>clean +' + CARE_GAIN.clean + '</small></button></div>';
   html += '<p class="bio">' + escapeHtml(pet.bio) + '</p>';
-  html += '<div class="section-rule"></div>';
+  html += '<div class="card-section-title">On file</div>' + onFile(state, pet);
+  html += '<div class="card-section-title">Particulars</div>';
   html += statRow('Cute', 'cute', pet.stats.cute) + statRow('Menace', 'menace', pet.stats.menace) +
     statRow('Damp', 'damp', pet.stats.damp) + statRow('Mystique', 'mystique', pet.stats.mystique);
   html += '<ul class="traits">';
@@ -104,15 +116,15 @@ export function openCard(state, id, keepScroll) {
     '<button class="btn btn-sm" id="renameBtn">Rename</button></div>';
 
   cardSheet.innerHTML = html;
-  // The portrait is a live animated sprite (a real DOM element), not something
-  // that can live inside the innerHTML string above — appended after the fact
-  // into the empty host div that string left behind.
+  // The portrait is a live animated sprite (a real DOM element), appended into
+  // the empty host the string left behind.
   const portrait = renderPetSprite(pet);
   portrait.classList.add(...moodMotionClasses(pet, { mood, asleep }));
   document.getElementById('cardPortraitHost').appendChild(portrait);
 
   cardVeil.classList.add('open');
   document.body.style.overflow = 'hidden';
+  cardSheet.scrollTop = y;
   cardVeil.scrollTop = y;
   if (focused?.care) cardSheet.querySelector('[data-care="' + focused.care + '"]')?.focus({ preventScroll: true });
   else if (focused?.id) document.getElementById(focused.id)?.focus({ preventScroll: true });
@@ -134,19 +146,16 @@ export function openCard(state, id, keepScroll) {
       if (cardVeil.classList.contains('open') && openPetId === pet.id) {
         openCard(state, pet.id, true);
       }
-      // After the re-render, not before: renderAll throws away the element the
-      // reaction has to play on. reactTo finds the pet again by id, on the
-      // shelf and in the portrait at once.
+      // After the re-render: renderAll throws away the element the reaction
+      // has to play on. reactTo finds the pet again by id, on the shelf and in
+      // the portrait at once.
       reactTo(pet.id, need);
     });
   });
   document.getElementById('cardClose').addEventListener('click', closeCard);
-  // Rename and Rehome deliberately do NOT use the native prompt()/confirm().
-  // Chrome silently makes both return null/false forever once the user ticks
-  // "Prevent this page from creating additional dialogs" (which appears after a
-  // few dialogs), so Rename appeared completely dead with no error in console.
-  // They're also unreliable inside installed PWAs and awkward on mobile, and this
-  // game is meant to be installed on a phone. In-page UI instead.
+  // Rename and Rehome deliberately do NOT use the native prompt()/confirm():
+  // Chrome silently suppresses them after "Prevent this page from creating
+  // additional dialogs", and they are unreliable inside installed PWAs.
   document.getElementById('renameBtn').addEventListener('click', () => {
     const actions = document.querySelector('#cardSheet .card-actions');
     if (!actions || document.getElementById('renameField')) return;
@@ -199,7 +208,8 @@ export function openCard(state, id, keepScroll) {
       addNote(state, pick([
         'They have counted themselves twice since.',
         'Nobody has taken the empty space. Nobody will.',
-        'One of them asked whether there is a list, and whether it is on it.'
+        'One of them asked whether there is a list, and whether it is on it.',
+        'Somebody has put a crumb in the empty slot. Nobody will say whether it is an offering.'
       ]), 'the shelf', 'angry');
     }
     save();
@@ -211,14 +221,18 @@ export function openCard(state, id, keepScroll) {
 export function openPropCard(state, id) {
   const pr = propById(state, id);
   if (!pr) return;
-  const def = PROPS[pr.kind] || { name: 'Unfamiliar furniture', desc: 'This belongs to a newer shelf.', ambient: ['It has not introduced itself.'] };
+  const def = PROPS[pr.kind] || { name: 'Unfamiliar furniture', desc: 'This belongs to a newer shelf.', ambient: ['It has not introduced itself.'], aura: {} };
   openPetId = null;
+  const AURA_WORD = { food: 'hunger', fuss: 'boredom', clean: 'grime' };
+  const auras = Object.entries(def.aura || {}).map(([k, v]) => AURA_WORD[k] + (v < 1 ? ' slows' : ' speeds up') + ' for neighbours');
   cardSheet.innerHTML =
     '<div class="sheet-head"><div><h2>' + escapeHtml(def.name) + '</h2>' +
     '<div class="card-meta">' + escapeHtml(def.desc) + '</div></div>' +
     '<button class="btn btn-ghost btn-sm" id="cardClose">Close</button></div>' +
-    '<div class="card-top"><div class="card-portrait">' + (PROP_ART[pr.kind] || '') + '</div><div>' +
-    '<p class="bio">' + escapeHtml(pick(def.ambient)) + '</p></div></div>' +
+    '<div class="card-hero"><div class="card-portrait">' + (PROP_ART[pr.kind] || '') + '</div><div>' +
+    '<p class="bio">' + escapeHtml(pick(def.ambient)) + '</p>' +
+    (auras.length ? '<p class="hint">' + escapeHtml(auras.join('; ')) + '.</p>' : '<p class="hint">No practical effect. They like it anyway.</p>') +
+    '</div></div>' +
     positionControl(state, pr.id) + '<div class="card-actions"><button class="btn btn-danger btn-sm" id="removeProp">Put it away</button></div>';
   cardVeil.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -247,7 +261,4 @@ export function closeCard() {
   document.body.style.overflow = '';
 }
 
-// This module only owns cardVeil's own outside-click-to-close behavior — the
-// global Escape-key handler (which needs to know about every other veil in
-// the app) belongs to main.js (Task 14), not here.
 cardVeil.addEventListener('click', e => { if (e.target === cardVeil) closeCard(); });

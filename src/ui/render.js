@@ -1,6 +1,6 @@
 import { renderScheme } from './schemes.js';
 import { moodOf, isAsleep, hasTrait, MOOD_WORD } from '../engine/tick.js';
-import { activeFeuds, feudingIds } from '../engine/achievements.js';
+import { activeFeuds, feudingIds, ACHIEVEMENTS } from '../engine/achievements.js';
 import { totalBond } from '../engine/unlocks.js';
 import { renderPetSprite, moodMotionClasses, MOTION_TRAIT_FLAGS } from '../art/sprite.js';
 import { captureShelfPositions, playShelfMoves } from '../art/animator.js';
@@ -19,19 +19,12 @@ export function renderAll(state) {
   renderNotes(state);
   renderScheme(state);
   renderProgress(state);
+  renderDoors(state);
 }
 
-// Three figures, and a fourth only when something is wrong.
-//
-// This used to be nine metrics in a pill rail. Four of them — Content / Fine /
-// Annoyed / Furious — were the mood census, which the shelf already renders as
-// physics: the pips under every creature and the ink on every nameplate. Showing
-// it a second time as analytics put a dashboard in front of the thing it
-// describes. So the census and the streak are gone from here (the streak now
-// lives in the Incidents sheet, which is the log it belongs to), and what is
-// left is a line that CHANGES when the game changes rather than a readout that
-// is always the same shape. Styled as an engraving on the case's bottom rail —
-// see the .stage>.status rules in css/style.css.
+// Three figures, and a fourth only when something is wrong. The mood census is
+// already on the shelf as pips and nameplate ink; this line is what changes
+// when the game changes.
 export function renderStatus(state) {
   const days = Math.max(1, Math.floor((Date.now() - state.started) / 86400000) + 1);
   const counts = { content: 0, fine: 0, annoyed: 0, furious: 0 };
@@ -40,9 +33,9 @@ export function renderStatus(state) {
   const unrest = counts.furious + feuds;
   document.getElementById('roundsBtn').disabled = !state.pets.length;
   statusBar.innerHTML =
-    '<span>Day <b>' + days + '</b></span>' +
-    '<span>Living here <b>' + state.pets.length + '</b> of ' + state.slots.length + '</span>' +
-    '<span>Trust <b>' + totalBond(state) + '</b></span>' +
+    '<span class="day">Day <b>' + days + '</b></span>' +
+    '<span class="pop">Living here <b>' + state.pets.length + '</b><span class="of">of ' + state.slots.length + '</span></span>' +
+    '<span class="trust">Trust <b>' + totalBond(state) + '</b></span>' +
     (unrest ? '<span class="bad">Unrest <b>' + unrest + '</b></span>' : '');
 }
 
@@ -73,6 +66,7 @@ function petEl(state, pet, slotIndex) {
   if (plotting) btn.classList.add('scheming');
   btn.dataset.kind = 'pet';
   btn.dataset.slot = slotIndex;
+  btn.dataset.mood = mood;
   btn.setAttribute('aria-label', 'Take care of ' + pet.name + ', currently ' + MOOD_WORD[mood]);
 
   // Trait flags are resolved here rather than inside art/sprite.js so the art
@@ -106,10 +100,8 @@ function propEl(pr, slotIndex) {
   btn.dataset.id = pr.id;
   btn.dataset.kind = 'prop';
   btn.dataset.slot = slotIndex;
-  // The one hook the lighting model needs: a candle and a lamp are light
-  // SOURCES, and css/style.css gives each kind its own pool that falls on the
-  // neighbours. Where you put a prop is therefore a lighting decision as well as
-  // an aura one. Everything else about props is unchanged.
+  // css/style.css gives light-source props their own pool that falls on the
+  // neighbours, keyed off this attribute.
   btn.dataset.prop = pr.kind;
   btn.setAttribute('aria-label', def.name);
   btn.innerHTML = (PROP_ART[pr.kind] || '') + '<span class="nameplate">' + escapeHtml(def.name) + '</span>';
@@ -126,9 +118,6 @@ export function renderShelf(state) {
   cabinet.innerHTML = '';
   const rows = state.slots.length / 6;
   for (let r = 0; r < rows; r++) {
-    // A row with nothing on it collapses to a thin bare shelf (CSS .row-empty)
-    // instead of leaving a full-height void. It keeps all six slot elements, so
-    // it stays a valid drop target and slot indices stay positional.
     const rowEmpty = state.slots.slice(r * 6, r * 6 + 6).every(id => !id);
     const bareShelf = r === 0 && rowEmpty && !state.pets.length;
     const row = document.createElement('div');
@@ -151,15 +140,13 @@ export function renderShelf(state) {
       }
       slots.appendChild(slot);
     }
-    // Guarded by rowEmpty (via bareShelf) so props sitting on row 0 with no pets
-    // yet are no longer wiped out by the empty-shelf message.
     if (bareShelf) {
       slots.innerHTML = '';
       const msg = document.createElement('div');
       msg.className = 'empty-shelf';
       msg.innerHTML = '<span class="empty-kicker">Vacancy. Eighteen small rooms.</span>' +
         '<strong>Someone should live here.</strong>' +
-        '<span>Grow a peculiar little creature, or draw your own. They cannot die. They can hold a grudge.</span>' +
+        '<span>Grow a peculiar little creature, or draw your own. They cannot die. They can hold a grudge, and they will hold it against you.</span>' +
         '<button class="btn btn-primary" type="button">Make your first pet</button>';
       msg.querySelector('button').addEventListener('click', () => document.getElementById('newPetBtn').click());
       slots.appendChild(msg);
@@ -173,6 +160,11 @@ export function renderShelf(state) {
   playShelfMoves(cabinet, before);
   if (focusedId) Array.from(cabinet.querySelectorAll('.piece')).find(el => el.dataset.id === focusedId)?.focus({ preventScroll: true });
 }
+
+// Notes the board has already shown, so a fresh one can slide in rather than
+// the whole wall re-appearing every render.
+const shown = new Set();
+let firstRender = true;
 
 export function renderNotes(state) {
   notesState = state;
@@ -190,10 +182,13 @@ export function renderNotes(state) {
     return;
   }
   (expandedNotes ? state.notes : state.notes.slice(0, 6)).forEach(n => {
+    const key = n.at + '|' + n.text;
+    const fresh = !firstRender && !shown.has(key);
+    shown.add(key);
     const d = document.createElement('div');
     // Forms 2/4/6 carry real newlines and rely on .note{white-space:pre-line}.
     // A filled-in document additionally drops the handwriting for a typed face.
-    d.className = 'note ' + n.kind + (n.form === 'doc' ? ' note--doc' : '');
+    d.className = 'note ' + n.kind + (n.form === 'doc' ? ' note--doc' : '') + (fresh ? ' note--new' : '');
     d.innerHTML = escapeHtml(n.text) + '<span class="from">' + escapeHtml(n.from) + '</span>';
     const time = document.createElement('time');
     const date = new Date(n.at);
@@ -205,6 +200,8 @@ export function renderNotes(state) {
     }
     notesEl.appendChild(d);
   });
+  firstRender = false;
+  if (shown.size > 400) shown.clear();
 }
 
 export function escapeHtml(s) {
@@ -215,5 +212,16 @@ function renderProgress(state) {
   const host = document.getElementById('shelfProgress');
   const bond = totalBond(state);
   const next = Object.values(PROPS).filter(p => p.at > bond).sort((a, b) => a.at - b.at)[0];
-  host.innerHTML = next ? '<div><span class="eyebrow">A little trust goes a long way</span><p><strong>' + escapeHtml(next.name) + '</strong> unlocks at ' + next.at + ' trust <span>· ' + (next.at - bond) + ' to go</span></p></div><meter min="0" max="' + next.at + '" value="' + bond + '" aria-label="Trust toward ' + escapeHtml(next.name) + '"></meter>' : '<div><span class="eyebrow">In far too deep</span><p>Every furnishing unlocked. They trust your judgment. An error, surely.</p></div>';
+  if (!state.pets.length) { host.innerHTML = ''; return; }
+  host.innerHTML = next ? '<div><span class="eyebrow">Next unlock</span><p><strong>' + escapeHtml(next.name) + '</strong> at ' + next.at + ' trust <span>· ' + (next.at - bond) + ' to go. Care for someone individually.</span></p></div><meter min="0" max="' + next.at + '" value="' + bond + '" aria-label="Trust toward ' + escapeHtml(next.name) + '"></meter>' : '<div><span class="eyebrow">In far too deep</span><p>Every furnishing unlocked. They trust your judgment. An error, surely.</p></div>';
+}
+
+function renderDoors(state) {
+  const sub = document.getElementById('incidentsSub');
+  if (!sub) return;
+  const n = (state.achievements || []).length;
+  const streak = state.streak && state.streak.count || 0;
+  sub.textContent = n
+    ? n + ' of ' + ACHIEVEMENTS.length + ' on record' + (streak > 1 ? ' · ' + streak + ' days running' : '')
+    : 'Nothing on file. Give it time.';
 }

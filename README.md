@@ -77,12 +77,14 @@ never saw updates.
 - **Check the shelf** — advances the world and produces notes. This is where the writing lives.
 - **Do the rounds** — top everyone up at once. Efficient. They notice it was the rounds.
 - **Tap a pet** — its card: needs, bond, grievances on file, traits, and the care buttons.
+- **Watch them.** Residents blink, glance at each other, face the way they walk, and cross the shelf in the gait their body allows (walkers plod, hoppers bounce, flyers arc, oozes stretch). Neighbours whisper, shove, sniff, glare across a feud line and wake each other up; furniture gets poked and rocks. Short thought bubbles come from `src/content/bubbles.js`.
 - **Move a resident** — drag it, or use the position selector in its card. On phones, hold before dragging. Adjacency drives feuds and furniture effects.
 - **Decorate** — six room themes, wall patterns, shelf woods, trim colours, and furniture that has
   actual mechanical effects on the pets standing next to it.
-- **Small conspiracies** — twelve rotating plans with two choices and an unsupervised outcome. Choices visibly trade needs for trust. Residents act on their own after three minutes; the next plan arrives five minutes after resolution. A return from offline resolves at most one outstanding plan.
+- **Small conspiracies.** A rotating set of plans with two choices and an unsupervised outcome. Choices visibly trade needs for trust. Residents act on their own after three minutes; the next plan arrives five minutes after resolution. A return from offline resolves at most one outstanding plan.
 - **Trust** — individual care and supervised schemes unlock furniture and drawing tools. The strip below the cabinet shows the next furnishing; trust is stored as `bond` in the save for compatibility.
-- **Incidents** — the achievements log.
+- **Incidents.** The achievements log, with a hint for everything still unearned.
+- **On a phone.** The app is a three-tab layout (Shelf, Plots, Notes) with a bottom bar and a More tray. Cards and sheets rise from the bottom and can be pulled down to close; the notes tab badges when a check of the shelf adds new notes.
 - **Mature** — off by default. Turns on cruder, sweary variants of the writing.
 - **Narrator** — reads notes aloud. See the note on voices below.
 
@@ -100,11 +102,11 @@ css/style.css
 src/
   main.js             boot + all wiring
   state.js            save/load/migration; the only file touching localStorage
-  content/            traits, copy, care voices, conspiracies, feuds, props, decor, dialogue, mature-mode overlay
+  content/            traits, copy, care voices, conspiracies, feuds, props, decor, dialogue, thought bubbles, mature-mode overlay
   engine/             tick, care, schemes, unlocks, achievements, loop, behavior, dialogue
   art/                stamps, creatures, sprite, animator, anatomy, drawing bounds, studio
   audio/              sound (Web Audio SFX), narrator (SpeechSynthesis)
-  ui/                 render, card, schemes, dialogs, decorUI, drag, toast
+  ui/                 render, card, schemes, dialogs, decorUI, drag, toast, nav (tabs, More tray, phone sheets)
 test/                 node:test suites
 docs/                 design docs, comedy direction, implementation plan
 ```
