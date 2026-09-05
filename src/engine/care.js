@@ -1,6 +1,6 @@
 import { TRAIT_CARE } from '../content/care.js';
 import { tick, isAsleep } from './tick.js';
-import { ASLEEP_LINES, OVERFED, CARE_LINES } from '../content/copy.js';
+import { ASLEEP_LINES, OVERFED, CARE_LINES, ROUNDS_NOTES, ROUNDS_NAMED, ROUNDS_TOASTS } from '../content/copy.js';
 import { clamp, pick, addNote, recordCare } from '../state.js';
 
 export const CARE_GAIN = { food: 34, fuss: 38, clean: 42 };
@@ -35,23 +35,20 @@ export function careFor(state, pet, need, now = Date.now()) {
   return { message: pet.name + ': ' + line, bondGained };
 }
 
-const ROUNDS_NOTES = [
-  'You did the rounds. They can all tell it was the rounds.',
-  'Everyone was seen to. Nobody was seen.',
-  'You went down the line. They noticed the order.'
-];
-const ROUNDS_TOASTS = [
-  'Rounds done. Nobody feels special.',
-  'Everyone fed. Everyone unimpressed.',
-  'Efficient. They hated it.'
-];
-
 export function doRounds(state, now = Date.now()) {
   tick(state, now);
   if (!state.pets.length) return null;
   state.pets.forEach(pet => {
     ['food', 'fuss', 'clean'].forEach(k => { pet.needs[k] = clamp(pet.needs[k] + 13, 0, 100); });
   });
-  addNote(state, pick(ROUNDS_NOTES), 'the shelf', 'note');
+  // Who was first and who was last is read off the shelf order, so the note can
+  // hold it against you by name.
+  const inOrder = state.slots.map(id => state.pets.find(p => p.id === id)).filter(Boolean);
+  const first = inOrder[0], last = inOrder[inOrder.length - 1];
+  const named = inOrder.length >= 2 && first !== last && Math.random() < 0.4;
+  const text = named
+    ? pick(ROUNDS_NAMED).replace(/\{first\}/g, first.name).replace(/\{last\}/g, last.name).replace(/\{n\}/g, String(inOrder.length))
+    : pick(ROUNDS_NOTES);
+  addNote(state, text, 'the shelf', 'note');
   return { message: pick(ROUNDS_TOASTS) };
 }

@@ -25,18 +25,39 @@ export function renderAll(state) {
 // Three figures, and a fourth only when something is wrong. The mood census is
 // already on the shelf as pips and nameplate ink; this line is what changes
 // when the game changes.
+// The moon, as a small drawn disc in the status line. Real phase, computed from
+// the synodic month; the line under it is what the shelf makes of it.
+const SYNODIC = 29.530588853;
+const MOON_EPOCH = Date.UTC(2000, 0, 6, 18, 14);
+export function moonPhase(now = Date.now()) {
+  const age = (((now - MOON_EPOCH) / 86400000) % SYNODIC + SYNODIC) % SYNODIC;
+  const f = age / SYNODIC;
+  const names = ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'];
+  const lines = [
+    'The dark ones are very pleased.', 'Something is being planned by lamplight.', 'Half the shelf is awake, and it is the wrong half.',
+    'The howling is rehearsed, not felt.', 'Nobody has slept and nobody intends to.', 'The candle has been asked to try harder.',
+    'The nocturnal ones are checking the rota.', 'The bowl has been moved toward the dark.'
+  ];
+  const i = Math.round(f * 8) % 8;
+  // A dark disc slid across a light one: 0 covers it (new), a full diameter clears it (full).
+  const shift = f < 0.5 ? -(f * 2) : (1 - f) * 2;
+  return { name: names[i], line: lines[i], shift: Math.round(shift * 13) };
+}
+
 export function renderStatus(state) {
   const days = Math.max(1, Math.floor((Date.now() - state.started) / 86400000) + 1);
   const counts = { content: 0, fine: 0, annoyed: 0, furious: 0 };
   state.pets.forEach(p => counts[moodOf(p)]++);
   const feuds = activeFeuds(state).length;
   const unrest = counts.furious + feuds;
+  const moon = moonPhase();
   document.getElementById('roundsBtn').disabled = !state.pets.length;
   statusBar.innerHTML =
     '<span class="day">Day <b>' + days + '</b></span>' +
     '<span class="pop">Living here <b>' + state.pets.length + '</b><span class="of">of ' + state.slots.length + '</span></span>' +
     '<span class="trust">Trust <b>' + totalBond(state) + '</b></span>' +
-    (unrest ? '<span class="bad">Unrest <b>' + unrest + '</b></span>' : '');
+    (unrest ? '<span class="bad">Unrest <b>' + unrest + '</b></span>' : '') +
+    '<span class="moon" title="' + escapeHtml(moon.name + '. ' + moon.line) + '" aria-label="' + escapeHtml(moon.name) + '"><i style="--ms:' + moon.shift + 'px"></i><span class="moon-name">' + escapeHtml(moon.name) + '</span></span>';
 }
 
 function feudDirectionFor(state, pet, slotIndex) {
@@ -166,22 +187,56 @@ export function renderShelf(state) {
 const shown = new Set();
 let firstRender = true;
 
+// Filter chips above the board. A note is classified from what the engine
+// already stamps on it (kind and form), so no note needs a new field.
+let noteFilter = 'all';
+function noteMatches(n, filter) {
+  switch (filter) {
+    case 'said': return ['two', 'react', 'direct'].includes(n.form) || n.from === 'overheard';
+    case 'complaints': return n.kind === 'angry' || n.kind === 'feud';
+    case 'papers': return n.form === 'doc' || n.form === 'list';
+    case 'plots': return n.kind === 'scheme';
+    default: return true;
+  }
+}
+const filterHost = document.getElementById('noteFilters');
+if (filterHost) filterHost.addEventListener('click', e => {
+  const chip = e.target.closest('[data-filter]');
+  if (!chip) return;
+  noteFilter = chip.dataset.filter;
+  filterHost.querySelectorAll('[data-filter]').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+  expandedNotes = false;
+  if (notesState) renderNotes(notesState);
+});
+
+function renderTeaser(state) {
+  const teaser = document.getElementById('shelfTeaser');
+  if (!teaser) return;
+  const n = state.notes[0];
+  teaser.hidden = !n;
+  if (!n) return;
+  teaser.querySelector('.teaser-text').textContent = n.text.length > 150 ? n.text.slice(0, 148).replace(/\s+\S*$/, '') + '…' : n.text;
+  teaser.querySelector('.teaser-by').textContent = n.from;
+}
+
 export function renderNotes(state) {
   notesState = state;
+  renderTeaser(state);
+  const list = state.notes.filter(n => noteMatches(n, noteFilter));
   const more = document.getElementById('notesMore');
-  more.hidden = state.notes.length <= 6;
-  more.textContent = expandedNotes ? 'Keep the latest six' : 'Read ' + (state.notes.length - 6) + (state.notes.length === 7 ? ' older note' : ' older notes');
+  more.hidden = list.length <= 6;
+  more.textContent = expandedNotes ? 'Keep the latest six' : 'Read ' + (list.length - 6) + (list.length === 7 ? ' older note' : ' older notes');
   more.setAttribute('aria-expanded', String(expandedNotes));
   notesEl.innerHTML = '';
   document.getElementById('clearNotes').disabled = !state.notes.length && document.getElementById('clearNotes').dataset.undo !== 'true';
-  if (!state.notes.length) {
+  if (!list.length) {
     const d = document.createElement('div');
     d.className = 'notes-empty';
-    d.textContent = state.pets.length ? 'Check the shelf to see what they have to say. Care for them individually to build trust and unlock new things.' : 'First, a creature. Then, the complaints.';
+    d.textContent = state.notes.length ? 'Nothing filed under that. Yet.' : state.pets.length ? 'Check the shelf to see what they have to say. Care for them individually to build trust and unlock new things.' : 'First, a creature. Then, the complaints.';
     notesEl.appendChild(d);
     return;
   }
-  (expandedNotes ? state.notes : state.notes.slice(0, 6)).forEach(n => {
+  (expandedNotes ? list : list.slice(0, 6)).forEach(n => {
     const key = n.at + '|' + n.text;
     const fresh = !firstRender && !shown.has(key);
     shown.add(key);
