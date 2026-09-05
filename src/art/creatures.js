@@ -1452,9 +1452,37 @@ const num = n => (Math.round(n * 1000) / 1000);
    (spindly legs, whips, antlers) are left alone. */
 const OUTLINE_SW = 1.2;
 
+/* Shading. Every shape filled with the body colour is painted with a radial
+   gradient instead of a flat fill: lit toward the key light at the top left,
+   the plain body colour through the middle, and the shadow colour at the far
+   rim. The gradient is declared once per creature in <defs>; its id is derived
+   from the two colours, so two creatures that share a palette share an id and
+   the definitions are interchangeable wherever the browser resolves them. */
+function mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = sh => Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
+  return '#' + [16, 8, 0].map(sh => ch(sh).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+function shadingId(colors) {
+  return 'crg' + colors.body.slice(1) + colors.bodyDark.slice(1);
+}
+function shadingDefs(colors) {
+  const id = shadingId(colors);
+  return `<defs><radialGradient id="${id}" cx="0.38" cy="0.3" r="0.82" fx="0.34" fy="0.26">`
+    + `<stop offset="0" stop-color="${mixHex(colors.body, colors.bodyLight, 0.5)}"/>`
+    + `<stop offset="0.42" stop-color="${colors.body}"/>`
+    + `<stop offset="1" stop-color="${mixHex(colors.body, colors.bodyDark, 0.62)}"/>`
+    + `</radialGradient></defs>`;
+}
+// Set for the duration of one renderCreatureSVG call; paint() reads it.
+let SHADE_ID = null;
+
 function paint(shape, colors) {
   let out = '';
-  if (shape.fill !== undefined) out += ` fill="${shape.fill === 'none' ? 'none' : colors[shape.fill] || shape.fill}"`;
+  if (shape.fill !== undefined) {
+    const shaded = shape.fill === 'body' && SHADE_ID && shape.k !== 'line';
+    out += ` fill="${shape.fill === 'none' ? 'none' : shaded ? `url(#${SHADE_ID})` : colors[shape.fill] || shape.fill}"`;
+  }
   if (shape.stroke !== undefined) out += ` stroke="${shape.stroke === 'none' ? 'none' : colors[shape.stroke] || shape.stroke}"`;
   else if (shape.fill === 'body' && shape.k === 'path') out += ` stroke="${colors.bodyDark}" stroke-width="${OUTLINE_SW}" stroke-linejoin="round"`;
   if (shape.sw !== undefined) out += ` stroke-width="${num(shape.sw)}"`;
@@ -1521,6 +1549,7 @@ function mount(o, inner) {
 export function renderCreatureSVG(creature, opts = {}) {
   const c = normalizeCreature(creature);
   const colors = resolveColors(c);
+  SHADE_ID = shadingId(colors);
   const body = BODIES[c.body];
   const a = body.anchors;
   const P = c.parts;
@@ -1653,7 +1682,8 @@ export function renderCreatureSVG(creature, opts = {}) {
     + wingMarkup + tailMarkup + armMarkup + topMarkup + earMarkup
     + bodyMarkup + detailMarkup + blushMarkup + eyeMarkup + mouthMarkup
     + `</g>`;
-  const figure = `<g class="cr-figure">${legMarkup}${torso}</g>`;
+  const figure = `<g class="cr-figure">${shadingDefs(colors)}${legMarkup}${torso}</g>`;
+  SHADE_ID = null;
 
   if (opts.inner) return figure;
 

@@ -494,10 +494,13 @@ test('rendered markup only contains resolved hex colours, never role names', () 
   for (let i = 0; i < 80; i++) {
     const c = generateCreature({ seed: 'col' + i });
     const svg = renderCreatureSVG(c);
-    [...svg.matchAll(/(?:fill|stroke)="([^"]+)"/g)].forEach(m => {
-      assert.ok(m[1] === 'none' || /^#[0-9A-Fa-f]{6}$/.test(m[1]),
+    const gradients = new Set([...svg.matchAll(/<radialGradient id="([^"]+)"/g)].map(m => m[1]));
+    [...svg.matchAll(/(?:fill|stroke|stop-color)="([^"]+)"/g)].forEach(m => {
+      const ref = /^url\(#([^)]+)\)$/.exec(m[1]);
+      assert.ok(m[1] === 'none' || /^#[0-9A-Fa-f]{6}$/.test(m[1]) || (ref && gradients.has(ref[1])),
         `unresolved colour "${m[1]}" leaked into the markup`);
     });
+    assert.ok(gradients.size >= 1, 'the body shading gradient must be declared');
     const colors = resolveColors(c);
     assert.ok(svg.includes(colors.body), 'the body colour must appear');
   }

@@ -84,6 +84,9 @@ never saw updates.
 - **Small conspiracies.** A rotating set of plans with two choices and an unsupervised outcome. Choices visibly trade needs for trust. Residents act on their own after three minutes; the next plan arrives five minutes after resolution. A return from offline resolves at most one outstanding plan.
 - **Trust** — individual care and supervised schemes unlock furniture and drawing tools. The strip below the cabinet shows the next furnishing; trust is stored as `bond` in the save for compatibility.
 - **Incidents.** The achievements log, with a hint for everything still unearned.
+- **Postcard.** The camera in the corner of the case (or More, then Postcard) draws the shelf, a note and a caption to a 1080 by 1350 picture you can share or save.
+- **Night.** After eight in the evening the room goes dark, the eyes catch the light, and the moon in the status line shows the real phase with a comment from the shelf.
+- **Notes board.** Filter chips for overheard scenes, complaints, paperwork and plots. On a phone the newest note also peeks onto the shelf tab.
 - **On a phone.** The app is a three-tab layout (Shelf, Plots, Notes) with a bottom bar and a More tray. Cards and sheets rise from the bottom and can be pulled down to close; the notes tab badges when a check of the shelf adds new notes.
 - **Mature** — off by default. Turns on cruder, sweary variants of the writing.
 - **Narrator** — reads notes aloud. See the note on voices below.
@@ -102,11 +105,11 @@ css/style.css
 src/
   main.js             boot + all wiring
   state.js            save/load/migration; the only file touching localStorage
-  content/            traits, copy, care voices, conspiracies, feuds, props, decor, dialogue, thought bubbles, mature-mode overlay
+  content/            traits, copy, care voices, conspiracies, feuds, props, decor, dialogue, thought bubbles, postcard captions, mature-mode overlay
   engine/             tick, care, schemes, unlocks, achievements, loop, behavior, dialogue
   art/                stamps, creatures, sprite, animator, anatomy, drawing bounds, studio
   audio/              sound (Web Audio SFX), narrator (SpeechSynthesis)
-  ui/                 render, card, schemes, dialogs, decorUI, drag, toast, nav (tabs, More tray, phone sheets)
+  ui/                 render, card, schemes, dialogs, decorUI, drag, toast, nav (tabs, More tray, phone sheets), postcard
 test/                 node:test suites
 docs/                 design docs, comedy direction, implementation plan
 ```

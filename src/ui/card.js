@@ -135,6 +135,7 @@ export function openCard(state, id, keepScroll) {
     btn.addEventListener('click', () => {
       const need = btn.dataset.care;
       const result = careFor(state, pet, need);
+      if (navigator.vibrate) navigator.vibrate(need === 'clean' ? [8, 30, 8] : 10);
       toast(result.message);
       if (need === 'food') playFeed();
       else if (need === 'fuss') playFuss();

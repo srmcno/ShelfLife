@@ -60,6 +60,7 @@ function syncBadges() {
 }
 
 tabs.forEach(t => t.addEventListener('click', () => setTab(t.dataset.tab)));
+document.getElementById('shelfTeaser')?.addEventListener('click', () => setTab('notes', { focus: true }));
 
 // Notes written while another tab is showing count toward the badge. A batch
 // from "Check the shelf" also flips the phone to the notes tab, which is where

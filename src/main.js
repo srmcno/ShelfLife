@@ -3,7 +3,7 @@ import {
 } from './state.js';
 import { TRAITS, TRAIT_BY_ID } from './content/traits.js';
 import { ORIGINS, HABITS, CLOSERS, FALLBACK_NAMES } from './content/copy.js';
-import { tick } from './engine/tick.js';
+import { tick, isNight } from './engine/tick.js';
 import { checkShelf, petLine } from './engine/loop.js';
 import { runBehavior, catchUpBehavior } from './engine/behavior.js';
 import { doRounds } from './engine/care.js';
@@ -12,6 +12,7 @@ import { checkUnlocks, totalBond } from './engine/unlocks.js';
 import { advanceSchemes } from './engine/schemes.js';
 import { initSchemeUI } from './ui/schemes.js';
 import { initDialogs } from './ui/dialogs.js';
+import { initPostcard } from './ui/postcard.js';
 import { initStudio } from './art/studio.js';
 import { initAnimator, reactShelf } from './art/animator.js';
 import { applyDecor, initDecorUI } from './ui/decorUI.js';
@@ -281,6 +282,13 @@ initDecorUI(state);
 initDrag(state);
 // One shared director for every pet on the shelf. getPet lets it read a pet's
 // traits for thought-bubble copy without art/ importing state.js.
+// Night on the shelf: css/style.css dims the case and lets the eyes catch the
+// light. Checked once a minute so the room changes while the game sits open.
+initPostcard();
+
+function syncNight() { document.body.classList.toggle('night', isNight()); }
+syncNight();
+setInterval(syncNight, 60000);
 initAnimator({ getPet: id => state.pets.find(p => p.id === id) || null });
 initNarrator();
 initNarratorUI();

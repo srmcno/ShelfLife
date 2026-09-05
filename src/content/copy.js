@@ -782,7 +782,71 @@ export const STRIKE_DOCS = [
 /* Which substitutions each state-aware pool is allowed to use. engine/loop.js must
    supply every one of these before it draws from the pool, and test/comedy.test.mjs
    fails the build if a template reaches for a sub its slot cannot provide. */
+
+/* ================= THE ROUNDS =================
+   Top everyone up in one pass. ROUNDS_NOTES is rendered raw; ROUNDS_NAMED needs the
+   first and last resident by slot order and the count, supplied by engine/care.js. */
+export const ROUNDS_NOTES = [
+  "You did the rounds. They can all tell it was the rounds.",
+  "Everyone was seen to. Nobody was seen.",
+  "You went down the line. They noticed the order.",
+  "The rounds took forty seconds. Several of them have timed it.",
+  "Everyone got the same amount. Everyone has measured it against the others'.",
+  "You did the rounds with one hand. They noticed the other hand.",
+  "The rounds were done in silence. The silence has been logged as a tone.",
+  "Everyone fed, fussed and wiped in one pass. Like a car wash. They have said car wash.",
+  "The rounds were done left to right. The right side has views about that.",
+  "You went down the line like a meter reader. Somebody has asked for the bill.",
+  "The rounds happened. A rota has been amended in a very small hand.",
+  "Everyone was topped up. Nobody was asked how they were.",
+  "You did the rounds. The dust was done too. The dust says thank you. Nobody else does.",
+  "The rounds were brisk. Two of the residents have requested a slower option.",
+  "The rounds were done at arm's length. The arm has been noted.",
+  "Everyone got a turn. The word turn is being disputed.",
+  "You went along the shelf like somebody checking tyres. One of the tyres has complained.",
+  "The rounds were completed. A small sign has gone up reading MINIMUM.",
+  "The rounds were done from memory. The memory missed a spot. The spot has a name.",
+  "Everyone was handled. That is the word they are using. Handled.",
+  "You did the rounds. The candle got a wipe too. The candle did not need one.",
+  "The rounds were counted by the resident at the end. It came to the same number as last time. It has written it down anyway."
+];
+
+export const ROUNDS_NAMED = [
+  "{first} was done first again. {last} was done last again. {last} has the dates.",
+  "You started with {first} and finished with {last}. {last} knows the exact minute.",
+  "{last} was last on the rounds. {last} says last is a position, not a place.",
+  "{first} got the fresh hand. {last} got the same hand, later. The hand was noted.",
+  "The rounds went {first} to {last}. {n} stops. {n} opinions about the route.",
+  "{last} watched the rounds come down the shelf for the whole of the rounds.",
+  "{first} was done first and has been insufferable about it to {last}.",
+  "You did {n} of them in a row. {last} counted {n}. {last} is checking the count."
+];
+
+export const ROUNDS_TOASTS = [
+  "Rounds done. Nobody feels special.",
+  "Everyone fed. Everyone unimpressed.",
+  "Efficient. They hated it.",
+  "Rounds done. A rota has been updated.",
+  "Everyone topped up. Nobody thanked.",
+  "Done. They noticed the order.",
+  "The rounds. Like a meter reader.",
+  "Rounds done in silence. Logged.",
+  "Everyone got the same. Everyone measured.",
+  "Brisk. Two requested a slower option.",
+  "Done. The dust says thank you.",
+  "Rounds done. Handled, they call it.",
+  "Everyone seen to. Nobody seen.",
+  "Rounds done. One of them timed it.",
+  "Done, left to right. The right side objects.",
+  "Rounds done. The word turn is disputed.",
+  "All topped up. The candle got wiped too.",
+  "Rounds done. Somebody wants the bill.",
+  "Everyone handled. At arm's length.",
+  "Rounds done. MINIMUM, says a small sign."
+];
+
 export const TEMPLATE_SUBS = {
+  ROUNDS_NAMED: ['first', 'last', 'n'],
   NEIGHBOR_COMPLAINTS: ['n'],
   PET_LIST_NOTES: ['p'],
   PET_SILENCE_LINES: ['p'],
