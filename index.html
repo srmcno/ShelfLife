@@ -53,7 +53,6 @@
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5H7l1.2-1.6h3.6L13 6h2.5A1.5 1.5 0 0 1 17 7.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="11" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
       </button>
     </div>
-    <p class="shelf-pan-hint">Swipe the cabinet to explore all six spaces. Tap a resident to care or play.</p>
     <div class="actions" id="actions">
       <button class="btn btn-check" id="checkBtn">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5h14M3 10h14M3 14.5h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="6" cy="5.5" r="1.6" fill="currentColor"/><circle cx="13" cy="10" r="1.6" fill="currentColor"/><circle cx="8" cy="14.5" r="1.6" fill="currentColor"/></svg>
@@ -335,7 +334,17 @@
 <div class="veil" id="museumVeil"><div class="sheet sheet-museum"><div class="sheet-head"><div><span class="eyebrow">Long memories, short legs</span><h2>Memory museum</h2></div><button class="btn btn-ghost btn-sm" id="museumClose">Close</button></div><div id="museumContent"></div></div></div>
 <div class="veil" id="playVeil"><div class="sheet sheet-play">
   <div class="sheet-head"><div><span class="eyebrow" id="playName">A small secret</span><h2 id="playTitle">Secret handshake</h2></div><button class="btn btn-ghost btn-sm" id="playClose">Close</button></div>
-  <div class="play-modes"><button class="chip" data-play-mode="memory" aria-pressed="true">Handshake</button><button class="chip" data-play-mode="dust" aria-pressed="false">Dust patrol</button><label><input type="checkbox" id="playRelaxed"> Relaxed play</label></div>
+  <div class="play-modes"><button class="chip" data-play-mode="chase" aria-pressed="true">Crumb Chase</button><button class="chip" data-play-mode="memory" aria-pressed="false">Handshake</button><label id="gentleOption"><input type="checkbox" id="playRelaxed"> Gentle pace</label></div>
+  <div id="chaseArea" hidden>
+    <div class="chase-hud"><span>Crumbs<b id="chaseCount">0 / 8</b></span><span>Score<b id="chaseScore">0</b></span><span>Time<b id="chaseTime">22s</b></span><button class="btn btn-ghost btn-sm" id="chasePause" aria-label="Pause chase">Pause</button></div>
+    <div class="chase-field" id="chaseField" tabindex="0" role="group" aria-label="Crumb Chase. Drag to steer your resident, or use left and right arrows. Space or the Hop button jumps.">
+      <div class="chase-window" aria-hidden="true"></div><div class="chase-floor" aria-hidden="true"></div><div id="chaseShadow" class="chase-shadow" aria-hidden="true"></div>
+      <div id="chaseItems"></div><div id="chaseResident" class="chase-resident" aria-hidden="true"></div><div id="chasePop" class="chase-pop" aria-hidden="true"></div>
+      <div id="chaseOverlay" class="chase-overlay"><h3 id="chaseHeading">The crumbs are escaping.</h3><p id="chaseDescription">Catch eight crumbs in 22 seconds.</p><button class="btn btn-primary" id="chaseGo">Let’s chase</button></div>
+    </div>
+    <div class="chase-controls"><button class="btn" data-chase-direction="left" aria-label="Move resident left">←</button><button class="btn btn-primary" id="chaseHop">Hop ↑</button><button class="btn" data-chase-direction="right" aria-label="Move resident right">→</button></div>
+    <p id="chaseTip" class="chase-tip">Drag to steer. Hop over dust bunnies.</p>
+  </div>
   <div class="play-theatre"><div id="playPortrait"></div><span id="playCue">They have been rehearsing.</span><div class="play-sparks" aria-hidden="true">✦ · ✧ · ✦</div></div>
   <div class="play-rounds"><span id="playProgress">Round 1 of 3</span><span class="play-step"></span><span class="play-step"></span><span class="play-step"></span></div>
   <p id="playStatus" role="status">Remember their gestures, then repeat them.</p><span id="playAnnouncement" class="sr-only" aria-live="polite"></span>

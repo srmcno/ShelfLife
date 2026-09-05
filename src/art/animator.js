@@ -713,6 +713,7 @@ function pass() {
     // Cheap, and only ever runs on elements this pass has not seen before,
     // which after a renderShelf is every element, exactly once.
     if (!el.dataset.slPrep) prepSprite(el);
+    if (el.dataset.slControlled === '1') continue;
     const mood = moodOfEl(el);
     const c = clockFor(id, now);
     c.seen = now;
@@ -814,6 +815,42 @@ export function initAnimator(opts) {
 
 // The same anatomy and gait used on the shelf, available in the studio/card.
 // Translation, limb cycles, torso weight and facing remain separate layers.
+export function createPuppet(el) {
+  prepSprite(el);
+  el.dataset.slControlled = '1'; el.classList.add('sl-controlled');
+  el.style.setProperty('--sl-gait-dur', '440ms');
+  let lastPose = '';
+  return {
+    move(moving, direction = 1, airborne = false) {
+      const gait = airborne && el.classList.contains('sl-can-flap') ? 'flap' : el.dataset.slGait;
+      const pose = `${moving}:${direction}:${airborne}:${gait}`;
+      if (pose === lastPose) return;
+      lastPose = pose;
+      el.classList.toggle('sl-travel', moving || airborne);
+      el.classList.toggle('sl-airborne', airborne);
+      for (const name of ['walk','scuttle','flap','hop','ooze']) el.classList.toggle('sl-gait-' + name, gait === name && (moving || airborne));
+      el.style.setProperty('--sl-face', direction < 0 ? '-1' : '1');
+    },
+    gesture(kind) {
+      if (reduced?.matches) return;
+      if (kind === 'blink') { holdClass(el, 'sl-blink', 340); return; }
+      const clips = {
+        knock: ['sl2-poke', 620, 'sl-reaching'], wiggle: ['sl2-wiggle', 680, 'sl-care-fuss'],
+        boop: ['sl2-perk', 480, 'sl-waving'], catch: ['sl2-nibble', 360, 'sl-catching'],
+        jump: ['sl2-pushoff', 230, 'sl-pushing-off'], bump: ['sl2-recoil', 360, 'sl-care-clean'],
+        shield: ['sl2-stomp', 420, 'sl-parry'], win: ['sl2-wiggle', 950, 'sl-care-fuss']
+      };
+      const clip = clips[kind];
+      if (clip) { playAnim(el, clip[0], clip[1], 'ease-out'); holdClass(el, clip[2], clip[1]); }
+    },
+    release() {
+      delete el.dataset.slControlled;
+      el.classList.remove('sl-controlled','sl-travel','sl-airborne',...['walk','scuttle','flap','hop','ooze'].map(g=>'sl-gait-'+g));
+      el.style.removeProperty('--sl-face');
+    }
+  };
+}
+
 export function previewMotion(host) {
   if (!host || reduced?.matches) return false;
   const el = host.querySelector('.sprite.sl2');

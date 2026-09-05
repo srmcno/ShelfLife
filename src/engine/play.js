@@ -26,36 +26,19 @@ export function rewardHandshake(state, game, now = Date.now()) {
   game.claimed = true;
   tick(state, now);
   if (playWait(pet, now) || isAsleep(pet, new Date(now))) return { practice: true, fuss: 0, bond: 0 };
-  const need = game.kind === 'dust' ? 'clean' : 'fuss';
+  const need = 'fuss';
   const fuss = Math.min(24, 100 - pet.needs[need]), bond = pet.bond < 25 ? 1 : 0;
   pet.needs[need] = clamp(pet.needs[need] + fuss, 0, 100);
   pet.bond += bond;
   pet.lastPlayed = now;
-  if (game.kind === 'dust') pet.dustPatrols = (pet.dustPatrols || 0) + 1;
+  if (game.kind === 'chase') {
+    pet.chases = (pet.chases || 0) + 1;
+    if (state.stories) state.stories.chases = (Number(state.stories.chases) || 0) + 1;
+  }
   else {
     pet.handshakes = (pet.handshakes || 0) + 1;
     if (state.stories) state.stories.handshakes = (Number(state.stories.handshakes) || 0) + 1;
   }
-  addNote(state, pet.name + (game.kind === 'dust' ? ' has surrendered six pieces of lint. It would like them catalogued separately.' : ' has taught you the secret handshake. It works without hands. This is now your problem.'), pet.name, 'note');
+  addNote(state, pet.name + (game.kind === 'chase' ? ' chased down ' + game.caught + ' crumbs and dodged ' + game.dodged + ' dust bunnies. It insists this was serious work.' : ' has taught you the secret handshake. It works without hands. This is now your problem.'), pet.name, 'note');
   return { practice: false, fuss: Math.round(fuss), bond };
-}
-
-export function newDustPatrol(pet) {
-  return { petId: pet.id, kind: 'dust', round: 0, hits: 0, target: -1, caught: false, complete: false, claimed: false };
-}
-export function nextDust(game, rng = Math.random) {
-  if (game.kind !== 'dust' || game.round >= 12) return false;
-  game.target = (game.target + 1 + Math.floor(Math.max(0, Math.min(.99999, rng())) * 3)) % 4;
-  game.round++; game.caught = false;
-  return true;
-}
-export function catchDust(game, target) {
-  if (game.complete || game.kind !== 'dust' || game.target < 0 || game.caught || target !== game.target) return false;
-  game.caught = true; game.hits++;
-  return true;
-}
-export function finishDust(game) {
-  if (game.kind !== 'dust' || game.round !== 12) return false;
-  game.complete = game.hits >= 6;
-  return game.complete;
 }
