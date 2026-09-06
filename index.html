@@ -337,11 +337,12 @@
   <div class="sheet-head"><div><span class="eyebrow" id="playName">A small secret</span><h2 id="playTitle">Secret handshake</h2></div><button class="btn btn-ghost btn-sm" id="playClose">Close</button></div>
   <div class="play-modes"><button class="chip" data-play-mode="chase" aria-pressed="true">Crumb Chase</button><button class="chip" data-play-mode="memory" aria-pressed="false">Handshake</button><label id="gentleOption"><input type="checkbox" id="playRelaxed"> Gentle pace</label></div>
   <div id="chaseArea" hidden>
-    <div class="chase-hud"><span>Crumbs<b id="chaseCount">0 / 8</b></span><span>Score<b id="chaseScore">0</b></span><span>Time<b id="chaseTime">22s</b></span><button class="btn btn-ghost btn-sm" id="chasePause" aria-label="Pause chase">Pause</button></div>
-    <div class="chase-field" id="chaseField" tabindex="0" role="group" aria-label="Crumb Chase. Drag to steer your resident, or use left and right arrows. Space or the Hop button jumps.">
+    <div class="chase-hud"><span>Crumbs<b id="chaseCount">0 / 8</b></span><span>Score<b id="chaseScore">0</b></span><span>Best<b id="chaseBest">–</b></span><span>Time<b id="chaseTime">22s</b></span><button class="btn btn-ghost btn-sm" id="chasePause" aria-label="Pause chase">Pause</button></div>
+    <div class="chase-combo" id="chaseCombo" aria-hidden="true"><span id="chaseComboLabel">Streak</span><i id="chaseComboBar"></i></div>
+    <div class="chase-field" id="chaseField" tabindex="0" role="group" aria-label="Crumb Chase. Drag to steer your resident, or use left and right arrows. Space or the Hop button jumps; land on a dust bunny to stomp it.">
       <div class="chase-window" aria-hidden="true"></div><div class="chase-floor" aria-hidden="true"></div><div id="chaseShadow" class="chase-shadow" aria-hidden="true"></div>
-      <div id="chaseItems"></div><div id="chaseResident" class="chase-resident" aria-hidden="true"></div><div id="chasePop" class="chase-pop" aria-hidden="true"></div>
-      <div id="chaseOverlay" class="chase-overlay"><h3 id="chaseHeading">The crumbs are escaping.</h3><p id="chaseDescription">Catch eight crumbs in 22 seconds.</p><button class="btn btn-primary" id="chaseGo">Let’s chase</button></div>
+      <div id="chaseItems"></div><div id="chaseFx" aria-hidden="true"></div><div id="chaseResident" class="chase-resident" aria-hidden="true"></div><div id="chasePop" class="chase-pop" aria-hidden="true"></div>
+      <div id="chaseOverlay" class="chase-overlay"><h3 id="chaseHeading">The crumbs are escaping.</h3><div id="chaseStars" class="chase-stars" role="img" aria-label="" hidden></div><p id="chaseDescription">Catch eight crumbs in 22 seconds.</p><p id="chaseQuip" class="chase-quip" hidden></p><button class="btn btn-primary" id="chaseGo">Let’s chase</button></div>
     </div>
     <div class="chase-controls"><button class="btn" data-chase-direction="left" aria-label="Move resident left">←</button><button class="btn btn-primary" id="chaseHop">Hop ↑</button><button class="btn" data-chase-direction="right" aria-label="Move resident right">→</button></div>
     <p id="chaseTip" class="chase-tip">Drag to steer. Hop over dust bunnies.</p>

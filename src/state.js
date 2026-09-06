@@ -297,7 +297,7 @@ export function normalizeState(raw) {
     p.bio = typeof p.bio === 'string' ? p.bio.slice(0, 3000) : 'It arrived without references.';
     p.born = finite(p.born, s.started, 1, now);
     p.lastPlayed = finite(p.lastPlayed, 0, 0, now);
-    if (record(p.chaseBest)) p.chaseBest = { score: Math.floor(finite(p.chaseBest.score, 0, 0, 100000)), caught: Math.floor(finite(p.chaseBest.caught, 0, 0, 100)), dodged: Math.floor(finite(p.chaseBest.dodged, 0, 0, 100)), at: finite(p.chaseBest.at, now, 0, now) };
+    if (record(p.chaseBest)) p.chaseBest = { score: Math.floor(finite(p.chaseBest.score, 0, 0, 100000)), caught: Math.floor(finite(p.chaseBest.caught, 0, 0, 100)), dodged: Math.floor(finite(p.chaseBest.dodged, 0, 0, 100)), at: finite(p.chaseBest.at, now, 0, now), bestStreak: Math.floor(finite(p.chaseBest.bestStreak, 0, 0, 100)), stars: Math.floor(finite(p.chaseBest.stars, 0, 0, 3)) };
     else delete p.chaseBest;
     for (const key of ['handshakes', 'dustPatrols', 'chases', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
     p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];

@@ -1371,7 +1371,7 @@ select.voice-select{width:100%}
 .chase-mode .play-theatre,.chase-mode .play-rounds,.chase-mode .gesture-grid,.chase-mode .play-controls{display:none}
 .chase-mode #playStatus{font-size:12px;min-height:0;line-height:1.45;margin:10px 0 5px}
 .chase-mode #playReward{font-size:11px;margin:8px 0 0}
-.chase-hud{display:grid;grid-template-columns:1fr 1fr .8fr auto;align-items:center;gap:10px;margin:14px 0 10px}
+.chase-hud{display:grid;grid-template-columns:1fr 1fr 1fr .8fr auto;align-items:center;gap:8px;margin:14px 0 10px}
 .chase-hud>span{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2)}
 .chase-hud b{display:block;font:400 23px/1.2 var(--display);color:var(--ink);letter-spacing:0;margin-top:3px;font-variant-numeric:tabular-nums;text-transform:none}
 .chase-hud .met{color:var(--mint)}.chase-hud .urgent{color:var(--pink)}.chase-hud .btn{min-height:44px;font-size:11px;padding:7px 10px}
@@ -1399,6 +1399,38 @@ select.voice-select{width:100%}
 .chase-controls{display:grid;grid-template-columns:1fr 1.45fr 1fr;gap:9px;margin-top:12px}
 .chase-controls .btn{min-height:54px;font-size:20px;touch-action:none}.chase-controls #chaseHop{font-size:16px}.chase-controls .btn:active{scale:.96}
 .chase-tip{font-size:11px;line-height:1.5;color:var(--ink-2);margin:8px 0 0}
+.chase-hud .beaten{color:var(--amber)}
+.chase-combo{display:flex;align-items:center;gap:8px;margin:-4px 0 8px;min-height:14px;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2)}
+.chase-combo span{white-space:nowrap;font-variant-numeric:tabular-nums}
+.chase-combo i{flex:1;position:relative;height:5px;border-radius:3px;background:var(--hair);overflow:hidden}
+.chase-combo i::after{content:'';position:absolute;inset:0;transform-origin:left center;scale:var(--fill,0) 1;background:var(--mint);transition:scale .18s ease-out}
+.chase-combo.hot{color:var(--ink)}.chase-combo.hot i::after{background:var(--amber)}.chase-combo.max i::after{background:var(--pink)}
+.chase-item.moth{width:11%;height:10.5%;filter:drop-shadow(0 2px 1px #0007)}
+.chase-item.moth svg{animation:chase-flutter .28s ease-in-out infinite alternate}
+.chase-item.moth.carrying{filter:drop-shadow(0 0 5px #e1b479)}
+.chase-item.biscuit{width:9.4%;height:13%;filter:drop-shadow(0 3px 2px #0008)}
+.chase-item.sugar{width:6.9%;height:9.6%;filter:drop-shadow(0 0 6px #b9a6ff);animation:chase-glint 1.1s ease-in-out infinite}
+.chase-item.squashed svg{transform-origin:50% 100%;rotate:0deg;animation:chase-squash .45s ease-out both}
+.chase-puff{position:absolute;z-index:2;width:15%;height:5%;transform:translate(-50%,50%);border-radius:50%;background:radial-gradient(ellipse,#d8c6b8cc,#d8c6b800 70%);pointer-events:none;animation:chase-puff .45s ease-out both}
+.chase-float{position:absolute;z-index:5;transform:translate(-50%,50%);font:bold 12px var(--body);color:#ffe683;text-shadow:0 1px 3px #000;white-space:nowrap;pointer-events:none;animation:chase-float .85s ease-out both}
+.chase-field.shake{animation:chase-shake .3s ease-out}
+.chase-field.rush{box-shadow:inset 0 0 0 2px #b9a6ff88,0 0 16px #b9a6ff55}
+.chase-field.rush .chase-resident{filter:drop-shadow(0 0 6px #d7ccff)}
+.chase-stars{display:flex;justify-content:center;gap:7px;margin:0 0 8px;font-size:26px;line-height:1;color:#5b4a5c}
+.chase-stars span{display:inline-block}
+.chase-stars .lit{color:#ffe683;text-shadow:0 0 8px #ffcd73aa;animation:chase-star .5s ease-out both}
+.chase-stars span:nth-child(2){animation-delay:.12s}.chase-stars span:nth-child(3){animation-delay:.24s}
+.chase-overlay .chase-quip{font-style:italic;color:var(--ink-2)}
+.chase-overlay.best{border-color:#ffe683;box-shadow:0 10px 24px #0005,0 0 0 1px #ffe68355,0 0 26px #ffcd7344}
+.chase-overlay.best h3{color:#ffe683}
+@keyframes chase-flutter{from{scale:1 1}to{scale:.7 1.06}}
+@keyframes chase-glint{0%,100%{filter:drop-shadow(0 0 4px #b9a6ff)}50%{filter:drop-shadow(0 0 9px #e6dcff)}}
+@keyframes chase-squash{0%{scale:1 1;opacity:1}35%{scale:1.5 .28}100%{scale:1.9 .08;opacity:0}}
+@keyframes chase-puff{from{opacity:.9;scale:.5 .6}to{opacity:0;scale:1.7 1;translate:0 -6px}}
+@keyframes chase-float{0%{opacity:0;translate:0 6px}20%{opacity:1}100%{opacity:0;translate:0 -28px}}
+@keyframes chase-shake{0%,100%{translate:0 0}20%{translate:-3px 1px}40%{translate:3px -1px}60%{translate:-2px 0}80%{translate:2px 0}}
+@keyframes chase-star{from{scale:.3;opacity:0}60%{scale:1.25;opacity:1}to{scale:1;opacity:1}}
+@media(prefers-reduced-motion:reduce){.chase-field.shake,.chase-item.moth svg,.chase-item.sugar,.chase-stars .lit,.chase-float{animation:none}.chase-float{opacity:1}.chase-puff{display:none}.chase-item.squashed svg{animation:none;scale:1.6 .2;opacity:.5}.chase-combo i::after{transition:none}}
 .sl2.sl-controlled.sl-travel .sprite-act{animation:none}
 .sl-controlled .sprite-creature,.sl-controlled .sprite-drawing{transition:none}
 .sl2.sl-controlled.sl-airborne .cr-joint[data-joint="knee"]{animation:knee-tuck .7s ease-in-out infinite}

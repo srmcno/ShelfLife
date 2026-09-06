@@ -33,7 +33,7 @@ export function initPlay(state, refresh) {
     document.getElementById('playTitle').textContent = mode === 'chase' ? 'Crumb Chase' : 'Secret handshake';
     document.getElementById('playName').textContent = (mode === 'chase' ? 'On the loose with ' : 'A secret with ') + pet.name;
     cue.textContent = 'They have been rehearsing.';
-    status.textContent = mode === 'chase' ? 'You steer. They chase. Keep a streak, catch golden crumbs, and jump over dust bunnies.' : 'Watch your resident perform the gestures, then tap them in order. A wrong tap just means another try.';
+    status.textContent = mode === 'chase' ? 'You steer. They chase. Keep a streak, catch what falls, and jump over or stomp the dust bunnies.' : 'Watch your resident perform the gestures, then tap them in order. A wrong tap just means another try.';
     document.getElementById('playReward').textContent = playWait(pet) || isAsleep(pet) ? 'Practice round · rewards return when rested and awake.' : 'Win for up to +24 attention and +1 trust.';
     host.replaceChildren();
     if (mode === 'chase') chase.prepare(pet, gentle.checked);

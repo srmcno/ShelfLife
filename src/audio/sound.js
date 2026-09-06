@@ -504,6 +504,91 @@ const SFX = {
     route(c, G, chain([click, cf, cg]), 0.7, 0, 0);
 
     return 0.28;
+  },
+
+  // A dust bunny going flat: a low thud with a quick pitch drop, a soft puff
+  // of dust, and a small squeak on top that gives up almost immediately.
+  stomp(c, G, t0) {
+    const k = rnd(0.95, 1.06);
+    const thud = osc(c, 'sine', 150 * k, t0);
+    sweep(thud.frequency, t0, 150 * k, 46, 0.11);
+    const tg = gain(c, 1);
+    env(tg.gain, t0, { peak: 0.4, a: 0.003, d: 0.14 });
+    route(c, G, chain([thud, tg]), 1, 0.05, 0);
+    thud.start(t0); thud.stop(t0 + 0.2);
+
+    const puff = noise(c, G, t0 + 0.01, 0.22, rnd(0.6, 0.8));
+    const pf = filter(c, 'lowpass', 1900 * k, t0, 1.4);
+    sweep(pf.frequency, t0 + 0.01, 1900 * k, 380, 0.2);
+    const pg = gain(c, 1);
+    env(pg.gain, t0 + 0.01, { peak: 0.2, a: 0.012, d: 0.19 });
+    route(c, G, chain([puff, pf, pg]), 0.85, 0.16, 0);
+
+    const ts = t0 + 0.02;
+    const squeak = osc(c, 'triangle', 1180 * k, ts);
+    sweep(squeak.frequency, ts, 1180 * k, 640 * k, 0.07);
+    const sg = gain(c, 1);
+    env(sg.gain, ts, { peak: 0.05, a: 0.004, d: 0.06 });
+    route(c, G, chain([squeak, sg]), 0.7, 0.1, 0);
+    squeak.start(ts); squeak.stop(ts + 0.1);
+
+    return 0.3;
+  },
+
+  // Sugar rush: three quick glassy steps up to a note that is slightly too
+  // bright, with a fizz of high noise underneath and the top left in the delay.
+  powerup(c, G, t0) {
+    const notes = [659.25, 783.99, 1108.73]; // E5 G5 C#6
+    notes.forEach((f, i) => {
+      const t = t0 + i * 0.07, last = i === notes.length - 1, len = last ? 0.7 : 0.2;
+      const g = gain(c, 1);
+      env(g.gain, t, { peak: 0.14, a: 0.004, d: last ? 0.3 : 0.11, sus: last ? 0.2 : 0, r: last ? 0.2 : 0 });
+      const o = osc(c, 'triangle', vary(f, 8), t);
+      const o2 = osc(c, 'sine', f * 2, t);
+      const g2 = gain(c, 0.3);
+      o.connect(g); o2.connect(g2); g2.connect(g);
+      o.start(t); o.stop(t + len);
+      o2.start(t); o2.stop(t + len);
+      route(c, G, g, 0.85, 0.22, last ? 0.32 : 0.08);
+    });
+
+    const fizz = noise(c, G, t0, 0.32, 1.3);
+    const ff = filter(c, 'highpass', 3200, t0, 0.8);
+    sweep(ff.frequency, t0, 3200, 9000, 0.3);
+    const fg = gain(c, 1);
+    env(fg.gain, t0, { peak: 0.06, a: 0.03, d: 0.26 });
+    route(c, G, chain([fizz, ff, fg]), 0.5, 0.25, 0);
+
+    return 0.55;
+  },
+
+  // Star sting: one bell strike per star (step 1-3), each a fourth higher,
+  // ringing into the room. Three stars earn a short shimmer on top.
+  star(c, G, t0, step) {
+    const stars = Math.max(1, Math.min(3, Math.round(step) || 1));
+    const notes = [880, 1174.66, 1567.98]; // A5 D6 G6
+    for (let i = 0; i < stars; i++) {
+      const t = t0 + i * 0.16, f = notes[i];
+      const g = gain(c, 1);
+      env(g.gain, t, { peak: 0.13, a: 0.003, d: 0.28, sus: 0.18, r: 0.3 });
+      [[1, 0.7], [2.76, 0.22], [5.4, 0.08]].forEach(([mul, lvl]) => { // bell partials
+        const o = osc(c, 'sine', vary(f * mul, 5), t);
+        const og = gain(c, lvl);
+        o.connect(og); og.connect(g);
+        o.start(t); o.stop(t + 0.9);
+      });
+      route(c, G, g, 0.8, 0.35, 0.16);
+    }
+    if (stars === 3) {
+      const ts = t0 + 0.5;
+      const shimmer = noise(c, G, ts, 0.4, 1.4);
+      const sf = filter(c, 'bandpass', 6000, ts, 2.5);
+      sweep(sf.frequency, ts, 6000, 11000, 0.35);
+      const sg = gain(c, 1);
+      env(sg.gain, ts, { peak: 0.05, a: 0.05, d: 0.3 });
+      route(c, G, chain([shimmer, sf, sg]), 0.5, 0.3, 0);
+    }
+    return 0.5 + stars * 0.3;
   }
 };
 
@@ -538,6 +623,9 @@ export function playFeud(opts) { return play('feud', opts); }
 export function playUnlock(opts) { return play('unlock', opts); }
 export function playAchievement(opts) { return play('achievement', opts); }
 export function playError(opts) { return play('error', opts); }
+export function playStomp(opts) { return play('stomp', opts); }
+export function playPowerUp(opts) { return play('powerup', opts); }
+export function playStar(opts) { return play('star', opts); }
 
 // What the last trigger actually built — used by the audio checks, since the
 // only other way to know a sound is wired correctly is to hear it.
