@@ -1,7 +1,7 @@
 import { tick, moodOf, worstNeed, isAsleep, neighborProps, neighborPets } from './tick.js';
-import { activeFeuds, feudPairKey, stepFeudArc, checkGrudgeEscalation, checkinStreak } from './achievements.js';
+import { activeFeuds, feudPairKey, stepFeudArc, fileGrudge, checkinStreak, FEUD_STEP_MS } from './achievements.js';
 import { checkUnlocks } from './unlocks.js';
-import { runBehavior } from './behavior.js';
+import { runBehavior, behaviorState } from './behavior.js';
 import { pickDialogue, dialogueText } from './dialogue.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { DRAWN_NOTES } from '../content/care.js';
@@ -11,16 +11,28 @@ import {
   PET_LIST_NOTES, PET_SILENCE_LINES, FOUND_PET_LINES, FAVOURITE_LINES, ABSENCE_LINES, RENAME_LINES,
   GONE_LINES, GRID_LINES, GRUDGE_COUNT_LINES, RECORD_LINES, BRIEFING_LINES, STRUCK_LINES,
   DIRECT_LINES, MINUTES_DOCS, SOLO_MINUTES_DOCS, CARE_RECORD_DOCS, ROTA_DOCS, STRIKE_DOCS,
-  EMPTY_SHELF_NOTES
+  EMPTY_SHELF_NOTES, PROP_EYE_LINES
 } from '../content/copy.js';
 import { MATURE_COMPLAINTS_EXTRA, MATURE_HAPPY_EXTRA, MATURE_EVENTS_EXTRA } from '../content/mature.js';
 import {
   pick, addNote, petById, chooseForm, reconcile, recordVisit, firstTouchCounts,
-  totalGrudges, formAllowed, wasPickedRecently, rememberPick, HOUR, ROW_WIDTH
+  totalGrudges, formAllowed, wasPickedRecently, rememberPick, forgetPick, HOUR, ROW_WIDTH
 } from '../state.js';
 
 export const DAY = 86400000;
 export const ABSENCE_HOURS = 3;          // a gap worth remarking on
+// Check the shelf gets a short restock like the rounds trolley: enough to stop a
+// run of taps flooding the board, short enough never to be noticed in play.
+export const CHECK_COOLDOWN_MS = 8000;
+// A check runs the residents' own behaviour pass at most this often. Every tap
+// used to force one, so the shelf was simulated as fast as it was clicked.
+export const CHECK_BEHAVIOR_MS = 90000;
+// How many feuds get a written line per check. Every active feud still steps.
+export const FEUD_NOTES_PER_CHECK = 2;
+
+export function checkWait(state, now = Date.now()) {
+  return Number.isFinite(state.lastCheck) && state.lastCheck > 0 ? Math.max(0, state.lastCheck + CHECK_COOLDOWN_MS - now) : 0;
+}
 export const GONE_FRESH_DAYS = 7;
 export const GONE_CADENCE_FRESH = 15;    // one {gone} line every N notes for a week
 export const GONE_CADENCE_OLD = 60;      // and every N notes forever after
@@ -38,6 +50,7 @@ export const FORM_KINDS = {
   two: ['trait', 'generic', 'feud'], react: ['reaction', 'chorus'], direct: ['direct'], line: ['fragment']
 };
 export const DIALOGUE_TRIES = 6;
+const NEED_WORD = { food: 'left hungry', fuss: 'left lonely', clean: 'left grubby' };
 
 // Asks for a scene until it offers one the corkboard has not shown lately. Returns
 // null rather than repeating itself — a pet with one written scene stays quiet
@@ -49,7 +62,9 @@ export function freshDialogue(state, opts = {}) {
     // choose freely rather than come back empty.
     const kind = kinds && i < DIALOGUE_TRIES - 2 ? kinds[i % kinds.length] : undefined;
     const d = pickDialogue(state, kind ? Object.assign({}, opts, { kind }) : opts);
-    if (!d) return null;
+    // A steered kind with no material is not the end of it: the next kind for
+    // the same form, then anything, gets a go before the pet says nothing.
+    if (!d) { if (kind) continue; return null; }
     const text = dialogueText(d);
     if (!text || wasPickedRecently(text)) continue;
     const form = DIALOGUE_FORM[d.form] || 'line';
@@ -178,7 +193,8 @@ export function subsFor(state, ctx = {}, now = Date.now()) {
 
   if (ctx.n) s.n = ctx.n.name || ctx.n;
   if (ctx.m) s.m = ctx.m.name || ctx.m;
-  if (ctx.q) s.q = (PROPS[ctx.q] && PROPS[ctx.q].name) || ctx.q;
+  // Templates say "the {q}", so a prop called The Urn arrives as plain Urn.
+  if (ctx.q) s.q = ((PROPS[ctx.q] && PROPS[ctx.q].name) || ctx.q).replace(/^The /, '');
 
   if (ctx.a && ctx.b) {
     s.a = ctx.a.name; s.b = ctx.b.name;
@@ -236,7 +252,9 @@ export function petLine(state, pet, ctx = {}) {
   const idx = (state.slots || []).indexOf(pet.id);
   const nbrs = idx >= 0 ? neighborPets(state, idx) : [];
   const neighbor = nbrs.length ? pick(nbrs) : null;
-  const subs = subsFor(state, Object.assign({ pet, n: neighbor }, ctx), now);
+  const nearProps = idx >= 0 ? neighborProps(state, idx) : [];
+  const nearProp = nearProps.length ? pick(nearProps) : null;
+  const subs = subsFor(state, Object.assign({ pet, n: neighbor, q: nearProp ? nearProp.kind : undefined }, ctx), now);
   const mood = moodOf(pet);
   const need = worstNeed(pet);
 
@@ -278,6 +296,7 @@ export function petLine(state, pet, ctx = {}) {
   } else {
     if (pet.art && !pet.art.creature && pet.art.body) offer(byForm, 'line', DRAWN_NOTES, subs, kind);
     if (trait.notes) offer(byForm, 'line', trait.notes, subs, kind);
+    if (subs.q) offer(byForm, 'line', PROP_EYE_LINES, subs, kind);
     if (mood === 'content') {
       let happy = HAPPY_NOTES;
       if (state.settings && state.settings.matureMode) happy = happy.concat(MATURE_HAPPY_EXTRA);
@@ -362,6 +381,7 @@ export function convene(state) {
 
 export function checkShelf(state, now = Date.now()) {
   tick(state, now);
+  state.lastCheck = now;
   reconcile(state, now);
   const visit = recordVisit(state, now);
   const batch = { doc: 0 };
@@ -375,8 +395,28 @@ export function checkShelf(state, now = Date.now()) {
     return;
   }
 
-  const feuds = activeFeuds(state).slice(0, 2);
-  feuds.forEach(([a, b]) => stepFeudArc(state, feudPairKey(a.id, b.id), a, b));
+  // Every active feud steps (escalation and truces are rate-limited per pair in
+  // achievements.js); only the pairs that have gone longest without a line get
+  // one this time, so a busy shelf stays readable.
+  const allFeuds = activeFeuds(state);
+  const feuds = allFeuds.slice().sort((x, y) => {
+    const ax = state.feudArcs[feudPairKey(x[0].id, x[1].id)], ay = state.feudArcs[feudPairKey(y[0].id, y[1].id)];
+    return ((ax && ax.notedAt) || 0) - ((ay && ay.notedAt) || 0);
+  }).slice(0, FEUD_NOTES_PER_CHECK);
+  feuds.forEach(([a, b]) => {
+    const key = feudPairKey(a.id, b.id);
+    stepFeudArc(state, key, a, b, now);
+    if (state.feudArcs[key]) state.feudArcs[key].notedAt = now;
+  });
+  allFeuds.forEach(pair => {
+    if (feuds.includes(pair)) return;
+    const [a, b] = pair;
+    const key = feudPairKey(a.id, b.id);
+    const arc = state.feudArcs[key] || (state.feudArcs[key] = { level: 0, truce: false });
+    if (arc.truce) return;
+    // Silent step: the arc can still move without spending a note on it.
+    stepFeudArcQuietly(state, key, now);
+  });
 
   // 4a. The moment a grudge goes terminal, Item 4 is moved, seconded and struck.
   state.pets.forEach(pet => {
@@ -412,6 +452,7 @@ export function checkShelf(state, now = Date.now()) {
         addNote(state, scene.text, scene.from, scene.tone, scene.form);
         return;
       }
+      if (scene) forgetPick(scene.text);          // turned down by the rotation: not told
     }
     const near = neighborProps(state, i);
     if (near.length && moodOf(pet) !== 'furious' && Math.random() < 0.42) {
@@ -433,11 +474,7 @@ export function checkShelf(state, now = Date.now()) {
     // it; bylining it with that same name reads as a creature introducing itself.
     const from = line.text.indexOf(pet.name) >= 0 ? 'observed' : pet.name;
     addNote(state, line.text, from, line.kind, line.form);
-    if (line.kind === 'angry') {
-      pet.grudges = (pet.grudges || 0) + 1;
-      convene(state);
-      checkGrudgeEscalation(state, pet);
-    }
+    if (line.kind === 'angry' && fileGrudge(state, pet, NEED_WORD[worstNeed(pet)] || 'neglected', now)) convene(state);
   });
 
   // One more chance at a scene per batch. The two-hander is the second-largest
@@ -447,7 +484,7 @@ export function checkShelf(state, now = Date.now()) {
     if (scene && formAllowed(state, scene.form) && !(scene.form === 'direct' && !allowDirect())) {
       if (scene.form === 'direct') useDirect();
       addNote(state, scene.text, scene.from, scene.tone, scene.form);
-    }
+    } else if (scene) forgetPick(scene.text);
   }
 
   if (state.props.length && Math.random() < 0.35) {
@@ -474,8 +511,22 @@ export function checkShelf(state, now = Date.now()) {
     }
   }
 
-  runBehavior(state, now, { force: true });
+  // The residents' own pass runs with the check, but not with every check.
+  runBehavior(state, now, { force: now - (behaviorState(state).lastRun || 0) >= CHECK_BEHAVIOR_MS });
   checkinStreak(state, now);
   checkUnlocks(state);
   reconcile(state, now);
+}
+
+// A feud that got no line this check can still move: same odds and cooldown as
+// a written step, minus the note. Truces from a quiet step are announced at
+// the next written step through the arc itself.
+function stepFeudArcQuietly(state, key, now) {
+  const arc = state.feudArcs[key];
+  if (!arc || arc.truce) return;
+  if (now - (arc.steppedAt || 0) < FEUD_STEP_MS) return;
+  arc.steppedAt = now;
+  const roll = Math.random();
+  if (arc.level >= 2 && roll < 0.12) arc.truce = true;
+  else if (roll < 0.35) arc.level += 1;
 }

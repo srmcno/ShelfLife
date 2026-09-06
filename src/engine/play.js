@@ -1,7 +1,7 @@
 // A short, untimed memory game. Wrong taps cost nothing; rewards are per pet,
 // rate limited, and only awarded after all three sequences are completed.
 import { tick, isAsleep } from './tick.js';
-import { clamp, addNote } from '../state.js';
+import { clamp, addNote, grantBonusTrust } from '../state.js';
 export const PLAY_COOLDOWN = 5 * 60000;
 export const GESTURES = ['Knock', 'Wiggle', 'Blink', 'Boop'];
 export function playWait(pet, now = Date.now()) {
@@ -27,9 +27,9 @@ export function rewardHandshake(state, game, now = Date.now()) {
   tick(state, now);
   if (playWait(pet, now) || isAsleep(pet, new Date(now))) return { practice: true, fuss: 0, bond: 0 };
   const need = 'fuss';
-  const fuss = Math.min(24, 100 - pet.needs[need]), bond = pet.bond < 25 ? 1 : 0;
+  const fuss = Math.min(24, 100 - pet.needs[need]);
   pet.needs[need] = clamp(pet.needs[need] + fuss, 0, 100);
-  pet.bond += bond;
+  const bond = grantBonusTrust(pet, 1, now);
   pet.lastPlayed = now;
   if (game.kind === 'chase') {
     pet.chases = (pet.chases || 0) + 1;

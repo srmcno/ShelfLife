@@ -26,6 +26,11 @@ const MOVE_MIN = 7;       // movement after pick-up that means "you meant to mov
 const EDGE = 56;          // auto-scroll zone at each end of the run / the screen
 const EDGE_MAX = 16;      // px per frame at the very edge
 
+let dragEngaged = false;
+// ui/render.js asks before rebuilding the cabinet: tearing down the piece that
+// holds pointer capture mid-carry used to strand the ghost on screen.
+export function isDragging() { return dragEngaged; }
+
 export function initDrag(state) {
   const cabinet = document.getElementById('cabinet');
   cabinet.addEventListener('click', e => {
@@ -69,6 +74,7 @@ export function initDrag(state) {
 
   function lift(d) {
     d.engaged = true;
+    dragEngaged = true;
     d.el.classList.add('dragging');
     const g = document.createElement('div');
     g.className = 'ghost';
@@ -97,6 +103,7 @@ export function initDrag(state) {
     if (d.hold) clearTimeout(d.hold);
     if (d.ghost) d.ghost.remove();
     d.el.classList.remove('dragging');
+    dragEngaged = false;
     document.querySelectorAll('.slot.drop-target').forEach(s => s.classList.remove('drop-target'));
     stopScrolling();
   }
@@ -158,7 +165,7 @@ export function initDrag(state) {
     if (e.target.closest && e.target.closest('.piece')) e.preventDefault();
   });
 
-  cabinet.addEventListener('pointerup', e => {
+  function drop(e) {
     if (!drag) return;
     const d = drag;
     drag = null;
@@ -190,9 +197,18 @@ export function initDrag(state) {
     state.slots[from] = tmp;
     save();
     renderAll(state);
+  }
+  // Listened for on the window rather than the cabinet: pointer capture is lost
+  // the moment the captured piece leaves the document (a re-render mid-carry),
+  // and a release over the notes pane must still end the drag.
+  window.addEventListener('pointerup', drop);
+  window.addEventListener('pointercancel', () => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    clear(d);
   });
-
-  cabinet.addEventListener('pointercancel', () => {
+  window.addEventListener('blur', () => {
     if (!drag) return;
     const d = drag;
     drag = null;

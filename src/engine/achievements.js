@@ -4,7 +4,28 @@ import { GRUDGE_LINES, STREAK_LINES } from '../content/copy.js';
 import { MATURE_GRUDGE_EXTRA } from '../content/mature.js';
 import { neighborPets, neighborSlots } from './tick.js';
 import { totalBond } from './unlocks.js';
-import { pick, addNote, clamp, petById } from '../state.js';
+import { pick, addNote, clamp, petById, GRUDGE_LOG_MAX } from '../state.js';
+
+// A resident files at most one grievance an hour, however many times the
+// player checks the shelf in that hour. Explicit slights (refusing a request,
+// being robbed) bypass the limit with { force: true }: those are earned.
+export const GRUDGE_COOLDOWN_MS = 60 * 60 * 1000;
+// A feud can escalate or settle once per half hour; the rest of the time the
+// pair only trade the ongoing lines.
+export const FEUD_STEP_MS = 30 * 60 * 1000;
+
+export function fileGrudge(state, pet, why, now = Date.now(), opts = {}) {
+  if (!state || !pet) return false;
+  if (!opts.force && now - (pet.lastGrudgeAt || 0) < GRUDGE_COOLDOWN_MS) return false;
+  pet.grudges = (pet.grudges || 0) + 1;
+  // A forced slight is its own matter; it does not use up the hour's neglect.
+  if (!opts.force) pet.lastGrudgeAt = now;
+  if (!Array.isArray(pet.grudgeLog)) pet.grudgeLog = [];
+  pet.grudgeLog.push({ why: String(why || 'unspecified').slice(0, 80), at: now });
+  if (pet.grudgeLog.length > GRUDGE_LOG_MAX) pet.grudgeLog.splice(0, pet.grudgeLog.length - GRUDGE_LOG_MAX);
+  checkGrudgeEscalation(state, pet);
+  return true;
+}
 
 export function activeFeuds(state) {
   const found = [];
@@ -38,10 +59,13 @@ export function feudPairKey(a, b) {
 // Every active feud gets exactly one note per call: an ongoing flavor line by
 // default, a chance to escalate (deepening the arc), or — only once the arc
 // has escalated at least twice — a rare chance to resolve into a truce.
-export function stepFeudArc(state, pairKey, a, b) {
+export function stepFeudArc(state, pairKey, a, b, now = Date.now()) {
   const arc = state.feudArcs[pairKey] || (state.feudArcs[pairKey] = { level: 0, truce: false });
   if (arc.truce) return null;
-  const roll = Math.random();
+  // Inside the cooldown the feud is only ever ongoing: one line, no dice.
+  const settled = now - (arc.steppedAt || 0) < FEUD_STEP_MS;
+  const roll = settled ? 1 : Math.random();
+  if (!settled) arc.steppedAt = now;
   if (arc.level >= 2 && roll < 0.12) {
     arc.truce = true;
     remember(state, 'An uneasy peace', a.name + ' and ' + b.name + ' have agreed to stop. Neither has agreed to explain.', Date.now(), 'relationship');

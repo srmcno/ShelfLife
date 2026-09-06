@@ -6,7 +6,7 @@ import {
 import { TRAITS, TRAIT_BY_ID } from './content/traits.js';
 import { ORIGINS, HABITS, CLOSERS, FALLBACK_NAMES } from './content/copy.js';
 import { tick, isNight } from './engine/tick.js';
-import { checkShelf, petLine } from './engine/loop.js';
+import { checkShelf, petLine, checkWait } from './engine/loop.js';
 import { runBehavior, catchUpBehavior } from './engine/behavior.js';
 import { doRounds } from './engine/care.js';
 import { checkAchievements, ACHIEVEMENTS } from './engine/achievements.js';
@@ -118,6 +118,8 @@ document.getElementById('roundsBtn').addEventListener('click', () => {
 });
 
 document.getElementById('checkBtn').addEventListener('click', () => {
+  const wait = checkWait(state);
+  if (wait > 0) { toast('Still listening. Give them ' + Math.ceil(wait / 1000) + ' seconds.'); return; }
   const before = state.noteCount || 0;
   checkShelf(state); // already calls checkUnlocks internally
   checkAchievements(state);
@@ -148,15 +150,21 @@ document.getElementById('clearNotes').addEventListener('click', () => {
   renderNotes(state);
 });
 
-document.getElementById('exportBtn').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(state)], { type: 'application/json' });
+// Object URLs for downloads are kept until the page goes away: iOS asks the
+// player to confirm a download, and revoking after half a second handed the
+// confirmation an empty file.
+const downloadUrls = [];
+function offerDownload(text, name) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'shelf-life-backup.json';
+  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  a.download = name;
   document.body.appendChild(a);
   a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-});
+  downloadUrls.push(a.href);
+  setTimeout(() => a.remove(), 1000);
+}
+window.addEventListener('pagehide', () => { downloadUrls.splice(0).forEach(u => URL.revokeObjectURL(u)); });
+document.getElementById('exportBtn').addEventListener('click', () => offerDownload(JSON.stringify(state), 'shelf-life-backup.json'));
 
 let pendingRestore = null;
 const restoreVeil = document.getElementById('restoreVeil');
@@ -177,6 +185,7 @@ document.getElementById('restoreConfirm').addEventListener('click', () => {
   catchUpBehavior(state);
   advanceSchemes(state);
   applyDecor(state);
+  syncNight();
   save();
   renderAll(state);
   syncAudioButtons();
@@ -186,13 +195,7 @@ document.getElementById('restoreConfirm').addEventListener('click', () => {
 const recoveryBtn = document.getElementById('recoveryBtn');
 recoveryBtn.hidden = !Store.get(RECOVERY_KEY);
 document.getElementById('recoveryWarn').hidden = !loadFailed;
-recoveryBtn.addEventListener('click', () => {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([Store.get(RECOVERY_KEY)], { type: 'application/json' }));
-  a.download = 'shelf-life-recovery.json';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-});
+recoveryBtn.addEventListener('click', () => offerDownload(Store.get(RECOVERY_KEY), 'shelf-life-recovery.json'));
 const importFile = document.getElementById('importFile');
 document.getElementById('importBtn').addEventListener('click', () => importFile.click());
 importFile.addEventListener('change', e => {
@@ -228,13 +231,19 @@ const matureBtn = document.getElementById('matureBtn');
 // these sit in a dark menu next to hand-drawn creatures that are supposed to be
 // the only saturated things in the frame. The aria-pressed state already says
 // which way each toggle is set; the word says the rest.
+function setTrayLabel(btn, label, sub) {
+  const span = btn.querySelector('span') || btn.appendChild(document.createElement('span'));
+  span.textContent = label;
+  const small = btn.querySelector('small') || btn.appendChild(document.createElement('small'));
+  if (sub) small.textContent = sub;
+}
 function syncAudioButtons() {
   muteBtn.setAttribute('aria-pressed', String(isMuted()));
-  muteBtn.textContent = isMuted() ? 'Muted' : 'Sound';
+  setTrayLabel(muteBtn, isMuted() ? 'Muted' : 'Sound', isMuted() ? 'Small noises, off' : 'Small noises');
   narratorBtn.setAttribute('aria-pressed', String(isNarratorOn()));
-  narratorBtn.textContent = isNarratorOn() ? 'Narrator' : 'Narrator off';
+  setTrayLabel(narratorBtn, isNarratorOn() ? 'Narrator' : 'Narrator off', isNarratorOn() ? 'Reads the notes aloud' : 'The notes stay on paper');
   matureBtn.setAttribute('aria-pressed', String(!!state.settings.matureMode));
-  matureBtn.textContent = state.settings.matureMode ? 'Mature: On' : 'Mature: Off';
+  setTrayLabel(matureBtn, state.settings.matureMode ? 'Mature: On' : 'Mature: Off', 'Swearing, cruder jokes');
 }
 muteBtn.addEventListener('click', () => { if (toggleMuted()) stopSpeech(); syncAudioButtons(); });
 narratorBtn.addEventListener('click', () => { toggleNarrator(); syncAudioButtons(); });
@@ -329,6 +338,7 @@ helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.cl
 
 (function boot() {
   applyDecor(state);
+  syncNight();
   const away = (Date.now() - state.lastTick) / HOUR;
   tick(state);
   catchUpBehavior(state);
@@ -374,11 +384,14 @@ window.addEventListener('pagehide', () => save());
 // offline support and no caching at all — service-worker.js was dead code.
 // Registered last so a failure here can never block the game from booting.
 if ('serviceWorker' in navigator) {
+  // Listen from the first moment: a fresh worker can finish installing before
+  // this page's own load event, and a controllerchange with nobody listening
+  // is an update the player is never told about.
+  const wasControlled = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (wasControlled) document.getElementById('updateBanner').hidden = false;
+  });
   window.addEventListener('load', () => {
-    const wasControlled = !!navigator.serviceWorker.controller;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (wasControlled) document.getElementById('updateBanner').hidden = false;
-    });
     navigator.serviceWorker.register('service-worker.js').then(registration => registration.update()).catch(() => {
       // Offline first visits may not have an update available.
     });

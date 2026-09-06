@@ -15,6 +15,10 @@ export const Store = (function () {
       catch { ok = false; }
       if (typeof window !== 'undefined') window.dispatchEvent(new Event('shelflife:storage'));
       return ok;
+    },
+    remove(k) {
+      delete mem[k];
+      try { localStorage.removeItem(k); } catch { /* nothing to remove, or storage is unavailable */ }
     }
   };
 })();
@@ -26,7 +30,17 @@ let recoveryRequired = false;
 export const SLOT_COUNT = 18;
 export const ROW_WIDTH = 6;
 export const HOUR = 3600000;
-export const MAX_OFFLINE_HOURS = 48;
+// Needs stop draining after this many hours away. The decay rates in
+// content/copy.js are tuned so a full day's absence leaves a hungry shelf, not
+// an empty one: coming back should cost care, never a fresh start.
+export const MAX_OFFLINE_HOURS = 18;
+// Between these local hours the whole shelf is dozing, so needs drain at half
+// speed. A night's sleep costs the player half a night's worth of complaints.
+export const NIGHT_DECAY_FACTOR = 0.5;
+// Games and conspiracies can add at most this much trust per resident per day.
+// Care is the steady route; the fast lanes are capped so they stay treats.
+export const BONUS_TRUST_PER_DAY = 3;
+export const LEGACY_SAVE_KEYS = ['shelflife.v3', 'shelflife.v2', 'shelflife.v1'];
 
 /* ================= FORM ROTATION =================
    Every note carries a `form`. Forms 2/4/6 are physically multi-line (they need
@@ -108,6 +122,13 @@ export function rememberPick(value) {
   RECENT_PICKS.unshift(value);
   if (RECENT_PICKS.length > PICK_MEMORY) RECENT_PICKS.length = PICK_MEMORY;
   return value;
+}
+
+// The opposite: a line that was drawn and then not shown (a scene the rotation
+// rules turned down) should not count as told.
+export function forgetPick(value) {
+  const at = RECENT_PICKS.indexOf(value);
+  if (at >= 0) RECENT_PICKS.splice(at, 1);
 }
 
 export function pick(arr) {
@@ -208,7 +229,10 @@ export function normalizeState(raw) {
     !['__proto__', 'constructor', 'prototype'].includes(id);
   if (s.pets.some(p => !record(p) || !validId(p.id))) return null;
   s.props = Array.isArray(s.props) ? s.props : [];
-  if (s.props.some(p => !record(p) || !validId(p.id) || typeof p.kind !== 'string' || !Object.hasOwn(PROPS, p.kind))) return null;
+  if (s.props.some(p => !record(p) || !validId(p.id) || typeof p.kind !== 'string')) return null;
+  // Furniture this build no longer knows is put away rather than bricking the
+  // shelf: a backup from a newer edition, or a retired kind, still loads.
+  s.props = s.props.filter(p => Object.hasOwn(PROPS, p.kind));
   // Reject malformed history records before any gameplay can consume them.
   for (const key of ['gone', 'visits']) {
     if (Array.isArray(s[key]) && s[key].some(item => !record(item))) return null;
@@ -273,7 +297,7 @@ export function normalizeState(raw) {
     p.bio = typeof p.bio === 'string' ? p.bio.slice(0, 3000) : 'It arrived without references.';
     p.born = finite(p.born, s.started, 1, now);
     p.lastPlayed = finite(p.lastPlayed, 0, 0, now);
-    if (record(p.chaseBest)) p.chaseBest = { score: Math.floor(finite(p.chaseBest.score, 0, 0, 100000)), caught: Math.floor(finite(p.chaseBest.caught, 0, 0, 100)), dodged: Math.floor(finite(p.chaseBest.dodged, 0, 0, 100)), at: finite(p.chaseBest.at, now, 0, now) };
+    if (record(p.chaseBest)) p.chaseBest = { score: Math.floor(finite(p.chaseBest.score, 0, 0, 100000)), caught: Math.floor(finite(p.chaseBest.caught, 0, 0, 100)), dodged: Math.floor(finite(p.chaseBest.dodged, 0, 0, 100)), at: finite(p.chaseBest.at, now, 0, now), bestStreak: Math.floor(finite(p.chaseBest.bestStreak, 0, 0, 100)), stars: Math.floor(finite(p.chaseBest.stars, 0, 0, 3)) };
     else delete p.chaseBest;
     for (const key of ['handshakes', 'dustPatrols', 'chases', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
     p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];
@@ -283,6 +307,13 @@ export function normalizeState(raw) {
     Object.entries(defaultNeeds()).forEach(([k, v]) => { p.needs[k] = finite(p.needs[k], v, 0, 100); });
     p.bond = Math.floor(finite(p.bond, 0, 0, 25));
     ['cared', 'grudges', 'grudgeStage'].forEach(k => { p[k] = Math.floor(finite(p[k], 0)); });
+    p.lastGrudgeAt = finite(p.lastGrudgeAt, 0, 0, now);
+    p.grudgeLog = (Array.isArray(p.grudgeLog) ? p.grudgeLog : [])
+      .filter(g => record(g) && typeof g.why === 'string' && Number.isFinite(g.at))
+      .map(g => ({ why: g.why.slice(0, 80), at: g.at })).slice(-GRUDGE_LOG_MAX);
+    p.bonusTrust = record(p.bonusTrust) && typeof p.bonusTrust.day === 'string'
+      ? { day: p.bonusTrust.day.slice(0, 12), n: Math.floor(finite(p.bonusTrust.n, 0, 0, 99)) } : null;
+    if (!p.bonusTrust) delete p.bonusTrust;
     p.art = normalizePetArt(p.art);
     p.art.stamps = p.art.stamps.filter(stamp => record(stamp) && typeof stamp.kind === 'string' && [stamp.x, stamp.y, stamp.size].every(Number.isFinite));
     if (!p.needs) p.needs = defaultNeeds();
@@ -308,7 +339,35 @@ export function normalizeState(raw) {
    cheap, additive and read back by the note templates in engine/loop.js. */
 
 export const SLOT_HIST_MAX = 8;
+export const GRUDGE_LOG_MAX = 6;
 export const VISIT_MAX = 20;
+
+export function localDayKey(ts = Date.now()) {
+  const d = new Date(ts);
+  return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+}
+
+// Trust from games and conspiracies, rationed per resident per local day.
+// Returns how much was actually granted, so the caller can say so honestly.
+export function grantBonusTrust(pet, amount, now = Date.now()) {
+  if (!pet || !(amount > 0)) return 0;
+  const day = localDayKey(now);
+  if (!pet.bonusTrust || pet.bonusTrust.day !== day) pet.bonusTrust = { day, n: 0 };
+  const room = Math.max(0, Math.min(BONUS_TRUST_PER_DAY - pet.bonusTrust.n, 25 - (pet.bond || 0)));
+  const granted = Math.min(amount, room);
+  if (granted > 0) {
+    pet.bond = clamp((pet.bond || 0) + granted, 0, 25);
+    pet.bonusTrust.n += granted;
+  }
+  return granted;
+}
+
+export function bonusTrustLeft(pet, now = Date.now()) {
+  if (!pet) return 0;
+  const day = localDayKey(now);
+  const used = pet.bonusTrust && pet.bonusTrust.day === day ? pet.bonusTrust.n : 0;
+  return Math.max(0, BONUS_TRUST_PER_DAY - used);
+}
 export const VISIT_GAP_MS = 2 * HOUR;   // a gap this long starts a new visit
 export const BRIEFING_AT = 12;          // total grudges at which new arrivals get briefed
 
@@ -450,9 +509,15 @@ export function save() {
       if (!Store.set(RECOVERY_KEY, Store.get(RECOVERY_KEY))) return false;
       recoveryRequired = false;
     }
-    return Store.set(SAVE_KEY, JSON.stringify(state));
+    const ok = Store.set(SAVE_KEY, JSON.stringify(state));
+    // The first successful v4 save retires the old keys: a v3 shelf of drawn
+    // pets is megabytes of data-URLs sitting next to the live save, and on a
+    // small quota that is the difference between saving and not.
+    if (ok && !legacyCleared) { legacyCleared = true; LEGACY_SAVE_KEYS.forEach(k => Store.remove(k)); }
+    return ok;
   } catch { return false; }
 }
+let legacyCleared = false;
 
 let noteListeners = [];
 export function onNote(listener) { noteListeners.push(listener); }

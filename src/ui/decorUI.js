@@ -29,7 +29,10 @@ export function applyDecor(state) {
   root.setProperty('--wood', wood.wood);
   root.setProperty('--wood-lip', wood.lip);
   root.setProperty('--pink', (ACCENTS[d.accent] || ACCENTS.bubblegum).c);
-  document.body.className = 'wall-' + d.wall;
+  // Swap only the wall class. Assigning className here used to wipe body.night
+  // (and anything else on the body) on every decor change and at boot.
+  [...document.body.classList].filter(c => c.startsWith('wall-')).forEach(c => document.body.classList.remove(c));
+  document.body.classList.add('wall-' + (WALLS[d.wall] ? d.wall : 'none'));
 }
 
 // Not exported — only the prop-tray click handler built inside buildDecor
@@ -52,7 +55,12 @@ export function buildDecor(state) {
 
   const rooms = document.getElementById('roomOpts');
   rooms.innerHTML = '';
-  Object.keys(ROOMS).forEach(k => rooms.appendChild(optButton(ROOMS[k].name, d.room === k, ROOMS[k].swatch, () => { d.room = k; applyDecor(state); save(); buildDecor(state); })));
+  // Every room is a dark room; what changes is the colour of the darkness and
+  // of the one bulb in it, so the swatch shows both rather than a pale panel
+  // the room never actually paints.
+  Object.keys(ROOMS).forEach(k => rooms.appendChild(optButton(ROOMS[k].name, d.room === k,
+    'linear-gradient(135deg,' + ROOMS[k].vars['--room-b'] + ' 0 55%,' + ROOMS[k].vars['--room-key'] + ' 55% 100%)',
+    () => { d.room = k; applyDecor(state); save(); buildDecor(state); })));
 
   const walls = document.getElementById('wallOpts');
   walls.innerHTML = '';

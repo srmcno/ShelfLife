@@ -38,7 +38,7 @@ export function setTab(name, opts = {}) {
   if (TABS.indexOf(name) < 0) name = 'shelf';
   const changed = currentTab() !== name;
   document.body.dataset.tab = name;
-  tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+  tabs.forEach(t => { if (t.dataset.tab === name) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
   try { localStorage.setItem(TAB_KEY, name); } catch (e) { /* storage is optional */ }
   if (name === 'notes') { unseenNotes = 0; syncBadges(); }
   if (changed && !opts.keepScroll) window.scrollTo({ top: 0, behavior: 'auto' });
@@ -118,9 +118,23 @@ if (tray) {
   tray.addEventListener('click', e => {
     if (!trayOpen) return;
     const b = e.target.closest('button');
-    if (b && b.id !== 'moreClose') setTray(false);
+    // Toggles (Sound, Narrator, Mature) show their new state in place; anything
+    // that opens a sheet closes the tray first.
+    if (b && b.id !== 'moreClose' && !b.hasAttribute('aria-pressed')) setTray(false);
   }, true);
 }
+
+// Somewhere else in the app wants a pane and a card in it on screen: the needs
+// strip, for one. On a phone that is a tab switch; on a desktop a scroll.
+window.addEventListener('shelflife:goto', e => {
+  const d = e.detail || {};
+  if (d.tab) setTab(d.tab, { keepScroll: true });
+  const target = d.target ? document.querySelector(d.target) : null;
+  if (target) {
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (typeof target.focus === 'function') { target.tabIndex = -1; target.focus({ preventScroll: true }); }
+  }
+});
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && trayOpen) setTray(false); });
 
 // ---------------------------------------------------------------------------

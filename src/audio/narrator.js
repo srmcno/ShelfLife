@@ -38,9 +38,12 @@ const ENHANCED = /\b(enhanced|premium|neural|natural|siri)\b/i;
 // macOS ships a drawer of joke voices. They are all English. None of them narrate.
 const NOVELTY = /^(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|junior|kathy|organ|princess|ralph|superstar|trinoids|whisper|wobble|zarvox|fred|bruce|agnes|victoria|grandma|grandpa|flo|sandy|shelley|eddy|rocko|reed|junior|wobble)\b/i;
 
-const MAX_QUEUE = 3;      // pending lines, on top of the one being spoken
+const MAX_QUEUE = 3;      // pending notes, on top of the one being spoken
 const GAP_MS = 170;       // a breath between lines
 const MAX_CHARS = 320;
+// Chrome's network voices stop dead at roughly fifteen seconds with no `end`
+// event, so a long note is read as a run of short utterances instead of one.
+const CHUNK_CHARS = 170;
 const READY_TIMEOUT = 2500;
 
 let voices = [];
@@ -52,6 +55,11 @@ let speaking = false;
 let poller = null;
 let pumpPending = false;
 let lastUtterance = null;
+// Each browser utterance gets a serial; a callback from an utterance that has
+// since been cancelled (the voice picker's preview, a restore) must not tear
+// down the one that replaced it.
+let utterSerial = 0;
+let noteSerial = 0;
 let nativeVoice = null;
 let nativeAudio = null;
 let nativeURL = null;
@@ -229,19 +237,46 @@ export function buildUtterance(text, browserFallback = false) {
   return u;
 }
 
+// Sentence-sized pieces, each short enough for the flakiest voice, in order.
+export function splitForSpeech(line, max = CHUNK_CHARS) {
+  const parts = [];
+  let current = '';
+  String(line).split(/(?<=[.!?…])\s+/).forEach(sentence => {
+    if (!sentence) return;
+    if (current && (current + ' ' + sentence).length > max) { parts.push(current); current = sentence; }
+    else current = current ? current + ' ' + sentence : sentence;
+    while (current.length > max) {
+      const cut = current.lastIndexOf(' ', max);
+      const at = cut > 40 ? cut : max;
+      parts.push(current.slice(0, at).trim());
+      current = current.slice(at).trim();
+    }
+  });
+  if (current) parts.push(current);
+  return parts;
+}
+
 export function speak(text, opts) {
   const o = opts || {};
   if (!synth) return false;
   if (state.settings.muted && !o.force) return false;
+  // A background tab does not narrate. The note is on the board when they return.
+  if (typeof document !== 'undefined' && document.hidden && !o.force) return false;
   const line = prepareForSpeech(text);
   if (!line) return false;
   if (o.immediate) {
     queue.length = 0;
     stopSpeech();
   }
-  queue.push(line);
-  // A burst of notes should not become a five-minute monologue. Keep the newest.
-  if (queue.length > MAX_QUEUE) queue.splice(0, queue.length - MAX_QUEUE);
+  const note = ++noteSerial;
+  splitForSpeech(line).forEach(chunk => queue.push({ text: chunk, note }));
+  // A burst of notes should not become a five-minute monologue. Keep the
+  // newest few notes whole, rather than the newest few sentences.
+  const notes = [...new Set(queue.map(q => q.note))];
+  if (notes.length > MAX_QUEUE) {
+    const keep = new Set(notes.slice(-MAX_QUEUE));
+    for (let i = queue.length - 1; i >= 0; i--) if (!keep.has(queue[i].note)) queue.splice(i, 1);
+  }
   pump();
   return true;
 }
@@ -264,7 +299,7 @@ function pump() {
     }
     return;
   }
-  const line = queue.shift();
+  const line = queue.shift().text;
   if (pickBestVoice()?.native) {
     speaking = true;
     speakNative(line, speechEpoch);
@@ -280,8 +315,8 @@ function speakBrowser(line) {
     : 'Speaking with ' + (u.voice?.name || 'the browser voice') + '.');
   lastUtterance = u;
   speaking = true;
-  u.onend = finish;
-  u.onerror = finish;
+  const mine = ++utterSerial;
+  u.onend = u.onerror = () => { if (mine === utterSerial) finish(); };
   try {
     synth.speak(u);
   } catch (e) {
@@ -358,6 +393,7 @@ function unwatch() {
 export function stopSpeech() {
   playbackStatus('Narration stopped.');
   speechEpoch++;
+  utterSerial++;                  // orphan any callback still in flight
   nativeRequest?.abort();
   nativeRequest = null;
   clearNativeAudio();
@@ -495,6 +531,7 @@ export function initNarratorUI() {
     if (!v) {
       meta.textContent = availableVoices().length
         ? 'No English voice found. The browser will use its own default.'
+        : ready ? 'This browser reports no voices. Narration will use whatever the system provides, or stay on paper.'
         : 'Still asking the system what voices it has.';
       return;
     }

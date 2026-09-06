@@ -1,6 +1,6 @@
 import { recordSharedPlot } from './stories.js';
 import { SCHEMES } from '../content/schemes.js';
-import { addNote, clamp } from '../state.js';
+import { addNote, clamp, grantBonusTrust } from '../state.js';
 import { tick, isAsleep } from './tick.js';
 
 export const SCHEME_WAIT = 5 * 60000;
@@ -31,7 +31,7 @@ export function resolveScheme(state, option, now = Date.now()) {
   const changes = choice ? choice.changes : { food: -6, clean: -6, fuss: 8 };
   for (const [need, delta] of Object.entries(changes)) plan.pet.needs[need] = clamp(plan.pet.needs[need] + delta, 0, 100);
   if (choice) recordSharedPlot(state, plan.petId);
-  if (choice) plan.pet.bond = clamp(plan.pet.bond + choice.bond, 0, 25);
+  const granted = choice ? grantBonusTrust(plan.pet, choice.bond, now) : 0;
   const text = (choice ? choice.outcome : plan.definition.autonomous).replaceAll('{p}', plan.pet.name);
   addNote(state, text, 'a small conspiracy', 'scheme');
   s.lastResult = { title: plan.definition.title, text, at: now };
@@ -40,7 +40,7 @@ export function resolveScheme(state, option, now = Date.now()) {
   s.history.unshift(plan.kind);
   s.history = s.history.slice(0, SCHEMES.length - 1);
   s.active = null;
-  return { text, petId: plan.petId, choice: option };
+  return { text, petId: plan.petId, choice: option, bond: granted };
 }
 export function advanceSchemes(state, now = Date.now()) {
   const s = schemeState(state);

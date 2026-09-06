@@ -706,10 +706,14 @@ function pass() {
   if (document.hidden) return;
   const now = Date.now();
   const els = document.querySelectorAll('.sprite.sl2[data-pet]');
+  // With a sheet up, css/style.css pauses the shelf's loops; the director
+  // leaves those residents alone too and only drives the sprite in the sheet.
+  const shelfResting = !!document.querySelector('.veil.open');
 
   for (let i = 0; i < els.length; i++) {
     const el = els[i];
     const id = el.dataset.pet;
+    if (shelfResting && el.closest('#cabinet')) continue;
     // Cheap, and only ever runs on elements this pass has not seen before,
     // which after a renderShelf is every element, exactly once.
     if (!el.dataset.slPrep) prepSprite(el);

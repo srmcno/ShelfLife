@@ -37,7 +37,7 @@ Must be served over http(s) — ES modules + the service worker do not run from 
 - **Grudge payoff**: crossing grudge thresholds (e.g. 5/12/20) triggers a real escalating "reckoning" consequence (shelf rearrangement, an ultimatum note, a bond hit) — not just a counter.
 - **Feud arcs**: feuds can escalate (sabotage) or rarely curdle into an uneasy truce, so the shelf has ongoing story rather than static permanent feud state.
 - **Incident Log / achievements**: milestone unlocks (first feud, first grudge, full shelf, 7-day streak, etc.) logged with a dark-humor toast — completionist hook.
-- **Daily streak**: tracks consecutive check-in days; small unlock nudges tied to streak, not just bond. The existing 48h offline-decay cap stays, so lapses aren't punishing.
+- **Daily streak**: tracks consecutive check-in days; small unlock nudges tied to streak, not just bond. Offline decay is capped at eighteen hours and runs at half speed overnight, so lapses aren't punishing.
 - A few more darker-flavored props if time allows (stretch, not core).
 
 ## 4. Mobile + PC (PWA now)
