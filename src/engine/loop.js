@@ -11,7 +11,7 @@ import {
   PET_LIST_NOTES, PET_SILENCE_LINES, FOUND_PET_LINES, FAVOURITE_LINES, ABSENCE_LINES, RENAME_LINES,
   GONE_LINES, GRID_LINES, GRUDGE_COUNT_LINES, RECORD_LINES, BRIEFING_LINES, STRUCK_LINES,
   DIRECT_LINES, MINUTES_DOCS, SOLO_MINUTES_DOCS, CARE_RECORD_DOCS, ROTA_DOCS, STRIKE_DOCS,
-  EMPTY_SHELF_NOTES
+  EMPTY_SHELF_NOTES, PROP_EYE_LINES
 } from '../content/copy.js';
 import { MATURE_COMPLAINTS_EXTRA, MATURE_HAPPY_EXTRA, MATURE_EVENTS_EXTRA } from '../content/mature.js';
 import {
@@ -193,7 +193,8 @@ export function subsFor(state, ctx = {}, now = Date.now()) {
 
   if (ctx.n) s.n = ctx.n.name || ctx.n;
   if (ctx.m) s.m = ctx.m.name || ctx.m;
-  if (ctx.q) s.q = (PROPS[ctx.q] && PROPS[ctx.q].name) || ctx.q;
+  // Templates say "the {q}", so a prop called The Urn arrives as plain Urn.
+  if (ctx.q) s.q = ((PROPS[ctx.q] && PROPS[ctx.q].name) || ctx.q).replace(/^The /, '');
 
   if (ctx.a && ctx.b) {
     s.a = ctx.a.name; s.b = ctx.b.name;
@@ -251,7 +252,9 @@ export function petLine(state, pet, ctx = {}) {
   const idx = (state.slots || []).indexOf(pet.id);
   const nbrs = idx >= 0 ? neighborPets(state, idx) : [];
   const neighbor = nbrs.length ? pick(nbrs) : null;
-  const subs = subsFor(state, Object.assign({ pet, n: neighbor }, ctx), now);
+  const nearProps = idx >= 0 ? neighborProps(state, idx) : [];
+  const nearProp = nearProps.length ? pick(nearProps) : null;
+  const subs = subsFor(state, Object.assign({ pet, n: neighbor, q: nearProp ? nearProp.kind : undefined }, ctx), now);
   const mood = moodOf(pet);
   const need = worstNeed(pet);
 
@@ -293,6 +296,7 @@ export function petLine(state, pet, ctx = {}) {
   } else {
     if (pet.art && !pet.art.creature && pet.art.body) offer(byForm, 'line', DRAWN_NOTES, subs, kind);
     if (trait.notes) offer(byForm, 'line', trait.notes, subs, kind);
+    if (subs.q) offer(byForm, 'line', PROP_EYE_LINES, subs, kind);
     if (mood === 'content') {
       let happy = HAPPY_NOTES;
       if (state.settings && state.settings.matureMode) happy = happy.concat(MATURE_HAPPY_EXTRA);

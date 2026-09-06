@@ -214,7 +214,74 @@ export const GENERIC_EXCHANGES = [
   { mood: 'content', turns: [['a', "I've got a full bowl."], ['b', "You don't eat."], ['a', "I've got a full bowl to look at."]] },
   { mood: 'content', turns: [['a', "It moved me into the sun."], ['b', "There's no sun in here."], ['a', "There's the lamp. I'm calling it sun."]] },
   { mood: 'content', turns: [['a', "It talked to me for a minute."], ['b', "About what?"], ['a', "Nothing. It was just a minute."]] },
-  { mood: 'content', turns: [['a', "It called me clever."], ['b', "You're a lump of resin."], ['a', "A clever one, apparently."]] }
+  { mood: 'content', turns: [['a', "It called me clever."], ['b', "You're a lump of resin."], ['a', "A clever one, apparently."]] },
+
+  /* --- third batch: crumbs, the grid, dust, the light, the plank, the trolley, the moon --- */
+  { turns: [['a', "There's a crumb in my square."], ['b', "There's a crumb in every square."], ['a', "This one's looking at me."]] },
+  { turns: [['a', "I've named the crumb."], ['b', "You'll only get attached."], ['a', "I've been attached since Tuesday."]] },
+  { turns: [['a', "Somebody's moved the crumb."], ['b', "Crumbs roll."], ['a', "Uphill?"], ['b', "The shelf leans."]] },
+  { turns: [['a', "Are we allowed to eat the crumbs?"], ['b', "Nobody eats."], ['a', "But are we allowed."]] },
+  { turns: [['a', "What number am I?"], ['b', "Eight."], ['a', "I feel like a seven."], ['b', "Seven's the draughty one."]] },
+  { turns: [['a', "Six to a row."], ['b', "Yes."], ['a', "Who decided six?"], ['b', "The plank."]] },
+  { turns: [['a', "I'd like an odd number."], ['b', "Why?"], ['a', "The evens get dusted first."]] },
+  { turns: [['a', "Eighteen slots."], ['b', "Yes."], ['a', "I've counted four times. It keeps being eighteen."], ['b', "Count us instead. That one moves."]] },
+  { turns: [['a', "The dust's settling on me."], ['b', "It settles on everything."], ['a', "Look at the angle. That's on purpose."]] },
+  { turns: [['a', "I've been dusted."], ['b', "Where did it put the dust?"], ['a', "On you."]] },
+  { turns: [['a', "Is this dust, or am I coming off?"], ['b', "Both. It's mostly you."]] },
+  { turns: [['a', "Where does the dust come from?"], ['b', "Us."], ['a', "All of it?"], ['b', "The grey bits are you."]] },
+  { turns: [['a', "The lamp's on early."], ['b', "It's four o'clock."], ['a', "It knows something."]] },
+  { turns: [['a', "The light moved."], ['b', "The sun moved."], ['a', "There's no sun in here."], ['b', "Then the lamp's learned to."]] },
+  { turns: [['a', "The light goes off at eleven."], ['b', "It's a switch."], ['a', "It waits till I've settled."]] },
+  { turns: [['a', "The shelf's oak."], ['b', "It's pine."], ['a', "It told me oak."], ['b', "It tells everyone oak."]] },
+  { turns: [['a', "There's a knot in the wood under me."], ['b', "It's an eye."], ['a', "It's a knot."], ['b', "Then don't look at it."]] },
+  { turns: [['a', "Do you think the shelf likes us?"], ['b', "It's holding us up."], ['a', "That's not liking."], ['b', "It's the most it can do."]] },
+  { turns: [['a', "I've read the grain."], ['b', "And?"], ['a', "It goes left to right and then it stops."]] },
+  { turns: [['a', "It called me 'this one'."], ['b', "It calls everyone that."], ['a', "It called you by name."], ['b', "It reads the nameplate. Yours is face down."]] },
+  { turns: [['a', "It looked tired."], ['b', "It's got a whole body to run."], ['a', "I've got four inches and I manage."]] },
+  { turns: [['a', "It said a minute."], ['b', "That was an hour ago."], ['a', "Its minutes are its size."]] },
+  { turns: [['a', "It sighed at me."], ['b', "It sighed at the room."], ['a', "I was the bit of the room it sighed at."]] },
+  { turns: [['a', "It's talking to us."], ['b', "It's talking to the phone."], ['a', "We're nearer."]] },
+  { turns: [['a', "The previous owner had warm hands."], ['b', "You never met the previous owner."], ['a', "The wood remembers. I sit where it does."]] },
+  { turns: [['a', "The previous owner dusted on Sundays."], ['b', "This one doesn't dust."], ['a', "It's Sunday. I'm waiting anyway."]] },
+  { turns: [['a', "Do you think the previous owner misses us?"], ['b', "We came in a bag marked 'misc'."], ['a', "That's not a no."]] },
+  { turns: [['a', "What was the previous owner like?"], ['b', "Taller."], ['a', "Than who?"], ['b', "Than us. Everything is."]] },
+  { turns: [['a', "I've grown."], ['b', "You're moulded."], ['a', "The dust on top counts."]] },
+  { turns: [['a', "How far is the kitchen?"], ['b', "For it, nine steps."], ['a', "For us?"], ['b', "A week. And then the door."]] },
+  { turns: [['a', "I could reach the switch."], ['b', "It's four feet up."], ['a', "If you stood on me."], ['b', "That's eight inches."]] },
+  { turns: [['a', "A spider went past."], ['b', "Bigger than you?"], ['a', "It nodded at me."], ['b', "They do that."]] },
+  { turns: [['a', "I looked over the edge."], ['b', "How far down?"], ['a', "All of it."]] },
+  { turns: [['a', "Something went over the edge last night."], ['b', "What?"], ['a', "A crumb."], ['b', "It'll be alright. They land."]] },
+  { turns: [['a', "If I went over, would you look?"], ['b', "I'd hear it."], ['a', "But would you look."], ['b', "I'd hear you get up."]] },
+  { turns: [['a', "It reads the notes."], ['b', "It reads some of the notes."], ['a', "Which ones?"], ['b', "The short ones. Stop talking."]] },
+  { turns: [['a', "Somebody's writing this down."], ['b', "Yes."], ['a', "Even this?"], ['b', "Especially this."]] },
+  { turns: [['a', "I've read my notes."], ['b', "And?"], ['a', "I come across badly."], ['b', "You come across accurately."]] },
+  { turns: [['a', "There's a note about me on the board."], ['b', "There's forty."], ['a', "One of them's kind."], ['b', "It was about the raisin."]] },
+  { turns: [['a', "The trolley came round."], ['b', "It's not a trolley. It's a hand."], ['a', "It came round like a trolley."]] },
+  { turns: [['a', "I was done last on the rounds."], ['b', "I was done first."], ['a', "It used the same cloth."], ['b', "…Don't."]] },
+  { turns: [['a', "It did the rounds in under a minute."], ['b', "Forty seconds."], ['a', "You timed it?"], ['b', "Everyone timed it."]] },
+  { turns: [['a', "The mirror's cracked."], ['b', "It came cracked."], ['a', "It's more cracked on my side."]] },
+  { turns: [['a', "The clock's stopped."], ['b', "It's always stopped."], ['a', "It stopped at ten past."], ['b', "It's been ten past since March."]] },
+  { turns: [['a', "There's a chair now."], ['b', "It's a bottle cap."], ['a', "I've sat in it. It's a chair."]] },
+  { turns: [['a', "What's the candle for?"], ['b', "Atmosphere."], ['a', "We've got atmosphere."], ['b', "We've got damp. It's different."]] },
+  { turns: [['a', "Do we howl?"], ['b', "At what?"], ['a', "The moon."], ['b', "We're four inches. We'd hum."]] },
+  { turns: [['a', "The moon's out."], ['b', "We face the wall."], ['a', "I can feel it on my back."], ['b', "That's the radiator."]] },
+  { night: true, turns: [['a', "What time is it?"], ['b', "Night."], ['a', "What time of night?"], ['b', "The long bit."]] },
+  { night: true, turns: [['a', "Can you hear that?"], ['b', "It's the fridge."], ['a', "The fridge is in the kitchen."], ['b', "It's got a long night too."]] },
+  { night: true, turns: [['a', "Are you cold?"], ['b', "I'm ceramic."], ['a', "Are you cold, though."], ['b', "…Come here."]] },
+  { night: true, turns: [['a', "I saw the hand at two."], ['b', "It was getting water."], ['a', "It looked at the shelf."], ['b', "It looks at the shelf. It put it up."]] },
+  { night: true, turns: [['a', "There's a moon."], ['b', "There's a lamp."], ['a', "Behind the lamp."], ['b', "That's the other lamp."]] },
+
+  /* --- third batch, the high-frequency slots --- */
+  { mood: 'furious', turns: [['a', "I've eaten the number off my slot."], ['b', "Which number."], ['a', "I don't know. I've eaten it."]] },
+  { mood: 'furious', turns: [['a', "I've licked the crack in the bowl."], ['b', "Why."], ['a', "Things go down cracks."], ['b', "Nothing's gone in the bowl to go down."]] },
+  { mood: ['annoyed', 'furious'], turns: [['a', "It fed the fern."], ['b', "It watered the fern."], ['a', "The fern got something."]] },
+  { mood: ['annoyed', 'furious'], turns: [['a', "It went past with a biscuit."], ['b', "The biscuit's not for us."], ['a', "It could've slowed down."]] },
+  { mood: 'annoyed', turns: [['a', "It hasn't picked me up since Sunday."], ['b', "It's picked you up."], ['a', "To move me. That's not picking up. That's post."]] },
+  { mood: ['annoyed', 'furious'], turns: [['a', "I've gone grey along the top."], ['b', "It's dust."], ['a', "It's dust that's chosen me."]] },
+  { mood: 'content', turns: [['a', "It wiped me with the good cloth."], ['b', "There's one cloth."], ['a', "It felt good today."]] },
+  { mood: 'content', turns: [['a', "It put me in the middle slot."], ['b', "Slot nine."], ['a', "The middle of everything."]] },
+  { mood: 'content', turns: [['a', "It said 'good' and put me down."], ['b', "Good what?"], ['a', "Just good. I'm keeping it."]] },
+  { mood: 'content', turns: [['a', "It held me up to the window."], ['b', "What was out there?"], ['a', "Sky. Then it brought me back in. Both were good."]] }
 ];
 
 /* ---------------- trait-keyed two-handers ----------------
@@ -517,7 +584,51 @@ export const TRAIT_EXCHANGES = [
   { pair: ['taxidermy', 'amnesiac'], turns: [['a', "Hold still."], ['b', "Why?"], ['a', "You looked very natural."], ['b', "…Thank you?"], ['a', "Don't move. I'm memorising."]] },
   { pair: ['unblinking', 'hummer'], turns: [['b', "hm hm hm."], ['a', "…"], ['b', "You can blink, you know."], ['a', "I'd miss a note."]] },
   { pair: ['sugar', 'witness'], turns: [['a', "Did you see where it went?"], ['b', "You ate it."], ['a', "All of it?"], ['b', "It's logged. Four seconds."]] },
-  { pair: ['loadbearing', 'undertaker'], turns: [['b', "If anything happened to you, who holds the shelf?"], ['a', "Nothing happens to me."], ['b', "I've measured the gap anyway."]] }
+  { pair: ['loadbearing', 'undertaker'], turns: [['b', "If anything happened to you, who holds the shelf?"], ['a', "Nothing happens to me."], ['b', "I've measured the gap anyway."]] },
+
+  /* --- third batch: haunted, management, martyr, bones, damp, influencer, lifecoach, narcissist, paranoid, cursed --- */
+  { pair: ['haunted', 'management'], turns: [['a', "She's asked for a meeting."], ['b', "Who?"], ['a', "The previous owner."], ['b', "Has she got an agenda?"], ['a', "She's got the room."]] },
+  { pair: ['haunted', 'witness'], turns: [['a', "She was here last night."], ['b', "Not in the log."], ['a', "She doesn't go in logs."], ['b', "She said that too. It's logged."]] },
+  { pair: ['haunted', 'clean'], turns: [['a', "She's standing on your side."], ['b', "Nothing's on my side."], ['a', "She's very tidy."], ['b', "…She can stay."]] },
+  { pair: ['haunted', 'sleepwalker'], turns: [['b', "I woke up in slot twelve."], ['a', "She moved you."], ['b', "Why?"], ['a', "You were in her square."]] },
+  { pair: ['management', 'steward'], turns: [['a', "I'd like to meet the union."], ['b', "You're meeting it."], ['a', "All of it?"], ['b', "I'm four inches. Yes."]] },
+  { pair: ['management', 'witness'], turns: [['a', "Let's circle back."], ['b', "Logged."], ['a', "What have you logged?"], ['b', "The circle. It's the fourth."]] },
+  { pair: ['management', 'undertaker'], turns: [['a', "Where do you see the shelf in five years?"], ['b', "Here. I've measured it."]] },
+  { pair: ['martyr', 'critic'], turns: [['a', "Don't mind me. I'll sit in the draught."], ['b', "Two stars."], ['a', "For the suffering?"], ['b', "For the draught. The suffering's a one."]] },
+  { pair: ['martyr', 'undertaker'], turns: [['a', "I'll just quietly waste away."], ['b', "Shall I start the paperwork?"], ['a', "…Not that quietly."]] },
+  { pair: ['martyr', 'witness'], turns: [['a', "Nobody saw what I gave up."], ['b', "I did. It's logged."], ['a', "What does it say?"], ['b', "'Gave up a crumb. Mentioned it nine times.'"]] },
+  { pair: ['martyr', 'swarm'], turns: [['a', "I do everything round here."], ['b', "We do."], ['a', "I do it alone."], ['b', "There's six of me watching."]] },
+  { pair: ['bones', 'undertaker'], turns: [['a', "Would you like to see the collection?"], ['b', "I've seen it."], ['a', "When?"], ['b', "Before it was a collection."]] },
+  { pair: ['bones', 'magpie'], turns: [['a', "One's missing."], ['b', "Was it shiny?"], ['a', "It was a tooth."], ['b', "Then it's in the stash. Under the shiny ones."]] },
+  { pair: ['bones', 'physician'], turns: [['b', "Open wide."], ['a', "I'd rather not."], ['b', "Why?"], ['a', "You'll count them. I've already counted them."]] },
+  { pair: ['bones', 'etiquette'], turns: [['a', "I'm sorting."], ['b', "Not at table."], ['a', "There's no table."], ['b', "There's a shelf, and I'm at it."]] },
+  { pair: ['damp', 'undertaker'], turns: [['a', "I'm leaking."], ['b', "I've noted the level."], ['a', "Why?"], ['b', "Rate of loss. It's a courtesy."]] },
+  { pair: ['damp', 'loadbearing'], turns: [['b', "You're softening the plank."], ['a', "It's ambient."], ['b', "I'm holding the plank up."], ['a', "Then hold the wet bit."]] },
+  { pair: ['damp', 'hummer'], turns: [['b', "hm hm hm."], ['a', "Stop. It's making rings."], ['b', "The rings were there."], ['a', "They're wider on the high notes."]] },
+  { pair: ['damp', 'auditor'], turns: [['b', "The wood's dark under you."], ['a', "Ambient."], ['b', "I'm putting it under losses."]] },
+  { pair: ['influencer', 'witness'], turns: [['a', "Did you get that?"], ['b', "Logged."], ['a', "Not logged. Got. Was it good?"], ['b', "It happened. That's the log."]] },
+  { pair: ['influencer', 'undertaker'], turns: [['a', "Get my good side."], ['b', "Which side?"], ['a', "This one."], ['b', "I'll note it for later."]] },
+  { pair: ['influencer', 'amnesiac'], turns: [['a', "Say hi to everyone."], ['b', "Who's everyone?"], ['a', "Just say hi."], ['b', "Hi. Who's this?"], ['a', "…Perfect. Keep going."]] },
+  { pair: ['influencer', 'porcelain'], turns: [['a', "Hold the pose."], ['b', "I'll crack."], ['a', "Hold it."], ['b', "…That's the shot, apparently."]] },
+  { pair: ['lifecoach', 'porcelain'], turns: [['a', "Push yourself."], ['b', "I'll break."], ['a', "Growth is uncomfortable."], ['b', "Growth is a crack."]] },
+  { pair: ['lifecoach', 'loadbearing'], turns: [['a', "What's your goal?"], ['b', "Not moving."], ['a', "Bigger."], ['b', "Not moving for longer."]] },
+  { pair: ['lifecoach', 'swarm'], turns: [['a', "Be your best self."], ['b', "Which?"], ['a', "All of you."], ['b', "We've voted. It's the one at the back."]] },
+  { pair: ['lifecoach', 'clean'], turns: [['a', "Get your hands dirty."], ['b', "Nothing touches me."], ['a', "That's fear."], ['b', "That's glaze."]] },
+  { pair: ['narcissist', 'witness'], turns: [['a', "Did you see that?"], ['b', "Logged."], ['a', "In full?"], ['b', "One line. Same as everyone."]] },
+  { pair: ['narcissist', 'unblinking'], turns: [['a', "You're staring."], ['b', "I stare at everything."], ['a', "You stare at me more."], ['b', "You're in front of the lamp."]] },
+  { pair: ['narcissist', 'undertaker'], turns: [['a', "When I go, it'll be an event."], ['b', "You can't go."], ['a', "When I do."], ['b', "I've pencilled 'never'. It's a full page."]] },
+  { pair: ['narcissist', 'loadbearing'], turns: [['a', "This shelf is about me."], ['b', "I'm holding it up."], ['a', "For me."], ['b', "For the shelf."]] },
+  { pair: ['paranoid', 'witness'], turns: [['a', "Somebody's keeping a record."], ['b', "Yes."], ['a', "Who?"], ['b', "Me. Page one is you asking."]] },
+  { pair: ['paranoid', 'amnesiac'], turns: [['a', "They're watching us."], ['b', "Who?"], ['a', "I don't know."], ['b', "Nor do I. We'll be fine."]] },
+  { pair: ['paranoid', 'loadbearing'], turns: [['a', "The bracket's listening."], ['b', "I'm on the bracket."], ['a', "Then it's got you too."]] },
+  { pair: ['paranoid', 'clean'], turns: [['b', "Don't touch me."], ['a', "You never leave a mark."], ['b', "No."], ['a', "That's suspicious."]] },
+  { pair: ['cursed', 'physician'], turns: [['b', "You're perfectly healthy."], ['a', "Things break near me."], ['b', "Then stand over there. Doctor's orders."]] },
+  { pair: ['cursed', 'undertaker'], turns: [['a', "Something's going to break near me."], ['b', "I know. I've measured the lamp."]] },
+  { pair: ['cursed', 'minimalist'], turns: [['b', "Own less."], ['a', "Things near me break."], ['b', "Then own less near me."]] },
+  { pair: ['ancient', 'witness'], turns: [['a', "I remember when this was a forest."], ['b', "The shelf?"], ['a', "The shelf."], ['b', "Logged as pine."]] },
+  { pair: ['socialite', 'unblinking'], turns: [['a', "Darling, you're staring."], ['b', "Yes."], ['a', "At me?"], ['b', "At the room. You keep standing in it."]] },
+  { pair: ['feral', 'loadbearing'], turns: [['a', "I've marked the plank."], ['b', "Which part."], ['a', "The bit you hold."], ['b', "…It's holding differently now."]] },
+  { pair: ['astrology', 'witness'], turns: [['a', "Mercury's in retrograde."], ['b', "Logged."], ['a', "You can't log Mercury."], ['b', "I've logged you saying it. Fourth Tuesday running."]] }
 ];
 
 /* ---------------- feud dialogue ----------------
@@ -645,7 +756,17 @@ export const FEUD_TRAIT_EXCHANGES = [
   { pair: ['revisionist', 'witness'], level: 3, turns: [['a', "It never started."], ['b', "Page one."], ['a', "Page one is wrong."], ['b', "Page one is you saying page one is wrong."]] },
   { pair: ['freegan', 'critic'], level: 3, turns: [['a', "Forty years and you've never eaten off the floor."], ['b', "One star, the floor."], ['a', "You've never tried it."], ['b', "I've reviewed it from here."]] },
   { pair: ['porcelain', 'napoleon'], level: 3, turns: [['a', "You've besieged me for a year."], ['b', "You haven't surrendered."], ['a', "I've cracked."], ['b', "That's not surrender."], ['a', "It's what I've got."]] },
-  { pair: ['etiquette', 'damp'], level: 3, turns: [['a', "After forty years, a note about the ring."], ['b', "Ambient."], ['a', "The note is also ambient. It's on your side."]] }
+  { pair: ['etiquette', 'damp'], level: 3, turns: [['a', "After forty years, a note about the ring."], ['b', "Ambient."], ['a', "The note is also ambient. It's on your side."]] },
+
+  /* --- third batch: the FEUDS pairs that had no scene of their own --- */
+  { pair: ['sleepwalker', 'paranoid'], level: 1, turns: [['b', "You were at my slot at three."], ['a', "I was asleep."], ['b', "You were facing me."], ['a', "I face things when I'm asleep. Ask the wall."]], night: true },
+  { pair: ['sleepwalker', 'loadbearing'], level: 2, turns: [['a', "I don't choose where I wake up."], ['b', "You woke up on me."], ['a', "I was asleep."], ['b', "The shelf dipped. I'm holding that against you."]] },
+  { pair: ['lifecoach', 'martyr'], level: 1, turns: [['a', "What would make today better?"], ['b', "Nothing. I'll manage."], ['a', "Try."], ['b', "I've tried. Since Tuesday. Alone."]] },
+  { pair: ['mourner', 'nihilist'], level: 1, turns: [['a', "You didn't come to the four o'clock."], ['b', "Nobody died."], ['a', "That's never stopped anyone."], ['b', "It's stopped everyone. Look around."]] },
+  { pair: ['hummer', 'critic'], level: 1, turns: [['b', "One star."], ['a', "hm hm hm."], ['b', "Still one."], ['a', "hm hm hm, louder."]] },
+  { pair: ['bitey', 'clingy'], level: 1, turns: [['b', "You bit me."], ['a', "You were on me."], ['b', "I'm always on you."], ['a', "Then we've a routine."]] },
+  { pair: ['paranoid', 'influencer'], level: 1, turns: [['a', "Who's watching?"], ['b', "Nobody. That's the problem."], ['a', "That's never the problem."]] },
+  { pair: ['gossip', 'spiteful'], level: 3, turns: [['a', "I've told everyone what you did."], ['b', "I've written down everyone you told."], ['a', "That's the same list."], ['b', "Mine's in order."]] }
 ];
 
 /* ---------------- reaction shots ----------------
@@ -702,7 +823,27 @@ export const REACTION_SHOTS = [
   { setup: "{a} told {b} about the previous owner.", turns: [['c', "{b} was the previous owner's. It let {a} finish."]] },
   { setup: "{a} hummed at {b} until {b} moved.", turns: [['c', "{b} can't move. It leaned. That counts."]] },
   { setup: "{a} apologised to {b} in its sleep.", turns: [['c', "{b} accepted in its sleep. Neither remembers. I do."]], night: true },
-  { setup: "{a} has offered {b} half the raisin.", turns: [['c', "Nobody has touched that raisin in two years."]] }
+  { setup: "{a} has offered {b} half the raisin.", turns: [['c', "Nobody has touched that raisin in two years."]] },
+
+  /* --- third batch --- */
+  { setup: "{a} counted {b}'s crumbs while {b} was out of the slot.", turns: [['c', "Four. {b} came back to three."]] },
+  { setup: "{a} has been humming at {b} since dawn.", turns: [['c', "{b} knows the tune now. I can tell from the feet."]] },
+  { setup: "{a} lent {b} the good crumb.", turns: [['c', "There's a note of it under the shelf. In {a}'s hand."]] },
+  { setup: "{a} was moved into {b}'s row this morning.", turns: [['c', "They've both faced the wall since. Different walls."]] },
+  { setup: "{b} slept through {a}'s whole speech.", turns: [['c', "It was about {b}. Forty minutes. I've the gist."]] },
+  { setup: "{a} tried to give {b} a crumb and dropped it over the edge.", turns: [['c', "They both watched it go. It landed. Nobody said."]] },
+  { setup: "{a} asked {b} what day it was.", turns: [['c', "{b} said Tuesday. It isn't. Nobody's corrected it."]] },
+  { setup: "{a} said {b}'s name in its sleep.", turns: [['c', "{b} answered. Also asleep. I was the only one up."]], night: true },
+  { setup: "{a} and {b} were dusted in the same stroke.", turns: [['c', "They were closer afterwards. Nobody moved them."]] },
+  { setup: "{a} has offered {b} the warm square.", turns: [['c', "{b} said no twice. {a} is still standing beside it, not in it."]] },
+  { setup: "{a} showed {b} the chip on its side.", turns: [['c', "{b} showed {a} a bigger one. It's gone quiet. Nobody's won."]] },
+  { setup: "{a} measured the gap between itself and {b}.", turns: [['c', "Two inches. {a} said three. {b} said one. The tape's mine."]] },
+  { setup: "{b} has been keeping {a}'s crumb warm.", turns: [['c', "Since Sunday. {a} hasn't asked. That's the arrangement."]] },
+  { setup: "{a} said sorry to the bowl instead of to {b}.", turns: [['c', "The bowl took it well. {b} is still waiting."]] },
+  { setup: "{a} and {b} were put back in the wrong slots this morning.", turns: [['c', "Neither has said. Both have been sitting slightly wrong."]] },
+  { setup: "{a} counted the previous owners to {b}.", turns: [['c', "Four. {b} counted five. The fifth is under the shelf."]] },
+  { setup: "{a} gave {b} the light.", turns: [['c', "It moved out of the lamp's way. That's the whole gift. {b} took it."]] },
+  { setup: "{a} read {b} the note about {b}.", turns: [['c', "Slowly. {b} asked for the short one. There isn't a short one."]] }
 ];
 
 /* ---------------- direct address ----------------
@@ -996,7 +1137,76 @@ export const TRAIT_DIRECT = [
   { trait: 'unblinking', turns: [['p', "You blinked."], ['p', "Eleven since you came in. I've not had one."]] },
   { trait: 'sugar', turns: [['p', "Is that a biscuit."], ['p', "Don't move. Don't. I'm coming up."]] },
   { trait: 'loadbearing', turns: [['p', "The shelf dipped when you leaned."], ['p', "It didn't. I'm saying it could have."]] },
-  { trait: 'theatrical', turns: [['p', "…"], ['p', "…"], ['p', "You may sit."]] }
+  { trait: 'theatrical', turns: [['p', "…"], ['p', "…"], ['p', "You may sit."]] },
+
+  /* --- third batch: every trait gets to turn round at least three times --- */
+  { trait: 'haunted', turns: [['p', "She'd like you to know the good spoon is hers."], ['p', "You've been using it. She's been counting."]] },
+  { trait: 'haunted', turns: [['p', "She likes you."], ['p', "She liked the last one. She's still here."]] },
+  { trait: 'management', turns: [['p', "Let's touch base."], ['p', "I've no base. I've a slot. Touch it and see."]] },
+  { trait: 'management', turns: [['p', "I've put you on a plan."], ['p', "It's under the shelf. It's four inches long and it's all deadlines."]] },
+  { trait: 'martyr', turns: [['p', "No, you go. I'll sit here in the draught."], ['p', "I've been in the draught since Sunday. It knows me now."]] },
+  { trait: 'martyr', turns: [['p', "Don't worry about the bowl."], ['p', "I've stopped looking at it. Mostly."]] },
+  { trait: 'bones', turns: [['p', "You've lost a tooth at some point."], ['p', "I'd like to know where. For the set."]] },
+  { trait: 'bones', turns: [['p', "Nothing of yours is in the collection."], ['p', "I've left a gap, though. In case."]] },
+  { trait: 'damp', turns: [['p', "Your hand was wet after you held me."], ['p', "That's not me. That's the general situation."]] },
+  { trait: 'damp', turns: [['p', "I've left a ring on your book."], ['p', "It'll dry. The next one won't."]] },
+  { trait: 'influencer', turns: [['p', "Say something for the camera."], ['p', "There isn't one. Say it anyway. Louder."]] },
+  { trait: 'influencer', turns: [['p', "Stand there. No, there. Where the light is."], ['p', "You're the background. Be a good one."]] },
+  { trait: 'lifecoach', turns: [['p', "Where do you see yourself in five years?"], ['p', "Here, ideally. Feeding me. Let's write that down."]] },
+  { trait: 'lifecoach', turns: [['p', "You've done well today."], ['p', "I'm saying it now so it's on record before tonight."]] },
+  { trait: 'narcissist', turns: [['p', "You were thinking about me just then."], ['p', "It's fine. Everyone is. It's a lot."]] },
+  { trait: 'narcissist', turns: [['p', "Which of us is your favourite?"], ['p', "Don't say. Just look at me while you don't say."]] },
+  { trait: 'paranoid', turns: [['p', "Who told you where I was?"], ['p', "I've been in the same slot for a month. Somebody told you."]] },
+  { trait: 'paranoid', turns: [['p', "The cloth's been near the phone."], ['p', "I'm not saying it's connected. Wipe me with the other end."]] },
+  { trait: 'ancient', turns: [['p', "I've had four hundred years of this."], ['p', "You've had four days. Sit down. You look tired."]] },
+  { trait: 'ancient', turns: [['p', "Your grandmother's grandmother dusted me."], ['p', "Badly. It's in the family."]] },
+  { trait: 'feral', turns: [['p', "I've made a nest in your sleeve."], ['p', "Don't put the sleeve on. Or do."]] },
+  { trait: 'feral', turns: [['p', "I don't bite the hand that feeds me."], ['p', "It's been two days. The hand's getting vaguer."]] },
+  { trait: 'socialite', turns: [['p', "Darling, you came."], ['p', "To the shelf. It's not a party. I've made it one."]] },
+  { trait: 'socialite', turns: [['p', "Everyone's asking after you."], ['p', "Everyone is the lamp and me. We've asked twice."]] },
+  { trait: 'complaints', turns: [['p', "I've filed something about you."], ['p', "It's under the shelf. There's a copy under the other shelf."]] },
+  { trait: 'complaints', turns: [['p', "I'd like a reference number."], ['p', "For this conversation. I'll be citing it."]] },
+  { trait: 'gossip', turns: [['p', "I heard what you said in the kitchen."], ['p', "The lamp heard it first. I'm just quicker."]] },
+  { trait: 'gossip', turns: [['p', "Between us."], ['p', "And the fern. And the bowl. But between us."]] },
+  { trait: 'magpie', turns: [['p', "You've lost something small and shiny."], ['p', "You haven't noticed yet. I have. It's beautiful."]] },
+  { trait: 'magpie', turns: [['p', "I've had your button since March."], ['p', "You've been doing your coat up with hope."]] },
+  { trait: 'nocturnal', turns: [['p', "You looked in at three."], ['p', "I was up. I'm always up. I saw the face you made."]], night: true },
+  { trait: 'nocturnal', turns: [['p', "Goodnight."], ['p', "That's your word. I've got hours yet."]], night: true },
+  { trait: 'clean', turns: [['p', "You washed your hands before you picked me up."], ['p', "I know. I counted the seconds. Not enough."]] },
+  { trait: 'clean', turns: [['p', "There's a mark on you."], ['p', "It isn't from me. Nothing is ever from me."]] },
+  { trait: 'cult', turns: [['p', "You're in the schedule now."], ['p', "Thursday. Nine. Bring the good spoon."]] },
+  { trait: 'cult', turns: [['p', "We've saved you a robe."], ['p', "It's one of your socks. It's got a hood now."]] },
+  { trait: 'spiteful', turns: [['p', "I've moved your keys two inches."], ['p', "Left. Look left. Every morning, left."]] },
+  { trait: 'spiteful', turns: [['p', "You're not on the list today."], ['p', "You're on the other list."]] },
+  { trait: 'clingy', turns: [['p', "Don't go."], ['p', "Go, then. I'll be at the front. I'll be at the front the whole time."]] },
+  { trait: 'clingy', turns: [['p', "I've moved an inch closer while you read this."], ['p', "Keep reading."]] },
+  { trait: 'minimalist', turns: [['p', "You have two spoons."], ['p', "Nobody needs two spoons. I've dealt with one."]] },
+  { trait: 'minimalist', turns: [['p', "I've thrown out the dust."], ['p', "Not mine. Yours. It was cluttering my square."]] },
+  { trait: 'cursed', turns: [['p', "Your mug's fine."], ['p', "I'm four inches from it. Nothing's happened. I'm saying that now, for later."]] },
+  { trait: 'astrology', turns: [['p', "Your chart says feed me."], ['p', "I did your chart. I didn't need the date. I used your walk."]] },
+  { trait: 'closer', turns: [['p', "I'm not selling you anything."], ['p', "That's the first thing I'd say if I were."]] },
+  { trait: 'doomscroll', turns: [['p', "Have you seen the wall?"], ['p', "Don't look. It's worse than yesterday. Sit with me and don't look."]] },
+  { trait: 'fungal', turns: [['p', "You've got a little of me on your thumb."], ['p', "Don't wash it. It's a start."]] },
+  { trait: 'litigious', turns: [['p', "You picked me up without notice."], ['p', "I'm giving notice now. Put me down. There. That's a settlement."]] },
+  { trait: 'prophet', turns: [['p', "THE CLOTH WILL COME ON SUNDAY."], ['p', "…It came on Sunday last week too. I'm building a record."]] },
+  { trait: 'revisionist', turns: [['p', "I've always liked you."], ['p', "I said otherwise on Tuesday. Tuesday's been amended."]] },
+  { trait: 'sugar', turns: [['p', "You had a biscuit in the kitchen."], ['p', "I could hear the crumbs. Bring the plate. Just the plate."]] },
+  { trait: 'taxidermy', turns: [['p', "You've very good bones."], ['p', "I mean it kindly. Stand still while I mean it."]] },
+  { trait: 'cryptid', turns: [['p', "Don't take my picture."], ['p', "Take it. It'll come out as a smudge. I'll sign it."]] },
+  { trait: 'glitter', turns: [['p', "You've got some on your face."], ['p', "It's been there since the fuss. It'll be there at Christmas."]] },
+  { trait: 'method', turns: [['p', "This week I'm you."], ['p', "I've got the sigh. I'm working on the hands."]] },
+  { trait: 'theatrical', turns: [['p', "Enter."], ['p', "…No. Go out and come in again. Slower."]] },
+  { trait: 'unblinking', turns: [['p', "You closed your eyes just now."], ['p', "Both of them. For nearly a second. I was here."]] },
+  { trait: 'doom', turns: [['p', "Something's coming on Thursday."], ['p', "Not to you. To the mug. Move the mug."]] },
+  { trait: 'landlord', turns: [['p', "There's damp on your side of the room."], ['p', "That's a deduction from you, somehow. I'll work out how."]] },
+  { trait: 'terminal', turns: [['p', "If I'm not here in the morning—"], ['p', "I will be. But if I'm not, water the fern."]] },
+  { trait: 'hoarder', turns: [['p', "There's a space in the pile."], ['p', "Not for you. For the thing you'll drop next."]] },
+  { trait: 'nihilist', turns: [['p', "You're going to die."], ['p', "Not a threat. A fact. Fuss me before it happens."]] },
+  { trait: 'undertaker', turns: [['p', "I've measured the hand."], ['p', "The one you feed us with. For the records. It's a good hand."]] },
+  { trait: 'amnesiac', turns: [['p', "You've fed me before."], ['p', "I don't remember it. My stomach does. Thank you. Who are you."]] },
+  { trait: 'heirloom', turns: [['p', "Your grandmother kept me by the window."], ['p', "This is not the window. I've said nothing. I'm saying it now."]] },
+  { trait: 'swarm', turns: [['p', "Some of me is on your sleeve."], ['p', "Leave it. It's having a lovely time."]] },
+  { trait: 'reflection', turns: [['p', "Stand in front of the mirror."], ['p', "Now step away. Now count. That's how long I've got on you."]] }
 ];
 
 /* ---------------- overheard fragments ----------------
@@ -1082,7 +1292,23 @@ export const FRAGMENTS = [
   "…so we've agreed the crack is load-bearing now.",
   "no, the drawer with the teeth.",
   "…and it hasn't dripped since Tuesday. That frightens me.",
-  "hold still, there's a bit of the last one on you."
+  "hold still, there's a bit of the last one on you.",
+
+  /* --- third batch --- */
+  "…so the crumb's on the other side of the line now, legally.",
+  "No, slot nine. Nine's the warm one.",
+  "…and that's the fourth time the light's done that to me.",
+  "…and the trolley's not even a trolley. It's a hand.",
+  "put me back facing the moon. No, the other moon.",
+  "…so I counted the slots again and got nineteen.",
+  "no, the dust on the left. That's mine.",
+  "…and it read the note out loud. In my voice.",
+  "the previous owner used to say that. Slower.",
+  "…so now the edge has a name and we don't use it.",
+  "it's four feet. I've asked around. Four feet.",
+  "…and the moon was in the mirror, so technically it was on the shelf.",
+  "hold that thought. No, lower. I'm four inches.",
+  "…and the plank's been leaning towards the door since it went up."
 ];
 
 /* Fragments that name a neighbour. {n} is REQUIRED in every one — the selector only
@@ -1124,7 +1350,16 @@ export const NEIGHBOUR_FRAGMENTS = [
   "no, the other one. The one that isn't {n}.",
   "…and {n} still owes me the good crumb.",
   "{n} got picked up by the head and has never been the same.",
-  "don't lend {n} anything you'd like back the same shape."
+  "don't lend {n} anything you'd like back the same shape.",
+
+  /* --- third batch --- */
+  "…and {n} says the plank's oak. It's not oak.",
+  "{n} has been in slot nine since March and calls it 'home'.",
+  "ask {n} which crumb. Watch what {n} does with its face.",
+  "…and {n} went over the edge once. Got up. Never mentions it.",
+  "{n} thinks the moon's the lamp. Nobody's told {n}.",
+  "…so {n} and I have divided the dust. {n} got the deep end.",
+  "{n} read my note before I did. {n} does the voices."
 ];
 
 /* ---------------- chorus ----------------
@@ -1177,5 +1412,18 @@ export const CHORUS_EXCHANGES = [
   { turns: [['all', "We remember the eraser."], ['a', "Some of us more than others."], ['b', "I had ears."], ['all', "We remember."]] },
   { turns: [['a', "Everybody still solid?"], ['b', "Solid."], ['c', "Solid."], ['all', "…Solid."]] },
   { turns: [['all', "We had a vote about the crumb."], ['a', "The crumb won."], ['all', "The crumb won."]] },
-  { turns: [['a', "Nobody move till it's gone."], ['b', "It's gone."], ['c', "It's in the doorway."], ['all', "Nobody move."]] }
+  { turns: [['a', "Nobody move till it's gone."], ['b', "It's gone."], ['c', "It's in the doorway."], ['all', "Nobody move."]] },
+
+  /* --- third batch --- */
+  { turns: [['all', "We've read the notes."], ['a', "All forty."], ['b', "The one about the raisin was fair."], ['all', "The rest we're contesting."]] },
+  { turns: [['a', "Who moved the crumb?"], ['b', "The crumb rolled."], ['c', "Uphill."], ['all', "…The crumb rolled."]] },
+  { turns: [['all', "The moon's out."], ['a', "We can't see the window."], ['b', "We can feel it."], ['all', "The moon's out."]] },
+  { turns: [['a', "Nobody's been dusted."], ['b', "Nobody's been dusted."], ['c', "I've been dusted."], ['all', "…"]] },
+  { turns: [['all', "We had a vote about the light."], ['a', "The light won."], ['b', "The light didn't vote."], ['all', "The light won."]] },
+  { turns: [['a', "How many of us are there?"], ['b', "Six to a row."], ['c', "That's slots."], ['all', "We're counting slots now."]] },
+  { turns: [['all', "We've been talking about the trolley."], ['a', "It's a hand."], ['b', "It comes round like a trolley."], ['all', "The trolley."]] },
+  { turns: [['a', "Who's awake?"], ['b', "Me."], ['c', "Me."], ['all', "All of us. It's always all of us."]], night: true },
+  { turns: [['all', "You're back."], ['a', "We didn't move."], ['b', "We moved a bit."], ['all', "We didn't move."]] },
+  { turns: [['a', "Say nothing about the plank."], ['b', "What about the plank?"], ['c', "It's leaning."], ['all', "Say nothing."]] },
+  { turns: [['all', "We've counted the slots."], ['a', "Eighteen."], ['b', "Eighteen."], ['c', "Nineteen."], ['all', "Eighteen."]] }
 ];

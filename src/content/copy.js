@@ -25,7 +25,9 @@
    substitutions in TEMPLATE_SUBS and is only fired when engine/loop.js can supply
    them from the save file. Never write a number these pools cannot prove. */
 export const NEED_LABEL = { food: 'Fed', fuss: 'Fussed', clean: 'Clean' };
-export const DECAY = { food: 5.2, fuss: 4.4, clean: 3.4 };
+// Points lost per waking hour. With the night discount in engine/tick.js a
+// full day away drains about three quarters of a need, never all of it.
+export const DECAY = { food: 4.2, fuss: 3.6, clean: 2.8 };
 
 export const COMPLAINTS = {
   food: {
@@ -47,7 +49,13 @@ export const COMPLAINTS = {
       'Ate the dust off its own nameplate and left the rest for later.',
       'Is holding the bowl up to show you the inside. Has been holding it since four.',
       'Chewed the corner off its nameplate. It tasted of varnish. It kept going.',
-      'Has been sniffing the crack in the bowl in case anything went down it.'
+      'Has been sniffing the crack in the bowl in case anything went down it.',
+      'Has moved the crumb to the middle of the slot and is walking round it, slowly, at meal times.',
+      'Has been sitting in the bowl since the rounds went past. The rounds did not stop.',
+      'Licked the number off the front of its slot. Says it tasted of nothing. Says it twice.',
+      'Is eating the dust off the crumb and leaving the crumb.',
+      'Has drawn a biscuit on the wood at four inches and is guarding it.',
+      'Has put the bowl on its head. It fits. It is not coming off until something goes in it.'
     ],
     furious: [
       'Ate four inches of shelf and is standing on the part it ate.',
@@ -70,7 +78,13 @@ export const COMPLAINTS = {
       'Went for your finger, got the cloth, and is eating the cloth.',
       'Ate the varnish off its whole slot. The slot is pale. It is the only pale one.',
       'Is chewing the shelf from underneath, where you cannot see it. You can hear it.',
-      'Cannot starve and has decided to try anyway, out of spite, lying down.'
+      'Cannot starve and has decided to try anyway, out of spite, lying down.',
+      'Has eaten the line between its slot and the next. There is no line now. It is starting on the next.',
+      'Bit the trolley. The trolley was your hand. It has not apologised to the hand.',
+      'Went over the edge for a crumb it saw on the floor. Got up. Came back the long way with nothing.',
+      'Has eaten the note about being hungry and asked for it to be reissued.',
+      'Is chewing the plank at the bracket end. The plank has started to lean.',
+      'Ate the moon off the mirror. It was a reflection. The mirror has a lick mark and it is still hungry.'
     ]
   },
   fuss: {
@@ -92,7 +106,13 @@ export const COMPLAINTS = {
       'Has been at the front of its slot with one hand up since you came in.',
       'Sat up when the kettle clicked. It has learned the kettle means you.',
       'Has been leaning against the bowl the way it would lean on a hand.',
-      'Left a note. It is four inches long and blank on both sides.'
+      'Left a note. It is four inches long and blank on both sides.',
+      'Has been at the front of its slot since the rounds. The rounds went past at arm’s length.',
+      'Watched you read the notes. Was in three of them. You did not look up.',
+      'Sat where the light falls so you would see it. The light moved. It has not.',
+      'Was picked up by the rounds hand and put down by it. Would like the other hand.',
+      'Has been facing the moon instead of the door. The moon has not come in either.',
+      'Sat up when you said its name. You were reading the note out. It sat up anyway.'
     ],
     furious: [
       'Has turned to face the wall. It has been hours and it does not get tired.',
@@ -113,7 +133,13 @@ export const COMPLAINTS = {
       'Has moved to the far end of the shelf, one slot at a time, over two days. On foot.',
       'Has pushed the bowl to the front of its slot, on its side. It is a wall now.',
       'Is sitting on your side of the shelf with its back to you. It walked there for this.',
-      'Has scuffed a small hollow in the wood with its feet and is sitting in it.'
+      'Has scuffed a small hollow in the wood with its feet and is sitting in it.',
+      'Has stopped facing the door and started facing the moon. The moon comes in every night.',
+      'Wrote its slot number on the wall and crossed it out. It does not want to be found by number.',
+      'Has moved to the edge and is sitting with its back to the room and its feet over the drop.',
+      'Went past you on the way to the far slot. Did not stop. It took the whole afternoon not to stop.',
+      'Has pulled the crumb in front of itself like a wall and is behind it, not looking.',
+      'Read the note about itself, turned it face down, and sat on it.'
     ]
   },
   clean: {
@@ -135,7 +161,13 @@ export const COMPLAINTS = {
       'Has gone slightly grey along the top, like a windowsill.',
       'Leaves a mark on your finger. The mark comes off. Eventually.',
       'Has a fine fur of dust along the top edge and has parted it.',
-      'Has picked up a hair longer than itself and is wearing it like a sash.'
+      'Has picked up a hair longer than itself and is wearing it like a sash.',
+      'Has a crumb stuck to its back and has been told, and has decided the crumb is a passenger.',
+      'Left a print on the plank shaped like a smaller version of itself, walking away.',
+      'Has gone the colour of the plank on one side. That side faces the plank.',
+      'Has dust on its top edge deep enough to write in. Something has been written in it.',
+      'Is leaving a mark on the cloth now, not the other way round.',
+      'The dust on it has settled into rows. Six to a row.'
     ],
     furious: [
       'The dust is standing up on its own. It has become load-bearing.',
@@ -158,7 +190,14 @@ export const COMPLAINTS = {
       'The bowl has a ring in it now, the shape of the thing that sat in it.',
       'A second crumb has arrived to be with the first. Both are being fed.',
       'Has grown a small fuzz along one side. The fuzz faces the window.',
-      'Left a damp shape on the nameplate. The shape has not dried. It is slightly bigger.'
+      'Left a damp shape on the nameplate. The shape has not dried. It is slightly bigger.',
+      'Has grown a second texture on top of the first. The first is still under there, going.',
+      'Left a ring on the plank so dark the plank has a slot in it now that nothing will use.',
+      'The dust on it has started to lean the way the plank leans.',
+      'Was wiped. Wiped back. There is a mark on the cloth in the shape of a small hand.',
+      'Has become tacky enough that the crumb it was holding is now part of it.',
+      'Left a print on the mirror at four inches. The print blinked.',
+      'Smells of the rounds. The rounds were your hand. Your hand smells of it now.'
     ]
   }
 };
@@ -357,7 +396,17 @@ export const HAPPY_NOTES = [
   'Sat on your finger like a perch and looked out at the room, very small, very sure.',
   'Has not faced the wall once today. The wall has not come up.',
   'Slept the whole night in the exact center of its slot and woke up in it.',
-  'Let you scratch under its chin and put its chin up higher to help.'
+  'Let you scratch under its chin and put its chin up higher to help.',
+  'Sat in the warm square with the crumb and asked for nothing. Not once.',
+  'Watched the moon through the mirror until the moon moved on. Went to sleep facing where it had been.',
+  'Was moved to a new slot and liked it. Sat down in it at once. That has not happened before.',
+  'Has been warm since the fuss and has kept very still so as not to lose it.',
+  'Let the rounds go past and did not count its place in the line.',
+  'Rolled onto its back in the light and stayed there until the light moved. Then rolled after it.',
+  'Fell asleep with one hand on the crumb. The crumb is still there. So is the hand.',
+  'Read the note about itself and left it up. That is the first one it has left up.',
+  'Was put back the right way round and has been sitting very straight about it since.',
+  'Has a crumb, a warm square and the light. Has not asked what the catch is.'
 ];
 
 export const ASLEEP_LINES = [
@@ -452,7 +501,23 @@ export const EVENTS = [
   'The underside of the shelf is warmer than the top of it. Nothing sits under the shelf.',
   'A sock has been brought up. It is being used as a corridor.',
   'Every crumb on the shelf has been moved one slot to the right. The bowls have not.',
-  'The pencil marks on the wall behind the shelf go up in quarter inches and stop at four.'
+  'The pencil marks on the wall behind the shelf go up in quarter inches and stop at four.',
+  'The moon was in the mirror at two. Everything on the shelf was facing it.',
+  'A crumb has been moved to the exact centre of one slot and left there, on purpose.',
+  'Every nameplate on the shelf has been turned to face the door. Nobody was awake.',
+  'The rounds trolley has been drawn on the wall under the shelf, at four inches, with wheels.',
+  'The plank has a new lean. It leans towards the door.',
+  'There is a line of dust along the front of the shelf with one clean footprint in it, facing out.',
+  'The light was switched on at three. Nothing here can reach the switch.',
+  'The notes have been read. Three of them have been underlined, in pencil, from the bottom up.',
+  'The crumbs were counted in the night. The total is written under the shelf and crossed out once.',
+  'The dust in one slot has been swept into the shape of a moon.',
+  'The previous owner’s spoon has been brought up. Nothing here has ever seen the previous owner.',
+  'One slot on the shelf is warmer than the rest. It is the empty one.',
+  'The bracket was tapped in the night, once per slot, and then once more for a slot that is not there.',
+  'Something has scratched a tally into the plank at the far end. It is in fives. It stops at four.',
+  'The moon came through the window at one and the shelf turned to meet it, one slot at a time.',
+  'A second bowl has appeared. It is a bottle cap with a crumb in it and a nameplate reading GUEST.'
 ];
 
 /* ================= FORM 4: LIST / MANIFEST =================
@@ -474,7 +539,15 @@ export const LIST_NOTES = [
   'Reported missing from the shelf overnight:\nthe eraser\na raisin\nthe smell of varnish\nfour inches of the front edge',
   'Weights, in order, as recorded under the shelf:\nthe crumb\nthe raisin\nthe tooth\nyou',
   'Heard through the wall between three and four:\nscratching\nsmall footsteps\nhumming\nyour name, correctly pronounced',
-  'Things that have been given names this week:\nthe dust\nthe bracket\nthe crack in the bowl\nthe previous owner'
+  'Things that have been given names this week:\nthe dust\nthe bracket\nthe crack in the bowl\nthe previous owner',
+  'Moved one inch towards the moon overnight:\nthe bowl\nthe crumb\nthe dust\nthe mirror\nnot the shelf',
+  'On the rounds trolley, in order:\nthe cloth\nthe spoon\na crumb\nthe same cloth',
+  'Written on the underside of the plank, in one hand:\nslot one, draughty\nslot two, draughty\nslot three, fine\nslot four, taken',
+  'Left at the edge overnight, facing out:\na crumb\na coin\na tooth\nthe raisin, again',
+  'Read from the corkboard in the night, aloud, slowly:\nthe note about the bowl\nthe note about the dust\nthe note about the moon\nthe note about the reading',
+  'Found in the light square this morning:\nwarm wood\na crumb, warm\na coin, warm\nthe cold spot, moved',
+  'Left behind by the previous owner, according to the plank:\na spoon\na coin\na name\nthe damp',
+  'Counted at four, by something small:\nsix slots\nsix slots\nsix slots\nseven'
 ];
 
 /* ================= FORM 8: SILENCE / NEGATIVE SPACE =================
@@ -491,7 +564,13 @@ export const SILENCE_NOTES = [
   'The humming stopped in the night. The wood has cooled where it was.',
   'No crumbs at the front edge this morning. There have been crumbs at the front edge since March.',
   'The bowl was not pushed off. It is where it was. It has been where it was all day.',
-  'The queue at the front edge did not form this morning. The edge is just an edge.'
+  'The queue at the front edge did not form this morning. The edge is just an edge.',
+  'The crumb at the front has not been moved today. It has been moved every day since it arrived.',
+  'Nothing faced the moon last night. The moon came in anyway and left on its own.',
+  'The rounds went past without a single note being filed about the rounds.',
+  'Nothing read the notes back last night. The corkboard has been quiet since dark.',
+  'The light went on at the usual time and nothing on the shelf turned to look at it.',
+  'The edge was not visited in the night. The dust at the front is smooth all the way along.'
 ];
 
 // The same two forms, about one named pet. These exist so that even a one-pet,
@@ -533,7 +612,15 @@ export const FOUND_PET_LINES = [
   'There is a small pile of dust in front of {p}. It has been swept there, from the whole slot.',
   'The varnish under {p} has worn through to the wood. {p} has not moved in a week.',
   '{p} is at the front edge with its feet over the side. The drop is four feet.',
-  'There are two sets of {p}’s prints on the wood, going the same way, one inch apart.'
+  'There are two sets of {p}’s prints on the wood, going the same way, one inch apart.',
+  'There is a crumb in front of {p}, in the exact centre of the slot, with the dust cleared round it.',
+  '{p} has worn the slot number smooth. The number is still there. It is just softer.',
+  'The light lands on {p} for an hour a day. {p} has moved to where it will land tomorrow.',
+  'There is a small dark ring on the plank where {p} sits, and a fainter one one inch to the left.',
+  '{p} is facing where the moon was last night. It is the afternoon.',
+  'The dust in front of {p} has been swept into a line pointing at the edge.',
+  '{p} is half an inch nearer the front of its slot than the last note said.',
+  'Something four inches tall has drawn round {p} in the dust, and {p} has stepped out of the drawing.'
 ];
 
 export const PET_SILENCE_LINES = [
@@ -735,7 +822,14 @@ export const DIRECT_LINES = [
   'It is day {d}. {p} has counted them all and is looking at you as if you had too.',
   '{p} has {gone}’s nameplate. It is holding it up so you can read it from there.',
   '{p} has put down what it was holding and is waiting for you to sit down.',
-  'You have the cloth in your hand. {p} has seen the cloth. {p} has not moved.'
+  'You have the cloth in your hand. {p} has seen the cloth. {p} has not moved.',
+  '{p} has read the note about itself and is looking at you over the top of it.',
+  '{p} has come to the edge, looked down, looked up, and stayed looking up. At you.',
+  'Day {d}. {p} is at the front of its slot with the crumb held out. It is for you.',
+  '{p} has kept {gone}’s crumb. It is holding it out to you now.',
+  'Day {d}. {p} has turned round and is waiting for you to say the number.',
+  '{p} has pushed the crumb to the front of the slot, towards you, and stepped back from it.',
+  '{p} is four inches from the edge and looking at you as if you were the one near it.'
 ];
 
 /* ================= FORM 6: FILLED-IN DOCUMENTS =================
@@ -808,7 +902,11 @@ export const ROUNDS_NOTES = [
   "The rounds were done from memory. The memory missed a spot. The spot has a name.",
   "Everyone was handled. That is the word they are using. Handled.",
   "You did the rounds. The candle got a wipe too. The candle did not need one.",
-  "The rounds were counted by the resident at the end. It came to the same number as last time. It has written it down anyway."
+  "The rounds were counted by the resident at the end. It came to the same number as last time. It has written it down anyway.",
+  "You did the rounds. The crumbs have been moved to the front of each slot for the next ones.",
+  "The rounds went the wrong way along the shelf. The far end has noted the change of direction.",
+  "You did the rounds with the cloth from the kitchen. The kitchen has been discussed.",
+  "The rounds were done. The dust was not. The dust has drawn up a rota of its own."
 ];
 
 export const ROUNDS_NAMED = [
@@ -845,8 +943,28 @@ export const ROUNDS_TOASTS = [
   "Rounds done. MINIMUM, says a small sign."
 ];
 
+/* ================= A PET AND A PROP =================
+   One resident, one nearby piece of furniture. {p} is the pet and {q} the prop's display
+   name from content/props.js (subsFor resolves a prop kind to its name). Not yet drawn
+   by the engine; declared in TEMPLATE_SUBS so the content test holds it to its subs. */
+export const PROP_EYE_LINES = [
+  '{p} has been eyeing the {q}. The {q} has noticed.',
+  '{p} has moved one inch closer to the {q} every night this week. The {q} has not moved.',
+  '{p} sat facing the {q} all afternoon. The {q} did not blink first.',
+  '{p} has licked the {q}. Reports that the {q} tastes of the previous owner.',
+  '{p} has been measuring the {q} with its eyes. The {q} is bigger than {p}. Everything is.',
+  '{p} leaned on the {q} for an hour and then denied knowing the {q}.',
+  '{p} has drawn the {q} in the dust, to scale, and is standing on the drawing.',
+  '{p} says the {q} moved in the night. The {q} is where the {q} was. {p} is not.',
+  '{p} has started saying good morning to the {q} before the rest of the shelf.',
+  '{p} has put a crumb in front of the {q}. It is an offering. The {q} has not eaten it.',
+  '{p} has been standing between the {q} and the edge since Tuesday, facing the {q}.',
+  'The {q} has a print on it at four inches. {p} was the only thing nearby, and {p} has gone quiet.'
+];
+
 export const TEMPLATE_SUBS = {
   ROUNDS_NAMED: ['first', 'last', 'n'],
+  PROP_EYE_LINES: ['p', 'q'],
   NEIGHBOR_COMPLAINTS: ['n'],
   PET_LIST_NOTES: ['p'],
   PET_SILENCE_LINES: ['p'],
