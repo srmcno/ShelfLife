@@ -409,6 +409,22 @@ export const HAPPY_NOTES = [
   'Has a crumb, a warm square and the light. Has not asked what the catch is.'
 ];
 
+/* What the board says about a sleeper. This slot used to hold one hardcoded string
+   ("Asleep. Has left a note reading later.") for every nocturnal creature on every
+   check, forever. It is third-person reportage, unlike its first-person twin
+   DREAM_LINES in content/inner.js, which is what the same creature is dreaming. */
+export const SLEEPING_NOTES = [
+  'Asleep. Has left a note reading "later".',
+  'Asleep with its back to the room. That took some arranging.',
+  'Asleep. One arm out over the edge of the slot, as far as it goes.',
+  'Asleep since the light changed. Nothing has been filed since.',
+  'Out cold and holding something. Nobody has established what.',
+  'Asleep in the position it complains about being moved into.',
+  'Fell asleep mid-grievance. The grievance is still open.',
+  'Asleep, and breathing in a way that carries further than you would think.',
+  'Asleep on the warm side of the plank. It found it in the dark.',
+  'Asleep. It will deny the whole afternoon.'
+];
 export const ASLEEP_LINES = [
   'Was asleep. Is now awake and unimpressed.',
   'You woke it. It has all the time there is to remember that.',

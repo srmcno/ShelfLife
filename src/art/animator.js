@@ -2,6 +2,7 @@ import {
   MOOD_BUBBLES, SLEEP_TALK, PLOTTING_BUBBLES, NOTICE_BUBBLES, TRAVEL_BUBBLES,
   CARE_BUBBLES, DUET_BUBBLES, PROP_POKE_BUBBLES
 } from '../content/bubbles.js';
+import { TRAIT_INNER } from '../content/inner.js';
 import { resolveMotion, PART_ORIGIN, limbPhase } from './anatomy.js';
 
 // ---------------------------------------------------------------------------
@@ -681,11 +682,32 @@ function solo(el, text, force, cls) {
   return true;
 }
 
+// A bubble is a clause, so an inner line only qualifies if one of its sentences
+// is short enough to be muttered under one's breath. Lowercased whole, because
+// that is the register every bubble in content/bubbles.js is written in.
+const BUBBLE_FRAGMENT_MAX = 44;
+function innerFragment(el) {
+  const piece = el.closest('.piece');
+  const ids = (piece && piece.dataset.traits ? piece.dataset.traits.split(' ') : []).filter(id => TRAIT_INNER[id]);
+  if (!ids.length) return null;
+  const bits = TRAIT_INNER[pickOne(ids)]
+    .reduce((out, line) => out.concat(line.split(/(?<=[.!?])\s+/)), [])
+    .filter(s => s.length <= BUBBLE_FRAGMENT_MAX);
+  return bits.length ? pickFresh(bits).toLowerCase() : null;
+}
+
 // A thought is always first person and always short: a bubble is what the
 // creature is thinking, not the shelf's report about it (that is the notes).
 function thought(el, mood) {
   if (el.classList.contains('sl-plotting') && mood !== 'asleep') return pickFresh(PLOTTING_BUBBLES);
   if (mood === 'asleep') return pickFresh(SLEEP_TALK);
+  // A third of the time it mutters a piece of its own written inner monologue
+  // rather than the shared mood pool, so two creatures in the same mood on the
+  // same day are still saying different things under their breath.
+  if (chance(0.34)) {
+    const own = innerFragment(el);
+    if (own) return own;
+  }
   return pickFresh(MOOD_BUBBLES[mood] || MOOD_BUBBLES.fine);
 }
 

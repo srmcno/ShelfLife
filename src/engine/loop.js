@@ -11,8 +11,9 @@ import {
   PET_LIST_NOTES, PET_SILENCE_LINES, FOUND_PET_LINES, FAVOURITE_LINES, ABSENCE_LINES, RENAME_LINES,
   GONE_LINES, GRID_LINES, GRUDGE_COUNT_LINES, RECORD_LINES, BRIEFING_LINES, STRUCK_LINES,
   DIRECT_LINES, MINUTES_DOCS, SOLO_MINUTES_DOCS, CARE_RECORD_DOCS, ROTA_DOCS, STRIKE_DOCS,
-  EMPTY_SHELF_NOTES, PROP_EYE_LINES
+  EMPTY_SHELF_NOTES, PROP_EYE_LINES, SLEEPING_NOTES
 } from '../content/copy.js';
+import { TRAIT_INNER, INNER_LINES, DREAM_LINES } from '../content/inner.js';
 import { MATURE_COMPLAINTS_EXTRA, MATURE_HAPPY_EXTRA, MATURE_EVENTS_EXTRA } from '../content/mature.js';
 import {
   pick, addNote, petById, chooseForm, reconcile, recordVisit, firstTouchCounts,
@@ -279,6 +280,18 @@ export function petLine(state, pet, ctx = {}) {
     if (drawn) return drawn;
   }
 
+  // A sleeping creature is a quiet one: no complaints, no paperwork, no turning
+  // round to address you. It gets the board's report of it, the silence, or — the
+  // only place dreams are ever printed — form 9.
+  if (ctx.asleep || isAsleep(pet, new Date(now))) {
+    const dozing = {};
+    offer(dozing, 'line', SLEEPING_NOTES, subs);
+    offer(dozing, 'thought', DREAM_LINES, subs);
+    offer(dozing, 'silence', PET_SILENCE_LINES, subs);
+    const asleepDraw = drawFrom(dozing, state, subs);
+    if (asleepDraw) return asleepDraw;
+  }
+
   const byForm = {};
   const angry = mood === 'furious' || mood === 'annoyed';
   // The mood sets the tag, not the pool: a list of the things a furious creature
@@ -304,6 +317,15 @@ export function petLine(state, pet, ctx = {}) {
     }
     if (neighbor && trait.social) offer(byForm, 'react', trait.social, subs, kind);
   }
+
+  // FORM 9, the inner voice. Its own archetypes first — a Spiteful creature and a
+  // Porcelain one keep very different things to themselves — then the general
+  // register for the mood it is actually in. This is the only pool in the game
+  // that is not something the shelf saw or something a creature said out loud.
+  (pet.traits || []).forEach(id => {
+    if (TRAIT_INNER[id]) offer(byForm, 'thought', TRAIT_INNER[id], subs, kind);
+  });
+  offer(byForm, 'thought', INNER_LINES[mood] || INNER_LINES.fine, subs, kind);
 
   // Lever 3. These are rarer than the everyday pools on purpose: the accusation
   // works because the number is real and because it is not said every time.

@@ -5,6 +5,7 @@ import { careFor, previewCare } from '../engine/care.js';
 import { playWait } from '../engine/play.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 import { checkAchievements, grudgeStageFor, GRUDGE_STAGE_AT } from '../engine/achievements.js';
+import { notePlayerMove } from '../engine/behavior.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS, PROP_ART } from '../content/props.js';
 import { renderPetSprite, moodMotionClasses } from '../art/sprite.js';
@@ -31,14 +32,22 @@ function positionControl(state, id) {
       (occupant && occupant !== id ? ' · swap with ' + escapeHtml((petById(state, occupant) || {}).name || (PROPS[(propById(state, occupant) || {}).kind] || {}).name || 'furniture') : occupant === id ? ' · here' : ' · empty') + '</option>').join('') +
     '</select><button class="btn btn-sm" id="moveResident">Move</button></div>';
 }
-function wirePosition(state, id) {
+// `reopen` keeps you where you were. Moving somebody used to close the whole card
+// and drop you back on the shelf, so feeding the resident you had just rearranged
+// meant finding it again and opening it again. The move is rarely the last thing
+// you wanted to do with that creature.
+function wirePosition(state, id, reopen) {
   document.getElementById('moveResident').addEventListener('click', () => {
     const from = state.slots.indexOf(id), to = Number(document.getElementById('residentPosition').value);
     if (from < 0 || from === to) { toast('Already there. It appreciates the certainty.'); return; }
+    const displaced = state.slots[to];
     [state.slots[from], state.slots[to]] = [state.slots[to], state.slots[from]];
+    notePlayerMove(state, id, from, to);
+    if (displaced) notePlayerMove(state, displaced, to, from);
     save();
-    closeCard();
     renderAll(state);
+    if (reopen) reopen();
+    else closeCard();
     toast('Moved. The neighbours are reassessing.');
   });
 }
@@ -158,7 +167,7 @@ export function openCard(state, id, keepScroll) {
 
   document.getElementById('petMotion').disabled = asleep;
   document.getElementById('petMotion').addEventListener('click', () => previewMotion(document.getElementById('cardPortraitHost')));
-  wirePosition(state, pet.id);
+  wirePosition(state, pet.id, () => openCard(state, pet.id, true));
   if (pendingPosition != null) document.getElementById('residentPosition').value = pendingPosition;
   cardSheet.querySelectorAll('[data-care]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -282,7 +291,7 @@ export function openPropCard(state, id) {
   cardVeil.classList.add('open');
   document.body.style.overflow = 'hidden';
   document.getElementById('cardClose').addEventListener('click', closeCard);
-  wirePosition(state, pr.id);
+  wirePosition(state, pr.id, () => openPropCard(state, pr.id));
   document.getElementById('removeProp').addEventListener('click', () => {
     state.props = state.props.filter(x => x.id !== pr.id);
     state.slots = state.slots.map(x => x === pr.id ? null : x);

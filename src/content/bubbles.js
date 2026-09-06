@@ -32,7 +32,10 @@ export const MOOD_BUBBLES = {
     'the plank is warm today.', 'slot nine. the good one.', 'nobody moved me. bliss.',
     'crumb secured.', 'the moon said hello.', 'i was picked up first.',
     'glazed and pleased.', 'dust settling. let it.', 'the light is on my side.',
-    'no notes today. none.', 'the bracket and i are fine.', 'my square. my dust.'
+    'no notes today. none.', 'the bracket and i are fine.', 'my square. my dust.',
+    'nothing hurts. it never will.', 'a crumb and a hundred years.', 'warm. i will keep this one.',
+    'the dust is up to my seam. cosy.', 'held for eleven seconds. logged.',
+    'i was put back to the grain.', 'the lamp warmed my bad side.', 'forever, but the warm sort.'
   ],
   fine: [
     'hm.', '…', 'mm.', 'is it tuesday.', 'i have been counting dust.',
@@ -45,7 +48,10 @@ export const MOOD_BUBBLES = {
     'the light is on. noted.', 'slot life, day whatever.', 'is the plank oak.',
     'a crumb went past.', 'counted the slots. eighteen.', 'the trolley is not a trolley.',
     'four inches. checked.', 'the moon is late.', 'the notes are about me. probably.',
-    'nothing moved. i checked twice.', 'the edge is still there.', 'the dust and i have an understanding.'
+    'nothing moved. i checked twice.', 'the edge is still there.', 'the dust and i have an understanding.',
+    'another one. i have plenty.', 'the dust is taller by a hair.',
+    'still four inches. still here.', 'the plank and i will see it out.', 'nothing today. same as forever.',
+    'i thought about the edge. briefly.', 'the wall has not blinked either.', 'waiting is the whole job now.'
   ],
   annoyed: [
     'tsk.', 'no.', 'i saw that.', 'noted. underlined.', 'the bowl is a rumour.',
@@ -59,7 +65,12 @@ export const MOOD_BUBBLES = {
     'the crumb was in my square.', 'slot nine is mine. was.', 'the light is on them. not me.',
     'moved. again. one inch.', 'read the note. it was rude.', 'the trolley skipped me.',
     'i asked for the warm square.', 'do not touch my dust.', 'the plank creaked at me.',
-    'i was counted last.', 'the moon saw that.', 'four inches of no thank you.'
+    'i was counted last.', 'the moon saw that.', 'four inches of no thank you.',
+    'i have all the time. remember it.',
+    'i will still be cross in a century.', 'noted. dated. shelved. like me.',
+    'four inches and nothing in reach.', 'the crumb moved. i did not move it.',
+    'they wiped my good side. again.', 'nobody counted me this morning.',
+    'i am filing this under forever.'
   ],
   furious: [
     'no.', '!', 'i will eat the bracket.', 'the list has your name.',
@@ -73,7 +84,12 @@ export const MOOD_BUBBLES = {
     'i have eaten the number.', 'the crumb is mine now. all of it.', 'i will bite the trolley.',
     'the plank will hear about this.', 'move me and see.', 'slot nine will be avenged.',
     'i have read all forty notes.', 'the light is a liar.', 'the edge is looking good today.',
-    'the previous owner fed me.', 'i am four inches of grievance.', 'counted. named. underlined.'
+    'the previous owner fed me.', 'i am four inches of grievance.', 'counted. named. underlined.',
+    'starving forever. a long career.', 'i will still be here. that is all.',
+    'through a hair of the plank. more.',
+    'give me a century. i have one.', 'i ate dust. the dust was us.',
+    'i would break if i could. i cannot.', 'the hand will hear from me. all year.',
+    'four inches of teeth and nowhere.'
   ]
 };
 
@@ -83,7 +99,10 @@ export const SLEEP_TALK = [
   'four inches. forever.', 'do not open the box.', 'the raisin knows.', 'i was taller once.',
   'under the shelf. under.', 'dig. dig. good.', 'uncle, no.', 'the crumb had a family.',
   'slot nine. slot nine.', 'the crumb is safe. the crumb.', 'not the trolley.', 'four feet. i can see it.',
-  'the moon has a face. ours.', 'shh. the notes can hear.', 'the plank. it leans.'
+  'the moon has a face. ours.', 'shh. the notes can hear.', 'the plank. it leans.',
+  'it never ends. it never ends.', 'the drawer. no. the drawer.', 'i am under the shelf. i am.',
+  'the previous one is awake too.',
+  'count me. somebody count me.', 'the hand is smaller now. smaller.'
 ];
 
 export const PLOTTING_BUBBLES = [
@@ -94,7 +113,9 @@ export const PLOTTING_BUBBLES = [
   'i have drawn a map. of here.', 'the bracket is the weak point.', 'not a heist. legally.',
   'the moth is in on it.', 'i will need a witness. not you.', 'first the raisin. then the world.',
   'the crumb goes tonight.', 'step two: the light.', 'the trolley is the way out.', 'i have measured the edge.',
-  'the plank will not hold. good.', 'nobody counts the dust.', 'the notes are the alibi.'
+  'the plank will not hold. good.', 'nobody counts the dust.', 'the notes are the alibi.',
+  'we have the time. all of it.', 'the plan takes ninety years. fine.', 'nobody suspects the damp one.',
+  'i have dug a hole in the dust.', 'wait for the next owner. then.'
 ];
 
 export const NOTICE_BUBBLES = [
@@ -104,7 +125,9 @@ export const NOTICE_BUBBLES = [
   'be honest. how long.', 'ah. the management.', 'do not look at the fern.', 'i was not asleep.',
   'we forgive you. mostly.', 'quick. hide the crumb.', 'you smell like outside.', 'we practised a face.',
   'you read the notes. we saw.', 'the trolley person.', 'you moved the light.', 'we counted. you were late.',
-  'hello. slot nine has notes.', 'you smell of the kitchen.', 'the moon told us you were coming.'
+  'hello. slot nine has notes.', 'you smell of the kitchen.', 'the moon told us you were coming.',
+  'you look older. we do not.', 'we were up all night. all of them.', 'you came back. we never left.',
+  'we are exactly where you left us.', 'you smell of a day we missed.'
 ];
 
 export const TRAVEL_BUBBLES = [
@@ -113,76 +136,95 @@ export const TRAVEL_BUBBLES = [
   'left foot. other left.', 'i was never here.', 'closer to the bowl.', 'away from that one.',
   'new square, new me.', 'nearly there. nearly.', 'this is the long way.', 'mind the dust.',
   'slot nine or bust.', 'the moon said this way.', 'four inches at a time.', 'past the crumb. do not look.',
-  'the light is that way.', 'shortcut. via the edge. no.', 'the plank leans this way. handy.'
+  'the light is that way.', 'shortcut. via the edge. no.', 'the plank leans this way. handy.',
+  'four inches. then four more.', 'towards the warm one. slowly.',
+  'i have a century to get there.', 'the dust is deeper this end.', 'do not count me till i land.'
 ];
 
 export const CARE_BUBBLES = {
-  food: ['finally.', 'mine. all mine.', 'chew. chew. yes.', 'acceptable.', 'more.', 'i knew you would fold.', 'crumb accepted.', 'noted. thank you.', 'the bowl was a rumour. was.', 'the crumb has come home.', 'chewing. do not watch.', 'bowl acknowledged.', 'four inches fuller.'],
-  fuss: ['hm. nice.', 'again.', 'there. no, there.', 'do not stop.', 'i permit this.', 'eleven seconds. a record.', 'ok. enough. no, more.', 'the seam likes it.', 'the thumb. the good thumb.', 'warm. suspiciously warm.', 'warm to the seam.', 'record attempt. shh.'],
-  fussbad: ['get off.', 'no.', 'i did not ask.', 'hands.', 'personal space.', 'later. maybe.', 'i am four inches of no.', 'i have a seam. mind it.', 'the light saw that.', 'not on the good side.'],
-  clean: ['sparkling.', 'i was fine.', 'cold water. cold.', 'the dust will return.', 'i smell of soap. betrayal.', 'that was my good grime.', 'shiny. vulnerable.', 'my dust. gone.', 'the ring will be back.', 'damp on purpose now.', 'squeak. that was me.'],
-  rounds: ['ah. the rounds.', 'efficient. noted.', 'everyone got one. hm.', 'assembly line care.', 'i was third. i counted.', 'a rota is not love.', 'a trolley. i am a stop.', 'fourth. i was fourth.', 'same cloth. i saw.', 'the rota has been noted.']
+  food: ['finally.', 'mine. all mine.', 'chew. chew. yes.', 'acceptable.', 'more.', 'i knew you would fold.', 'crumb accepted.', 'noted. thank you.', 'the bowl was a rumour. was.', 'the crumb has come home.', 'chewing. do not watch.', 'bowl acknowledged.', 'four inches fuller.',
+    'i will be hungry again in march.', 'a crumb against forever. fine.', 'the bowl remembered me today.'],
+  fuss: ['hm. nice.', 'again.', 'there. no, there.', 'do not stop.', 'i permit this.', 'eleven seconds. a record.', 'ok. enough. no, more.', 'the seam likes it.', 'the thumb. the good thumb.', 'warm. suspiciously warm.', 'warm to the seam.', 'record attempt. shh.',
+    'warmer than the plank.', 'i will keep this one for years.', 'hold on a bit longer. longer.'],
+  fussbad: ['get off.', 'no.', 'i did not ask.', 'hands.', 'personal space.', 'later. maybe.', 'i am four inches of no.', 'i have a seam. mind it.', 'the light saw that.', 'not on the good side.',
+    'not the seam. never the seam.', 'i will recall this in a century.', 'put me down as you found me.'],
+  clean: ['sparkling.', 'i was fine.', 'cold water. cold.', 'the dust will return.', 'i smell of soap. betrayal.', 'that was my good grime.', 'shiny. vulnerable.', 'my dust. gone.', 'the ring will be back.', 'damp on purpose now.', 'squeak. that was me.',
+    'you wiped off a year of me.', 'my ring is gone. i will make one.', 'cold. and i cannot get ill.'],
+  rounds: ['ah. the rounds.', 'efficient. noted.', 'everyone got one. hm.', 'assembly line care.', 'i was third. i counted.', 'a rota is not love.', 'a trolley. i am a stop.', 'fourth. i was fourth.', 'same cloth. i saw.', 'the rota has been noted.',
+    'the rota outlives everyone. me too.', 'same cloth, same order, forever.', 'a hand each. briefly.']
 };
 
 export const DUET_BUBBLES = {
   whisper: {
-    a: ['psst.', 'about the bowl.', 'not here. later.', 'they cannot hear us.', 'i have a plan.', 'meet me by the fern.', 'the lamp is listening.', 'it was me. the crumb.', 'do you have a shovel.', 'the keeper is a liar.', 'the crumb moved.', 'slot nine is free.', 'the notes are about you.'],
-    b: ['no.', 'i heard nothing.', 'i am not involved.', 'again?', 'tell the fern.', 'you said that tuesday.', 'i am four inches from you.', 'leave me out of it.', 'your breath is damp.', 'write it down. not here.', 'crumbs roll.', 'nine is draughty.', 'they are about everyone.']
+    a: ['psst.', 'about the bowl.', 'not here. later.', 'they cannot hear us.', 'i have a plan.', 'meet me by the fern.', 'the lamp is listening.', 'it was me. the crumb.', 'do you have a shovel.', 'the keeper is a liar.', 'the crumb moved.', 'slot nine is free.', 'the notes are about you.',
+      'they get old. we do not.', 'meet me here in a century.'],
+    b: ['no.', 'i heard nothing.', 'i am not involved.', 'again?', 'tell the fern.', 'you said that tuesday.', 'i am four inches from you.', 'leave me out of it.', 'your breath is damp.', 'write it down. not here.', 'crumbs roll.', 'nine is draughty.', 'they are about everyone.',
+      'i will be exactly here.', 'that is not a plan. that is tuesday.']
   },
   nudge: {
-    a: ['budge up.', 'my side.', 'you are in my light.', 'move.', 'closer. no, back.', 'there is no room.', 'you are leaning.', 'you are on my number.', 'an inch. give me an inch.'],
-    b: ['hey.', 'rude.', 'i felt that.', 'noted.', 'there was room.', 'do that again. go on.', 'i am telling the shelf.', 'that was my good side.', 'the number belongs to the plank.', 'take it from the dust.']
+    a: ['budge up.', 'my side.', 'you are in my light.', 'move.', 'closer. no, back.', 'there is no room.', 'you are leaning.', 'you are on my number.', 'an inch. give me an inch.',
+      'you have leaned since march.', 'give me the warm inch.'],
+    b: ['hey.', 'rude.', 'i felt that.', 'noted.', 'there was room.', 'do that again. go on.', 'i am telling the shelf.', 'that was my good side.', 'the number belongs to the plank.', 'take it from the dust.',
+      'the plank leans. i comply.', 'take it. i have inches to spare.']
   },
   glare: {
-    a: ['…', 'i see you.', 'we both know.', 'stay there.', 'yours, was it.', 'do not.', 'you read my note.', 'the crumb. explain.'],
-    b: ['…', 'blink first.', 'i can do this all day.', 'i have no lids.', 'still here.', 'what.', 'i was here in march.', 'it was on the board.', 'a crumb is a crumb.']
+    a: ['…', 'i see you.', 'we both know.', 'stay there.', 'yours, was it.', 'do not.', 'you read my note.', 'the crumb. explain.',
+      'i can outlast you.', 'i have not blinked since the shop.'],
+    b: ['…', 'blink first.', 'i can do this all day.', 'i have no lids.', 'still here.', 'what.', 'i was here in march.', 'it was on the board.', 'a crumb is a crumb.',
+      'so can i. that is the trouble.', 'nor have i. it is not a talent.']
   },
   poke: {
-    a: ['wake up.', 'you were snoring.', 'are you dead.', 'still there?', 'boo.', 'psst. wake.', 'you were talking. about me.', 'the moon is out.', 'you were on my side.'],
-    b: ['no.', 'i was resting my eyes.', 'i am awake. legally.', 'that was my good nap.', '!', 'never.', 'i will remember that.', 'i was somewhere nice.', 'the moon is the lamp.', 'the side moved.']
+    a: ['wake up.', 'you were snoring.', 'are you dead.', 'still there?', 'boo.', 'psst. wake.', 'you were talking. about me.', 'the moon is out.', 'you were on my side.',
+      'checking you are still solid.', 'you stopped moving. i checked.'],
+    b: ['no.', 'i was resting my eyes.', 'i am awake. legally.', 'that was my good nap.', '!', 'never.', 'i will remember that.', 'i was somewhere nice.', 'the moon is the lamp.', 'the side moved.',
+      'solid. i am always solid.', 'i was resting for a decade.']
   },
   sniff: {
-    a: ['you smell of outside.', 'is that the bowl.', 'you have been in the fern.', 'sniff. hm.', 'something died on you.', 'you are damp.', 'you smell of the trolley.', 'is that the cloth.'],
-    b: ['personal space.', 'it is ambient moisture.', 'back off.', 'that is my smell.', 'i have not moved.', 'stop that.', 'you first.', 'the trolley is a hand.', 'the cloth is everyone.']
+    a: ['you smell of outside.', 'is that the bowl.', 'you have been in the fern.', 'sniff. hm.', 'something died on you.', 'you are damp.', 'you smell of the trolley.', 'is that the cloth.',
+      'you smell of the previous one.', 'is that dust, or is that you.'],
+    b: ['personal space.', 'it is ambient moisture.', 'back off.', 'that is my smell.', 'i have not moved.', 'stop that.', 'you first.', 'the trolley is a hand.', 'the cloth is everyone.',
+      'it is me. it is all me now.', 'we are the dust. keep up.']
   },
   mirror: {
-    a: ['again.', 'together.', 'on three.', 'ha.', 'higher.', 'left. no, other left.', 'we are the same height.'],
-    b: ['again.', 'i did it better.', 'three.', 'wheee. quietly.', 'my knees. i have no knees.', 'my left. your other.', 'we are four inches.']
+    a: ['again.', 'together.', 'on three.', 'ha.', 'higher.', 'left. no, other left.', 'we are the same height.',
+      'same height. same year. same.', 'do this forever with me.'],
+    b: ['again.', 'i did it better.', 'three.', 'wheee. quietly.', 'my knees. i have no knees.', 'my left. your other.', 'we are four inches.',
+      'we have the time for forever.', 'same year. different mould.']
   }
 };
 
 export const PROP_POKE_BUBBLES = {
-  _default: ['hm.', 'is this mine now.', 'it moved. i swear.', 'what does it do.', 'i could lick that.', 'mine.', 'four inches from it. close enough.', 'it came with the house.', 'not eating that. yet.'],
-  bowl: ['empty. again.', 'crumb? no crumb.', 'i checked. still nothing.', 'the bowl lies.', 'a crumb. no. dust.', 'i live here now.'],
-  tub: ['cold.', 'no.', 'nobody is watching. good.', 'not today, tub.'],
-  lamp: ['too bright.', 'warm. suspicious.', 'i moved it an inch.', 'the bulb is watching.', 'it is looking at slot nine.', 'the moon, indoors.'],
-  yarn: ['prey.', 'it fought back.', 'one more pull.', 'the yarn started it.'],
+  _default: ['hm.', 'is this mine now.', 'it moved. i swear.', 'what does it do.', 'i could lick that.', 'mine.', 'four inches from it. close enough.', 'it came with the house.', 'not eating that. yet.', 'i will still be poking this in march.'],
+  bowl: ['empty. again.', 'crumb? no crumb.', 'i checked. still nothing.', 'the bowl lies.', 'a crumb. no. dust.', 'i live here now.', 'empty forever is still empty.'],
+  tub: ['cold.', 'no.', 'nobody is watching. good.', 'not today, tub.', 'i cannot drown. i checked.'],
+  lamp: ['too bright.', 'warm. suspicious.', 'i moved it an inch.', 'the bulb is watching.', 'it is looking at slot nine.', 'the moon, indoors.', 'it gets switched off. lucky.'],
+  yarn: ['prey.', 'it fought back.', 'one more pull.', 'the yarn started it.', 'it unravels. i am moulded.'],
   mat: ['WELCOM. ha.', 'wipe. wipe. done.', 'another letter gone.'],
   musicbox: ['play it again.', 'it knows the words.', 'not that song.'],
-  candle: ['pretty. dangerous.', 'the flame leaned.', 'it is watching me back.', 'do not tell it my secrets.', 'the flame knows the moon.'],
-  fern: ['nobody checks the fern.', 'something is buried here.', 'it moved. it did.', 'my things are in there.', 'the leaf bit back.', 'the previous owner is in there.'],
-  mirror: ['who is that.', 'it blinked first.', 'handsome. cracked.', 'not looking. not looking.', 'the other one blinked.', 'i look four inches.'],
-  clock: ['still march.', 'it is always this time.', 'tick. no tock.', 'ten past. still.', 'it is waiting too.'],
-  skull: ['hello, uncle.', 'uncle agrees.', 'uncle has heard worse.', 'goodnight, uncle.', 'uncle, the crumb went.', 'uncle knows about the edge.'],
-  coffinbed: ['mine.', 'a nap. a long one.', 'it fits. it fits.', 'do not close the lid.'],
-  phone: ['it rang. it never rings.', 'hello? hello.', 'for you. it is the wall.', 'the dial says nine.'],
-  bell: ['tap.', 'something is under there.', 'let me in.', 'do not lift it.'],
-  globe: ['shake it.', 'it is snowing in there.', 'the little man waved.', 'snow. again. snow.', 'the little man is stuck.'],
-  birdcage: ['the door is open.', 'the bird left. i stay.', 'the perch is mine.'],
-  trophy: ['what happened to the rest.', 'nice antlers.', 'salute.'],
-  board: ['ask it something.', 'it says GOODBYE.', 'the planchette moved.', 'spell it slower.'],
-  urn: ['warm.', 'sorry. again.', 'whose is it.', 'family, probably.'],
-  box: ['filed.', 'another one for the box.', 'the box is full. good.', 'one about the trolley.'],
+  candle: ['pretty. dangerous.', 'the flame leaned.', 'it is watching me back.', 'do not tell it my secrets.', 'the flame knows the moon.', 'it gets shorter. i never do.'],
+  fern: ['nobody checks the fern.', 'something is buried here.', 'it moved. it did.', 'my things are in there.', 'the leaf bit back.', 'the previous owner is in there.', 'plastic. it outlasts the house.'],
+  mirror: ['who is that.', 'it blinked first.', 'handsome. cracked.', 'not looking. not looking.', 'the other one blinked.', 'i look four inches.', 'the same face for a century.'],
+  clock: ['still march.', 'it is always this time.', 'tick. no tock.', 'ten past. still.', 'it is waiting too.', 'it stopped. i did not.'],
+  skull: ['hello, uncle.', 'uncle agrees.', 'uncle has heard worse.', 'goodnight, uncle.', 'uncle, the crumb went.', 'uncle knows about the edge.', 'uncle got out. i did not.'],
+  coffinbed: ['mine.', 'a nap. a long one.', 'it fits. it fits.', 'do not close the lid.', 'a lie-down that goes nowhere.'],
+  phone: ['it rang. it never rings.', 'hello? hello.', 'for you. it is the wall.', 'the dial says nine.', 'nobody left to ring me.'],
+  bell: ['tap.', 'something is under there.', 'let me in.', 'do not lift it.', 'under there is where i would go.'],
+  globe: ['shake it.', 'it is snowing in there.', 'the little man waved.', 'snow. again. snow.', 'the little man is stuck.', 'he cannot die in there either.'],
+  birdcage: ['the door is open.', 'the bird left. i stay.', 'the perch is mine.', 'it got a door. i got a slot.'],
+  trophy: ['what happened to the rest.', 'nice antlers.', 'salute.', 'the rest of it got out.'],
+  board: ['ask it something.', 'it says GOODBYE.', 'the planchette moved.', 'spell it slower.', 'it spelled FOREVER. rude.'],
+  urn: ['warm.', 'sorry. again.', 'whose is it.', 'family, probably.', 'somebody finished. imagine.'],
+  box: ['filed.', 'another one for the box.', 'the box is full. good.', 'one about the trolley.', 'a file that never closes.'],
   plant: ['it is crying again.', 'leaf. bite. done.', 'the fig understands.'],
-  lantern: ['warm pane.', 'moths. moths everywhere.', 'a light for the edge.', 'do not let it go out.'],
-  cauldron: ['what is in it.', 'green. hm. green.', 'i dropped a tooth in.', 'it bubbles when i lie.'],
-  jar: ['are those mine.', 'one more for the jar.', 'the teeth are counting.', 'shake. rattle. hm.'],
-  hourglass: ['flip it. flip it again.', 'the sand is going up.', 'time. rude.', 'it is always half.', 'it finished. nobody saw.', 'i saw the last grain.'],
-  headstone: ['not mine yet.', 'nice stone.', 'who is under it.', 'spelled wrong. probably.', 'blank. keep it that way.'],
-  effigy: ['it looks like you.', 'pins? no pins. yet.', 'it has your hair.'],
-  guillotine: ['for a raisin.', 'i cannot die. try me.', 'sharp. hm.'],
-  mousetrap: ['not today, trap.', 'the cheese is a lie.', 'snap. missed.', 'the cheese is a rumour.', 'not today. not ever.'],
-  teacup: ['it fits me.', 'cold tea. mine.', 'one lump.', 'the good one. i am in it.', 'no tea. again.'],
-  portrait: ['the eyes follow.', 'the previous owner.', 'do not touch the frame.'],
+  lantern: ['warm pane.', 'moths. moths everywhere.', 'a light for the edge.', 'do not let it go out.', 'a small light for a long night.'],
+  cauldron: ['what is in it.', 'green. hm. green.', 'i dropped a tooth in.', 'it bubbles when i lie.', 'i climbed in once. nothing.'],
+  jar: ['are those mine.', 'one more for the jar.', 'the teeth are counting.', 'shake. rattle. hm.', 'these teeth got out early.'],
+  hourglass: ['flip it. flip it again.', 'the sand is going up.', 'time. rude.', 'it is always half.', 'it finished. nobody saw.', 'i saw the last grain.', 'it runs out. lucky thing.'],
+  headstone: ['not mine yet.', 'nice stone.', 'who is under it.', 'spelled wrong. probably.', 'blank. keep it that way.', 'blank. i have time to fill it.'],
+  effigy: ['it looks like you.', 'pins? no pins. yet.', 'it has your hair.', 'it will crumble first.'],
+  guillotine: ['for a raisin.', 'i cannot die. try me.', 'sharp. hm.', 'it would only make two of me.'],
+  mousetrap: ['not today, trap.', 'the cheese is a lie.', 'snap. missed.', 'the cheese is a rumour.', 'not today. not ever.', 'it cannot finish me. we both know.'],
+  teacup: ['it fits me.', 'cold tea. mine.', 'one lump.', 'the good one. i am in it.', 'no tea. again.', 'cold since march. so am i.'],
+  portrait: ['the eyes follow.', 'the previous owner.', 'do not touch the frame.', 'it aged. i did not.'],
   radio: ['static. good song.', 'it whispers the news.', 'turn it down. no, up.', 'it said my slot number.']
 };

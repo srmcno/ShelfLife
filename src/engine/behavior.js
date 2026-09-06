@@ -326,8 +326,40 @@ const MOVE_LINES = {
     'Is somewhere else now. There was no announcement.',
     'Has moved one slot along, for no reason it has offered.',
     'Is in a different square. The dust in the old one has not settled.'
+  ],
+  /* Two motives that only exist because the creature keeps its own counsel now.
+     `returning` fires when it has walked back to the slot you carried it out of;
+     `patience` when it finally acts on something it has been eyeing for days. */
+  returning: [
+    'Is back in its old slot. You moved it. It has moved itself.',
+    'Has returned to the square you took it out of and settled in facing the room.',
+    'Walked back. It took the long way and it did not hurry.',
+    'Is where it was before you rearranged it. Neither of you is going to mention this.',
+    'Has undone your decision. Four inches at a time, over several hours.'
+  ],
+  patience: [
+    'Has finally taken the slot it has been looking at all week.',
+    'Made its move. It has been waiting for this square since Tuesday.',
+    'Went for it. Whatever it was weighing up, it has stopped weighing it up.',
+    'Has taken the square. It waited until wanting it was cheaper than not.',
+    'Moved at last. It had been standing at the edge of its slot for days.'
   ]
 };
+
+/* What it says when YOU move it somewhere materially worse. The hand coming down
+   used to be the only event on this shelf nobody had a line about. */
+const DISPLACED_LINES = [
+  'Has been placed in a worse square by a much larger creature. It is taking names.',
+  'Was carried. Did not consent to being carried. Is facing the wrong way on purpose.',
+  'Put down here like a jar. It has looked back at the old slot four times.',
+  'Has been rehoused without notice. The paperwork will follow, it says.',
+  'Was moved. It went quietly, which should worry you more than the alternative.',
+  'Has been relocated by hand. It is measuring the distance back.',
+  'Did not ask to be here. Has begun the long business of not being here.',
+  'Was lifted, moved and set down. All three are on the record separately.',
+  'Has been put somewhere it can see the old slot from. That was a mistake.',
+  'Moved by management. It is four inches tall and it remembers everything.'
+];
 
 // Appended to a move note when how it got there is worth a sentence.
 const MEANS_LINES = {
@@ -712,7 +744,49 @@ function needPull(state, pet, prop, now) {
   return ((55 - level) / 55) * 6;      // only real desperation is worth crossing the shelf for
 }
 
-export function pairScore(state, pet, other) {
+/* ---------------- what happened between these two ----------------
+   Feuds come from the trait table: two archetypes that were never going to work
+   are set against each other before either of them has done anything. That left
+   the shelf's social graph entirely predetermined — a theft, a shoved neighbour
+   or a contested bowl changed the notes and changed nothing else, and by the next
+   pass the victim was perfectly happy to stand there again.
+
+   Friction is the other half: a per-pair tally of things that actually happened,
+   written by the phases below and read by pairScore, so a creature keeps its
+   distance from the one that robbed it whether or not their traits disagree. It
+   fades over about three days, because a grudge held against you for a crumb is
+   funnier than a grudge held forever, and forever is already what the player
+   gets. */
+export const FRICTION_DECAY_MS = 3 * 24 * 60 * 60 * 1000;
+export const FRICTION_MAX = 4;             // beyond this the pair are simply not speaking
+export const FRICTION_WEIGHT = 1.1;        // slot points per remembered incident
+
+export function frictionKey(a, b) { return [a, b].sort().join('|'); }
+
+export function addFriction(state, a, b, now = Date.now(), amount = 1) {
+  if (!state || !a || !b || a === b) return 0;
+  if (!state.friction || typeof state.friction !== 'object') state.friction = {};
+  const key = frictionKey(a, b);
+  const cur = state.friction[key];
+  const carried = cur ? frictionAt(cur, now) : 0;
+  const next = Math.min(FRICTION_MAX, carried + amount);
+  state.friction[key] = { n: next, at: now };
+  return next;
+}
+
+// A record's remaining weight, straight-line decayed since it was last topped up.
+function frictionAt(record, now) {
+  if (!record || !Number.isFinite(record.n) || !Number.isFinite(record.at)) return 0;
+  const age = now - record.at;
+  if (age >= FRICTION_DECAY_MS) return 0;
+  return record.n * (1 - age / FRICTION_DECAY_MS);
+}
+
+export function frictionBetween(state, a, b, now = Date.now()) {
+  return frictionAt(state.friction && state.friction[frictionKey(a, b)], now);
+}
+
+export function pairScore(state, pet, other, now = Date.now()) {
   let s = 0;
   if (artPersonality(other).horns && (pet.stats?.menace || 0) < 5) s -= 1.5;
   const relation = relationship(state, pet, other);
@@ -726,6 +800,8 @@ export function pairScore(state, pet, other) {
   const mutual = Math.min(pet.bond || 0, other.bond || 0);
   s += Math.min(Math.max(mutual - 2, 0) * 0.35, 1.5);
   if ((pet.grudgeStage || 0) >= 2) s -= 1.5;
+  // ... and whatever this particular pair has actually done to each other.
+  s -= frictionBetween(state, pet.id, other.id, now) * FRICTION_WEIGHT;
   return s;
 }
 
@@ -742,7 +818,7 @@ export function slotScore(state, pet, index, now = Date.now(), slots = state.slo
     const other = petById(state, id);
     if (other) {
       if (!petsFeud(pet, other)) petNeighbors++;    // an enemy does not count as company
-      score += pairScore(state, pet, other);
+      score += pairScore(state, pet, other, now);
       if (request?.status === 'accepted' && request.kind === 'neighbor' && request.target === other.id) score += 4;
       return;
     }
@@ -800,6 +876,38 @@ export function reachableSlots(state, pet, from, caps = capabilitiesOf(pet)) {
 
 // Deterministic: given a shelf, a pet either has a reason to move or it does
 // not. All the randomness in this module is in the wording, not the decision.
+/* ---------------- wanting a slot, and going on wanting it ----------------
+   Every pass used to be decided from nothing: score the slots, compare against
+   inertia, act or forget. A creature that had spent a week eyeing the square by
+   the lamp was exactly as likely to go for it on Sunday as it had been on Monday,
+   which is a shelf of dice rather than a shelf of intentions.
+
+   So an unmet want is now written down. Each pass a creature still wants the same
+   slot, its resolve grows and the bar it has to clear comes down — up to a point.
+   Nothing here lets it move sooner than its cooldown allows; it only makes a
+   long-held plan finally worth the effort of standing up. */
+export const PATIENCE_STEP = 0.35;        // threshold shaved per pass still wanting it
+export const PATIENCE_MAX = 1.4;          // never cheaper than this, or they teleport about
+export const WANT_FORGET_MS = 6 * 60 * 60 * 1000;
+
+export function resolveOf(pet, slot, now = Date.now()) {
+  const want = pet && pet.wants;
+  if (!want || want.slot !== slot) return 0;
+  if (now - (want.since || 0) > WANT_FORGET_MS) return 0;
+  return Math.min(PATIENCE_MAX, (want.tries || 0) * PATIENCE_STEP);
+}
+
+function rememberWant(pet, slot, now) {
+  if (!pet) return;
+  const want = pet.wants;
+  if (want && want.slot === slot && now - (want.since || 0) <= WANT_FORGET_MS) {
+    want.tries = Math.min(20, (want.tries || 0) + 1);
+    want.at = now;
+  } else {
+    pet.wants = { slot, since: now, at: now, tries: 1 };
+  }
+}
+
 export function decideMove(state, pet, now = Date.now()) {
   if (!pet || !Array.isArray(state.slots)) return null;
   const from = state.slots.indexOf(pet.id);
@@ -811,15 +919,57 @@ export function decideMove(state, pet, now = Date.now()) {
   const stay = slotScore(state, pet, from, now) + inertiaOf(pet);
   let best = null;
   reachableSlots(state, pet, from, caps).forEach(c => {
-    const score = slotScore(state, pet, c.to, now, simulate(state, from, c.to)) - c.cost;
+    let score = slotScore(state, pet, c.to, now, simulate(state, from, c.to)) - c.cost;
+    // Somewhere it was carried away from is somewhere it is trying to get back to.
+    if (pet.displacedFrom === c.to && now - (pet.displacedAt || 0) < WANT_FORGET_MS) score += 2.5;
     if (!best || score > best.score) best = { to: c.to, score, means: c.means };
   });
-  if (!best || best.score - stay < MOVE_THRESHOLD) return null;
+  if (!best) return null;
+  const bar = MOVE_THRESHOLD - resolveOf(pet, best.to, now);
+  if (best.score - stay < bar) {
+    rememberWant(pet, best.to, now);        // not today. It has not dropped the idea.
+    return null;
+  }
+  const patience = pet.wants && pet.wants.slot === best.to ? (pet.wants.tries || 0) : 0;
+  pet.wants = null;
+  const returning = pet.displacedFrom === best.to && now - (pet.displacedAt || 0) < WANT_FORGET_MS;
+  if (returning) { pet.displacedFrom = null; pet.displacedAt = 0; }
   return {
     pet, from, to: best.to, means: best.means,
     gain: best.score - stay,
+    patience, returning,
     sneaky: !!caps.sneak && (isNight(new Date(now)) || flag(pet, 'nocturnal'))
   };
+}
+
+/* ---------------- being put somewhere ----------------
+   Called by ui/drag.js and the card's position control whenever the PLAYER moves
+   somebody. Until now a hand coming down and rearranging the furniture of a
+   creature's entire world was the one event on the shelf nobody had an opinion
+   about. If the new slot is materially worse than the one it was in, it notices,
+   it remembers where it came from, and decideMove() will start trying to undo
+   your decision. It is four inches tall; walking back is the only vote it has. */
+export const DISPLACE_TOLERANCE = 1.5;
+
+export function notePlayerMove(state, id, from, to, now = Date.now()) {
+  const pet = petById(state, id);
+  if (!pet || from === to) return null;
+  const wasThere = state.slots.slice();
+  wasThere[to] = state.slots[from];
+  wasThere[from] = state.slots[to];
+  const before = slotScore(state, pet, from, now, wasThere);
+  const after = slotScore(state, pet, to, now);
+  pet.lastMoveAt = now;
+  if (after >= before - DISPLACE_TOLERANCE) {
+    pet.displacedFrom = null;
+    pet.displacedAt = 0;
+    return { pet: pet.id, objected: false, drop: before - after };
+  }
+  pet.displacedFrom = from;
+  pet.displacedAt = now;
+  pet.wants = { slot: from, since: now, at: now, tries: 2 };   // it starts out already impatient
+  addNote(state, fill(pick(DISPLACED_LINES), { p: pet }), pet.name, 'angry');
+  return { pet: pet.id, objected: true, drop: before - after };
 }
 
 // Why the move happened, in the order a player would read it off the shelf.
@@ -876,7 +1026,12 @@ export function performMove(state, move, now = Date.now()) {
   const before = occupantsAt(state, move.from, state.slots);
   applyMove(state, move.from, move.to, now);
   const after = occupantsAt(state, move.to, state.slots);
-  const reason = moveReason(state, pet, before, after, now);
+  // Undoing the player's arrangement, or acting on a plan it has been sitting on,
+  // outrank whatever it happens to be standing next to now. Both are about the
+  // creature rather than the furniture, and both are the more interesting note.
+  const reason = move.returning ? { kind: 'returning' }
+    : move.patience >= 3 ? { kind: 'patience' }
+    : moveReason(state, pet, before, after, now);
   const kind = reason.kind === 'flee' ? 'feud' : (reason.kind === 'storm' ? 'angry' : 'note');
   addNote(state, moveNoteFor(state, pet, move, reason), pet.name, kind);
   return { ...move, reason: reason.kind };
@@ -988,6 +1143,7 @@ export function contestProp(state, prop, now = Date.now()) {
   }
   addNote(state, fill(pick(CONTEST_LINES), { p: winner, n: loser, q: prop.kind }), 'observed', 'feud');
   fileGrudge(state, loser, 'lost the ' + propName(prop.kind) + ' to ' + winner.name, now);
+  addFriction(state, winner.id, loser.id, now, 1);
   return { winner: winner.id, loser: loser.id, prop: prop.id };
 }
 
@@ -1036,6 +1192,10 @@ export function stealPhase(state, now = Date.now()) {
   const line = over ? pick(REACH_THEFT_LINES) : pick(THEFT_LINES);
   addNote(state, fill(line, { p: thief, n: victim, m: over }), thief.name, 'feud');
   fileGrudge(state, victim, 'robbed by ' + thief.name, now, { force: true });
+  // The victim remembers who, not merely that. A reached-over theft annoys the
+  // creature in the middle too: it was leaned across and it did not agree to it.
+  addFriction(state, thief.id, victim.id, now, 2);
+  if (over) addFriction(state, thief.id, over.id, now, 1);
   return { thief: thief.id, victim: victim.id, reached: !!over };
 }
 

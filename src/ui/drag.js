@@ -17,6 +17,7 @@
 // mid-gesture, so preventDefault is the only lever). Any real movement before
 // the hold completes is a scroll, and the candidate drag is dropped on the spot.
 import { petById, save } from '../state.js';
+import { notePlayerMove } from '../engine/behavior.js';
 import { renderAll } from './render.js';
 import { openCard, openPropCard } from './card.js';
 
@@ -195,6 +196,10 @@ export function initDrag(state) {
     const tmp = state.slots[to];
     state.slots[to] = d.id;
     state.slots[from] = tmp;
+    // The creature gets an opinion about where you have just put it, and both
+    // halves of a swap were moved by you, so both of them get one.
+    notePlayerMove(state, d.id, from, to);
+    if (tmp) notePlayerMove(state, tmp, to, from);
     save();
     renderAll(state);
   }

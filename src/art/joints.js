@@ -6,12 +6,18 @@ export const LIMB_JOINTS = {
     stubby: [0, 3, 3.8, 'body'], spindly: [-.9, 6, 1.6, 'accent'],
     bird: [-.25, 5, 1.45, 'accent'], hoof: [0, 4, 4.4, 'body'],
     many: [.8, 4, 1.25, 'accent'], tentacles: [.4, 4, 1.7, 'accent'],
-    boots: [0, 2.8, 3.4, 'body'], bony: [-.6, 5.6, 1.6, 'bone']
+    boots: [0, 2.8, 3.4, 'body'], bony: [-.6, 5.6, 1.6, 'bone'],
+    // Every non-'none' variant in creatures.js needs a hinge here or it walks
+    // as one rigid piece — and test/joints.test.mjs will say so.
+    pegs: [0, 4.4, 2.8, 'bodyDark'], crab: [-1.8, 3.8, 1.3, 'accent'],
+    roots: [0, 3.4, 2.2, 'bodyDark'], springs: [0, 3.4, 2, 'bone']
   },
   arm: {
     stubby: [-5, 1, 3.4, 'bodyDark'], noodle: [-8, 5, 1.35, 'accent'],
     claw: [-7, 1, 1.25, 'accent'], paddle: [-5, 4, 3.4, 'bodyDark'],
-    bones: [-6.6, 7.4, 1.7, 'bone'], mitts: [-6, 1.7, 1.3, 'accent']
+    bones: [-6.6, 7.4, 1.7, 'bone'], mitts: [-6, 1.7, 1.3, 'accent'],
+    pincer: [-6, 1.4, 1.5, 'accent'], tendril: [-8, 5.4, 1.3, 'accent'],
+    lopsided: [-7.4, .4, 1.6, 'accent'], sleeves: [-7, 2, 3, 'bodyDark']
   }
 };
 

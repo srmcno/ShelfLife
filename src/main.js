@@ -1,7 +1,7 @@
 import { artPersonality } from './engine/personality.js';
 import { initStories } from './ui/stories.js';
 import {
-  state, save, addNote, pick, clamp, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store, RECOVERY_KEY, loadFailed
+  state, save, addNote, pick, clamp, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store, RECOVERY_KEY, loadFailed, backupDue
 } from './state.js';
 import { TRAITS, TRAIT_BY_ID } from './content/traits.js';
 import { ORIGINS, HABITS, CLOSERS, FALLBACK_NAMES } from './content/copy.js';
@@ -9,7 +9,7 @@ import { tick, isNight } from './engine/tick.js';
 import { checkShelf, petLine, checkWait } from './engine/loop.js';
 import { runBehavior, catchUpBehavior } from './engine/behavior.js';
 import { doRounds } from './engine/care.js';
-import { checkAchievements, ACHIEVEMENTS } from './engine/achievements.js';
+import { checkAchievements, ACHIEVEMENTS, INCIDENT_GROUPS, incidentProgress } from './engine/achievements.js';
 import { checkUnlocks, totalBond } from './engine/unlocks.js';
 import { advanceSchemes } from './engine/schemes.js';
 import { initPlay } from './ui/play.js';
@@ -164,7 +164,43 @@ function offerDownload(text, name) {
   setTimeout(() => a.remove(), 1000);
 }
 window.addEventListener('pagehide', () => { downloadUrls.splice(0).forEach(u => URL.revokeObjectURL(u)); });
-document.getElementById('exportBtn').addEventListener('click', () => offerDownload(JSON.stringify(state), 'shelf-life-backup.json'));
+
+// "1 pets and 1 pieces of furniture" is the kind of sentence that makes a player
+// trust the rest of the screen slightly less. Counts get their own noun.
+function countOf(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+
+// The reminder itself (when a shelf is worth nagging about) lives in state.js so
+// it can be tested without a DOM; this end only paints it.
+const backupBanner = document.getElementById('backupBanner');
+function syncBackupBanner() {
+  if (!backupBanner) return;
+  const due = backupDue(state);
+  backupBanner.hidden = !due;
+  if (!due) return;
+  const text = document.getElementById('backupBannerText');
+  if (text) {
+    text.textContent = state.lastBackup
+      ? 'It has been a while since you took a copy of this shelf. They cannot be re-drawn.'
+      : countOf(state.pets.length, 'resident') + ' live only in this browser. Clearing site data ends them.';
+  }
+}
+document.getElementById('backupNow')?.addEventListener('click', () => {
+  document.getElementById('exportBtn').click();
+  backupBanner.hidden = true;
+});
+document.getElementById('backupLater')?.addEventListener('click', () => {
+  state.backupSnooze = Date.now();
+  save();
+  backupBanner.hidden = true;
+  toast('Noted. They will bring it up again.');
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  state.lastBackup = Date.now();
+  save();
+  offerDownload(JSON.stringify(state), 'shelf-life-backup.json');
+  syncBackupBanner();
+});
 
 let pendingRestore = null;
 const restoreVeil = document.getElementById('restoreVeil');
@@ -210,8 +246,11 @@ importFile.addEventListener('change', e => {
       if (!normalized) throw new Error('bad save file');
       pendingRestore = normalized;
       document.getElementById('restoreSummary').textContent =
-        'This backup contains ' + normalized.pets.length + ' pets and ' + normalized.props.length +
-        ' pieces of furniture. It will replace the ' + state.pets.length + ' pets on your current shelf.';
+        'This backup contains ' + countOf(normalized.pets.length, 'resident') + ' and ' +
+        countOf(normalized.props.length, 'piece of furniture', 'pieces of furniture') + '. ' +
+        (state.pets.length
+          ? 'It will replace the ' + countOf(state.pets.length, 'resident') + ' on your current shelf.'
+          : 'Your shelf is empty, so nothing here will be lost.');
       document.getElementById('restoreVeil').classList.add('open');
     } catch (err) {
       toast('That file did not load.');
@@ -275,10 +314,32 @@ function renderIncidents() {
     '</div></div>' +
     '<button class="btn btn-ghost btn-sm" id="incidentsClose">Close</button></div>';
   if (!unlocked.size) html += '<div class="incident-empty">No incidents logged. Give it time. They are working on it.</div>';
-  ACHIEVEMENTS.forEach(a => {
-    const has = unlocked.has(a.id);
-    html += '<div class="incident' + (has ? '' : ' locked') + '"><div><b>' + escapeHtml(has ? a.label : 'Not yet') + '</b><p>' +
-      escapeHtml(has ? a.desc : a.hint || 'Something has not happened here yet.') + '</p></div></div>';
+  // In chapters, so the parts of the shelf a player has never touched are visible
+  // as gaps rather than buried in one long list.
+  const when = state.achievementAt || {};
+  const dated = ts => Number.isFinite(ts)
+    ? new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null;
+  INCIDENT_GROUPS.forEach(group => {
+    const entries = group.ids.map(id => ACHIEVEMENTS.find(a => a.id === id)).filter(Boolean);
+    if (!entries.length) return;
+    const done = entries.filter(a => unlocked.has(a.id)).length;
+    html += '<div class="incident-group"><h3>' + escapeHtml(group.title) +
+      '<span>' + done + '/' + entries.length + '</span></h3>';
+    entries.forEach(a => {
+      const has = unlocked.has(a.id);
+      const on = has ? dated(when[a.id]) : null;
+      const progress = has ? null : incidentProgress(state, a.id);
+      html += '<div class="incident' + (has ? '' : ' locked') + '"><div><b>' +
+        escapeHtml(has ? a.label : 'Not yet') + '</b><p>' +
+        escapeHtml(has ? a.desc : a.hint || 'Something has not happened here yet.') + '</p>' +
+        (progress && progress.have > 0
+          ? '<span class="incident-progress"><i style="width:' +
+            Math.round(progress.have / progress.need * 100) + '%"></i></span>' +
+            '<small>' + progress.have + ' of ' + progress.need + '</small>'
+          : '') +
+        '</div>' + (on ? '<time>' + escapeHtml(on) + '</time>' : '') + '</div>';
+    });
+    html += '</div>';
   });
   incidentsSheet.innerHTML = html;
   document.getElementById('incidentsClose').addEventListener('click', closeIncidents);
@@ -355,6 +416,7 @@ helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.cl
     renderNotes(state);
   }
   syncAudioButtons();
+  syncBackupBanner();
 })();
 
 setInterval(() => {

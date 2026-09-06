@@ -109,6 +109,9 @@ function petEl(state, pet, slotIndex) {
   if (plotting) btn.classList.add('scheming');
   btn.dataset.kind = 'pet';
   btn.dataset.slot = slotIndex;
+  // The animation director reads these back to mutter a fragment of this
+  // creature's own inner monologue instead of a generic mood bubble.
+  btn.dataset.traits = (pet.traits || []).join(' ');
   btn.dataset.mood = mood;
   const needs = Object.keys(needWords).filter(k => pet.needs[k] < 42).map(k => needWords[k]);
   btn.setAttribute('aria-label', 'Take care of ' + pet.name + ', currently ' + MOOD_WORD[mood] + (needs.length ? ', ' + needs.join(', ') : ''));
@@ -259,6 +262,7 @@ function noteMatches(n, filter) {
     case 'said': return ['two', 'react', 'direct'].includes(n.form) || n.from === 'overheard';
     case 'complaints': return n.kind === 'angry' || n.kind === 'feud';
     case 'papers': return n.form === 'doc' || n.form === 'list';
+    case 'unsaid': return n.form === 'thought';
     case 'plots': return n.kind === 'scheme';
     default: return true;
   }
@@ -309,8 +313,14 @@ export function renderNotes(state) {
     shown.add(key);
     const d = document.createElement('div');
     // Forms 2/4/6 carry real newlines and rely on .note{white-space:pre-line}.
-    // A filled-in document additionally drops the handwriting for a typed face.
-    d.className = 'note ' + n.kind + (n.form === 'doc' ? ' note--doc' : '') + (fresh ? ' note--new' : '');
+    // A filled-in document additionally drops the handwriting for a typed face,
+    // and form 9 — the inner voice — is pinned unlined and unsigned, because it
+    // is the one note on the board that nobody wrote down on purpose.
+    d.className = 'note ' + n.kind + (n.form === 'doc' ? ' note--doc' : '') +
+      (n.form === 'thought' ? ' note--thought' : '') + (fresh ? ' note--new' : '');
+    // The byline stays the bare name: tapping it filters the board to that
+    // resident, and that lookup is by textContent. The "not out loud" qualifier a
+    // thought carries is CSS generated content for exactly that reason.
     d.innerHTML = escapeHtml(n.text) + '<span class="from">' + escapeHtml(n.from) + '</span>';
     const time = document.createElement('time');
     const date = new Date(n.at);

@@ -768,6 +768,21 @@ export const EARS = {
   antennae: { id:'antennae', name:'Feelers', mirror:true, tags:['bug','light'], shapes:[
     { k:'path', d:'M 0 4 C -6 2 -12 -4 -14 -12', fill:'none', stroke:'bodyDark', sw:1.8, cap:'round' },
     { k:'circle', cx:-14.6, cy:-13.6, r:2.6, fill:'accent' }
+  ]},
+  folded: { id:'folded', name:'Folded', mirror:true, tags:['soft','long'], shapes:[
+    { k:'path', d:'M 0 2 C -6.4 -3.4 -12.4 -8.4 -15.4 -8.4 C -14.4 -3.4 -11.4 1.4 -6.4 4.4 Z', fill:'body' },
+    { k:'path', d:'M -6.4 4.4 C -10.4 4.4 -13.4 2.4 -14.4 -0.4 C -11.4 -0.4 -8.4 1 -6.4 4.4 Z', fill:'bodyDark' },
+    { k:'path', d:'M -3.4 0.4 C -6.4 -2.4 -9.4 -4.4 -11.4 -5.4', fill:'none', stroke:'accent', sw:1.2, op:.7, cap:'round' }
+  ]},
+  shell: { id:'shell', name:'Shells', mirror:true, tags:['soft','big'], shapes:[
+    { k:'path', d:'M -1 4 C -9.4 3 -13.4 -3.4 -10.4 -8.4 C -7.4 -13 -0.4 -11.4 1.4 -4.4 Z', fill:'body' },
+    { k:'path', d:'M -3.4 1.4 C -8 0.4 -10 -3.4 -8.4 -6.4', fill:'none', stroke:'accent', sw:1.3, cap:'round' },
+    { k:'path', d:'M -5.4 -1.4 C -7.4 -2.4 -8 -4.4 -7 -6', fill:'none', stroke:'accent', sw:1, op:.7, cap:'round' }
+  ]},
+  feathered: { id:'feathered', name:'Feathered', mirror:true, tags:['bug','hair'], shapes:[
+    { k:'path', d:'M 0 2 C -5 -2.4 -9.4 -7.4 -11.4 -12.4', fill:'none', stroke:'accent', sw:1.6, cap:'round' },
+    { k:'path', d:'M -3 -1 L -6.4 -1.4 M -5.4 -4 L -9 -4.4 M -7.6 -7 L -11 -7.6 M -9.4 -10 L -12.4 -10.6', fill:'none', stroke:'accent', sw:1.1, cap:'round' },
+    { k:'path', d:'M -3 -1 L -1.4 -4 M -5.4 -4 L -4 -7 M -7.6 -7 L -6.4 -10', fill:'none', stroke:'accent', sw:1, op:.75, cap:'round' }
   ]}
 };
 
@@ -809,6 +824,23 @@ export const LEGS = {
     { k:'circle', cx:-0.6, cy:5.6, r:1.6, fill:'bone' },
     { k:'path', d:'M -0.6 6 L -1.6 12.4', fill:'none', stroke:'bone', sw:2.2, cap:'round' },
     { k:'path', d:'M -5 13.6 L 2.4 13.6', fill:'none', stroke:'bone', sw:2.4, cap:'round' }
+  ]},
+  pegs: { id:'pegs', name:'Pegs', mirror:true, tags:['short','walk','heavy'], count:2, length:11, shapes:[
+    { k:'path', d:'M -3.4 -4 L -2 7.4 L 2 7.4 L 3.4 -4 Z', fill:'bodyDark' },
+    { k:'path', d:'M -2 7.4 L -1.4 11 L 1.4 11 L 2 7.4 Z', fill:'bone' },
+    { k:'ellipse', cx:0, cy:11.6, rx:3.4, ry:1.8, fill:'ink', op:.5 }
+  ]},
+  crab: { id:'crab', name:'Scuttlers', mirror:true, tags:['many','walk','scuttle','sneak'], count:6, length:12, shapes:[
+    { k:'path', d:'M 0 -4 C -1.4 1 -3.4 4.4 -3 8.4', fill:'none', stroke:'accent', sw:2, cap:'round' },
+    { k:'path', d:'M -3 8.4 L -5.4 11.4 M -3 8.4 L -0.6 11.4', fill:'none', stroke:'accent', sw:1.5, cap:'round' }
+  ]},
+  roots: { id:'roots', name:'Roots', mirror:true, tags:['short','walk','heavy'], count:2, length:10, shapes:[
+    { k:'path', d:'M -3 -4 C -3.4 2 -4.4 6 -6.4 9.4 M 0 -4 C 0 2 0 6 0 10 M 3 -4 C 3.4 2 4.4 6 6.4 9.4', fill:'none', stroke:'bodyDark', sw:2.2, cap:'round' },
+    { k:'path', d:'M -6.4 9.4 L -9 11.4 M 0 10 L 0 12.4 M 6.4 9.4 L 9 11.4', fill:'none', stroke:'bodyDark', sw:1.6, cap:'round' }
+  ]},
+  springs: { id:'springs', name:'Springs', mirror:true, tags:['long','walk','sneak'], count:2, length:14, shapes:[
+    { k:'path', d:'M 0 -3 C -4 -1 4 1.4 0 3.4 C -4 5.4 4 7.4 0 9.4', fill:'none', stroke:'bone', sw:2, cap:'round' },
+    { k:'ellipse', cx:0, cy:12, rx:5, ry:2.6, fill:'accent' }
   ]}
 };
 
@@ -841,6 +873,26 @@ export const ARMS = {
   mitts: { id:'mitts', name:'Mitts', mirror:true, tags:['short','grab'], count:2, reach:15, shapes:[
     { k:'path', d:'M 0 -2 C -5 -1 -9 2 -10.4 7', fill:'none', stroke:'accent', sw:2.6, cap:'round' },
     { k:'path', d:'M -7.4 5.6 C -12.4 5 -14.4 9.4 -12 12.4 C -10 14.6 -6.6 13.4 -6.2 10 C -4.4 9.4 -5 6.4 -7.4 5.6 Z', fill:'body' }
+  ]},
+  pincer: { id:'pincer', name:'Pincers', mirror:true, tags:['short','grab'], count:2, reach:17, shapes:[
+    { k:'path', d:'M 0 -2 C -5 -1.4 -9 1 -11 5', fill:'none', stroke:'accent', sw:2.6, cap:'round' },
+    { k:'path', d:'M -11 5 C -15.4 3.4 -18 6.4 -16 9.4 C -14.6 11.4 -12 10.4 -11.4 8', fill:'none', stroke:'accent', sw:2.2, cap:'round' },
+    { k:'path', d:'M -11 5.6 C -14.4 8.4 -14.4 12.4 -11.4 13.4 C -9 14.2 -7.4 12 -8.4 9.4', fill:'none', stroke:'accent', sw:2.2, cap:'round' }
+  ]},
+  tendril: { id:'tendril', name:'Tendrils', mirror:true, tags:['long','hang','grab'], count:2, reach:24, shapes:[
+    { k:'path', d:'M 0 -1 C -7 1.4 -12.4 6.4 -13.4 13.4 C -14 18.4 -10.4 22.4 -6.4 21 C -3.4 20 -3 16.4 -5.4 15.4', fill:'none', stroke:'accent', sw:2.2, cap:'round' },
+    { k:'circle', cx:-13.6, cy:9.4, r:1.5, fill:'detail', op:.8 },
+    { k:'circle', cx:-11.4, cy:17.4, r:1.3, fill:'detail', op:.8 }
+  ]},
+  lopsided: { id:'lopsided', name:'The One Arm', mirror:false, tags:['short','grab'], count:1, reach:16, shapes:[
+    { k:'path', d:'M -1 -3.4 C -8 -3 -13 0.4 -14 5.4', fill:'none', stroke:'accent', sw:2.8, cap:'round' },
+    { k:'circle', cx:-14.4, cy:8, r:3.6, fill:'accent' },
+    { k:'path', d:'M -17 10.4 L -18 13.4 M -14.2 11.4 L -14.4 14.4 M -11.4 10.4 L -10.4 13.4', fill:'none', stroke:'accent', sw:1.4, cap:'round' }
+  ]},
+  sleeves: { id:'sleeves', name:'Sleeves', mirror:true, tags:['long','hang'], count:2, reach:21, shapes:[
+    { k:'path', d:'M 1 -5 C -7 -4 -13.4 1.4 -15.4 9.4 C -16.4 13.4 -13.4 16.4 -9.4 15 C -5 13.4 -1 6.4 1.4 -3 Z', fill:'bodyDark' },
+    { k:'path', d:'M -13.4 11.4 C -11.4 13.4 -8.4 13.4 -6 11.4', fill:'none', stroke:'detail', sw:1.3, cap:'round' },
+    { k:'circle', cx:-10.4, cy:16.4, r:2.6, fill:'bone', op:.9 }
   ]}
 };
 
@@ -883,6 +935,25 @@ export const TAILS = {
   fin: { id:'fin', name:'Fin', tags:['thin','damp'], length:18, shapes:[
     { k:'path', d:'M 0 -3 C 6 -3 10 -1 13 2 C 14.4 -4 17 -8 20 -10 C 19 -4 19 2 20 8 C 17 6 14 4 13 2 C 10 5 6 6 0 5 Z', fill:'accent' },
     { k:'path', d:'M 14 0 L 18.4 -6 M 14.4 3 L 18.6 6', fill:'none', stroke:'ink', sw:.8, op:.35, cap:'round' }
+  ]},
+  forked: { id:'forked', name:'Forked', tags:['thin','sinister'], length:23, shapes:[
+    { k:'path', d:'M 0 0 C 8.4 0.4 13.4 -4.4 14.4 -11.4', fill:'none', stroke:'accent', sw:2.2, cap:'round' },
+    { k:'path', d:'M 14.4 -11.4 L 19.4 -18.4 M 14.4 -11.4 L 20.4 -10.4', fill:'none', stroke:'accent', sw:1.9, cap:'round' }
+  ]},
+  rattle: { id:'rattle', name:'Rattle', tags:['thick','sinister'], length:22, shapes:[
+    { k:'path', d:'M 0 1 C 8 1.4 13 -2.4 15 -8.4', fill:'none', stroke:'bodyDark', sw:3.2, cap:'round' },
+    { k:'circle', cx:16.4, cy:-11.4, r:3.4, fill:'bone' },
+    { k:'circle', cx:18.4, cy:-16, r:2.6, fill:'bone' },
+    { k:'circle', cx:19.4, cy:-19.6, r:1.9, fill:'bone' }
+  ]},
+  plume: { id:'plume', name:'Plume', tags:['soft'], length:24, shapes:[
+    { k:'path', d:'M 0 0 C 7.4 -2 12.4 -8.4 13.4 -16.4', fill:'none', stroke:'bodyDark', sw:2, cap:'round' },
+    { k:'path', d:'M 13.4 -16.4 C 8.4 -19.4 8 -25.4 12.4 -27.4 C 16.4 -29 19.4 -24.4 17.4 -20.4 C 16.4 -18.4 15 -17 13.4 -16.4 Z', fill:'bodyLight' },
+    { k:'path', d:'M 11.4 -19.4 C 13.4 -22.4 14.4 -24.4 15.4 -25.4', fill:'none', stroke:'detail', sw:0.9, op:.6 }
+  ]},
+  hook: { id:'hook', name:'Hook', tags:['thin','bone','sinister'], length:20, shapes:[
+    { k:'path', d:'M 0 0 C 7.4 1 12.4 -2.4 14.4 -8.4', fill:'none', stroke:'bone', sw:2.1, cap:'round' },
+    { k:'path', d:'M 14.4 -8.4 C 18.4 -9.4 20.4 -6.4 18.4 -3.4 C 17 -1.4 14.4 -2.4 14.4 -4.4', fill:'none', stroke:'bone', sw:1.9, cap:'round' }
   ]}
 };
 
@@ -913,6 +984,22 @@ export const WINGS = {
     { k:'path', d:'M 0 -4 C -8 -12 -18 -20 -28 -22', fill:'none', stroke:'bone', sw:2, cap:'round' },
     { k:'path', d:'M -12 -14 L -22 -8 M -19 -18 L -27 -12 M -6 -9 L -15 0', fill:'none', stroke:'bone', sw:1.6, cap:'round' },
     { k:'path', d:'M -12 -14 L -6 -9 L -15 0 Z', fill:'bodyDark', op:.35 }
+  ]},
+  stubs: { id:'stubs', name:'Vestigial', mirror:true, tags:['soft'], count:2, span:20, shapes:[
+    { k:'path', d:'M -2 -2 C -9.4 -9.4 -19.4 -9.4 -20.4 -3.4 C -21.4 2.4 -13.4 6.4 -4.4 3.4 C -2.4 2 -1.4 0 -2 -2 Z', fill:'bodyLight' },
+    { k:'path', d:'M -5.4 -1.4 C -9.4 -3.4 -14.4 -3.6 -17.4 -2', fill:'none', stroke:'ink', sw:0.9, op:.32 },
+    { k:'path', d:'M -5.4 1.4 C -9.4 1.4 -13.4 1.4 -16.4 0.4', fill:'none', stroke:'ink', sw:0.8, op:.24 }
+  ]},
+  tattered: { id:'tattered', name:'Tattered', mirror:true, tags:['thin','sharp'], count:2, span:30, shapes:[
+    { k:'path', d:'M 0 -3 C -9 -17 -22 -21.4 -28.4 -17 C -25.4 -12 -22.4 -8.4 -20 -5 C -22 -3.4 -24 -1 -24.4 2 C -20 0.4 -16.4 1 -13.4 3.4 C -13.4 7 -11.4 10 -8.4 11.4 C -4.4 6.4 -1.4 1 0 -3 Z', fill:'bodyDark' },
+    { k:'path', d:'M -20 -5 L -17.4 -1 L -21.4 -0.4 Z M -13.4 3.4 L -11 7 L -14.4 7.4 Z', fill:'ink', op:.5 },
+    { k:'path', d:'M -1.4 -2.4 C -8.4 -9.4 -17 -14.4 -25 -16.4', fill:'none', stroke:'ink', sw:0.9, op:.35 }
+  ]},
+  dragonfly: { id:'dragonfly', name:'Dragonfly', mirror:true, tags:['thin','bug'], count:4, span:32, shapes:[
+    { k:'path', d:'M -1.4 -5.4 C -10.4 -14.4 -24.4 -17.4 -29.4 -12.4 C -33 -8.4 -22.4 -3.4 -12.4 -4.4 C -7.4 -4.8 -3.4 -4.8 -1.4 -5.4 Z', fill:'bodyLight', op:.72 },
+    { k:'path', d:'M -1.4 1.4 C -9.4 2.4 -20.4 5.4 -24.4 9.4 C -27.4 12.4 -18.4 12.4 -11.4 8.4 C -6.4 5.6 -2.4 3.4 -1.4 1.4 Z', fill:'bodyLight', op:.6 },
+    { k:'path', d:'M -2 -8.4 C -12 -11.4 -22 -11.4 -29 -9.4', fill:'none', stroke:'detail', sw:0.7, op:.5 },
+    { k:'path', d:'M -2 0.4 C -10 1.4 -18 2 -25 2.4', fill:'none', stroke:'detail', sw:0.7, op:.5 }
   ]}
 };
 
@@ -982,6 +1069,26 @@ export const DETAILS = {
     { k:'circle', cx:-6.4, cy:3, r:.6, fill:'detail', op:.6 },
     { k:'circle', cx:8, cy:-5.6, r:.6, fill:'detail', op:.6 },
     { k:'circle', cx:8.8, cy:-1.6, r:.6, fill:'detail', op:.6 }
+  ]},
+  buttons: { id:'buttons', name:'Buttons', tags:['sewn'], shapes:[
+    { k:'circle', cx:0, cy:-8.4, r:4.2, fill:'bone' },
+    { k:'circle', cx:0, cy:1, r:4.2, fill:'bone' },
+    { k:'circle', cx:0, cy:10.4, r:4.2, fill:'bone' },
+    { k:'path', d:'M -1.6 -10 L 1.6 -6.8 M 1.6 -10 L -1.6 -6.8 M -1.6 -0.6 L 1.6 2.6 M 1.6 -0.6 L -1.6 2.6 M -1.6 8.8 L 1.6 12 M 1.6 8.8 L -1.6 12', fill:'none', stroke:'ink', sw:0.9, op:.65 }
+  ]},
+  mould: { id:'mould', name:'Bloom', tags:['grime'], shapes:[
+    { k:'circle', cx:-11.4, cy:4.4, r:6.4, fill:'detail', op:.5 },
+    { k:'circle', cx:-5.4, cy:9.4, r:4.4, fill:'detail', op:.42 },
+    { k:'circle', cx:9.4, cy:-5.4, r:5.4, fill:'detail', op:.46 },
+    { k:'circle', cx:13, cy:0.4, r:3.4, fill:'detail', op:.38 },
+    { k:'circle', cx:-13.4, cy:-2.4, r:3, fill:'detail', op:.45 },
+    { k:'circle', cx:1.4, cy:12.4, r:3.4, fill:'detail', op:.4 }
+  ]},
+  runes: { id:'runes', name:'Marked', tags:['sinister'], shapes:[
+    { k:'path', d:'M -9.4 -4.4 L -9.4 2.4 M -12 -1.4 L -6.8 -1.4', fill:'none', stroke:'detail', sw:1.3, cap:'round', op:.85 },
+    { k:'path', d:'M 0 -6.4 L -2.4 0.4 L 2.4 0.4 Z', fill:'none', stroke:'detail', sw:1.2, op:.85 },
+    { k:'path', d:'M 8.4 -3.4 L 11.4 3.4 M 11.4 -3.4 L 8.4 3.4', fill:'none', stroke:'detail', sw:1.3, cap:'round', op:.85 },
+    { k:'path', d:'M -6.4 8.4 C -2.4 10.4 2.4 10.4 6.4 8.4', fill:'none', stroke:'detail', sw:1.1, op:.6 }
   ]}
 };
 
