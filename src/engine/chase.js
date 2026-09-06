@@ -13,14 +13,36 @@ const CHEST = 27;   // the catch box sits this far above the resident's feet
 
 export const streakMultiplier = combo => Math.min(3, 1 + Math.floor(combo / 4));
 
-export function newChase(pet, { gentle = false, rng = Math.random } = {}) {
+/* Who you are chasing with used to change only what its body could do — wings
+   glide, horns take a hit, a tail bounces higher off a bunny. What it FELT about
+   you changed nothing at all, so a furious half-starved resident handled exactly
+   like a content one that had been fussed all week.
+
+   `temper` is that missing half. A creature in a mood is quick and hard to hold
+   a line with; a settled one is slower off the mark and much easier to steer.
+   Trust buys nothing so large that the game plays itself: one extra bump of
+   patience at high trust, and that is all. */
+export const TEMPER = {
+  furious: { speed: 1.16, grip: 0.72 },
+  annoyed: { speed: 1.08, grip: 0.85 },
+  fine:    { speed: 1, grip: 1 },
+  content: { speed: 0.95, grip: 1.12 }
+};
+
+export function temperOf(mood) { return TEMPER[mood] || TEMPER.fine; }
+
+export function newChase(pet, { gentle = false, rng = Math.random, mood = 'fine' } = {}) {
   const art = artPersonality(pet);
+  const temper = temperOf(mood);
   return {
     kind: 'chase', petId: pet.id, time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
     goal: gentle ? 6 : 8, complete: false, finished: false, claimed: false, gentle, stars: 0,
     wings: art.motion.canFlap, horns: art.horns, halo: art.halo, tail: art.motion.tails > 0,
-    shield: art.horns ? 1 : 0, rush: 0,
+    mood, speedScale: temper.speed, grip: temper.grip,
+    // Horns are a shield. So, once, is a resident that genuinely trusts you: it
+    // will take one knock on your behalf before it starts blaming you for them.
+    shield: (art.horns ? 1 : 0) + ((pet.bond || 0) >= 15 ? 1 : 0), rush: 0,
     player: { x: 160, z: 0, vy: 0, direction: 1, moving: false, glided: false, invincible: 0 },
     items: [], serial: 0, crumbsMade: 0, nextCrumb: .15, nextBunny: 3.2,
     nextMoth: gentle ? 11 : 8, nextBiscuit: gentle ? 6 : 5, nextSugar: gentle ? 7 : 8, rng
@@ -92,9 +114,12 @@ function stepPlayer(game, input, dt, events) {
   const p = game.player, previousZ = p.z;
   p.invincible = Math.max(0, p.invincible - dt);
   if (game.rush > 0) { game.rush = Math.max(0, game.rush - dt); if (!game.rush) events.push({ type: 'rushEnd' }); }
-  const speed = game.rush > 0 ? 236 : 178;
+  // Mood sets the top speed; grip is how much of a drag-to-steer instruction it
+  // actually accepts. A furious creature is faster than you can comfortably aim.
+  const speed = (game.rush > 0 ? 236 : 178) * (game.speedScale || 1);
+  const grip = game.grip || 1;
   let dx = clamp(Number(input.axis) || 0, -1, 1) * speed * dt;
-  if (!dx && Number.isFinite(input.targetX)) dx = clamp(input.targetX - p.x, -speed * dt, speed * dt);
+  if (!dx && Number.isFinite(input.targetX)) dx = clamp((input.targetX - p.x) * grip, -speed * dt, speed * dt);
   p.x = clamp(p.x + dx, 26, 294); p.moving = Math.abs(dx) > .01;
   if (p.moving) p.direction = dx < 0 ? -1 : 1;
   if (p.z > 0 || p.vy > 0) {

@@ -1,4 +1,5 @@
 import { newChase, updateChase, jumpChase, recordChase, chaseStars, streakMultiplier, CHASE_SECONDS, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND } from '../engine/chase.js';
+import { moodOf } from '../engine/tick.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { createPuppet } from '../art/animator.js';
 import { playFeed, playFuss, playClean, playStomp, playPowerUp, playStar } from '../audio/sound.js';
@@ -178,7 +179,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function start() {
     if (!pet || root.hidden) return;
-    stopFrame(); game = newChase(pet, { gentle });
+    stopFrame(); game = newChase(pet, { gentle, mood: moodOf(pet) });
     root.dataset.finished = 'false'; pop.textContent = ''; stars.hidden = true; quip.hidden = true;
     overlay.classList.remove('best'); fx.replaceChildren(); paint(); run();
   }
@@ -229,7 +230,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   return {
     prepare(resident, useGentle) {
       stopFrame(); puppet?.release(); paused = false; pet = resident; gentle = useGentle;
-      game = newChase(pet, { gentle });
+      game = newChase(pet, { gentle, mood: moodOf(pet) });
       actor.replaceChildren(renderPetSprite(pet)); actor.firstElementChild.classList.add('sl-mood-content');
       puppet = createPuppet(actor.firstElementChild);
       title.textContent = 'The crumbs are escaping.';

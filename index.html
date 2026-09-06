@@ -36,6 +36,7 @@
 </header>
 
 <div class="update-banner" id="updateBanner" hidden><span>A fresh edition of the shelf is ready.</span><button class="btn btn-sm" id="refreshGame">Save & refresh</button></div>
+<div class="update-banner" id="backupBanner" hidden><span id="backupBannerText">This shelf only exists in this browser. Keep a copy.</span><button class="btn btn-sm" id="backupNow">Back up</button><button class="btn btn-ghost btn-sm" id="backupLater">Not now</button></div>
 <div class="storage-warn" id="recoveryWarn" hidden>Your previous save could not be read. Its original contents are kept in a recovery file under More. You can also restore a backup.</div>
 <div class="storage-warn" id="storageWarn" hidden>Your latest changes are only in memory: browser storage is unavailable or full. Use More → Back up before closing this page.</div>
 
@@ -108,6 +109,7 @@
       <button class="filter-chip" data-filter="said" aria-pressed="false">Overheard</button>
       <button class="filter-chip" data-filter="complaints" aria-pressed="false">Complaints</button>
       <button class="filter-chip" data-filter="papers" aria-pressed="false">Paperwork</button>
+      <button class="filter-chip" data-filter="unsaid" aria-pressed="false">Unsaid</button>
       <button class="filter-chip" data-filter="plots" aria-pressed="false">Plots</button>
     </div>
     <div class="voice-hint" id="voiceHint" hidden>
@@ -335,7 +337,7 @@
 <div class="veil" id="museumVeil"><div class="sheet sheet-museum"><div class="sheet-head"><div><span class="eyebrow">Long memories, short legs</span><h2>Memory museum</h2></div><button class="btn btn-ghost btn-sm" id="museumClose">Close</button></div><div id="museumContent"></div></div></div>
 <div class="veil" id="playVeil"><div class="sheet sheet-play">
   <div class="sheet-head"><div><span class="eyebrow" id="playName">A small secret</span><h2 id="playTitle">Secret handshake</h2></div><button class="btn btn-ghost btn-sm" id="playClose">Close</button></div>
-  <div class="play-modes"><button class="chip" data-play-mode="chase" aria-pressed="true">Crumb Chase</button><button class="chip" data-play-mode="memory" aria-pressed="false">Handshake</button><label id="gentleOption"><input type="checkbox" id="playRelaxed"> Gentle pace</label></div>
+  <div class="play-modes"><button class="chip" data-play-mode="chase" aria-pressed="true">Crumb Chase</button><button class="chip" data-play-mode="memory" aria-pressed="false">Handshake</button><button class="chip" data-play-mode="alibi" aria-pressed="false">The Alibi</button><label id="gentleOption"><input type="checkbox" id="playRelaxed"> Gentle pace</label></div>
   <div id="chaseArea" hidden>
     <div class="chase-hud"><span>Crumbs<b id="chaseCount">0 / 8</b></span><span>Score<b id="chaseScore">0</b></span><span>Best<b id="chaseBest">–</b></span><span>Time<b id="chaseTime">22s</b></span><button class="btn btn-ghost btn-sm" id="chasePause" aria-label="Pause chase">Pause</button></div>
     <div class="chase-combo" id="chaseCombo" aria-hidden="true"><span id="chaseComboLabel">Streak</span><i id="chaseComboBar"></i></div>
@@ -350,6 +352,14 @@
   <div class="play-theatre"><div id="playPortrait"></div><span id="playCue">They have been rehearsing.</span><div class="play-sparks" aria-hidden="true">✦ · ✧ · ✦</div></div>
   <div class="play-rounds"><span id="playProgress">Round 1 of 3</span><span class="play-step"></span><span class="play-step"></span><span class="play-step"></span></div>
   <p id="playStatus" role="status">Remember their gestures, then repeat them.</p><span id="playAnnouncement" class="sr-only" aria-live="polite"></span>
+  <!-- The Alibi. Three sworn statements about your actual shelf, one of them false.
+       The statements are generated from the save file by engine/alibi.js, so the
+       buttons are filled in at play time rather than written here. -->
+  <div id="alibiArea" hidden>
+    <p class="alibi-charge" id="alibiCharge">Three statements. One of them is false.</p>
+    <div class="alibi-statements" id="alibiStatements" role="group" aria-label="Sworn statements. Choose the false one."></div>
+    <p class="alibi-verdict" id="alibiVerdict" role="status"></p>
+  </div>
   <div class="gesture-grid" aria-label="Handshake gestures">
     <button class="gesture" data-gesture="0"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 35V19a4 4 0 0 1 8 0v9-15a4 4 0 0 1 8 0v15-8a4 4 0 0 1 8 0v13c0 8-5 10-12 10s-12-4-12-8Z"/><path d="M8 12 5 8m5 17H4m10-21v4"/></svg><span>Knock</span></button>
     <button class="gesture" data-gesture="1"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 34c0-18 8-27 16-18s16 0 16-10M8 42c0-18 8-27 16-18s16 0 16-10"/></svg><span>Wiggle</span></button>

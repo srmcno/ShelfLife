@@ -52,9 +52,16 @@ export const LEGACY_SAVE_KEYS = ['shelflife.v3', 'shelflife.v2', 'shelflife.v1']
      2. no form other than the plain one-liner twice within four notes.
    Rule 1 is why addNote() tags an untagged note itself rather than defaulting to
    'line': engine/achievements.js and engine/behavior.js emit prose notes back to
-   back, and a hardcoded default would put two identical tags next to each other. */
-export const FORMS = ['line', 'two', 'react', 'list', 'found', 'doc', 'direct', 'silence'];
-export const FORM_SHARE = { line: 40, two: 18, react: 8, list: 10, found: 9, doc: 6, direct: 6, silence: 3 };
+   back, and a hardcoded default would put two identical tags next to each other.
+
+   FORM 9, 'thought', is the inner voice: the one form in the game that is not a
+   report. Everything else on the corkboard is something the shelf observed or
+   something a creature said out loud. A thought is what it did not say, printed
+   anyway, and it is the only place the writing is allowed to be fond of you
+   without a straight man in the room to undercut it. It is rationed low for that
+   reason — an inner monologue is a devastating once, and a diary if overused. */
+export const FORMS = ['line', 'two', 'react', 'list', 'found', 'doc', 'direct', 'silence', 'thought'];
+export const FORM_SHARE = { line: 40, two: 18, react: 8, list: 10, found: 9, doc: 6, direct: 6, silence: 3, thought: 7 };
 // The forms a plain block of prose can be tagged with when the caller did not say.
 // Four of them, and one is the one-liner: that is exactly the condition under which
 // both rules are always satisfiable. If prev is not 'line', 'line' is free; if prev
@@ -161,7 +168,7 @@ export function blankState() {
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
     gone: [], visits: [], ledger: defaultLedger(), roster: {}, rosterSeeded: false,
-    formLog: [], noteCount: 0, lastGoneNote: 0
+    formLog: [], noteCount: 0, lastGoneNote: 0, lastBackup: 0, backupSnooze: 0
   };
 }
 
@@ -259,6 +266,12 @@ export function normalizeState(raw) {
   s.props = Array.isArray(s.props) ? s.props : [];
   s.decor = Object.assign(defaultDecor(), s.decor || {});
   s.achievements = Array.isArray(s.achievements) ? s.achievements : [];
+  // When each incident happened, so the log can be dated. Additive: a save from
+  // before this existed simply has undated entries.
+  s.achievementAt = record(s.achievementAt) ? s.achievementAt : {};
+  Object.keys(s.achievementAt).forEach(k => {
+    if (!Number.isFinite(s.achievementAt[k])) delete s.achievementAt[k];
+  });
   s.feudArcs = s.feudArcs && typeof s.feudArcs === 'object' ? s.feudArcs : {};
   s.streak = s.streak && typeof s.streak === 'object' ? Object.assign(defaultStreak(), s.streak) : defaultStreak();
   s.settings = s.settings && typeof s.settings === 'object' ? Object.assign(defaultSettings(), s.settings) : defaultSettings();
@@ -284,6 +297,18 @@ export function normalizeState(raw) {
   s.formLog = Array.isArray(s.formLog) ? s.formLog.filter(f => FORMS.indexOf(f) >= 0) : [];
   s.noteCount = typeof s.noteCount === 'number' ? s.noteCount : s.notes.length;
   s.lastGoneNote = typeof s.lastGoneNote === 'number' ? s.lastGoneNote : 0;
+  // When this shelf was last written to a file, and when the player last waved the
+  // reminder away. Both default to zero, so a save from before the reminder existed
+  // is treated as never-backed-up rather than as recently safe.
+  s.lastBackup = finite(s.lastBackup, 0, 0, now);
+  s.backupSnooze = finite(s.backupSnooze, 0, 0, now);
+  // Per-pair friction: what these two have actually done to each other, as
+  // opposed to what their traits say they should think of each other.
+  s.friction = record(s.friction) ? s.friction : {};
+  Object.entries(s.friction).forEach(([key, value]) => {
+    if (!record(value) || !Number.isFinite(value.n) || !Number.isFinite(value.at) || !/^[\w-]+\|[\w-]+$/.test(key)) delete s.friction[key];
+    else s.friction[key] = { n: clamp(value.n, 0, 8), at: finite(value.at, now, 0, now) };
+  });
   s.notes.forEach(n => { if (n && FORMS.indexOf(n.form) < 0) n.form = 'line'; });
 
   for (const key of ['muted', 'narratorOn', 'matureMode']) {
@@ -299,7 +324,7 @@ export function normalizeState(raw) {
     p.lastPlayed = finite(p.lastPlayed, 0, 0, now);
     if (record(p.chaseBest)) p.chaseBest = { score: Math.floor(finite(p.chaseBest.score, 0, 0, 100000)), caught: Math.floor(finite(p.chaseBest.caught, 0, 0, 100)), dodged: Math.floor(finite(p.chaseBest.dodged, 0, 0, 100)), at: finite(p.chaseBest.at, now, 0, now), bestStreak: Math.floor(finite(p.chaseBest.bestStreak, 0, 0, 100)), stars: Math.floor(finite(p.chaseBest.stars, 0, 0, 3)) };
     else delete p.chaseBest;
-    for (const key of ['handshakes', 'dustPatrols', 'chases', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
+    for (const key of ['handshakes', 'dustPatrols', 'chases', 'alibis', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
     p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];
     p.stats = record(p.stats) ? p.stats : {};
     ['cute', 'menace', 'damp', 'mystique'].forEach(k => { p.stats[k] = finite(p.stats[k], 5, 1, 10); });
@@ -330,6 +355,14 @@ export function normalizeState(raw) {
     p.names = p.names.filter(n => record(n) && typeof n.name === 'string');
     if (!p.names.length) p.names = [{ name: p.name, at: p.born }];
     p.slotHist = Array.isArray(p.slotHist) ? p.slotHist.filter(h => record(h) && Number.isFinite(h.slot) && Number.isFinite(h.at)).slice(-8) : [];
+    // What it is currently trying to do about where it is standing (engine/behavior.js).
+    p.wants = record(p.wants) && Number.isFinite(p.wants.slot)
+      ? { slot: clamp(Math.floor(p.wants.slot), 0, SLOT_COUNT - 1), since: finite(p.wants.since, now, 0, now),
+          at: finite(p.wants.at, now, 0, now), tries: Math.floor(finite(p.wants.tries, 1, 0, 20)) }
+      : null;
+    if (!p.wants) delete p.wants;
+    p.displacedFrom = Number.isFinite(p.displacedFrom) ? clamp(Math.floor(p.displacedFrom), 0, SLOT_COUNT - 1) : null;
+    p.displacedAt = finite(p.displacedAt, 0, 0, now);
   });
   return s;
 }
@@ -370,6 +403,25 @@ export function bonusTrustLeft(pet, now = Date.now()) {
 }
 export const VISIT_GAP_MS = 2 * HOUR;   // a gap this long starts a new visit
 export const BRIEFING_AT = 12;          // total grudges at which new arrivals get briefed
+
+/* ================= THE BACKUP REMINDER =================
+   Everything in this game lives in one browser's localStorage: no account, no
+   sync, and no way back from a cleared site-data dialog. The game has always
+   offered a backup under More and has never once suggested taking one, so the
+   players most likely to lose a shelf were exactly the ones who never opened that
+   menu. These rules ask — but only once a shelf is old enough and populated
+   enough to be worth losing, and never more often than once a week. */
+export const BACKUP_MIN_PETS = 3;
+export const BACKUP_MIN_AGE = 2 * 24 * HOUR;      // nothing on day one
+export const BACKUP_STALE = 7 * 24 * HOUR;        // a week since the last copy
+export const BACKUP_SNOOZE = 3 * 24 * HOUR;       // "Not now" buys three days
+
+export function backupDue(state, now = Date.now()) {
+  if (!state || (state.pets || []).length < BACKUP_MIN_PETS) return false;
+  if (now - (state.started || now) < BACKUP_MIN_AGE) return false;
+  if (now - (state.backupSnooze || 0) < BACKUP_SNOOZE) return false;
+  return now - (state.lastBackup || 0) >= BACKUP_STALE;
+}
 
 export function totalGrudges(state) {
   return (state.pets || []).reduce((n, p) => n + (p.grudges || 0), 0);
