@@ -49,10 +49,8 @@
       <div class="cabinet-wrap" id="cabinetWrap">
         <div class="cabinet" id="cabinet" tabindex="-1" aria-label="Your creature shelf"></div>
       </div>
-      <button class="snap-btn" id="snapBtn" type="button" aria-label="Send a postcard of the shelf" title="Send a postcard">
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5H7l1.2-1.6h3.6L13 6h2.5A1.5 1.5 0 0 1 17 7.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="11" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-      </button>
     </div>
+    <div id="needsYou" class="needs-you" aria-label="What needs you"></div>
     <div class="actions" id="actions">
       <button class="btn btn-check" id="checkBtn">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5h14M3 10h14M3 14.5h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="6" cy="5.5" r="1.6" fill="currentColor"/><circle cx="13" cy="10" r="1.6" fill="currentColor"/><circle cx="8" cy="14.5" r="1.6" fill="currentColor"/></svg>
@@ -65,6 +63,9 @@
       <button class="btn btn-primary" id="newPetBtn">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
         <span>Make a pet</span>
+      </button>
+      <button class="btn btn-icon snap-btn" id="snapBtn" type="button" aria-label="Send a postcard of the shelf" title="Send a postcard">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5H7l1.2-1.6h3.6L13 6h2.5A1.5 1.5 0 0 1 17 7.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="11" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
       </button>
     </div>
     <button class="shelf-teaser" id="shelfTeaser" type="button" hidden aria-label="Open the notes">
@@ -102,7 +103,7 @@
       <h2>The complaint department</h2>
       <button class="btn btn-ghost btn-sm" id="clearNotes">Clear notes</button>
     </div>
-    <div class="note-filters" id="noteFilters" aria-label="Show only">
+    <div class="note-filters" id="noteFilters" role="group" aria-label="Show only">
       <button class="filter-chip" data-filter="all" aria-pressed="true">All</button>
       <button class="filter-chip" data-filter="said" aria-pressed="false">Overheard</button>
       <button class="filter-chip" data-filter="complaints" aria-pressed="false">Complaints</button>
@@ -121,16 +122,16 @@
 
 <!-- ---- the phone tab bar ---------------------------------------------------- -->
 <nav class="tabbar" aria-label="Sections">
-  <button class="tab" type="button" data-tab="shelf" aria-selected="true">
+  <button class="tab" type="button" data-tab="shelf" aria-current="page">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 13h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 7V4.5M15 7V3.5M11 13v-2.5M17 19v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Shelf</span>
   </button>
-  <button class="tab" type="button" data-tab="notes" aria-selected="false">
+  <button class="tab" type="button" data-tab="notes">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 10h7M8.5 14h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="4.5" r="1.6" fill="currentColor"/></svg>
     <span>Notes</span>
     <span class="tab-badge" id="notesBadge" hidden></span>
   </button>
-  <button class="tab" type="button" data-tab="plots" aria-selected="false">
+  <button class="tab" type="button" data-tab="plots">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2 3 3 4.5 3 6.5a3 3 0 0 1-6 0C9 7.5 10 6 12 3z" fill="currentColor"/><path d="M9 13h6v7H9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7 20h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Plots</span>
     <span class="tab-dot" id="plotsDot" hidden></span>
@@ -290,15 +291,15 @@
   <div class="sheet-head"><div><h2>A small field guide</h2><p class="card-meta">Nobody here came with instructions. These are our best guesses.</p></div><button class="btn btn-ghost btn-sm" id="helpClose">Close</button></div>
   <ol class="guide-steps">
     <li><h3>Make someone peculiar.</h3><p>Grow a creature and change its parts, or draw one and give it moving stamps. Name it. Move it in.</p></li>
-    <li><h3>Keep it fed, fussed, and clean.</h3><p>Tap a creature to care for it. Helping when a need is below 72 earns care credit; every three credits adds a trust point. Rounds help everyone a little, but build no trust.</p></li>
-    <li><h3>Read the room.</h3><p>Check the shelf for notes, arguments, and small developments. Individual care builds trust, unlocking drawing tools and furniture in Decorate.</p></li>
+    <li><h3>Keep it fed, fussed, and clean.</h3><p>Tap a creature to care for it. Helping when a need is below 72 earns care credit; every three credits adds a trust point. Rounds help everyone a little, but build no trust. Games and conspiracies add at most three trust per resident per day; care is the steady route.</p></li>
+    <li><h3>Read the room.</h3><p>Check the shelf for notes, arguments, and small developments. A resident files at most one grievance an hour, so reading often costs nothing. Individual care builds trust, unlocking drawing tools and furniture in Decorate. Tap a byline on the board to keep one resident’s notes.</p></li>
     <li><h3>Reconsider the neighbours.</h3><p>Drag to rearrange. On a phone, hold first. Or open a resident’s card and choose a shelf position. Furniture affects the creatures beside it; some neighbours feud. Watch them: they nudge, whisper, glare and steal from whoever is next to them.</p></li>
     <li><h3>Encourage a terrible idea.</h3><p>Small conspiracies offer choices with visible costs and rewards. Help, redirect, or leave the residents to their own devices. They act after three minutes; another plan follows five minutes later. Nobody dies. Sometimes the raisin does.</p></li>
     <li><h3>Make a little history.</h3><p>Plots holds a six-beat weekly case and temporary visitors. Follow the evidence through care, placement and choices. A case waits until you finish it. Visitors stay six hours and leave museum curiosities when welcomed.</p></li>
-    <li><h3>Keep your promises.</h3><p>Accept a resident’s request in its card, then fulfil it within twelve hours for trust. Refusing costs one trust and adds a grievance. Friends form after fifteen minutes beside each other with trust on both sides. Rivals can reach a truce once both trust you at level three.</p></li>
+    <li><h3>Keep your promises.</h3><p>Accept a resident’s request in its card, then fulfil it within twelve hours of accepting for trust. Refusing costs one trust and adds a grievance. Friends form after fifteen minutes beside each other with trust on both sides. Rivals can reach a truce once both trust you at level three.</p></li>
     <li><h3>Learn their secret handshake.</h3><p>A short untimed memory game lives in each resident’s card. Repeat three patterns for attention and trust. Wrong taps cost nothing; replay the pattern. Rewards recharge every five minutes per resident; practice whenever you like.</p></li>
   </ol>
-  <p class="guide-footnote">Needs change while you are away, up to two days at a time. They cannot die. You can take a break. Your shelf saves on this device; More → Back up keeps a copy you can restore elsewhere.</p>
+  <p class="guide-footnote">Needs change while you are away, up to eighteen hours at a time, and only half as fast at night. They cannot die. You can take a break. Your shelf saves on this device; More → Back up keeps a copy you can restore elsewhere.</p>
   <p class="guide-footnote">Keyboard: Tab through controls, Enter or Space to activate, Escape to close a sheet. The game respects your device’s reduced-motion preference.</p>
 </div></div>
 <div class="veil" id="restoreVeil"><div class="sheet">

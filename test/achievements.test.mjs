@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   activeFeuds, feudingIds, feudPairKey, stepFeudArc,
-  GRUDGE_STAGE_AT, grudgeStageFor, checkGrudgeEscalation,
+  GRUDGE_STAGE_AT, grudgeStageFor, checkGrudgeEscalation, FEUD_STEP_MS,
   checkinStreak, ACHIEVEMENTS, checkAchievements
 } from '../src/engine/achievements.js';
 import { FEUDS } from '../src/content/feuds.js';
@@ -39,10 +39,12 @@ test('stepFeudArc always adds exactly one note per call, level never regresses, 
   const s = blankState();
   const a = makePet('a', []); const b = makePet('b', []);
   const key = feudPairKey('a', 'b');
+  // Escalation rolls once per FEUD_STEP_MS per pair, so the calls are spaced out.
+  const base = Date.now();
   for (let i = 0; i < 150; i++) {
     const before = s.feudArcs[key] ? s.feudArcs[key].level : 0;
     const notesBefore = s.notes.length;
-    const outcome = stepFeudArc(s, key, a, b);
+    const outcome = stepFeudArc(s, key, a, b, base + i * FEUD_STEP_MS);
     if (outcome === null) continue;
     assert.equal(s.notes.length, notesBefore + 1);
     const after = s.feudArcs[key].level;

@@ -9,7 +9,7 @@ import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS, PROP_ART } from '../content/props.js';
 import { renderPetSprite, moodMotionClasses } from '../art/sprite.js';
 import { reactTo, previewMotion } from '../art/animator.js';
-import { renderAll, escapeHtml } from './render.js';
+import { renderAll, escapeHtml, noteAbout, setPetFilter } from './render.js';
 import { toast } from './toast.js';
 import { buildDecor } from './decorUI.js';
 import { playFeed, playFuss, playClean } from '../audio/sound.js';
@@ -66,12 +66,30 @@ function statRow(label, key, val) {
 
 // The last few things the board has said about this creature, in its own hand.
 function onFile(state, pet) {
-  const mine = (state.notes || []).filter(n => n.from === pet.name || (n.text && n.text.indexOf(pet.name) >= 0)).slice(0, 3);
+  const all = (state.notes || []).filter(n => noteAbout(n, pet.name));
+  const mine = all.slice(0, 3);
   if (!mine.length) return '<p class="on-file-empty">Nothing on file. It is early. It has plans.</p>';
   return '<ul class="on-file">' + mine.map(n => {
     const text = n.text.length > 150 ? n.text.slice(0, 147).trimEnd() + '…' : n.text;
     return '<li class="' + escapeHtml(n.kind || 'note') + '">' + escapeHtml(text) + '</li>';
-  }).join('') + '</ul>';
+  }).join('') + '</ul>' + (all.length > 3 ? '<button type="button" class="on-file-more" id="onFileMore">All ' + all.length + ' notes about ' + escapeHtml(pet.name) + '</button>' : '');
+}
+
+function ago(ts, now = Date.now()) {
+  const m = Math.max(0, Math.round((now - ts) / 60000));
+  if (m < 2) return 'just now';
+  if (m < 60) return m + ' min ago';
+  const h = Math.round(m / 60);
+  if (h < 24) return h + (h === 1 ? ' hour ago' : ' hours ago');
+  const d = Math.round(h / 24);
+  return d + (d === 1 ? ' day ago' : ' days ago');
+}
+
+// The last few reasons, so a falling trust number is never a mystery.
+function grievanceReasons(pet) {
+  const log = Array.isArray(pet.grudgeLog) ? pet.grudgeLog.slice(-3).reverse() : [];
+  if (!log.length) return '';
+  return '<ul class="grievance-list">' + log.map(g => '<li>' + escapeHtml(g.why) + ', ' + ago(g.at) + '</li>').join('') + '</ul>';
 }
 
 export function openCard(state, id, keepScroll) {
@@ -96,7 +114,7 @@ export function openCard(state, id, keepScroll) {
     needRow(pet, 'food', 'Fed') + needRow(pet, 'fuss', 'Fussed') + needRow(pet, 'clean', 'Clean') +
     '<div class="bondline"><b>Trust ' + pet.bond + ' of 25.</b> ' + grievanceLine(pet) +
     (stage ? ' Grudge stage ' + stage + ' of ' + GRUDGE_STAGE_AT.length + '.' : '') +
-    '<span class="bond-bar"><span style="width:' + (pet.bond / 25 * 100) + '%"></span></span></div>' +
+    '<span class="bond-bar"><span style="width:' + (pet.bond / 25 * 100) + '%"></span></span>' + grievanceReasons(pet) + '</div>' +
     '</div></div>';
   const careNames = { food: 'Feed it', fuss: 'Fuss over it', clean: 'Clean it up' };
   html += '<div class="care-row">' + Object.keys(careNames).map(need => {
@@ -112,6 +130,7 @@ export function openCard(state, id, keepScroll) {
   html += '<div class="card-section-title">Particulars</div>';
   html += statRow('Cute', 'cute', pet.stats.cute) + statRow('Menace', 'menace', pet.stats.menace) +
     statRow('Damp', 'damp', pet.stats.damp) + statRow('Mystique', 'mystique', pet.stats.mystique);
+  html += '<p class="hint particulars-hint">Cute sweetens fussing. Menace wins arguments over furniture. Damp attracts grime. Mystique attracts case files.</p>';
   html += '<ul class="traits">';
   pet.traits.forEach(tid => {
     const t = TRAIT_BY_ID[tid];
@@ -169,6 +188,11 @@ export function openCard(state, id, keepScroll) {
     });
   });
   document.getElementById('playPet')?.addEventListener('click', () => { closeCard(); window.dispatchEvent(new CustomEvent('shelflife:play', { detail: { petId: pet.id } })); });
+  document.getElementById('onFileMore')?.addEventListener('click', () => {
+    closeCard();
+    setPetFilter(state, pet.name);
+    window.dispatchEvent(new CustomEvent('shelflife:goto', { detail: { tab: 'notes', target: '#noteFilters' } }));
+  });
   document.getElementById('cardClose').addEventListener('click', closeCard);
   // Rename and Rehome deliberately do NOT use the native prompt()/confirm():
   // Chrome silently suppresses them after "Prevent this page from creating

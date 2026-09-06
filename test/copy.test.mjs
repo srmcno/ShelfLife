@@ -20,9 +20,9 @@ test('NEED_LABEL and DECAY have the three need keys with the right shapes', () =
     assert.equal(typeof DECAY[k], 'number');
     assert.ok(DECAY[k] > 0);
   });
-  assert.equal(DECAY.food, 5.2);
-  assert.equal(DECAY.fuss, 4.4);
-  assert.equal(DECAY.clean, 3.4);
+  assert.equal(DECAY.food, 4.2);
+  assert.equal(DECAY.fuss, 3.6);
+  assert.equal(DECAY.clean, 2.8);
 });
 
 test('COMPLAINTS has annoyed/furious pools per need, each at/above the size floor', () => {

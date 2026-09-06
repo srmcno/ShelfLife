@@ -498,7 +498,7 @@ test('with nowhere to drag it to, a claim is just a claim', () => {
 
 test('contestProp resolves two rivals into a winner, a grudge and a deeper feud arc', () => {
   const strong = makePet('a', ['cult', 'prophet']);        // candle 3 + 3
-  const weak = makePet('b', ['astrology']);                // candle 3
+  const weak = makePet('b', ['astrology', 'doom']);        // candle 3 + 1, and cult/doom feud
   const candle = makeProp('q1', 'candle');
   const s = shelf([strong, candle, weak]);
   const out = contestProp(s, candle, NOW);

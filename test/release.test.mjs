@@ -21,10 +21,17 @@ test('restore rejects malformed or oversized rosters before replacing a shelf', 
   for (const raw of [
     { pets: [null] }, { pets: [pet('constructor')] }, { pets: [pet('x'), pet('x')] },
     { pets: [pet('x')], props: [{ id: 'x', kind: 'bowl' }] },
-    { pets: [], props: [{ id: 'd', kind: 'unknown' }] },
+    { pets: [], props: [{ id: 'd', kind: 7 }] },
     { pets: Array.from({ length: 19 }, (_, i) => pet('p' + i)) },
     { pets: [], gone: [null] }, { pets: [], feudArcs: { x: null } }
   ]) assert.equal(normalizeState(raw), null);
+});
+test('restore puts away furniture this build does not know instead of rejecting the shelf', () => {
+  const s = normalizeState({ pets: [pet('x')], props: [{ id: 'd', kind: 'retired-prop' }, { id: 'e', kind: 'bowl' }], slots: ['x', 'd', 'e'] });
+  assert.ok(s);
+  assert.deepEqual(s.props.map(p => p.kind), ['bowl']);
+  assert.equal(s.slots.indexOf('d'), -1);
+  assert.equal(s.slots.indexOf('e'), 2);
 });
 test('restore supplies finite needs, stats, dates, names and safe opt-in settings', () => {
   const s = normalizeState({ pets: [{ id: 'p', needs: { food: -99, fuss: 300, clean: 'bad' }, stats: null, bond: 100, traits: null }], lastTick: Infinity, settings: { matureMode: 'false' } });

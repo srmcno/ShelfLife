@@ -2,14 +2,20 @@ import { advanceStories } from '../engine/stories.js';
 import { renderStories } from './stories.js';
 import { save } from '../state.js';
 import { roundsWait } from '../engine/care.js';
+import { checkWait } from '../engine/loop.js';
+import { isDragging } from './drag.js';
 import { playWait } from '../engine/play.js';
 import { renderScheme } from './schemes.js';
 import { moodOf, isAsleep, hasTrait, worstNeed, MOOD_WORD } from '../engine/tick.js';
 import { activeFeuds, feudingIds, ACHIEVEMENTS } from '../engine/achievements.js';
 import { totalBond } from '../engine/unlocks.js';
+import { petById } from '../state.js';
 import { renderPetSprite, moodMotionClasses, MOTION_TRAIT_FLAGS } from '../art/sprite.js';
 import { captureShelfPositions, playShelfMoves } from '../art/animator.js';
 import { PROPS, PROP_ART } from '../content/props.js';
+import { currentScheme, SCHEME_DEADLINE } from '../engine/schemes.js';
+import { storyState, caseGate, currentCase, VISIT_LENGTH } from '../engine/stories.js';
+import { VISITORS } from '../content/stories.js';
 
 const cabinet = document.getElementById('cabinet');
 const notesEl = document.getElementById('notes');
@@ -28,6 +34,7 @@ export function renderAll(state) {
   renderProgress(state);
   renderDoors(state);
   renderBrief(state);
+  renderNeeds(state);
   renderStories(state);
   save();
 }
@@ -49,9 +56,14 @@ export function moonPhase(now = Date.now()) {
     'The nocturnal ones are checking the rota.', 'The bowl has been moved toward the dark.'
   ];
   const i = Math.round(f * 8) % 8;
-  // A dark disc slid across a light one: 0 covers it (new), a full diameter clears it (full).
-  const shift = f < 0.5 ? -(f * 2) : (1 - f) * 2;
-  return { name: names[i], line: lines[i], shift: Math.round(shift * 13) };
+  // The disc is lit; css/style.css paints an inset shadow whose x-offset is the
+  // width of the dark part. Positive shadows the left edge (a waxing moon, lit
+  // on the right), negative the right edge (waning). Full is 0, new is the
+  // whole diameter.
+  const lit = f < 0.5 ? f * 2 : 2 - f * 2;
+  const dark = 1 - lit;
+  const shift = (f < 0.5 ? 1 : -1) * dark;
+  return { name: names[i], line: lines[i], shift: Math.round(shift * 13), lit };
 }
 
 export function renderStatus(state) {
@@ -142,6 +154,9 @@ function propEl(pr, slotIndex) {
 }
 
 export function renderShelf(state) {
+  // A resident being carried keeps the DOM it is holding on to; the next
+  // render after the drop redraws everything.
+  if (isDragging()) return;
   // The cabinet is rebuilt from scratch every render, so a pet that changed
   // slots is destroyed and recreated somewhere else — it would teleport. Snap
   // the old positions first and hand them to the animator afterwards, which
@@ -207,7 +222,39 @@ let firstRender = true;
 // Filter chips above the board. A note is classified from what the engine
 // already stamps on it (kind and form), so no note needs a new field.
 let noteFilter = 'all';
+// A second, orthogonal filter: only notes by or about one resident. Set by
+// tapping a byline on the board or the link in a resident's card.
+let petFilter = null;
+export function nameMentions(text, name) {
+  if (!name) return false;
+  const safe = String(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('(^|[^\\w])' + safe + '(?=$|[^\\w])', 'i').test(String(text || ''));
+}
+export function noteAbout(n, name) {
+  return n.from === name || nameMentions(n.text, name);
+}
+export function setPetFilter(state, name) {
+  petFilter = name || null;
+  expandedNotes = false;
+  if (state) { notesState = state; renderNotes(state); }
+}
+export function getPetFilter() { return petFilter; }
+function syncPetChip() {
+  const host = document.getElementById('noteFilters');
+  if (!host) return;
+  host.querySelector('.pet-filter')?.remove();
+  if (!petFilter) return;
+  const chip = document.createElement('button');
+  chip.className = 'filter-chip pet-filter';
+  chip.type = 'button';
+  chip.dataset.petFilter = petFilter;
+  chip.setAttribute('aria-pressed', 'true');
+  chip.setAttribute('aria-label', 'Only notes about ' + petFilter + '. Tap to show everyone.');
+  chip.innerHTML = 'Only ' + escapeHtml(petFilter) + '<span aria-hidden="true">×</span>';
+  host.appendChild(chip);
+}
 function noteMatches(n, filter) {
+  if (petFilter && !noteAbout(n, petFilter)) return false;
   switch (filter) {
     case 'said': return ['two', 'react', 'direct'].includes(n.form) || n.from === 'overheard';
     case 'complaints': return n.kind === 'angry' || n.kind === 'feud';
@@ -218,6 +265,8 @@ function noteMatches(n, filter) {
 }
 const filterHost = document.getElementById('noteFilters');
 if (filterHost) filterHost.addEventListener('click', e => {
+  const petChip = e.target.closest('[data-pet-filter]');
+  if (petChip) { setPetFilter(notesState, null); return; }
   const chip = e.target.closest('[data-filter]');
   if (!chip) return;
   noteFilter = chip.dataset.filter;
@@ -244,12 +293,13 @@ export function renderNotes(state) {
   more.hidden = list.length <= 6;
   more.textContent = expandedNotes ? 'Keep the latest six' : 'Read ' + (list.length - 6) + (list.length === 7 ? ' older note' : ' older notes');
   more.setAttribute('aria-expanded', String(expandedNotes));
+  syncPetChip();
   notesEl.innerHTML = '';
   document.getElementById('clearNotes').disabled = !state.notes.length && document.getElementById('clearNotes').dataset.undo !== 'true';
   if (!list.length) {
     const d = document.createElement('div');
     d.className = 'notes-empty';
-    d.textContent = state.notes.length ? 'Nothing filed under that. Yet.' : state.pets.length ? 'Check the shelf to see what they have to say. Care for them individually to build trust and unlock new things.' : 'First, a creature. Then, the complaints.';
+    d.textContent = state.notes.length ? (petFilter ? 'Nothing on file about ' + petFilter + '. Yet.' : 'Nothing filed under that. Yet.') : state.pets.length ? 'Check the shelf to see what they have to say. Care for them individually to build trust and unlock new things.' : 'First, a creature. Then, the complaints.';
     notesEl.appendChild(d);
     return;
   }
@@ -275,6 +325,15 @@ export function renderNotes(state) {
   firstRender = false;
   if (shown.size > 400) shown.clear();
 }
+
+// Tap a byline to keep only that resident's paper trail.
+if (notesEl) notesEl.addEventListener('click', e => {
+  const from = e.target.closest('.note .from');
+  if (!from || !notesState) return;
+  const name = from.textContent;
+  if (!notesState.pets.some(p => p.name === name)) return;
+  setPetFilter(notesState, petFilter === name ? null : name);
+});
 
 export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -304,6 +363,11 @@ function syncRounds(state) {
   const button = document.getElementById('roundsBtn'), remaining = roundsWait(state);
   button.disabled = !state.pets.length || remaining > 0;
   button.querySelector('span').textContent = remaining ? 'Restocking · ' + Math.ceil(remaining / 1000) + 's' : 'Do the rounds';
+  const check = document.getElementById('checkBtn'), wait = checkWait(state);
+  if (check) {
+    check.disabled = wait > 0;
+    check.querySelector('span').textContent = wait ? 'Listening · ' + Math.ceil(wait / 1000) + 's' : 'Check the shelf';
+  }
 }
 setInterval(() => { if (briefState) syncRounds(briefState); }, 1000);
 function renderBrief(state) {
@@ -319,5 +383,73 @@ function renderBrief(state) {
     return;
   }
   host.innerHTML = '<span class="brief-icon" aria-hidden="true">' + (needy ? '!' : '✦') + '</span><div><b>' + escapeHtml(needy ? pet.name + ' is feeling ' + needWords[worstNeed(pet)] + '.' : 'A little time together?') + '</b><span>' + (needy ? 'Tap to help. Individual care builds trust.' : 'Try a secret handshake with ' + escapeHtml(pet.name) + '.') + '</span></div><button class="btn btn-sm">' + (needy ? 'Care' : 'Play') + ' ↗</button>';
-  host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent(needy ? 'shelflife:care' : 'shelflife:play', { detail: { petId: pet.id } })));
+  host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent(needy ? 'shelflife:care' : 'shelflife:play', { detail: { petId: pet.id, mode: 'memory' } })));
 }
+
+/* ---- what needs you -------------------------------------------------------
+   One row of chips for the things with a clock on them or a decision in them:
+   a live conspiracy and its deadline, offered requests, a visitor at the door,
+   a case beat ready to file, and anyone below thirty on a need. Each chip goes
+   to the place the thing is decided. */
+let needsState = null;
+function needsItems(state) {
+  const items = [];
+  const now = Date.now();
+  const plan = currentScheme(state);
+  if (plan) items.push({ key: 'scheme', cls: 'urgent', label: 'Conspiracy', deadline: plan.at + SCHEME_DEADLINE, tab: 'plots', target: '#schemeCard' });
+  const s = storyState(state);
+  const offered = Object.entries(s.requests).filter(([id, r]) => r.status === 'offered' && state.pets.some(p => p.id === id));
+  if (offered.length) items.push({ key: 'requests', cls: '', label: offered.length === 1 ? 'A request' : offered.length + ' requests', small: offered.length === 1 ? (petById(state, offered[0][0]) || {}).name : 'waiting in cards', petId: offered[0][0] });
+  if (s.visitor && !s.visitor.welcomed) {
+    const d = VISITORS.find(v => v.id === s.visitor.kind);
+    items.push({ key: 'visitor', cls: '', label: 'Visitor', small: d ? d.name : 'at the door', deadline: s.visitor.at + VISIT_LENGTH, tab: 'plots', target: '#visitorCard', hours: true });
+  }
+  const c = currentCase(state);
+  if (c && c.beat < 6 && caseGate(state).ready) items.push({ key: 'case', cls: '', label: 'Case file', small: 'evidence ready', tab: 'plots', target: '#caseCard' });
+  const sore = state.pets.filter(p => p.needs[worstNeed(p)] < 30).sort((a, b) => a.needs[worstNeed(a)] - b.needs[worstNeed(b)]);
+  if (sore.length) items.push({ key: 'sore', cls: 'sore', label: sore.length === 1 ? sore[0].name : sore.length + ' residents', small: sore.length === 1 ? needWords[worstNeed(sore[0])] : 'in a bad way', petId: sore[0].id });
+  return items;
+}
+function countdownText(item, now = Date.now()) {
+  const left = Math.max(0, item.deadline - now);
+  if (item.hours) return Math.max(1, Math.ceil(left / 3600000)) + 'h left';
+  const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
+  return m + ':' + String(sec).padStart(2, '0');
+}
+function renderNeeds(state) {
+  needsState = state;
+  const host = document.getElementById('needsYou');
+  if (!host) return;
+  const items = needsItems(state);
+  const signature = items.map(i => i.key + (i.small || '') + (i.label || '')).join('|');
+  if (host.dataset.signature === signature) { tickNeeds(); return; }
+  host.dataset.signature = signature;
+  host.innerHTML = '';
+  items.forEach(item => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'need-chip' + (item.cls ? ' ' + item.cls : '');
+    chip.innerHTML = '<i aria-hidden="true"></i>' + escapeHtml(item.label) +
+      (item.deadline ? ' <b data-countdown>' + countdownText(item) + '</b>' : '') +
+      (item.small ? ' <small>' + escapeHtml(item.small) + '</small>' : '');
+    chip.dataset.deadline = item.deadline || '';
+    chip.dataset.hours = item.hours ? '1' : '';
+    chip.addEventListener('click', () => {
+      if (item.petId) { window.dispatchEvent(new CustomEvent('shelflife:care', { detail: { petId: item.petId } })); return; }
+      window.dispatchEvent(new CustomEvent('shelflife:goto', { detail: { tab: item.tab, target: item.target } }));
+    });
+    host.appendChild(chip);
+  });
+}
+function tickNeeds() {
+  const host = document.getElementById('needsYou');
+  if (!host) return;
+  const now = Date.now();
+  host.querySelectorAll('.need-chip[data-deadline]').forEach(chip => {
+    const deadline = Number(chip.dataset.deadline);
+    if (!deadline) return;
+    const b = chip.querySelector('[data-countdown]');
+    if (b) b.textContent = countdownText({ deadline, hours: chip.dataset.hours === '1' }, now);
+  });
+}
+setInterval(() => { if (needsState) tickNeeds(); }, 1000);

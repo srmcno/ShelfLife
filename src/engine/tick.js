@@ -2,7 +2,7 @@ import { artPersonality } from './personality.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS } from '../content/props.js';
 import { DECAY } from '../content/copy.js';
-import { propById, petById, clamp, HOUR, MAX_OFFLINE_HOURS } from '../state.js';
+import { propById, petById, clamp, HOUR, MAX_OFFLINE_HOURS, NIGHT_DECAY_FACTOR } from '../state.js';
 
 export const MOOD_WORD = { content: 'Content', fine: 'Fine', annoyed: 'Annoyed', furious: 'Furious' };
 
@@ -58,13 +58,32 @@ export function decayRate(pet, need, state) {
     });
     if (hasTrait(pet, 'nocturnal') && nbrs.some(pr => pr.kind === 'lamp') && need === 'fuss') r *= 1.5;
   }
+  // Particulars, finally doing something: a damp resident attracts grime.
+  const damp = pet.stats && typeof pet.stats.damp === 'number' ? pet.stats.damp : null;
+  if (need === 'clean' && damp !== null) r *= 1 + (damp - 5) * 0.04;
   return r;
 }
 
-export function tick(state, now = Date.now()) {
-  let hours = (now - state.lastTick) / HOUR;
-  if (hours <= 0) { state.lastTick = now; return false; }
+// Elapsed hours between two instants, with the night hours counted at
+// NIGHT_DECAY_FACTOR. Walks the span an hour at a time (it is capped at
+// MAX_OFFLINE_HOURS, so this is at most a couple of dozen steps).
+export function effectiveHours(from, to) {
+  let hours = (to - from) / HOUR;
+  if (hours <= 0) return 0;
   hours = Math.min(hours, MAX_OFFLINE_HOURS);
+  let out = 0;
+  let cursor = to - hours * HOUR;
+  while (cursor < to) {
+    const step = Math.min(HOUR, to - cursor);
+    out += (step / HOUR) * (isNight(new Date(cursor)) ? NIGHT_DECAY_FACTOR : 1);
+    cursor += step;
+  }
+  return out;
+}
+
+export function tick(state, now = Date.now()) {
+  if (now - state.lastTick <= 0) { state.lastTick = now; return false; }
+  const hours = effectiveHours(state.lastTick, now);
   state.pets.forEach(pet => {
     ['food', 'fuss', 'clean'].forEach(k => {
       pet.needs[k] = clamp(pet.needs[k] - decayRate(pet, k, state) * hours, 0, 100);

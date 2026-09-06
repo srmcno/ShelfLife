@@ -31,7 +31,7 @@ import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS } from '../content/props.js';
 import { FEUDS } from '../content/feuds.js';
 import { hasTrait, isAsleep, isNight, moodOf, neighborSlots } from './tick.js';
-import { feudPairKey, checkGrudgeEscalation } from './achievements.js';
+import { feudPairKey, fileGrudge } from './achievements.js';
 import { pick, clamp, addNote, petById, propById } from '../state.js';
 
 /* ---------------- tuning ---------------- */
@@ -218,7 +218,15 @@ export const TRAIT_PROP_AFFINITY = {
   etiquette:   { teacup: 3, mat: 2, jar: -2, mousetrap: -2, bowl: -1 },
   swarm:       { mousetrap: 2, fern: 2, jar: 1, bell: -2 },
   fullname:    { teacup: 2, box: 2, board: 1 },
-  lifecoach:   { trophy: 3, mirror: 2, teacup: 1, hourglass: 1, coffinbed: -2 }
+  lifecoach:   { trophy: 3, mirror: 2, teacup: 1, hourglass: 1, coffinbed: -2 },
+  understudy:  { mirror: 2, trophy: 2, musicbox: 1, board: 1, box: -1 },
+  reflection:  { mirror: 3, globe: 2, bell: 1, lamp: -1, jar: 1 },
+  hummer:      { musicbox: 3, bell: 2, phone: 1, clock: 1, mousetrap: -1 },
+  bitey:       { yarn: 2, bowl: 2, trophy: 1, mousetrap: -2, teacup: -1, birdcage: 1 },
+  fungal:      { fern: 3, plant: 2, cauldron: 2, jar: 1, tub: -2, lamp: -1, lantern: -1 },
+  porcelain:   { teacup: 3, bell: 2, mat: 1, mirror: 1, mousetrap: -3, yarn: -1, cauldron: -1 },
+  physician:   { jar: 2, hourglass: 2, box: 1, skull: 1, teacup: 1, cauldron: -1 },
+  sleepwalker: { coffinbed: 3, mat: 2, candle: 1, hourglass: 1, bell: -2, mousetrap: -2 }
 };
 
 // Wanting to be near others (positive) or emphatically not (negative).
@@ -905,9 +913,8 @@ export function useProp(state, pet, prop, now = Date.now(), opts = {}) {
   const holder = claimantOf(state, prop.id, now);
   touchProp(state, pet, prop.id, now);
   if (holder && holder.id !== pet.id) {
-    addNote(state, fill(pick(BLOCKED_LINES), { p: pet, n: holder, q: prop.kind }), pet.name, 'note');
-    pet.grudges = (pet.grudges || 0) + 1;
-    checkGrudgeEscalation(state, pet);
+    addNote(state, fill(pick(BLOCKED_LINES), { p: pet, n: holder, q: prop.kind }), pet.name, 'angry');
+    fileGrudge(state, pet, 'kept off the ' + propName(prop.kind) + ' by ' + holder.name, now);
     return { outcome: 'blocked', by: holder.id };
   }
   if (isSpent(state, prop.id, now)) {
@@ -965,16 +972,22 @@ export function contestProp(state, prop, now = Date.now()) {
     .map(id => petById(state, id))
     .filter(p => p && !safeAsleep(p, now) && affinityFor(p, prop.kind) >= CLAIM_AFFINITY);
   if (rivals.length < 2) return null;
-  rivals.sort((a, b) => (affinityFor(b, prop.kind) - affinityFor(a, prop.kind)) || ((b.bond || 0) - (a.bond || 0)));
+  // Wanting it most wins; then menace (the Particulars earn their keep here);
+  // then whoever the player trusts more.
+  const menace = p => (p.stats && typeof p.stats.menace === 'number') ? p.stats.menace : 5;
+  rivals.sort((a, b) => (affinityFor(b, prop.kind) - affinityFor(a, prop.kind)) || (menace(b) - menace(a)) || ((b.bond || 0) - (a.bond || 0)));
   const [winner, loser] = rivals;
   claimProp(state, winner, prop.id, now);
-  loser.grudges = (loser.grudges || 0) + 1;
-  const key = feudPairKey(winner.id, loser.id);
-  if (!state.feudArcs) state.feudArcs = {};
-  const arc = state.feudArcs[key] || (state.feudArcs[key] = { level: 0, truce: false });
-  if (!arc.truce) arc.level += 1;
+  // Only a pair that actually feud deepen their arc over furniture; a squabble
+  // between residents who otherwise get on stays a squabble.
+  if (petsFeud(winner, loser)) {
+    const key = feudPairKey(winner.id, loser.id);
+    if (!state.feudArcs) state.feudArcs = {};
+    const arc = state.feudArcs[key] || (state.feudArcs[key] = { level: 0, truce: false });
+    if (!arc.truce) arc.level += 1;
+  }
   addNote(state, fill(pick(CONTEST_LINES), { p: winner, n: loser, q: prop.kind }), 'observed', 'feud');
-  checkGrudgeEscalation(state, loser);
+  fileGrudge(state, loser, 'lost the ' + propName(prop.kind) + ' to ' + winner.name, now);
   return { winner: winner.id, loser: loser.id, prop: prop.id };
 }
 
@@ -1020,10 +1033,9 @@ export function stealPhase(state, now = Date.now()) {
   const { pet: victim, over } = marks[0];
   victim.needs.food = clamp(victim.needs.food - 14, 0, 100);
   thief.needs.food = clamp(thief.needs.food + 12, 0, 100);
-  victim.grudges = (victim.grudges || 0) + 1;
   const line = over ? pick(REACH_THEFT_LINES) : pick(THEFT_LINES);
   addNote(state, fill(line, { p: thief, n: victim, m: over }), thief.name, 'feud');
-  checkGrudgeEscalation(state, victim);
+  fileGrudge(state, victim, 'robbed by ' + thief.name, now, { force: true });
   return { thief: thief.id, victim: victim.id, reached: !!over };
 }
 

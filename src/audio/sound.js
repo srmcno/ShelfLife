@@ -24,6 +24,23 @@ const MASTER_GAIN = 0.82;
 let ctx = null;
 const graphs = new WeakMap();
 
+// Browsers refuse to start audio before the player has touched the page, and
+// a context created early sits suspended with every scheduled sound piling up
+// at t=0 until the first tap releases them all at once. So: no context, and
+// no scheduling, until a real gesture has happened; nothing while the tab is
+// hidden either, because a paper tick from a background tab is just noise.
+let activated = false;
+if (typeof document !== 'undefined') {
+  const arm = () => { activated = true; };
+  ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, arm, { once: true, passive: true, capture: true }));
+}
+export function audioAllowed() {
+  if (typeof document === 'undefined') return false;
+  if (document.hidden) return false;
+  if (typeof navigator !== 'undefined' && navigator.userActivation) return navigator.userActivation.hasBeenActive;
+  return activated;
+}
+
 function getCtx() {
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -496,6 +513,7 @@ let lastSound = null;
 
 function play(name, opts) {
   if (state.settings.muted) return null;
+  if (!audioAllowed()) return null;
   const c = getCtx();
   if (!c) return null;
   const G = graphFor(c);

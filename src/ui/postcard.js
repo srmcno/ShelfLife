@@ -61,6 +61,20 @@ function loadUrl(src) {
   });
 }
 
+// Decoded images keyed by source, so a redraw ("Another") and the preload
+// above share the work with the draw loop.
+const imageCache = new Map();
+function cached(key, load) {
+  if (!key) return Promise.resolve(null);
+  if (!imageCache.has(key)) {
+    if (imageCache.size > 60) imageCache.clear();
+    imageCache.set(key, load());
+  }
+  return imageCache.get(key);
+}
+const loadSvgCached = svg => cached(svg, () => loadSvg(svg));
+const loadUrlCached = src => cached(src, () => loadUrl(src));
+
 // Prop art is themed with CSS variables the image loader cannot see; resolve
 // them against the current room first.
 const PROP_FALLBACK = { wood: '#5C3A47', 'wood-lip': '#7A4C5B', pink: '#FF8FB8', amber: '#F2B441', mint: '#7FD8C0', blood: '#A32C3C', 'bone-dim': '#C9BCAE', bone: '#F2E9DC' };
@@ -104,7 +118,7 @@ async function loadFonts() {
 async function drawPet(ctx, pet, cx, plankY, size) {
   if (pet.art && pet.art.creature) {
     const { svg, foot } = creatureSvg(pet.art.creature, size);
-    const image = await loadSvg(svg);
+    const image = await loadSvgCached(svg);
     if (!image) return;
     const unit = size / 144;
     ctx.drawImage(image, cx - size / 2, plankY - (foot + 72) * unit, size, size);
@@ -116,7 +130,7 @@ async function drawPet(ctx, pet, cx, plankY, size) {
   const fx = cx - box / 2, fy = plankY - box;
   const fr = drawingFrame(pet.art && pet.art.bounds) || { scale: 1, left: 0, top: 0 };
   const dw = fr.scale * box, dx = fx + fr.left * box, dy = fy + fr.top * box;
-  const body = await loadUrl(pet.art && pet.art.body);
+  const body = await loadUrlCached(pet.art && pet.art.body);
   if (body) ctx.drawImage(body, dx, dy, dw, dw);
   for (const stamp of (pet.art && pet.art.stamps) || []) {
     const raw = STAMP_SVG[stamp.kind];
@@ -133,13 +147,14 @@ async function drawPet(ctx, pet, cx, plankY, size) {
   }
 }
 
-function bubbleAt(ctx, text, cx, topY) {
+function bubbleAt(ctx, text, cx, topY, bounds) {
   ctx.font = '600 25px Caveat';
   const pad = 12;
   const w = Math.min(230, ctx.measureText(text).width + pad * 2);
   const lines = wrap(ctx, text, w - pad * 2, 3);
   const h = lines.length * 28 + pad * 2 - 6;
-  const x = Math.max(12, Math.min(W - w - 12, cx - w / 2));
+  const left = bounds ? bounds.left + 10 : 12, right = bounds ? bounds.right - 10 : W - 12;
+  const x = Math.max(left, Math.min(right - w, cx - w / 2));
   const y = topY - h - 14;
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
@@ -203,6 +218,14 @@ export async function renderPostcard(caption) {
   spot.addColorStop(0, 'rgba(242,192,131,.26)'); spot.addColorStop(1, 'rgba(242,192,131,0)');
   ctx.fillStyle = spot; ctx.fillRect(caseX, caseY, caseW, caseH);
 
+  // Every image the case needs, fetched at once rather than one after another.
+  await Promise.all(state.slots.map(id => {
+    const pet = id && state.pets.find(p => p.id === id);
+    if (!pet) return null;
+    if (pet.art && pet.art.creature) return loadSvgCached(creatureSvg(pet.art.creature, petSize).svg);
+    return loadUrlCached(pet.art && pet.art.body);
+  }).filter(Boolean));
+
   let speaker = null;
   if (!rows.length) {
     ctx.fillStyle = ink3; ctx.textAlign = 'center'; ctx.font = '600 40px Caveat';
@@ -248,7 +271,7 @@ export async function renderPostcard(caption) {
     }
     if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '0px';
   }
-  if (speaker) bubbleAt(ctx, pick(MOOD_BUBBLES[moodOf(speaker.pet)] || MOOD_BUBBLES.fine), speaker.cx, speaker.top);
+  if (speaker) bubbleAt(ctx, pick(MOOD_BUBBLES[moodOf(speaker.pet)] || MOOD_BUBBLES.fine), speaker.cx, speaker.top, { left: caseX, right: caseX + caseW });
 
   // a note, pinned under the case
   // A short note reads on a postcard; a filled-in document does not.

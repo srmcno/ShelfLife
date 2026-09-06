@@ -15,7 +15,11 @@ export function previewCare(pet, need, now = Date.now()) {
   const before = pet.needs[need];
   const asleep = isAsleep(pet, new Date(now));
   const factor = asleep ? .5 : before > 78 ? .25 : 1;
-  return { gain: Math.min(100 - before, Math.round(CARE_GAIN[need] * factor)), useful: before < 72,
+  // A cute resident gets a little more out of being fussed over. Particulars
+  // are shown on every card; this is one of the four places they act.
+  const cute = pet.stats && typeof pet.stats.cute === 'number' ? pet.stats.cute : 5;
+  const charm = need === 'fuss' ? 1 + (cute - 5) * 0.03 : 1;
+  return { gain: Math.min(100 - before, Math.round(CARE_GAIN[need] * factor * charm)), useful: before < 72,
     reason: asleep ? 'Sleepy · half effect' : before > 78 ? 'Already comfortable' : 'Builds trust' };
 }
 

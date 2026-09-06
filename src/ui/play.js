@@ -83,7 +83,7 @@ export function initPlay(state, refresh) {
   window.addEventListener('shelflife:play', e => {
     pet = state.pets.find(p => p.id === e.detail?.petId);
     if (!pet) return;
-    setMode('chase'); veil.classList.add('open');
+    setMode(e.detail?.mode === 'memory' ? 'memory' : 'chase'); veil.classList.add('open');
   });
   function conclude() {
     lock(true); replay.disabled = true;
