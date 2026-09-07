@@ -158,7 +158,7 @@ export function advanceCase(state, choice = 'listen', now = Date.now()) {
 export function requestDescription(state, pet) {
   const r = storyState(state).requests[pet.id]; if (!r) return null;
   const other = state.pets.find(p => p.id === r.target);
-  const text = { food: 'Feed me once, individually. I am deciding which of my feet looks less essential.', fuss: 'Give me some individual attention. I am too small to haunt you from this distance.', clean: 'Wash me individually. Something in the crust has started charging rent.', play: 'Win a rewarded Handshake, Crumb Chase or Alibi with me. I need a shared incident.', prop: 'Put a ' + (PROPS[r.target]?.name || 'food bowl') + ' beside me. I need a neighbour with fewer opinions.', neighbor: 'Let me stand beside ' + (other?.name || 'another resident') + '. I have something small and incriminating to say.', room: 'Change the room to Bone Parlor. I want to look expensive.' }[r.kind];
+  const text = { food: 'Feed me once, individually. I have started thinking of the shelf as a serving suggestion.', fuss: 'Give me some individual attention. I am too small to haunt you from this distance.', clean: 'Wash me individually. Something in the crust has started charging rent.', play: 'Win a rewarded Handshake, Crumb Chase or Alibi with me. I need a shared incident.', prop: 'Put a ' + (PROPS[r.target]?.name || 'food bowl') + ' beside me. I need a neighbour with fewer opinions.', neighbor: 'Let me stand beside ' + (other?.name || 'another resident') + '. I have something small and incriminating to say.', room: 'Change the room to Bone Parlor. I want to look expensive.' }[r.kind];
   return { ...r, text };
 }
 export function acceptRequest(state, petId, accept, now = Date.now()) {
