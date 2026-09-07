@@ -87,7 +87,7 @@ export function initPlay(state, refresh) {
     const round = live ? live.round + (mode === 'alibi' && currentRound(live)?.answered !== null ? 1 : 0) : 0;
     const total = mode === 'alibi' ? ((alibi && alibi.rounds.length) || ALIBI_ROUNDS)
       : (game && game.rounds) || handshakeRounds(pet);
-    document.getElementById('playProgress').textContent = live?.complete ? 'Complete · ' + total + ' rounds' : 'Round ' + Math.min(total, round + 1) + ' of ' + total;
+    document.getElementById('playProgress').textContent = live?.complete ? 'Complete · ' + total + ' rounds' : 'Round ' + Math.min(total, (live?.round || 0) + 1) + ' of ' + total;
     const steps = veil.querySelector('.play-rounds');
     let pips = [...steps.querySelectorAll('.play-step')];
     while (pips.length < total) { const el = document.createElement('span'); el.className = 'play-step'; steps.appendChild(el); pips.push(el); }

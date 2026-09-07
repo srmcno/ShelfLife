@@ -44,9 +44,11 @@ test('stepFeudArc always adds exactly one note per call, level never regresses, 
   for (let i = 0; i < 150; i++) {
     const before = s.feudArcs[key] ? s.feudArcs[key].level : 0;
     const notesBefore = s.notes.length;
+    const countBefore = s.noteCount;
     const outcome = stepFeudArc(s, key, a, b, base + i * FEUD_STEP_MS);
     if (outcome === null) continue;
-    assert.equal(s.notes.length, notesBefore + 1);
+    assert.equal(s.notes.length, Math.min(40, notesBefore + 1));
+    assert.equal(s.noteCount, countBefore + 1);
     const after = s.feudArcs[key].level;
     assert.ok(after >= before);
     if (s.feudArcs[key].truce) assert.ok(after >= 2);

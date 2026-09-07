@@ -72,3 +72,17 @@ test('invalid catalog selections preserve the creature', () => {
   assert.deepEqual(selectCreaturePart(c, 'wings', 'not-a-wing'), c);
   assert.deepEqual(selectCreaturePart(c, 'not-a-slot', 'none'), c);
 });
+
+// One star is participation, two means the crumb goal was reached.
+test('Crumb Bailiff is awarded for a win, never a one-star loss', async () => {
+  const { ACHIEVEMENTS } = await import('../src/engine/achievements.js');
+  const { newChase, recordChase } = await import('../src/engine/chase.js');
+  const award = ACHIEVEMENTS.find(a => a.id === 'chase-win');
+  for (const gentle of [false, true]) {
+    const s = shelf(), p = s.pets[0];
+    const lost = newChase(p, { gentle }); lost.finished = true; lost.caught = lost.goal - 1; lost.score = 100;
+    recordChase(p, lost); assert.equal(award.check(s), false);
+    const won = newChase(p, { gentle }); won.finished = true; won.caught = won.goal; won.score = 80;
+    recordChase(p, won); assert.equal(award.check(s), true);
+  }
+});
