@@ -30,7 +30,6 @@ export const ALIBI_FUSS = 20;
 
 const ROW_NAME = ['top', 'middle', 'bottom'];
 const rowOf = slot => Math.floor(slot / ROW_WIDTH);
-const other = (list, not) => list.filter(x => x && x.id !== (not && not.id));
 
 function propNameOf(kind) { return (PROPS[kind] || {}).name || 'something'; }
 
@@ -51,21 +50,23 @@ export function statementsFor(state, pet, now = Date.now()) {
 
   // --- who is beside it -----------------------------------------------------
   const left = at(leftSlot), right = at(rightSlot);
-  if (left) push(truths, 'left', 'I have ' + left.name + ' on my left.');
+  const label = item => item.kind ? propNameOf(item.kind) : item.name;
+  if (left) push(truths, 'left', 'I have ' + label(left) + ' on my left.');
   else if (leftSlot >= 0) push(truths, 'left', 'There is nobody at all on my left.');
-  if (right) push(truths, 'right', 'I have ' + right.name + ' on my right.');
+  if (right) push(truths, 'right', 'I have ' + label(right) + ' on my right.');
   else if (rightSlot >= 0) push(truths, 'right', 'My right-hand side is empty and I prefer it.');
-  const notLeft = pets.filter(p => !left || p.id !== left.id);
+  const notLeft = pets.filter(p => !left || p.name !== label(left));
   if (notLeft.length) push(lies, 'left', 'I have ' + notLeft[0].name + ' on my left.');
   if (left) push(lies, 'left', 'There is nobody at all on my left.');
-  const notRight = pets.filter(p => !right || p.id !== right.id);
+  const notRight = pets.filter(p => !right || p.name !== label(right));
   if (notRight.length) push(lies, 'right', 'I have ' + notRight[notRight.length - 1].name + ' on my right.');
   if (right) push(lies, 'right', 'My right-hand side is empty and I prefer it.');
 
   // --- the furniture within reach -------------------------------------------
   const nearProps = near.map(i => state.slots[i]).filter(Boolean).map(id => propById(state, id)).filter(Boolean);
   const allProps = (state.props || []);
-  const farProps = allProps.filter(p => !nearProps.some(q => q.id === p.id));
+  // Claims name a kind of furniture, not a particular instance of it.
+  const farProps = allProps.filter(p => !nearProps.some(q => q.kind === p.kind));
   if (nearProps.length) push(truths, 'prop', 'There is a ' + propNameOf(nearProps[0].kind) + ' within reach of me.');
   else if (allProps.length) push(truths, 'prop', 'There is no furniture within reach of me whatsoever.');
   if (farProps.length) push(lies, 'prop', 'There is a ' + propNameOf(farProps[0].kind) + ' within reach of me.');
@@ -108,7 +109,7 @@ export function statementsFor(state, pet, now = Date.now()) {
   }
 
   const older = pets.filter(p => (p.born || 0) > (pet.born || 0));
-  const younger = pets.filter(p => (p.born || 0) < (pet.born || 0));
+  const younger = pets.filter(p => (p.born || 0) < (pet.born || 0) && !older.some(q => q.name === p.name));
   if (older.length) push(truths, 'age', 'I was living here before ' + older[0].name + ' ever arrived.');
   if (younger.length) push(lies, 'age', 'I was living here before ' + younger[0].name + ' ever arrived.');
 
@@ -144,7 +145,9 @@ export function newAlibi(state, pet, rng = Math.random) {
     }
     if (picked.length < ALIBI_CHOICES - 1) break;
     const cards = shuffle(picked.concat([lie]));
-    rounds.push({ statements: cards.map(c => c.text), lie: cards.indexOf(lie), answered: null });
+    const evidence = truths.filter(t => t.key === lie.key).map(t => t.text);
+    rounds.push({ statements: cards.map(c => c.text), lie: cards.indexOf(lie), answered: null,
+      evidence: evidence.join(' ') || 'That claim does not match the shelf at the start of this statement.' });
   }
   return { kind: 'alibi', petId: pet.id, rounds, round: 0, correct: 0, complete: !rounds.length, claimed: false };
 }
@@ -182,6 +185,7 @@ export function advanceAlibi(game) {
 }
 
 export function rewardAlibi(state, game, now = Date.now()) {
+  if (!game || !game.rounds?.length) return null;
   const pet = state.pets.find(p => p.id === game.petId);
   if (!pet || !game.complete || game.claimed) return null;
   game.claimed = true;

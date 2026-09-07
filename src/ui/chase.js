@@ -13,10 +13,10 @@ const SUGAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8l8-4 8 4
 const ART = { crumb: CRUMB, bunny: BUNNY, moth: MOTH, biscuit: BISCUIT, sugar: SUGAR };
 // Deadpan end-screen copy. Short, dry, four inches tall.
 const QUIPS = {
-  lost: ['The crumbs remain at large.', 'It maintains the floor moved.', 'Nothing was lost except the crumbs. And the round.'],
+  lost: ['The crumbs remain at large.', 'Immortal. Outrun by bread.', 'It has requested a smaller floor.', 'It maintains the floor moved.', 'Nothing was lost except the crumbs. And the round.'],
   two: ['Adequate. It will not say so.', 'Serious work, four inches tall.', 'It will accept praise now. Briefly.'],
-  three: ['Flawless. It will be unbearable about this.', 'Three stars. Nobody saw. It knows.', 'The dust has requested a meeting.'],
-  best: ['A new record. The pride was already there.', 'The old best has been quietly disowned.', 'It would like this noted in the museum.']
+  three: ['Flawless. It will be unbearable about this.', 'Three stars. Nobody saw. It knows.', 'The dust has requested a meeting.', 'The dust bunny left a tiny will. You ate it.'],
+  best: ['A new record. The pride was already there.', 'The old best has been quietly disowned.', 'It scratched the score into the wood. With a tooth.', 'It would like this noted in the museum.']
 };
 
 export function createChaseUI(root, onFinish, onStatus) {
@@ -33,7 +33,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   const controls = [...directions, hop];
   const nodes = new Map(), held = new Set();
   let pet = null, game = null, puppet = null, running = false, paused = false, gentle = false;
-  let frameId = 0, lastTime = 0, targetX = null, pointerId = null;
+  let frameId = 0, lastTime = 0, targetX = null, pointerId = null, goalCelebrated = false;
   const resetInput = () => { held.clear(); targetX = null; pointerId = null; };
   const stopFrame = () => { cancelAnimationFrame(frameId); frameId = 0; running = false; resetInput(); };
   function disabled(value) { controls.forEach(b => { b.disabled = value; }); pauseButton.disabled = value; }
@@ -96,6 +96,8 @@ export function createChaseUI(root, onFinish, onStatus) {
     best.classList.toggle('beaten', !!pet?.chaseBest && game.score > pet.chaseBest.score);
     time.textContent = Math.max(0, Math.ceil(CHASE_SECONDS - game.time)) + 's';
     time.classList.toggle('urgent', game.time > CHASE_SECONDS - 5);
+    root.querySelector('#chaseClockFill').style.transform = 'scaleX(' + Math.max(0, 1 - game.time / CHASE_SECONDS) + ')';
+    field.classList.toggle('urgent', running && game.time > CHASE_SECONDS - 5);
     paintCombo();
     root.dataset.score = game.score; root.dataset.caught = game.caught;
     root.dataset.running = String(running); root.dataset.paused = String(paused);
@@ -110,7 +112,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function summary(reward) {
     const n = (count, word) => count + ' ' + word + (count === 1 ? '' : 's');
-    const line = n(game.caught, 'crumb') + ' · ' + n(game.dodged, 'dodge') + ' · ' + n(game.stomps, 'stomp') + ' · ' + n(game.score, 'point') + ' · best streak ' + game.bestCombo + '. ';
+    const line = n(game.caught, 'crumb') + ' · ' + n(game.dodged, 'dodge') + ' · ' + n(game.stomps, 'stomp') + ' · ' + n(game.score, 'point') + ' · best streak ' + game.bestCombo + ' · ' + n(game.airCatches, 'air catch') + ' · ' + n(game.bumps, 'bump') + '. ';
     if (!game.complete) return line + 'Reach ' + game.goal + ' crumbs to win. Nothing on your shelf was lost.';
     return line + (reward?.practice ? 'Practice complete. Your best still counts.' : '+' + (reward?.fuss || 0) + ' attention · +' + (reward?.bond || 0) + ' trust.');
   }
@@ -141,6 +143,11 @@ export function createChaseUI(root, onFinish, onStatus) {
     const label = event.kind === 'moth' ? 'Moth caught! ' : event.kind === 'biscuit' ? 'Whole biscuit! ' : event.air ? 'Air catch! ' : event.gold ? 'Golden crumb! ' : '';
     spark('float', event.x, event.z, '+' + event.points);
     message(label + '+' + event.points + (mult > 1 ? ' · streak ×' + mult : ''), 'good');
+    if (!goalCelebrated && game.caught >= game.goal) {
+      goalCelebrated = true; playStar({ step: 1 });
+      spark('float', game.player.x, game.player.z + 65, 'Goal ✓');
+      onStatus('Crumb goal reached! Keep playing for more stars. The floor has become a buffet with casualties.');
+    }
   }
   function onPowerUp(event) {
     playPowerUp(); spark('float', event.x, event.z, 'Sugar!');
@@ -155,8 +162,9 @@ export function createChaseUI(root, onFinish, onStatus) {
     else if (event.type === 'shield') { puppet.gesture('shield'); message('Horn block! Unbothered.', 'good'); }
     else if (event.type === 'dodge') { spark('float', p.x, p.z + 40, '+' + event.points); message('Clean jump! +' + event.points, 'good'); }
     else if (event.type === 'land') spark('puff', event.x, 0);
-    else if (event.type === 'steal') { spark('puff', event.x, event.z); message('A moth took that one.', 'bad'); }
-    else if (event.type === 'crumble') { spark('puff', event.x, 0); message('The biscuit crumbled. Unclaimed.', ''); }
+    else if (event.type === 'steal') { spark('puff', event.x, event.z); message('Moth theft. No witnesses with spines.', 'bad'); }
+    else if (event.type === 'crumble') { spark('puff', event.x, 0); message('Biscuit deceased. Crumbs inherited nothing.', ''); }
+    else if (event.type === 'miss') message('Crumb escaped. Streak reset. It had dependants.', '');
     else if (event.type === 'melt') spark('puff', event.x, 0);
     else if (event.type === 'powerup') onPowerUp(event);
   }
@@ -180,6 +188,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   function start() {
     if (!pet || root.hidden) return;
     stopFrame(); game = newChase(pet, { gentle, mood: moodOf(pet) });
+    goalCelebrated = false;
     root.dataset.finished = 'false'; pop.textContent = ''; stars.hidden = true; quip.hidden = true;
     overlay.classList.remove('best'); fx.replaceChildren(); paint(); run();
   }
@@ -229,7 +238,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   window.addEventListener('blur', pause);
   return {
     prepare(resident, useGentle) {
-      stopFrame(); puppet?.release(); paused = false; pet = resident; gentle = useGentle;
+      stopFrame(); puppet?.release(); paused = false; goalCelebrated = false; pet = resident; gentle = useGentle;
       game = newChase(pet, { gentle, mood: moodOf(pet) });
       actor.replaceChildren(renderPetSprite(pet)); actor.firstElementChild.classList.add('sl-mood-content');
       puppet = createPuppet(actor.firstElementChild);
