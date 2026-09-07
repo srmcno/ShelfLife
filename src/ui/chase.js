@@ -129,7 +129,7 @@ export function createChaseUI(root, onFinish, onStatus) {
     return pick(newBest ? QUIPS.best : rating === 3 ? QUIPS.three : QUIPS.two);
   }
   function summary(reward) {
-    const n = (count, word) => count + ' ' + word + (count === 1 ? '' : 's');
+    const n = (count, word) => count + ' ' + word + (count === 1 ? '' : word.endsWith('catch') ? 'es' : 's');
     const line = n(game.caught, 'crumb') + ' · ' + n(game.dodged, 'dodge') + ' · ' + n(game.stomps, 'stomp') + ' · ' + n(game.score, 'point') + ' · best streak ' + game.bestCombo + ' · ' + n(game.airCatches, 'air catch') + ' · ' + n(game.bumps, 'bump') + '. ';
     if (!game.complete) return line + 'Reach ' + game.goal + ' crumbs to win. Nothing on your shelf was lost.';
     return line + (reward?.practice ? 'Practice complete. Your best still counts.' : '+' + (reward?.fuss || 0) + ' attention · +' + (reward?.bond || 0) + ' trust.');

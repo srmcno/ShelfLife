@@ -237,10 +237,11 @@ export function initPlay(state, refresh) {
     trail.replaceChildren(); trail.setAttribute('aria-label', 'Handshake complete');
     encore.disabled = false;
     cue.textContent = game.encore ? 'The inner circle. Six gestures wide.' : 'You are in the club.';
+    document.getElementById('playAnnouncement').textContent = 'Handshake complete. ' + game.rounds + ' rounds remembered.';
     status.textContent = result && !result.practice ? '+' + result.fuss + ' attention · +' + result.bond + ' trust. They will deny enjoying that.' : 'Practice complete. They insist they were letting you win.';
-    status.textContent += ' ' + game.rounds + ' rounds · ' + game.mistakes + ' slips · ' + game.replays + ' replays.';
+    status.textContent += ' ' + game.rounds + ' rounds · ' + game.mistakes + (game.mistakes === 1 ? ' slip · ' : ' slips · ') + game.replays + (game.replays === 1 ? ' replay.' : ' replays.');
     const bestRun = pet.handshakeBest?.[game.encore ? 'encore' : 'standard'];
-    if (bestRun) status.textContent += ' Personal best: ' + bestRun.rounds + ' rounds with ' + bestRun.mistakes + ' slips and ' + bestRun.replays + ' replays.';
+    if (bestRun) status.textContent += ' Personal best: ' + bestRun.rounds + ' rounds with ' + bestRun.mistakes + (bestRun.mistakes === 1 ? ' slip and ' : ' slips and ') + bestRun.replays + (bestRun.replays === 1 ? ' replay.' : ' replays.');
     puppet.gesture('win'); playFuss();
     start.hidden = false; start.textContent = 'Play again for practice'; replay.hidden = true; start.focus({ preventScroll: true });
   }
