@@ -20,13 +20,11 @@ import { resolveMotion, PART_ORIGIN, limbPhase } from './anatomy.js';
 //   * ONE shared timer for the whole shelf (18 pets max), not one rAF loop per
 //     pet. Each pass is a single querySelectorAll over <20 nodes plus a little
 //     arithmetic, so cost is flat regardless of shelf size.
-//   * ui/render.js throws away and rebuilds the entire cabinet on every
-//     renderShelf, so the director must never hold references to elements. It
-//     re-scans the DOM each pass and looks pets up by `data-pet`. Clocks live in
-//     a Map keyed by pet id and are pruned once a pet has been missing for a
-//     while, so the Map cannot grow without bound.
-//   * One-shot animations are cleaned up by a `once` animationend listener, so
-//     an element removed mid-behaviour takes its listener with it.
+//   * ui/render.js preserves shelf sprites. The director scans the active panel
+//     and ignores hidden/offscreen portraits. Clocks are keyed by resident id
+//     and pruned after absence.
+//   * One-shot clips replace their completion handler when interrupted. Class
+//     timers extend an existing gesture without forcing a layout read.
 //   * Everything a duet needs about a neighbour is read off the DOM (which slot,
 //     which side, awake or not, pet or prop), never from engine state, so the
 //     director stays independent of the simulation.
@@ -235,6 +233,7 @@ function setDir(el, dir) {
   el.style.setProperty('--sl-dir', dir < 0 ? '-1' : '1');
 }
 
+const activeClipKeys = new WeakMap();
 function playAnim(el, name, ms, ease, dir) {
   const act = el.querySelector('.sprite-act');
   if (!act) return;
@@ -242,17 +241,24 @@ function playAnim(el, name, ms, ease, dir) {
   // side per behaviour so they don't always turn the same way.
   if (dir === true && !isFeuding(el)) setDir(el, Math.random() < 0.5 ? -1 : 1);
   else if (typeof dir === 'number' && dir) setDir(el, dir);
-  act.style.animation = 'none';
-  void act.offsetWidth;                       // force a reflow so it restarts
-  act.style.animation = name + ' ' + ms + 'ms ' + (ease || DUET_EASE) + ' 1';
-  act.addEventListener('animationend', () => { act.style.animation = ''; }, { once: true });
+  const animation = name + ' ' + ms + 'ms ' + (ease || DUET_EASE) + ' 1';
+  if (act.style.animation && activeClipKeys.get(act) === animation) {
+    const active = act.getAnimations().find(a => a.animationName === name);
+    if (active) active.currentTime = 0;
+  } else act.style.animation = animation;
+  activeClipKeys.set(act, animation);
+  // Replacing one handler also handles interrupted clips. A cancelled clip must
+  // not leave a once-listener waiting to cancel a later gesture.
+  act.onanimationend = event => { if (event.target === act && event.animationName === name) act.style.animation = ''; };
 }
 
+const heldClasses = new WeakMap();
 function holdClass(el, cls, ms) {
-  el.classList.remove(cls);
-  void el.offsetWidth;
+  let timers = heldClasses.get(el);
+  if (!timers) { timers = new Map(); heldClasses.set(el, timers); }
+  clearTimeout(timers.get(cls));
   el.classList.add(cls);
-  setTimeout(() => el.classList.remove(cls), ms);
+  timers.set(cls, setTimeout(() => { el.classList.remove(cls); timers.delete(cls); }, ms));
 }
 
 function blink(el, deep) {
@@ -297,8 +303,7 @@ function runAct(el, act) {
 }
 
 // --- anatomy prep ----------------------------------------------------------
-// Runs once per sprite element (elements are thrown away and rebuilt on every
-// renderShelf, so "once per element" is also "once per render, per pet").
+// Runs once per new sprite element; ordinary shelf updates preserve the rig.
 // Everything it writes is derived, never authored by hand: capability classes
 // the behaviour picker reads, a gait name locomotion CSS keys off, and a phase
 // offset per limb so a pair alternates and six legs ripple.
@@ -370,9 +375,8 @@ function prepSprite(el) {
 }
 
 // --- travel (FLIP) ---------------------------------------------------------
-// ui/render.js rebuilds the cabinet wholesale, so a pet that changed slots is a
-// brand-new element in a new place. Capture where every pet was before the
-// rebuild, then play the difference back as movement: a beat of hesitation, a
+// ui/render.js reuses residents and only captures positions for changed slots.
+// Play the difference back as movement: a beat of hesitation, a
 // glance, then a characterful crossing that depends on the body doing it. A
 // walker plods with a small bob, a hopper bounces the whole way in parabolas, a
 // flyer lifts into a high arc and flaps, a scuttler darts flat and twitchy, and
@@ -727,7 +731,8 @@ function zzz(el) {
 function pass() {
   if (document.hidden) return;
   const now = Date.now();
-  const els = document.querySelectorAll('.sprite.sl2[data-pet]');
+  const panel = document.getElementById(document.body.dataset.activeDialog);
+  const els = (panel || document).querySelectorAll('.sprite.sl2[data-pet]');
   // With a sheet up, css/style.css pauses the shelf's loops; the director
   // leaves those residents alone too and only drives the sprite in the sheet.
   const shelfResting = !!document.querySelector('.veil.open');
@@ -735,9 +740,9 @@ function pass() {
   for (let i = 0; i < els.length; i++) {
     const el = els[i];
     const id = el.dataset.pet;
+    if (el.closest('[hidden]') || el.closest('.veil:not(.open)') || el.classList.contains('sl-offscreen')) continue;
     if (shelfResting && el.closest('#cabinet')) continue;
-    // Cheap, and only ever runs on elements this pass has not seen before,
-    // which after a renderShelf is every element, exactly once.
+    // Prepare newly created portraits once. Routine shelf updates reuse them.
     if (!el.dataset.slPrep) prepSprite(el);
     if (el.dataset.slControlled === '1') continue;
     const mood = moodOfEl(el);
@@ -835,7 +840,11 @@ export function initAnimator(opts) {
     if (reduced.addEventListener) reduced.addEventListener('change', onChange);
     else if (reduced.addListener) reduced.addListener(onChange);
   }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) pass(); });
+  document.addEventListener('visibilitychange', () => {
+    document.body.classList.toggle('app-hidden', document.hidden);
+    if (document.hidden) { if (timer !== null) clearInterval(timer); timer = null; }
+    else { start(); pass(); }
+  });
   start();
 }
 
@@ -863,7 +872,7 @@ export function createPuppet(el) {
       const clips = {
         knock: ['sl2-poke', 620, 'sl-reaching'], wiggle: ['sl2-wiggle', 680, 'sl-care-fuss'],
         boop: ['sl2-perk', 480, 'sl-waving'], catch: ['sl2-nibble', 360, 'sl-catching'],
-        jump: ['sl2-pushoff', 230, 'sl-pushing-off'], bump: ['sl2-recoil', 360, 'sl-care-clean'],
+        land: ['sl2-land', 240, 'sl-landing'], jump: ['sl2-pushoff', 230, 'sl-pushing-off'], bump: ['sl2-recoil', 360, 'sl-care-clean'],
         shield: ['sl2-stomp', 420, 'sl-parry'], win: ['sl2-wiggle', 950, 'sl-care-fuss']
       };
       const clip = clips[kind];

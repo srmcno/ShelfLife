@@ -43,7 +43,6 @@ export function initSchemeUI(state, refresh) {
     if (navigator.vibrate) navigator.vibrate(12);
     checkUnlocks(state);
     checkAchievements(state);
-    save();
     refresh();
     reactTo(result.petId, choice === 'alone' ? 'rounds' : 'fuss');
     toast(result.text);

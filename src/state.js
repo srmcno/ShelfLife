@@ -155,7 +155,7 @@ export function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 export function defaultNeeds() { return { food: 78, fuss: 78, clean: 82 }; }
 export function defaultDecor() { return { room: 'aubergine', wall: 'none', wood: 'rosewood', accent: 'bubblegum' }; }
 export function defaultStreak() { return { count: 0, lastCheckin: 0 }; }
-export function defaultSettings() { return { muted: false, narratorOn: true, narratorVoiceURI: null }; }
+export function defaultSettings() { return { muted: false, narratorOn: true, narratorVoiceURI: null, effects: 'auto' }; }
 export function defaultCareLog() { return { food: 0, fuss: 0, clean: 0 }; }
 // meeting: how many times the shelf has convened over you. carried: how many times
 // Item 4 has been carried forward. struck: petId -> when that pet closed the matter.
@@ -311,6 +311,7 @@ export function normalizeState(raw) {
   });
   s.notes.forEach(n => { if (n && FORMS.indexOf(n.form) < 0) n.form = 'line'; });
 
+  if (!['auto', 'light', 'full'].includes(s.settings.effects)) s.settings.effects = 'auto';
   delete s.settings.matureMode; // Retired setting from older backups.
   for (const key of ['muted', 'narratorOn']) {
     if (typeof s.settings[key] !== 'boolean') s.settings[key] = defaultSettings()[key];
@@ -325,6 +326,18 @@ export function normalizeState(raw) {
     p.lastPlayed = finite(p.lastPlayed, 0, 0, now);
     if (record(p.chaseBest)) p.chaseBest = { score: Math.floor(finite(p.chaseBest.score, 0, 0, 100000)), caught: Math.floor(finite(p.chaseBest.caught, 0, 0, 100)), dodged: Math.floor(finite(p.chaseBest.dodged, 0, 0, 100)), at: finite(p.chaseBest.at, now, 0, now), bestStreak: Math.floor(finite(p.chaseBest.bestStreak, 0, 0, 100)), stars: Math.floor(finite(p.chaseBest.stars, 0, 0, 3)) };
     else delete p.chaseBest;
+    p.chaseRecords = record(p.chaseRecords) ? p.chaseRecords : {};
+    for (const key of Object.keys(p.chaseRecords)) {
+      const r = p.chaseRecords[key];
+      if (!['gentle', 'standard'].includes(key) || !record(r)) { delete p.chaseRecords[key]; continue; }
+      p.chaseRecords[key] = { score:Math.floor(finite(r.score,0,0,100000)), stars:Math.floor(finite(r.stars,0,0,3)), at:finite(r.at,now,0,now) };
+    }
+    p.handshakeBest = record(p.handshakeBest) ? p.handshakeBest : {};
+    for (const key of Object.keys(p.handshakeBest)) {
+      const r = p.handshakeBest[key];
+      if (!['encore', 'standard'].includes(key) || !record(r)) { delete p.handshakeBest[key]; continue; }
+      p.handshakeBest[key] = {rounds:Math.floor(finite(r.rounds,3,3,5)),mistakes:Math.floor(finite(r.mistakes,0,0,10000)),replays:Math.floor(finite(r.replays,0,0,10000)),at:finite(r.at,now,0,now)};
+    }
     for (const key of ['handshakes', 'dustPatrols', 'chases', 'alibis', 'alibiWins', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
     p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];
     p.stats = record(p.stats) ? p.stats : {};

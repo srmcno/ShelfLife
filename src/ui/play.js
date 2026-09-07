@@ -16,6 +16,8 @@ export function initPlay(state, refresh) {
   const chaseRoot = document.getElementById('chaseArea'), gentle = document.getElementById('playRelaxed');
   const pads = [...veil.querySelectorAll('[data-gesture]')], modeButtons = [...veil.querySelectorAll('[data-play-mode]')];
   const slow = document.getElementById('playSlow'), trail = document.getElementById('memoryTrail');
+  const encore = document.getElementById('playEncore');
+  const notebook = document.getElementById('alibiNotebook'), facts = document.getElementById('alibiFacts');
   const alibiRoot = document.getElementById('alibiArea');
   const alibiList = document.getElementById('alibiStatements');
   const alibiVerdict = document.getElementById('alibiVerdict');
@@ -27,7 +29,7 @@ export function initPlay(state, refresh) {
   let alibi = null;
   function reward(finished) {
     const result = rewardHandshake(state, finished);
-    checkUnlocks(state); checkAchievements(state); save(); refresh();
+    checkUnlocks(state); checkAchievements(state); refresh();
     document.getElementById('playReward').textContent = 'Games share a 5-minute reward rest per resident. Practice and personal bests are always available.';
     return result;
   }
@@ -37,13 +39,13 @@ export function initPlay(state, refresh) {
   const BRIEFS = {
     chase: 'You steer. They chase. Keep a streak, catch what falls, and jump over or stomp the dust bunnies.',
     memory: 'Watch, then repeat the gestures. Tap the pads or press 1–4. Wrong taps cost nothing. It has eternity to rehearse.',
-    alibi: 'Three sworn statements about this shelf. Exactly one of them is false. You have to know your own shelf.'
+    alibi: 'Three sworn statements about this shelf. Find the false one. Your evidence notebook is available throughout; no timer, no penalties for reading.'
   };
   const STARTS = { chase: 'Let’s chase', memory: 'Learn the handshake', alibi: 'Take their statement' };
 
   function setMode(next) {
     generation++; chase.stop(); puppet?.release(); puppet = null;
-    mode = next; game = mode === 'memory' ? newHandshake(pet) : null; alibi = null; lock(true);
+    mode = next; game = mode === 'memory' ? newHandshake(pet, Math.random, {encore:encore.checked}) : null; alibi = null; lock(true);
     modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.playMode === mode)));
     pads.forEach(p => p.classList.remove('lit'));
     veil.classList.toggle('chase-mode', mode === 'chase');
@@ -57,6 +59,7 @@ export function initPlay(state, refresh) {
     alibiRoot.hidden = mode !== 'alibi';
     gestureGrid.hidden = mode !== 'memory';
     playControls.hidden = mode === 'chase';
+    notebook.hidden = true; notebook.open = false; facts.replaceChildren(); encore.disabled = false;
     alibiList.replaceChildren();
     alibiVerdict.textContent = ''; alibiNext.hidden = true;
     alibiCharge.textContent = 'Three statements. One false. All suspiciously moist.';
@@ -117,6 +120,8 @@ export function initPlay(state, refresh) {
 
   function startAlibi() {
     alibi = newAlibi(state, pet);
+    notebook.hidden = false; notebook.open = false;
+    facts.replaceChildren(...alibi.notebook.map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
     alibiNext.hidden = true;
     alibiVerdict.textContent = '';
     if (!alibi.rounds.length) {
@@ -127,13 +132,13 @@ export function initPlay(state, refresh) {
       return;
     }
     start.hidden = true;
-    status.textContent = 'Find the lie. Facts are recorded when you start; take all the time you need.';
+    status.textContent = 'Find the lie. Check the evidence notebook or press 1–3 to choose. Take all the time you need.';
     renderAlibi();
   }
 
   function concludeAlibi() {
     const result = rewardAlibi(state, alibi, Date.now());
-    checkUnlocks(state); checkAchievements(state); save(); refresh();
+    checkUnlocks(state); checkAchievements(state); refresh();
     const caught = alibi.correct, total = alibi.rounds.length;
     alibiCharge.textContent = 'Statement closed. You caught ' + caught + ' of ' + total + '.';
     const outcome = result && !result.practice
@@ -230,18 +235,24 @@ export function initPlay(state, refresh) {
     lock(true); replay.disabled = true;
     const result = reward(game); progress();
     trail.replaceChildren(); trail.setAttribute('aria-label', 'Handshake complete');
-    cue.textContent = 'You are in the club.';
+    encore.disabled = false;
+    cue.textContent = game.encore ? 'The inner circle. Six gestures wide.' : 'You are in the club.';
     status.textContent = result && !result.practice ? '+' + result.fuss + ' attention · +' + result.bond + ' trust. They will deny enjoying that.' : 'Practice complete. They insist they were letting you win.';
+    status.textContent += ' ' + game.rounds + ' rounds · ' + game.mistakes + ' slips · ' + game.replays + ' replays.';
+    const bestRun = pet.handshakeBest?.[game.encore ? 'encore' : 'standard'];
+    if (bestRun) status.textContent += ' Personal best: ' + bestRun.rounds + ' rounds with ' + bestRun.mistakes + ' slips and ' + bestRun.replays + ' replays.';
     puppet.gesture('win'); playFuss();
     start.hidden = false; start.textContent = 'Play again for practice'; replay.hidden = true; start.focus({ preventScroll: true });
   }
   start.addEventListener('click', () => {
     if (mode === 'alibi') { startAlibi(); return; }
-    if (!game || game.complete) game = newHandshake(pet);
-    start.hidden = true; replay.hidden = false; demonstrate();
+    if (!game || game.complete) game = newHandshake(pet, Math.random, {encore:encore.checked});
+    encore.disabled = true; start.hidden = true; replay.hidden = false; demonstrate();
   });
-  replay.addEventListener('click', () => { if (game && !game.complete) { game.cursor = 0; demonstrate(); } });
+  replay.addEventListener('click', () => { if (game && !game.complete) { game.cursor = 0; game.replays++; demonstrate(); } });
+  encore.addEventListener('change', () => { if (pet && mode === 'memory') setMode('memory'); });
   document.addEventListener('keydown', e => {
+    if (mode === 'alibi' && veil.classList.contains('open') && !e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey && /^[1-3]$/.test(e.key) && !e.target?.closest?.('input,select,textarea,[contenteditable=true]')) { e.preventDefault(); alibiList.children[Number(e.key)-1]?.click(); return; }
     if (mode !== 'memory' || !accepting || !veil.classList.contains('open') || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.target?.closest?.('input,select,textarea,[contenteditable=true]')) return;
     if (/^[1-4]$/.test(e.key)) { e.preventDefault(); pads[Number(e.key) - 1].click(); }
@@ -249,11 +260,16 @@ export function initPlay(state, refresh) {
   pads.forEach((pad, i) => pad.addEventListener('click', () => {
     if (!accepting || !game) return;
     const result = tapHandshake(game, i); paintTrail();
-    pad.classList.remove('tapped'); void pad.offsetWidth; pad.classList.add('tapped');
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) pad.animate([{transform:'scale(.94)'},{transform:'scale(1)'}], {duration:180});
     cue.textContent = (game.names || GESTURES)[i];
     puppet.gesture(result === 'retry' ? 'bump' : GESTURES[i].toLowerCase());
     if (navigator.vibrate) navigator.vibrate(8);
-    if (result === 'retry') { lock(true); cue.textContent = 'Nearly. They insist.'; status.textContent = 'No points lost. Replay the pattern and try again.'; return; }
+    if (result === 'retry') {
+      lock(true); cue.textContent = 'A rehearsal casualty.'; status.textContent = 'No progress lost. They will show this round again.';
+      const token = ++generation;
+      wait(1000).then(() => { if (token === generation && game && !game.complete && !document.hidden) demonstrate(); });
+      return;
+    }
     if (result === 'correct') { status.textContent = game.cursor + ' remembered. Keep going.'; return; }
     lock(true); replay.disabled = true;
     if (result === 'round') demonstrate();

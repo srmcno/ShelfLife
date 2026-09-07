@@ -1,4 +1,4 @@
-import { storyState, currentCase, caseText, caseGate, advanceCase, requestDescription, acceptRequest, relationship, brokerTruce, welcomeVisitor, VISIT_LENGTH } from '../engine/stories.js';
+import { storyState, currentCase, caseText, caseGate, advanceCase, requestDescription, acceptRequest, relationship, brokerTruce, welcomeVisitor, inviteVisitor, farewellVisitor, INVITATION_REST, VISIT_LENGTH } from '../engine/stories.js';
 import { artPersonality } from '../engine/personality.js';
 import { VISITORS } from '../content/stories.js';
 import { POSTCARD_CAPTIONS } from '../content/postcards.js';
@@ -54,7 +54,8 @@ function renderVisitor(state) {
   const d = v && VISITORS.find(x => x.id === v.kind);
   // Preserve the host selector, keyboard focus, and the animated portrait across
   // ordinary shelf refreshes. A changed need should never close an open select.
-  const key = JSON.stringify([v?.kind, v?.at, v?.welcomed, v?.response, state.pets.map(p => [p.id,p.name]), s.collection.length]);
+  const inviteMinutes = Math.max(0, Math.ceil(((s.lastInvitation || 0) + INVITATION_REST - Date.now()) / 60000));
+  const key = JSON.stringify([v ? 0 : inviteMinutes, v?.kind, v?.at, v?.welcomed, v?.response, state.pets.map(p => [p.id,p.name]), s.collection.length]);
   const hours = v ? Math.max(0, Math.ceil((v.at + VISIT_LENGTH - Date.now()) / 3600000)) : 0;
   if (guest.dataset.viewKey === key) {
     const clock = guest.querySelector('.guest-clock');
@@ -70,14 +71,14 @@ function renderVisitor(state) {
   guest.dataset.viewKey = key; guest.dataset.visitKey = visitKey;
   guest.classList.toggle('guest-present', !!v);
   if (!v) {
-    guest.innerHTML = '<span class="eyebrow">The visiting step</span><h2>No one at the door.</h2><p>Nine unusual callers. One questionable doorstep. Visitors stay six hours; the next arrives 8–18 hours after a departure.</p><small>No need to keep the app open. Missed visits never cost trust.</small>';
+    guest.innerHTML = '<span class="eyebrow">The visiting step</span><h2>No one at the door.</h2><p>' + VISITORS.length + ' unusual callers. One questionable doorstep. Visitors stay six hours; the next arrives 8–18 hours after a departure.</p><small>No need to keep the app open. Missed visits never cost trust.</small><button class="btn btn-sm" data-visit-action="invite" ' + (inviteMinutes || !state.pets.length ? 'disabled' : '') + '>' + (inviteMinutes ? 'Calling cards rest · ' + inviteMinutes + 'm' : 'Send a calling card') + '</button><small>Invite a random guest now, once per hour.</small>';
     return;
   }
   guest.innerHTML = '<div class="guest-topline"><span class="eyebrow">' + (v.returning ? 'A familiar face · visit ' + (v.visitNumber || 2) : 'A new arrival') + '</span><span class="guest-clock">' + hours + 'h left</span></div><div class="guest-portrait" aria-hidden="true"></div><h2>' + esc(d.name) + '</h2><span class="guest-title">' + esc(d.title) + '</span><p class="guest-dialogue">' + esc(v.welcomed ? v.response || v.host + ' has welcomed ' + d.name + '. The keepsake is safe in the museum.' : v.arrival || d.line) + '</p>' +
-    (v.welcomed ? '<div class="guest-receipt"><span class="eyebrow">Safely mislabelled in the museum</span><b>' + esc(d.gift) + '</b><span class="accepted">Souvenirs · ' + s.collection.length + ' / ' + VISITORS.length + '</span><button class="btn btn-ghost btn-sm" data-proxy="museumBtn">View collection ↗</button></div>' : '<label class="visitor-host">Choose a host<select id="visitorHost">' + state.pets.map(p => '<option value="'+p.id+'">'+esc(p.name)+'</option>').join('') + '</select></label><div class="request-actions"><button class="btn btn-sm" data-visitor="crumbs">Share crumbs · −8 host food, +1 trust</button><button class="btn btn-sm" data-visitor="tour">Give a tour · +8 host attention</button></div><small>Either welcome earns '+esc(d.gift.toLowerCase())+'. No shelf space needed.</small>');
+    (v.welcomed ? '<div class="guest-receipt"><span class="eyebrow">Safely mislabelled in the museum</span><b>' + esc(d.gift) + '</b><span class="accepted">Souvenirs · ' + s.collection.length + ' / ' + VISITORS.length + '</span><button class="btn btn-ghost btn-sm" data-proxy="museumBtn">View collection ↗</button><button class="btn btn-ghost btn-sm" data-visit-action="farewell">Wave goodbye</button></div>' : '<label class="visitor-host">Choose a host<select id="visitorHost">' + state.pets.map(p => '<option value="'+p.id+'">'+esc(p.name)+'</option>').join('') + '</select></label><div class="request-actions"><button class="btn btn-sm" data-visitor="crumbs">Share crumbs · −8 host food, up to +1 trust</button><button class="btn btn-sm" data-visitor="tour">Give a tour · +8 host attention</button></div><small>Either welcome earns '+esc(d.gift.toLowerCase())+'. No shelf space needed.</small>');
   if (portrait) guest.querySelector('.guest-portrait').replaceWith(portrait);
   else {
-    const sprite = renderPetSprite({ id: 'guest-' + d.id, art: { creature: generateCreature({ seed:d.seed, body:d.body, palette:d.palette, parts:d.parts }) } });
+    const sprite = renderPetSprite({ id: 'guest-' + d.id, art: { creature: generateCreature(d.classic ? { seed:d.seed, parts:d.parts } : { seed:d.seed, body:d.body, palette:d.palette, parts:d.parts }) } });
     sprite.classList.add('sl-mood-content');
     guest.querySelector('.guest-portrait').appendChild(sprite);
   }
@@ -98,6 +99,12 @@ export function renderMuseum(state) {
 }
 export function initStories(state, refresh, refreshPet) {
   document.addEventListener('click', e => {
+    const visitAction = e.target.closest('[data-visit-action]');
+    if (visitAction) {
+      const changed = visitAction.dataset.visitAction === 'invite' ? inviteVisitor(state) : farewellVisitor(state);
+      if (changed) refresh();
+      return;
+    }
     const caseButton=e.target.closest('[data-case-choice]'), request=e.target.closest('[data-request]'), truce=e.target.closest('[data-truce]'), visitor=e.target.closest('[data-visitor]');
     if (!caseButton&&!request&&!truce&&!visitor) return;
     let changed=false;
@@ -105,7 +112,7 @@ export function initStories(state, refresh, refreshPet) {
     if (request) changed=acceptRequest(state,request.dataset.pet,request.dataset.request==='accept');
     if (truce) changed=brokerTruce(state,truce.dataset.pet,truce.dataset.truce);
     if (visitor) { changed=welcomeVisitor(state,document.getElementById('visitorHost')?.value,visitor.dataset.visitor); if(!changed) toast('A visitor needs to be here, and sharing needs 8 host food. A tour costs no food.'); }
-    if(changed){checkAchievements(state);checkUnlocks(state);save();refresh();if(request||truce)refreshPet((request||truce).dataset.pet);if(caseButton)document.getElementById('caseCard').focus({preventScroll:true});}
+    if(changed){checkAchievements(state);checkUnlocks(state);refresh();if(request||truce)refreshPet((request||truce).dataset.pet);if(caseButton)document.getElementById('caseCard').focus({preventScroll:true});}
   });
   const veil=document.getElementById('museumVeil');
   document.getElementById('museumBtn').addEventListener('click',()=>{renderMuseum(state);veil.classList.add('open');});

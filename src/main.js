@@ -92,7 +92,6 @@ const studio = initStudio({
     if (anatomy.horns || anatomy.halo || anatomy.motion.canFlap) addNote(state, finalName + ': ' + anatomy.features[0].text, 'made this way', 'note');
     checkAchievements(state);
     advanceSchemes(state);
-    save();
     renderAll(state);
   }
 });
@@ -110,7 +109,6 @@ document.getElementById('roundsBtn').addEventListener('click', () => {
   if (result?.cooling) return;
   checkUnlocks(state);
   checkAchievements(state);
-  save();
   renderAll(state);
   // Staggered left to right, so doing the rounds reads as you going down the
   // line rather than the whole shelf twitching at once.
@@ -123,7 +121,6 @@ document.getElementById('checkBtn').addEventListener('click', () => {
   const before = state.noteCount || 0;
   checkShelf(state); // already calls checkUnlocks internally
   checkAchievements(state);
-  save();
   renderAll(state);
   // The shelf reacts before the notes are read: everyone glances up at once,
   // staggered, the way a room does when the door opens.
@@ -222,7 +219,6 @@ document.getElementById('restoreConfirm').addEventListener('click', () => {
   advanceSchemes(state);
   applyDecor(state);
   syncNight();
-  save();
   renderAll(state);
   syncAudioButtons();
   cancelRestore();
@@ -396,7 +392,6 @@ helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.cl
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
-  save();   // life went on while you were away
   renderAll(state);
   if (state.pets.length && away > 6) {
     const worst = state.pets.slice().sort((a, b) =>
@@ -412,10 +407,10 @@ helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.cl
 })();
 
 setInterval(() => {
+  if (document.hidden || document.getElementById('playVeil').classList.contains('open') || document.getElementById('studioVeil').classList.contains('open')) return;
   if (tick(state)) {
     advanceSchemes(state);
     runBehavior(state);                 // self-rate-limited to PASS_INTERVAL_MS
-    save();
     renderAll(state);
     const openId = getOpenPetId();
     if (openId && !document.getElementById('renameField') && !document.querySelector('#rehomeBtn[data-armed="1"]')) openCard(state, openId, true);
@@ -428,7 +423,6 @@ document.addEventListener('visibilitychange', () => {
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
-  save();
   renderAll(state);
 });
 window.addEventListener('pagehide', () => save());

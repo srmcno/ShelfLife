@@ -53,8 +53,10 @@ export function statementsFor(state, pet, now = Date.now()) {
   const label = item => item.kind ? propNameOf(item.kind) : item.name;
   if (left) push(truths, 'left', 'I have ' + label(left) + ' on my left.');
   else if (leftSlot >= 0) push(truths, 'left', 'There is nobody at all on my left.');
+  else if (slot >= 0) push(truths, 'left', 'My left side faces the edge of this shelf.');
   if (right) push(truths, 'right', 'I have ' + label(right) + ' on my right.');
   else if (rightSlot >= 0) push(truths, 'right', 'My right-hand side is empty and I prefer it.');
+  else if (slot >= 0) push(truths, 'right', 'My right side faces the edge of this shelf.');
   const notLeft = pets.filter(p => !left || p.name !== label(left));
   if (notLeft.length) push(lies, 'left', 'I have ' + notLeft[0].name + ' on my left.');
   if (left) push(lies, 'left', 'There is nobody at all on my left.');
@@ -111,6 +113,7 @@ export function statementsFor(state, pet, now = Date.now()) {
   const older = pets.filter(p => (p.born || 0) > (pet.born || 0));
   const younger = pets.filter(p => (p.born || 0) < (pet.born || 0) && !older.some(q => q.name === p.name));
   if (older.length) push(truths, 'age', 'I was living here before ' + older[0].name + ' ever arrived.');
+  if (younger.length) push(truths, 'age', younger[0].name + ' was living here before I arrived.');
   if (younger.length) push(lies, 'age', 'I was living here before ' + younger[0].name + ' ever arrived.');
 
   const shakes = pet.handshakes || 0;
@@ -130,7 +133,7 @@ export function newAlibi(state, pet, rng = Math.random) {
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
     return a;
   };
-  const truthBag = shuffle(truths), lieBag = shuffle(lies);
+  const truthBag = shuffle(truths), lieBag = shuffle(lies.filter(l => truths.some(t => t.key === l.key)));
   const usedKeys = new Set(), rounds = [];
   for (let r = 0; r < ALIBI_ROUNDS; r++) {
     const lie = lieBag.find(l => !usedKeys.has(l.key));
@@ -149,7 +152,7 @@ export function newAlibi(state, pet, rng = Math.random) {
     rounds.push({ statements: cards.map(c => c.text), lie: cards.indexOf(lie), answered: null,
       evidence: evidence.join(' ') || 'That claim does not match the shelf at the start of this statement.' });
   }
-  return { kind: 'alibi', petId: pet.id, rounds, round: 0, correct: 0, complete: !rounds.length, claimed: false };
+  return { kind: 'alibi', petId: pet.id, notebook: truths.map(t => t.text), rounds, round: 0, correct: 0, complete: !rounds.length, claimed: false };
 }
 
 export function currentRound(game) {

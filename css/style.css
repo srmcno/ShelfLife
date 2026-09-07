@@ -1567,3 +1567,42 @@ select.voice-select{width:100%}
 @keyframes care-bubble{0%{opacity:0;transform:translate(0,12px) scale(.1)}20%{opacity:.8}78%{opacity:.6;transform:translate(var(--mote-x),var(--mote-rise)) scale(var(--mote-size))}90%,100%{opacity:0;transform:translate(var(--mote-x),var(--mote-rise)) scale(1.5)}}
 @keyframes care-heart{0%{opacity:0;transform:translate(0,8px) scale(.1)}22%{opacity:1;transform:translate(calc(var(--mote-x) * .4),-18px) scale(1.2)}50%{opacity:.9}100%{opacity:0;transform:translate(var(--mote-x),var(--mote-rise)) rotate(-12deg) scale(.6)}}
 @media(prefers-reduced-motion:reduce){.guest-portrait .sprite,.guest-portrait .sl-part[data-part="wing"],.guest-portrait::after,.guest-receipt{animation:none}.care-motes{display:none}}
+
+/* Keep motion on what the player can actually see. Light mode saves paint work,
+   while blinks, purposeful gestures and the game's movement remain expressive. */
+.app-hidden *, .app-hidden *::before, .app-hidden *::after,
+[inert] .sprite, [inert] .sprite *, [inert] .guest-portrait::after,
+.sl-offscreen, .sl-offscreen *{animation-play-state:paused!important}
+.sl2 .sprite-act{will-change:auto}
+body[data-effects="light"] .sprite-figure,
+body[data-effects="light"] .prop svg,
+body[data-effects="light"] .guest-portrait .sprite{filter:none!important}
+body[data-effects="light"] :is(.veil,.tray,.bottom-nav){backdrop-filter:none;-webkit-backdrop-filter:none}
+body[data-effects="light"] .sl2:not(.sl-controlled):not(.sl-travel):not(.sl-sauntering):not(.sl-sneaking):not(.sl-flapping) :is(.sl-part[data-part="arm"],.sl-part[data-part="ear"],.sl-part[data-part="horn"],.sl-part[data-part="crest"],.cr-joint){animation:none}
+body[data-effects="light"] .chase-motes{display:none}
+body[data-effects="light"] .chase-item{filter:none;animation:none}
+.effects-setting{grid-column:1/-1;padding:14px;border:1px solid var(--hair-lit);border-radius:12px;display:grid;gap:8px;font-size:13px}
+.effects-setting select{min-height:44px;background:var(--night-3);color:var(--ink);border:1px solid var(--hair-lit);border-radius:8px;padding:8px;font-size:16px}
+.effects-setting small{color:var(--ink-2);line-height:1.5}
+.gen-details{width:100%;margin-top:14px;border-top:1px solid var(--hair-lit);padding-top:12px}
+.gen-details summary{cursor:pointer;min-height:44px;color:var(--mint);font-size:13px;line-height:44px}
+.gen-tuning{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.gen-tuning label{font-size:12px;color:var(--ink-2)}.gen-tuning output{float:right;font-variant-numeric:tabular-nums;color:var(--mint)}
+.gen-tuning input{display:block;width:100%;min-height:40px;accent-color:var(--mint)}
+.gen-colours{display:flex;gap:16px;margin-top:14px}.gen-colours label{font-size:12px;display:grid;gap:6px;flex:1}.gen-colours input{min-height:44px;width:100%;padding:3px;border:1px solid var(--hair-lit);border-radius:8px;background:var(--night-3)}
+.chase-world{position:absolute;left:0;bottom:0;width:320px;height:230px;transform-origin:0 100%;pointer-events:none}
+.chase-world .chase-resident,.chase-world .chase-item{left:0;bottom:0;will-change:transform}
+.chase-world .chase-shadow{left:0;bottom:20px}
+.chase-objective{font-size:11px;color:var(--amber);padding:7px 10px;border-left:2px solid var(--amber);background:#e2b2760b;margin:0 0 10px}.chase-objective.complete{color:var(--mint);border-color:var(--mint)}
+#memoryOption{display:flex;flex-wrap:wrap;gap:12px}#memoryOption[hidden]{display:none}
+.alibi-notebook{border:1px solid var(--hair-lit);border-radius:10px;background:var(--night-3);padding:0 13px;margin:10px 0 14px;font-size:12px;line-height:1.6}.alibi-notebook summary{cursor:pointer;padding:12px 0;color:var(--mint);min-height:44px}.alibi-notebook p{color:var(--ink-2)}.alibi-notebook ul{padding-left:20px;max-height:180px;overflow-y:auto}.alibi-notebook li{margin-bottom:7px}
+@keyframes sl2-land{0%{transform:scale(1,1)}35%{transform:scale(1.12,.87)}70%{transform:scale(.98,1.04)}100%{transform:scale(1,1)}}
+.sl2.sl-landing .cr-joint[data-joint="knee"]{animation:knee-tuck .24s ease-out 1}
+.sl2.sl-airborne .sl-part[data-part="tail"]{rotate:calc(-26deg * var(--sl-mirror,1));transition:rotate .14s}
+/* Purposeful gestures: reaching with both arms, a small bow on a successful
+   testimony, and a settling tail after a landing. No extra perpetual loops. */
+.sl2.sl-reaching .cr-joint[data-joint="elbow"]{animation:handshake-reach .62s ease-out 1}
+.sl2.sl-waving .sl-part[data-part="arm"]{animation:handshake-wave .48s ease-out 1}
+@keyframes handshake-reach{0%,100%{rotate:calc(10deg * var(--sl-pose,1))}45%{rotate:calc(65deg * var(--sl-pose,1))}}
+@keyframes handshake-wave{0%,100%{rotate:0deg}35%{rotate:calc(-35deg * var(--sl-mirror,1))}65%{rotate:calc(18deg * var(--sl-mirror,1))}}
+@media(prefers-reduced-motion:reduce){.sl2.sl-reaching .cr-joint,.sl2.sl-waving .sl-part,.sl2.sl-landing .cr-joint{animation:none!important}}

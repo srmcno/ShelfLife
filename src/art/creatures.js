@@ -1383,16 +1383,33 @@ export function normalizeCreature(creature) {
     detail: DETAILS[p.detail] ? p.detail : 'none'
   };
   const t = c.tune || {};
+  const bounded = (value, fallback, low, high) => Number.isFinite(value) ? Math.max(low, Math.min(high, value)) : fallback;
   const tune = {
-    eyeScale: typeof t.eyeScale === 'number' ? t.eyeScale : 1,
-    eyeSpread: typeof t.eyeSpread === 'number' ? t.eyeSpread : 1,
-    mouthScale: typeof t.mouthScale === 'number' ? t.mouthScale : 1,
-    lean: typeof t.lean === 'number' ? t.lean : 0
+    eyeScale: bounded(t.eyeScale, 1, .7, 1.4),
+    eyeSpread: bounded(t.eyeSpread, 1, .75, 1.25),
+    mouthScale: bounded(t.mouthScale, 1, .7, 1.4),
+    lean: bounded(t.lean, 0, -7, 7)
   };
   const out = { v: 1, seed: c.seed == null ? '' : String(c.seed), body: bodyId, palette: paletteId, parts, tune };
-  out.anatomy = c.anatomy && c.anatomy.legStyle === parts.legs ? c.anatomy : describeAnatomy(out);
-  out.rig = c.rig && Array.isArray(c.rig.legs) && c.rig.legs.length === out.anatomy.legCount ? c.rig : buildRig(out);
+  // Imported colours are data, never SVG markup. Old presets remain unchanged.
+  const colors = Object.fromEntries(Object.entries(c.colors || {}).filter(([role, value]) =>
+    COLOR_ROLES.includes(role) && role !== 'none' && typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)));
+  if (Object.keys(colors).length) out.colors = colors;
+  // Derived anatomy/rig must follow every changed body, part and face proportion.
+  out.anatomy = describeAnatomy(out);
+  out.rig = buildRig(out);
   return out;
+}
+
+export function customizeCreature(creature, { tune = {}, colors = {} } = {}) {
+  const next = normalizeCreature(creature);
+  next.tune = { ...next.tune, ...tune };
+  next.colors = { ...next.colors, ...colors };
+  if (typeof colors.body === 'string' && /^#[0-9a-f]{6}$/i.test(colors.body)) {
+    next.colors.bodyDark = mixHex(colors.body, '#17101F', .28);
+    next.colors.bodyLight = mixHex(colors.body, '#FFFFFF', .38);
+  }
+  return normalizeCreature(next);
 }
 
 /** Resolve the palette (plus any per-creature overrides) into role -> hex. */
