@@ -67,7 +67,7 @@ export function freshDialogue(state, opts = {}) {
     // the same form, then anything, gets a go before the pet says nothing.
     if (!d) { if (kind) continue; return null; }
     const text = dialogueText(d);
-    if (!text || wasPickedRecently(text)) continue;
+    if (!text || wasPickedRecently(text) || state.notes?.some(n => n.text === text)) continue;
     const form = DIALOGUE_FORM[d.form] || 'line';
     rememberPick(text);
     return { text, from: d.from, tone: d.tone || 'note', form, kind: d.kind, cast: d.cast };
@@ -456,12 +456,18 @@ export function checkShelf(state, now = Date.now()) {
   });
 
   const occupied = state.slots.map((id, i) => (id ? i : -1)).filter(i => i >= 0);
-  const chosen = occupied.slice().sort(() => Math.random() - 0.5).slice(0, 4);
+  // A proper shuffle is uniform and reproducible across JavaScript engines.
+  for (let i = occupied.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [occupied[i], occupied[j]] = [occupied[j], occupied[i]];
+  }
+  const chosen = occupied.slice(0, 4);
   chosen.forEach(i => {
     const pet = petById(state, state.slots[i]);
     if (!pet) return;
     if (isAsleep(pet, new Date(now)) && Math.random() < 0.5) {
-      addNote(state, 'Asleep. Has left a note reading "later".', pet.name, 'note');
+      const fresh = SLEEPING_NOTES.filter(line => !state.notes.some(n => n.text === line));
+      if (fresh.length) addNote(state, pick(fresh), pet.name, 'note');
       return;
     }
     // Lever 1: put a second creature in the room. This is the highest-value slot
@@ -479,8 +485,9 @@ export function checkShelf(state, now = Date.now()) {
     const near = neighborProps(state, i);
     if (near.length && moodOf(pet) !== 'furious' && Math.random() < 0.42) {
       const pr = pick(near);
-      addNote(state, fill(pick(PROPS[pr.kind].lines), { p: pet.name }), PROPS[pr.kind].name, 'note');
-      return;
+      const fresh = PROPS[pr.kind].lines.map(line => fill(line, { p: pet.name }))
+        .filter(line => !state.notes.some(n => n.text === line));
+      if (fresh.length) { addNote(state, pick(fresh), PROPS[pr.kind].name, 'note'); return; }
     }
     const line = petLine(state, pet, {
       now,
@@ -511,7 +518,8 @@ export function checkShelf(state, now = Date.now()) {
 
   if (state.props.length && Math.random() < 0.35) {
     const pr = pick(state.props);
-    addNote(state, pick(PROPS[pr.kind].ambient), PROPS[pr.kind].name, 'note');
+    const fresh = PROPS[pr.kind].ambient.filter(line => !state.notes.some(n => n.text === line));
+    if (fresh.length) addNote(state, pick(fresh), PROPS[pr.kind].name, 'note');
   }
 
   const gone = goneDue(state, now);

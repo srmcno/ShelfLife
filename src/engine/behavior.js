@@ -1009,16 +1009,16 @@ export function applyMove(state, from, to, now = Date.now()) {
 // Motive, then means. "Moved to be nearer the Black Candle. It climbed."
 export function moveNoteFor(state, pet, move, reason) {
   const subs = { p: pet, n: reason.other, q: reason.prop && reason.prop.kind };
-  let text;
-  if (move.sneaky) {
-    const pool = reason.prop ? SNEAK_LINES.prop : (reason.other ? SNEAK_LINES.pet : SNEAK_LINES.plain);
-    text = fill(pick(pool), subs);
-  } else {
-    text = fill(pick(MOVE_LINES[reason.kind] || MOVE_LINES.restless), subs);
-  }
-  const means = MEANS_LINES[move.means];
-  if (means) text += ' ' + fill(pick(means), subs);
-  return text;
+  const motives = move.sneaky
+    ? reason.prop ? SNEAK_LINES.prop : reason.other ? SNEAK_LINES.pet : SNEAK_LINES.plain
+    : MOVE_LINES[reason.kind] || MOVE_LINES.restless;
+  const means = MEANS_LINES[move.means] || [''];
+  const candidates = motives.flatMap(motive => means.map(how => fill(motive, subs) + (how ? ' ' + fill(how, subs) : '')));
+  const visible = new Set((state.notes || []).map(note => note.text));
+  const fresh = candidates.filter(text => !visible.has(text));
+  // A small motive pool can be exhausted by several residents. The movement
+  // still happens; the board need not print the same report a second time.
+  return fresh.length ? pick(fresh) : null;
 }
 
 export function performMove(state, move, now = Date.now()) {
@@ -1033,7 +1033,8 @@ export function performMove(state, move, now = Date.now()) {
     : move.patience >= 3 ? { kind: 'patience' }
     : moveReason(state, pet, before, after, now);
   const kind = reason.kind === 'flee' ? 'feud' : (reason.kind === 'storm' ? 'angry' : 'note');
-  addNote(state, moveNoteFor(state, pet, move, reason), pet.name, kind);
+  const note = moveNoteFor(state, pet, move, reason);
+  if (note) addNote(state, note, pet.name, kind);
   return { ...move, reason: reason.kind };
 }
 

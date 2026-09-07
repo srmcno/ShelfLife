@@ -24,20 +24,21 @@ function seededRandom(seed) {
 
 // Several pets, props, feuding trait pairs, absences, care events, a rename and a
 // rehoming — the same shape as the scratch harness the content was read through.
-function simulate(seed = 5, days = 10) {
+function simulate(seed = 5, days = 10, hour = 12) {
+  const epoch = new Date(2026, 0, 15, hour).getTime();
   const real = Math.random;
   Math.random = seededRandom(seed);
   resetPickMemory();
   try {
     const s = blankState();
-    s.started = Date.now() - 14 * DAY;
+    s.started = epoch - 14 * DAY;
     const sets = [['spiteful', 'hummer'], ['gossip', 'porcelain'], ['damp', 'fungal'],
                   ['napoleon', 'steward'], ['auditor', 'magpie'], ['clingy', 'bitey']];
     const names = ['Gary', 'Doreen', 'Mildew', 'Small Kevin', 'The Auditor', 'Bisque'];
     sets.forEach((traits, i) => {
       const p = {
         id: 'p' + i, name: names[i], traits, art: { body: '', stamps: [] },
-        stats: { cute: 4, menace: 4, damp: 3, mystique: 4 }, bio: '', born: Date.now() - 12 * DAY,
+        stats: { cute: 4, menace: 4, damp: 3, mystique: 4 }, bio: '', born: epoch - 12 * DAY,
         needs: { food: 70, fuss: 66, clean: 74 }, bond: 2, cared: 0, grudges: 0, grudgeStage: 0
       };
       s.pets.push(p); s.slots[i] = p.id;
@@ -46,7 +47,7 @@ function simulate(seed = 5, days = 10) {
     s.slots[6] = 'r1'; s.slots[7] = 'r2';
     normalizeState(s);
 
-    let now = Date.now() - days * DAY;
+    let now = epoch - days * DAY;
     s.lastTick = now;
     const all = [];
     const take = () => {
@@ -247,8 +248,8 @@ test('{home} is withheld once a pet has moved, so "since it arrived" can never b
 /* ---------------- recent-line suppression ---------------- */
 
 test('no line repeats within a visible board over a long run', () => {
-  for (const seed of [8, 21]) {
-    const { notes } = simulate(seed);
+  for (const hour of [0, 8, 16]) for (const seed of [8, 21]) {
+    const { notes } = simulate(seed, 10, hour);
     const texts = notes.map(n => n.text);
     let repeats = 0;
     texts.forEach((t, i) => {
