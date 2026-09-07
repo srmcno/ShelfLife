@@ -264,7 +264,6 @@ importFile.addEventListener('change', e => {
 
 const muteBtn = document.getElementById('muteBtn');
 const narratorBtn = document.getElementById('narratorBtn');
-const matureBtn = document.getElementById('matureBtn');
 
 // No emoji. A full-colour OS glyph is the most saturated thing on the page and
 // these sit in a dark menu next to hand-drawn creatures that are supposed to be
@@ -281,16 +280,9 @@ function syncAudioButtons() {
   setTrayLabel(muteBtn, isMuted() ? 'Muted' : 'Sound', isMuted() ? 'Small noises, off' : 'Small noises');
   narratorBtn.setAttribute('aria-pressed', String(isNarratorOn()));
   setTrayLabel(narratorBtn, isNarratorOn() ? 'Narrator' : 'Narrator off', isNarratorOn() ? 'Reads the notes aloud' : 'The notes stay on paper');
-  matureBtn.setAttribute('aria-pressed', String(!!state.settings.matureMode));
-  setTrayLabel(matureBtn, state.settings.matureMode ? 'Mature: On' : 'Mature: Off', 'Swearing, cruder jokes');
 }
 muteBtn.addEventListener('click', () => { if (toggleMuted()) stopSpeech(); syncAudioButtons(); });
 narratorBtn.addEventListener('click', () => { toggleNarrator(); syncAudioButtons(); });
-matureBtn.addEventListener('click', () => {
-  state.settings.matureMode = !state.settings.matureMode;
-  save();
-  syncAudioButtons();
-});
 
 // ---------- incidents (achievements log) ----------
 

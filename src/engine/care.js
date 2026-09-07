@@ -1,3 +1,4 @@
+import { contextualCare } from './observations.js';
 import { TRAIT_CARE } from '../content/care.js';
 import { tick, isAsleep } from './tick.js';
 import { ASLEEP_LINES, OVERFED, CARE_LINES, ROUNDS_NOTES, ROUNDS_NAMED, ROUNDS_TOASTS } from '../content/copy.js';
@@ -34,8 +35,9 @@ export function careFor(state, pet, need, now = Date.now()) {
   } else if (before > 78) {
     line = pick(OVERFED[need]);
   } else {
+    const contextual = contextualCare(state, pet, need, now);
     const specific = (pet.traits || []).flatMap(t => TRAIT_CARE[t]?.[need] || []);
-    line = pick(specific.length && Math.random() < .5 ? specific : CARE_LINES[need]);
+    line = pick(contextual.length && Math.random() < .6 ? contextual : specific.length && Math.random() < .5 ? specific : CARE_LINES[need]);
   }
   pet.needs[need] = clamp(before + gain, 0, 100);
   // The only choke point where the game learns who you went to, in what order,

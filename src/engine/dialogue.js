@@ -1,3 +1,4 @@
+import { contextualExchanges } from './observations.js';
 /* ================= DIALOGUE SELECTION =================
    Pure selection logic for src/content/dialogue.js. No DOM, no note writing, no
    mutation of state — every function takes `state` explicitly so it can be unit
@@ -13,7 +14,7 @@
      setup:   unattributed narration, reaction shots only, else null
      turns:   [{ who, speaker, line }]        placeholders already substituted
      cast:    [pet, ...]                      the pets in the scene, in role order
-     meta:    { pair?, level?, category?, trait?, mature }
+     meta:    { pair?, level?, category?, trait?, }
    }
 
    Renderers get speaker attribution per turn and can lay it out however they like;
@@ -27,12 +28,6 @@ import {
   REACTION_SHOTS, DIRECT_ADDRESS, TRAIT_DIRECT, FRAGMENTS, NEIGHBOUR_FRAGMENTS,
   CHORUS_EXCHANGES
 } from '../content/dialogue.js';
-import {
-  MATURE_GENERIC_EXCHANGES, MATURE_TRAIT_EXCHANGES, MATURE_FEUD_EXCHANGES,
-  MATURE_FEUD_TRAIT_EXCHANGES, MATURE_REACTION_SHOTS, MATURE_DIRECT_ADDRESS,
-  MATURE_TRAIT_DIRECT, MATURE_FRAGMENTS, MATURE_NEIGHBOUR_FRAGMENTS,
-  MATURE_CHORUS_EXCHANGES
-} from '../content/mature.js';
 
 export const DIALOGUE_KINDS = ['feud', 'trait', 'generic', 'reaction', 'direct', 'fragment', 'chorus'];
 
@@ -62,30 +57,7 @@ const BASE_POOLS = {
   chorus: CHORUS_EXCHANGES
 };
 
-const MATURE_POOLS = {
-  generic: GENERIC_EXCHANGES.concat(MATURE_GENERIC_EXCHANGES),
-  trait: TRAIT_EXCHANGES.concat(MATURE_TRAIT_EXCHANGES),
-  feud: {
-    1: FEUD_EXCHANGES[1].concat(MATURE_FEUD_EXCHANGES[1]),
-    2: FEUD_EXCHANGES[2].concat(MATURE_FEUD_EXCHANGES[2]),
-    3: FEUD_EXCHANGES[3].concat(MATURE_FEUD_EXCHANGES[3])
-  },
-  feudTrait: FEUD_TRAIT_EXCHANGES.concat(MATURE_FEUD_TRAIT_EXCHANGES),
-  reaction: REACTION_SHOTS.concat(MATURE_REACTION_SHOTS),
-  direct: DIRECT_ADDRESS.concat(MATURE_DIRECT_ADDRESS),
-  traitDirect: TRAIT_DIRECT.concat(MATURE_TRAIT_DIRECT),
-  fragment: FRAGMENTS.concat(MATURE_FRAGMENTS),
-  neighbourFragment: NEIGHBOUR_FRAGMENTS.concat(MATURE_NEIGHBOUR_FRAGMENTS),
-  chorus: CHORUS_EXCHANGES.concat(MATURE_CHORUS_EXCHANGES)
-};
-
-export function dialoguePools(state) {
-  return isMature(state) ? MATURE_POOLS : BASE_POOLS;
-}
-
-function isMature(state) {
-  return !!(state && state.settings && state.settings.matureMode);
-}
+export function dialoguePools() { return BASE_POOLS; }
 
 /* ---------------- small helpers ---------------- */
 
@@ -267,7 +239,7 @@ function makeExchange(kind, entry, a, b, ctx, meta) {
     setup: null,
     turns: buildTurns(entry.turns, { a, b }, names),
     cast: [a, b],
-    meta: Object.assign({ mature: ctx.mature }, meta || {})
+    meta: Object.assign({}, meta || {})
   };
 }
 
@@ -292,7 +264,9 @@ function buildTrait(state, ctx, rng) {
 function buildGeneric(state, ctx, rng) {
   if (!ctx.pairs.length) return null;
   const [a, b] = choose(ctx.pairs, rng);
-  const entry = pickEntry(ctx.pools.generic, ctx, [a, b], rng);
+  const contextual = contextualExchanges(state, a, ctx.now);
+  const pool = contextual.length && rnd(rng) < .65 ? contextual : ctx.pools.generic;
+  const entry = pickEntry(pool, ctx, [a, b], rng);
   if (!entry) return null;
   return makeExchange('generic', entry, a, b, ctx);
 }
@@ -335,7 +309,7 @@ function buildReaction(state, ctx, rng) {
       setup: fill(entry.setup, names),
       turns: buildTurns(entry.turns, { a, b, c }, names),
       cast: [a, b, c],
-      meta: { mature: ctx.mature }
+      meta: {}
     };
   }
   return null;
@@ -395,7 +369,7 @@ function makeDirect(entry, pet, neighbour, ctx, meta) {
     setup: null,
     turns: buildTurns(entry.turns, roles, names),
     cast: neighbour ? [pet, neighbour] : [pet],
-    meta: Object.assign({ mature: ctx.mature }, meta || {})
+    meta: Object.assign({}, meta || {})
   };
 }
 
@@ -418,7 +392,7 @@ function buildFragment(state, ctx, rng) {
     setup: null,
     turns: [{ who: 'p', speaker: pet.name, line }],
     cast: [pet],
-    meta: { mature: ctx.mature }
+    meta: {}
   };
 }
 
@@ -438,7 +412,7 @@ function buildChorus(state, ctx, rng) {
     setup: null,
     turns: buildTurns(entry.turns, { a, b, c }, names),
     cast: [a, b, c],
-    meta: { mature: ctx.mature }
+    meta: {}
   };
 }
 
@@ -468,7 +442,6 @@ export function dialogueContext(state, now = Date.now()) {
   return {
     now,
     night: isNight(new Date(now)),
-    mature: isMature(state),
     pools: dialoguePools(state),
     awake,
     pairs,

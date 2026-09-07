@@ -199,6 +199,10 @@ export function rewardAlibi(state, game, now = Date.now()) {
   pet.needs.fuss = clamp(pet.needs.fuss + Math.max(0, fuss), 0, 100);
   const bond = clean ? grantBonusTrust(pet, 1, now) : 0;
   pet.lastPlayed = now;
+  if (clean) {
+    pet.alibiWins = (pet.alibiWins || 0) + 1;
+    if (state.stories) state.stories.alibiWins = (state.stories.alibiWins || 0) + 1;
+  }
   pet.alibis = (pet.alibis || 0) + 1;
   if (state.stories) state.stories.alibis = (Number(state.stories.alibis) || 0) + 1;
   addNote(state, clean

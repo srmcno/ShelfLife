@@ -7,9 +7,6 @@ import {
 } from '../src/content/copy.js';
 import { PROPS, PROP_ART } from '../src/content/props.js';
 import { ROOMS, WALLS, WOODS, ACCENTS } from '../src/content/decor.js';
-import {
-  MATURE_COMPLAINTS_EXTRA, MATURE_HAPPY_EXTRA, MATURE_EVENTS_EXTRA, MATURE_GRUDGE_EXTRA
-} from '../src/content/mature.js';
 
 const NEEDS = ['food', 'fuss', 'clean'];
 
@@ -200,27 +197,4 @@ test('ROOMS/WALLS/WOODS/ACCENTS are non-empty objects with the expected sub-shap
     assert.equal(typeof a.name, 'string');
     assert.equal(typeof a.c, 'string');
   });
-});
-
-test('mature-mode overlay pools meet their size floors', () => {
-  NEEDS.forEach(k => {
-    assert.ok(Array.isArray(MATURE_COMPLAINTS_EXTRA[k]) && MATURE_COMPLAINTS_EXTRA[k].length >= 7, `MATURE_COMPLAINTS_EXTRA.${k} too small`);
-  });
-  assert.ok(MATURE_HAPPY_EXTRA.length >= 7, `MATURE_HAPPY_EXTRA too small: ${MATURE_HAPPY_EXTRA.length}`);
-  assert.ok(MATURE_EVENTS_EXTRA.length >= 8, `MATURE_EVENTS_EXTRA too small: ${MATURE_EVENTS_EXTRA.length}`);
-  [1, 2, 3].forEach(stage => {
-    const pool = MATURE_GRUDGE_EXTRA[stage];
-    assert.ok(Array.isArray(pool) && pool.length >= 6, `MATURE_GRUDGE_EXTRA[${stage}] too small`);
-    pool.forEach(line => assert.ok(line.includes('{n}'), `missing {n} in: ${line}`));
-  });
-});
-
-test('mature overlay pools are additive extras only (disjoint from the base pools)', () => {
-  NEEDS.forEach(k => {
-    MATURE_COMPLAINTS_EXTRA[k].forEach(line => {
-      assert.ok(!COMPLAINTS[k].annoyed.includes(line) && !COMPLAINTS[k].furious.includes(line));
-    });
-  });
-  MATURE_HAPPY_EXTRA.forEach(line => assert.ok(!HAPPY_NOTES.includes(line)));
-  MATURE_EVENTS_EXTRA.forEach(line => assert.ok(!EVENTS.includes(line)));
 });

@@ -1540,3 +1540,30 @@ select.voice-select{width:100%}
 .gesture.tapped{animation:gesture-confirm .3s ease-out}
 @keyframes gesture-confirm{0%{box-shadow:0 0 0 3px var(--gesture);transform:scale(.95)}100%{box-shadow:0 0 0 0 transparent;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){.chase-motes i,.gesture.tapped{animation:none}}
+
+/* The visiting step: a little lit theatre in the household ledger. */
+.guest-topline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.guest-clock{border:1px solid var(--hair-lit);border-radius:20px;padding:4px 9px;color:var(--ink-2);font-size:10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.visitor-card.guest-present{background:radial-gradient(ellipse at 95% 30%,color-mix(in srgb,var(--amber) 10%,transparent),transparent 55%),var(--night-2);position:relative}
+.guest-portrait{position:relative;isolation:isolate;width:114px;height:124px;margin:0 -4px 8px 12px}
+.guest-portrait::before{content:"";position:absolute;z-index:-1;inset:0 8px 3px;border:1px solid color-mix(in srgb,var(--amber) 35%,transparent);border-bottom:3px solid var(--wood-lip);border-radius:55px 55px 3px 3px;background:radial-gradient(ellipse at 50% 60%,color-mix(in srgb,var(--amber) 14%,transparent),transparent 72%);box-shadow:inset 0 0 20px #0002}
+.guest-portrait::after{content:"";position:absolute;z-index:-1;bottom:4px;width:65px;height:9px;border-radius:50%;background:#0005;filter:blur(3px);animation:guest-shadow 5s ease-in-out infinite}
+.guest-portrait .sprite{animation:guest-breathe 5s ease-in-out infinite;transform-origin:50% 100%;filter:drop-shadow(0 3px 4px #0004)}
+.guest-portrait .sl-part[data-part="wing"]{animation:guest-wing 5s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.guest-dialogue{min-height:4.8em;line-height:1.7}
+.guest-receipt{clear:both;padding:14px 14px 12px;border:1px dashed color-mix(in srgb,var(--mint) 32%,transparent);border-radius:8px;background:color-mix(in srgb,var(--mint) 4%,transparent);display:grid;gap:8px;animation:receipt-in .4s ease-out}
+.guest-receipt b{font:500 22px var(--hand);color:var(--ink)}
+.guest-receipt .btn{justify-self:start}
+@keyframes guest-breathe{0%,100%{transform:translateY(0) rotate(-1deg)}45%{transform:translateY(-3px) rotate(1deg)}55%{transform:translateY(-3px) rotate(0deg)}}
+@keyframes guest-shadow{0%,100%{transform:scaleX(1);opacity:.8}50%{transform:scaleX(.85);opacity:.55}}
+@keyframes guest-wing{0%,38%,58%,100%{scale:1}43%,53%{scale:.86 1}48%{scale:1.04 1}}
+@keyframes receipt-in{from{opacity:0;transform:translateY(7px) rotate(-1deg)}to{opacity:1;transform:none}}
+/* Care now has its own material response: crumbs fall into the mouth, soap
+   bubbles drift and pop, affection opens out into a small fan of hearts. */
+.care-motes-food i{animation-name:care-crumb;animation-duration:.72s}
+.care-motes-clean i{animation-name:care-bubble;animation-duration:1s;box-shadow:inset 2px 2px 0 #fff5}
+.care-motes-fuss i{animation-name:care-heart;animation-duration:1s}
+@keyframes care-crumb{0%{opacity:0;transform:translate(var(--mote-x),-48px) rotate(0deg) scale(var(--mote-size))}20%{opacity:1}80%{opacity:1;transform:translate(0,8px) rotate(110deg) scale(.75)}100%{opacity:0;transform:translate(0,12px) scale(0)}}
+@keyframes care-bubble{0%{opacity:0;transform:translate(0,12px) scale(.1)}20%{opacity:.8}78%{opacity:.6;transform:translate(var(--mote-x),var(--mote-rise)) scale(var(--mote-size))}90%,100%{opacity:0;transform:translate(var(--mote-x),var(--mote-rise)) scale(1.5)}}
+@keyframes care-heart{0%{opacity:0;transform:translate(0,8px) scale(.1)}22%{opacity:1;transform:translate(calc(var(--mote-x) * .4),-18px) scale(1.2)}50%{opacity:.9}100%{opacity:0;transform:translate(var(--mote-x),var(--mote-rise)) rotate(-12deg) scale(.6)}}
+@media(prefers-reduced-motion:reduce){.guest-portrait .sprite,.guest-portrait .sl-part[data-part="wing"],.guest-portrait::after,.guest-receipt{animation:none}.care-motes{display:none}}

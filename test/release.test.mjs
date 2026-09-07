@@ -38,7 +38,7 @@ test('restore supplies finite needs, stats, dates, names and safe opt-in setting
   assert.deepEqual(s.pets[0].needs, { food: 0, fuss: 100, clean: 82 });
   assert.equal(s.pets[0].bond, 25);
   assert.equal(s.pets[0].stats.cute, 5);
-  assert.equal(s.settings.matureMode, false);
+  assert.equal(s.settings.matureMode, undefined);
   assert.ok(Number.isFinite(s.lastTick));
   assert.equal(s.pets[0].name, 'Someone');
 });
@@ -100,7 +100,7 @@ test('trait-specific care does not leak to pets without that trait', () => {
   Math.random = () => 0;
   try {
     const s = blankState();
-    const p = { ...pet('p'), traits: ['porcelain'], needs: { food: 30, fuss: 30, clean: 30 }, cared: 0, bond: 0 };
+    const p = { ...pet('p'), traits: ['porcelain'], needs: { food: 60, fuss: 60, clean: 60 }, cared: 0, bond: 0 };
     s.pets = [p]; s.slots[0] = 'p';
     assert.ok(TRAIT_CARE.porcelain.food.some(line => careFor(s, p, 'food', s.lastTick).message.includes(line)));
     p.traits = []; p.needs.food = 30;

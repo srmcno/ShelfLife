@@ -33,3 +33,31 @@ export const VISITORS = [
   { id: 'lint', name: 'The Lint Baron', title: 'Owner of absolutely no land', gift: 'A ceremonial dust crown', seed: 'visitor-lint', parts: { top: 'crown' }, line: 'He has crossed three floorboards to be here. He considers this an overseas visit.' },
   { id: 'bell', name: 'Miss Afterbell', title: 'Arrives just after the noise', gift: 'A bell with the sound removed', seed: 'visitor-bell', parts: { top: 'halo' }, line: 'She has brought the silence from inside a bell. Please do not shake it.' }
 ];
+
+// Each caller leaves a different object and reacts differently to hospitality.
+const GUEST_DETAILS = {
+  moth: { body: 'bulb', palette: 'amber', returnLine: 'Madam Moth recognises the lamp. She greets it before anyone with a pulse.', crumbs: 'Madam Moth holds a crumb up to the light. “Opaque,” she says, and eats the evidence.', tour: 'Madam Moth inspects the shadows. One is trying to look taller than its owner.' },
+  lint: { body: 'tuft', palette: 'ash', returnLine: 'The Lint Baron returns to inspect his holdings. Most are still attached to somebody else.', crumbs: 'The Baron calls the crumb a province. Annexation takes one bite.', tour: 'The Baron surveys the plank from both ends. His empire has doubled without getting any larger.' },
+  bell: { body: 'gown', palette: 'lilac', returnLine: 'Miss Afterbell is back. The silence arrives first and looks for its old seat.', crumbs: 'Miss Afterbell eats without a sound. The crumb makes enough fuss for both of them.', tour: 'Miss Afterbell finds a quiet corner and folds it into a quieter corner.' }
+};
+VISITORS.forEach(v => Object.assign(v, GUEST_DETAILS[v.id]));
+VISITORS.push(
+  { id: 'undertow', name: 'Dr Undertow', title: 'Physician to the incurably permanent', gift: 'A clean bill of undeath', seed: 'visitor-undertow', body: 'urn', palette: 'drowned', parts: { top: 'halo' },
+    line: 'Dr Undertow has arrived for a house call. The house has been told to stick out its tongue.', returnLine: 'Dr Undertow returns for a follow-up. Everyone is still here. A devastating result for his waiting list.',
+    crumbs: 'Dr Undertow prescribes the crumb to himself. “Never test medicine on someone who can complain.”', tour: 'Dr Undertow checks the shelf for a pulse. “Wooden,” he says. “But very stable.”' },
+  { id: 'widow', name: 'The Button Widow', title: 'Bereaved of a very small coat', gift: 'A mourning button', seed: 'visitor-widow', body: 'pear', palette: 'tar', parts: { wings: 'tattered', top: 'none' },
+    line: 'The Button Widow has come dressed for a funeral. She is open to suggestions.', returnLine: 'The Button Widow is back. The funeral dress now has a pocket for snacks.',
+    crumbs: 'The Button Widow breaks the crumb in half. One for the departed coat. Both for her.', tour: 'The Button Widow measures the plank for a procession. The procession will have to go single sadness.' },
+  { id: 'spore', name: 'Auntie Spore', title: 'Travelling family of one', gift: 'A family portrait that keeps growing', seed: 'visitor-spore', body: 'sprout', palette: 'mould', parts: { top: 'none', detail: 'moss' },
+    line: 'Auntie Spore arrives with a family portrait. The relatives on the back are still drying.', returnLine: 'Auntie Spore returns. There are more relatives in the photograph and less room in the frame.',
+    crumbs: 'Auntie Spore names the crumb before eating it. “We were close, briefly.”', tour: 'Auntie Spore admires the corners. “Lovely. A nursery in every one.”' },
+  { id: 'tooth', name: 'Sir Loose Tooth', title: 'Knight of the recently detached', gift: 'A medal with bite marks', seed: 'visitor-tooth', body: 'shard', palette: 'bone', parts: { top: 'crown', wings: 'none' },
+    line: 'Sir Loose Tooth arrives without his horse. It was a sugar cube. They parted badly.', returnLine: 'Sir Loose Tooth has returned on foot. He refuses to discuss the replacement horse.',
+    crumbs: 'Sir Loose Tooth challenges the crumb to single combat. It is a short and heavily chewed campaign.', tour: 'Sir Loose Tooth declares the shelf defensible. “Against what?” remains outside his brief.' },
+  { id: 'echo', name: 'Little Echo', title: 'The second opinion', gift: 'A spare last word', seed: 'visitor-echo', body: 'stack', palette: 'ecto', parts: { top: 'antennae', wings: 'stubs' },
+    line: 'Little Echo knocks twice. It insists the second knock was someone else.', returnLine: 'Little Echo is back. Back, it adds, helpfully.',
+    crumbs: 'Little Echo asks for seconds before finishing firsts. It considers this professional consistency.', tour: 'Little Echo repeats the names of the rooms. There is only one room, but it gets a generous review.' },
+  { id: 'needle', name: 'Mother Needle', title: 'Emergency seamstress', gift: 'A stitch in borrowed time', seed: 'visitor-needle', body: 'spindle', palette: 'cherry', parts: { top: 'none', detail: 'stitches' },
+    line: 'Mother Needle has come to mend things. She looks at the residents and asks where to start.', returnLine: 'Mother Needle returns with stronger thread and lower expectations.',
+    crumbs: 'Mother Needle threads a crumb onto a hair. “Packed lunch.” Then she eats the packing.', tour: 'Mother Needle inspects the cracks in the wood. “I can close those. The personalities will cost extra.”' }
+);

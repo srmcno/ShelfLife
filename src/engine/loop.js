@@ -1,3 +1,4 @@
+import { observationLines } from './observations.js';
 import { tick, moodOf, worstNeed, isAsleep, neighborProps, neighborPets } from './tick.js';
 import { activeFeuds, feudPairKey, stepFeudArc, fileGrudge, checkinStreak, FEUD_STEP_MS } from './achievements.js';
 import { checkUnlocks } from './unlocks.js';
@@ -14,7 +15,6 @@ import {
   EMPTY_SHELF_NOTES, PROP_EYE_LINES, SLEEPING_NOTES
 } from '../content/copy.js';
 import { TRAIT_INNER, INNER_LINES, DREAM_LINES } from '../content/inner.js';
-import { MATURE_COMPLAINTS_EXTRA, MATURE_HAPPY_EXTRA, MATURE_EVENTS_EXTRA } from '../content/mature.js';
 import {
   pick, addNote, petById, chooseForm, reconcile, recordVisit, firstTouchCounts,
   totalGrudges, formAllowed, wasPickedRecently, rememberPick, forgetPick, HOUR, ROW_WIDTH
@@ -67,7 +67,7 @@ export function freshDialogue(state, opts = {}) {
     // the same form, then anything, gets a go before the pet says nothing.
     if (!d) { if (kind) continue; return null; }
     const text = dialogueText(d);
-    if (!text || wasPickedRecently(text)) continue;
+    if (!text || wasPickedRecently(text) || state.notes?.some(n => n.text === text)) continue;
     const form = DIALOGUE_FORM[d.form] || 'line';
     rememberPick(text);
     return { text, from: d.from, tone: d.tone || 'note', form, kind: d.kind, cast: d.cast };
@@ -300,10 +300,12 @@ export function petLine(state, pet, ctx = {}) {
   const kind = angry ? 'angry' : 'note';
   const trait = TRAIT_BY_ID[pick(pet.traits || [])] || {};
 
+  const observed = observationLines(state, pet, now);
+  if (observed.length) offer(byForm, 'line', observed, subs, kind);
+
   // Everyday supply. Form 1 is load-bearing and has to stay short and plentiful.
   if (angry) {
     let pool = COMPLAINTS[need][mood];
-    if (state.settings && state.settings.matureMode) pool = pool.concat(MATURE_COMPLAINTS_EXTRA[need] || []);
     offer(byForm, 'line', pool, subs, kind);
     if (neighbor) offer(byForm, 'react', NEIGHBOR_COMPLAINTS[need], subs, kind);
   } else {
@@ -312,7 +314,6 @@ export function petLine(state, pet, ctx = {}) {
     if (subs.q) offer(byForm, 'line', PROP_EYE_LINES, subs, kind);
     if (mood === 'content') {
       let happy = HAPPY_NOTES;
-      if (state.settings && state.settings.matureMode) happy = happy.concat(MATURE_HAPPY_EXTRA);
       offer(byForm, 'line', happy, subs, kind);
     }
     if (neighbor && trait.social) offer(byForm, 'react', trait.social, subs, kind);
@@ -355,7 +356,6 @@ export function shelfNote(state, ctx = {}, now = Date.now()) {
   const subs = subsFor(state, ctx, now);
   const byForm = {};
   let events = EVENTS;
-  if (state.settings && state.settings.matureMode) events = events.concat(MATURE_EVENTS_EXTRA);
   offer(byForm, 'line', events.filter(l => l.length <= 90), subs);
   offer(byForm, 'found', events, subs);
   offer(byForm, 'list', LIST_NOTES, subs);
@@ -456,12 +456,18 @@ export function checkShelf(state, now = Date.now()) {
   });
 
   const occupied = state.slots.map((id, i) => (id ? i : -1)).filter(i => i >= 0);
-  const chosen = occupied.slice().sort(() => Math.random() - 0.5).slice(0, 4);
+  // A proper shuffle is uniform and reproducible across JavaScript engines.
+  for (let i = occupied.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [occupied[i], occupied[j]] = [occupied[j], occupied[i]];
+  }
+  const chosen = occupied.slice(0, 4);
   chosen.forEach(i => {
     const pet = petById(state, state.slots[i]);
     if (!pet) return;
     if (isAsleep(pet, new Date(now)) && Math.random() < 0.5) {
-      addNote(state, 'Asleep. Has left a note reading "later".', pet.name, 'note');
+      const fresh = SLEEPING_NOTES.filter(line => !state.notes.some(n => n.text === line));
+      if (fresh.length) addNote(state, pick(fresh), pet.name, 'note');
       return;
     }
     // Lever 1: put a second creature in the room. This is the highest-value slot
@@ -479,8 +485,9 @@ export function checkShelf(state, now = Date.now()) {
     const near = neighborProps(state, i);
     if (near.length && moodOf(pet) !== 'furious' && Math.random() < 0.42) {
       const pr = pick(near);
-      addNote(state, fill(pick(PROPS[pr.kind].lines), { p: pet.name }), PROPS[pr.kind].name, 'note');
-      return;
+      const fresh = PROPS[pr.kind].lines.map(line => fill(line, { p: pet.name }))
+        .filter(line => !state.notes.some(n => n.text === line));
+      if (fresh.length) { addNote(state, pick(fresh), PROPS[pr.kind].name, 'note'); return; }
     }
     const line = petLine(state, pet, {
       now,
@@ -511,7 +518,8 @@ export function checkShelf(state, now = Date.now()) {
 
   if (state.props.length && Math.random() < 0.35) {
     const pr = pick(state.props);
-    addNote(state, pick(PROPS[pr.kind].ambient), PROPS[pr.kind].name, 'note');
+    const fresh = PROPS[pr.kind].ambient.filter(line => !state.notes.some(n => n.text === line));
+    if (fresh.length) addNote(state, pick(fresh), PROPS[pr.kind].name, 'note');
   }
 
   const gone = goneDue(state, now);

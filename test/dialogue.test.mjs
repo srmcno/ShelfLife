@@ -8,12 +8,6 @@ import {
   CHORUS_EXCHANGES
 } from '../src/content/dialogue.js';
 import {
-  MATURE_GENERIC_EXCHANGES, MATURE_TRAIT_EXCHANGES, MATURE_FEUD_EXCHANGES,
-  MATURE_FEUD_TRAIT_EXCHANGES, MATURE_REACTION_SHOTS, MATURE_DIRECT_ADDRESS,
-  MATURE_TRAIT_DIRECT, MATURE_FRAGMENTS, MATURE_NEIGHBOUR_FRAGMENTS,
-  MATURE_CHORUS_EXCHANGES
-} from '../src/content/mature.js';
-import {
   pickDialogue, pickDirectAddress, pickExchange, adjacentPairs, awakePets,
   feudingPairs, feudTier, traitExchangesFor, directCategoriesFor, dialoguePools,
   formatDialogue, dialogueText, joinNames, DIRECT_CATEGORIES, DIALOGUE_KINDS, CHORUS_SPEAKER
@@ -49,28 +43,18 @@ const EXCHANGE_POOLS = [
   ['FEUD_EXCHANGES[3]', FEUD_EXCHANGES[3]],
   ['FEUD_TRAIT_EXCHANGES', FEUD_TRAIT_EXCHANGES],
   ['CHORUS_EXCHANGES', CHORUS_EXCHANGES],
-  ['MATURE_GENERIC_EXCHANGES', MATURE_GENERIC_EXCHANGES],
-  ['MATURE_TRAIT_EXCHANGES', MATURE_TRAIT_EXCHANGES],
-  ['MATURE_FEUD_EXCHANGES[1]', MATURE_FEUD_EXCHANGES[1]],
-  ['MATURE_FEUD_EXCHANGES[2]', MATURE_FEUD_EXCHANGES[2]],
-  ['MATURE_FEUD_EXCHANGES[3]', MATURE_FEUD_EXCHANGES[3]],
-  ['MATURE_FEUD_TRAIT_EXCHANGES', MATURE_FEUD_TRAIT_EXCHANGES],
-  ['MATURE_CHORUS_EXCHANGES', MATURE_CHORUS_EXCHANGES]
 ];
 
 const DIRECT_POOLS = [
   ['DIRECT_ADDRESS', DIRECT_ADDRESS],
-  ['MATURE_DIRECT_ADDRESS', MATURE_DIRECT_ADDRESS]
 ];
 
 const TRAIT_DIRECT_POOLS = [
   ['TRAIT_DIRECT', TRAIT_DIRECT],
-  ['MATURE_TRAIT_DIRECT', MATURE_TRAIT_DIRECT]
 ];
 
 const REACTION_POOLS = [
   ['REACTION_SHOTS', REACTION_SHOTS],
-  ['MATURE_REACTION_SHOTS', MATURE_REACTION_SHOTS]
 ];
 
 function everyTurn(pool, fn) {
@@ -89,7 +73,7 @@ function allLines() {
   REACTION_POOLS.forEach(([, pool]) => {
     pool.forEach(e => { out.push(e.setup); e.turns.forEach(t => out.push(t[1])); });
   });
-  return out.concat(FRAGMENTS, NEIGHBOUR_FRAGMENTS, MATURE_FRAGMENTS, MATURE_NEIGHBOUR_FRAGMENTS);
+  return out.concat(FRAGMENTS, NEIGHBOUR_FRAGMENTS);
 }
 
 /* ---------------- content shape ---------------- */
@@ -128,7 +112,7 @@ test('two-hander pools only use the a/b roles; chorus adds c and all', () => {
   twoHanders.forEach(([name, pool]) => {
     everyTurn(pool, t => assert.ok(t[0] === 'a' || t[0] === 'b', `${name}: bad role "${t[0]}"`));
   });
-  [CHORUS_EXCHANGES, MATURE_CHORUS_EXCHANGES].forEach(pool => {
+  [CHORUS_EXCHANGES].forEach(pool => {
     everyTurn(pool, t => assert.ok(['a', 'b', 'c', 'all'].includes(t[0]), `chorus bad role "${t[0]}"`));
   });
 });
@@ -163,7 +147,7 @@ test('direct address entries carry a known category and only speak as p or n', (
 });
 
 test('every trait id referenced by a dialogue pair exists and the pair is distinct', () => {
-  const paired = TRAIT_EXCHANGES.concat(FEUD_TRAIT_EXCHANGES, MATURE_TRAIT_EXCHANGES, MATURE_FEUD_TRAIT_EXCHANGES);
+  const paired = TRAIT_EXCHANGES.concat(FEUD_TRAIT_EXCHANGES);
   paired.forEach(e => {
     assert.ok(Array.isArray(e.pair) && e.pair.length === 2, `bad pair: ${JSON.stringify(e.pair)}`);
     e.pair.forEach(id => assert.ok(TRAIT_BY_ID[id], `unknown trait id in dialogue: ${id}`));
@@ -175,7 +159,7 @@ test('every trait id referenced by a dialogue pair exists and the pair is distin
 // from FEUDS is dead content that no shelf can ever reach.
 test('every feud-specific pair is a real FEUDS pair', () => {
   const known = new Set(FEUDS.map(([a, b]) => [a, b].sort().join('|')));
-  FEUD_TRAIT_EXCHANGES.concat(MATURE_FEUD_TRAIT_EXCHANGES).forEach(e => {
+  FEUD_TRAIT_EXCHANGES.forEach(e => {
     const key = e.pair.slice().sort().join('|');
     assert.ok(known.has(key), `feud dialogue for a non-feuding pair: ${e.pair.join('/')}`);
     assert.ok([1, 2, 3].includes(e.level), `bad feud level for ${e.pair.join('/')}: ${e.level}`);
@@ -208,13 +192,13 @@ test('reaction setups use only {a}/{b}, reaction lines only {a}/{b}', () => {
 });
 
 test('FRAGMENTS render raw, so they must contain no braces at all', () => {
-  FRAGMENTS.concat(MATURE_FRAGMENTS).forEach(line => {
+  FRAGMENTS.forEach(line => {
     assert.ok(!/[{}]/.test(line), `unsubstituted placeholder in fragment: ${line}`);
   });
 });
 
 test('NEIGHBOUR_FRAGMENTS all require {n} and use nothing else', () => {
-  NEIGHBOUR_FRAGMENTS.concat(MATURE_NEIGHBOUR_FRAGMENTS).forEach(line => {
+  NEIGHBOUR_FRAGMENTS.forEach(line => {
     assert.ok(line.includes('{n}'), `neighbour fragment missing {n}: ${line}`);
     (line.match(/\{[^}]*\}/g) || []).forEach(ph => assert.equal(ph, '{n}', `illegal ${ph} in: ${line}`));
   });
@@ -245,7 +229,7 @@ test('no exchange is duplicated across any dialogue pool', () => {
 });
 
 test('no fragment is duplicated', () => {
-  const all = FRAGMENTS.concat(NEIGHBOUR_FRAGMENTS, MATURE_FRAGMENTS, MATURE_NEIGHBOUR_FRAGMENTS);
+  const all = FRAGMENTS.concat(NEIGHBOUR_FRAGMENTS);
   const seen = new Set();
   all.forEach(line => {
     assert.ok(!seen.has(line), `duplicate fragment: ${line}`);
@@ -264,46 +248,10 @@ test('dialogue keeps the house length budget', () => {
   assert.ok(short >= 0.6, `only ${(short * 100).toFixed(1)}% of lines are <= 90 chars`);
 });
 
-/* ---------------- mature is strictly additive ---------------- */
+/* ---------------- content selection ---------------- */
 
-test('mature dialogue pools are disjoint from the base pools', () => {
-  const pairsOf = [
-    [GENERIC_EXCHANGES, MATURE_GENERIC_EXCHANGES],
-    [TRAIT_EXCHANGES, MATURE_TRAIT_EXCHANGES],
-    [FEUD_EXCHANGES[1], MATURE_FEUD_EXCHANGES[1]],
-    [FEUD_EXCHANGES[2], MATURE_FEUD_EXCHANGES[2]],
-    [FEUD_EXCHANGES[3], MATURE_FEUD_EXCHANGES[3]],
-    [FEUD_TRAIT_EXCHANGES, MATURE_FEUD_TRAIT_EXCHANGES],
-    [REACTION_SHOTS, MATURE_REACTION_SHOTS],
-    [DIRECT_ADDRESS, MATURE_DIRECT_ADDRESS],
-    [TRAIT_DIRECT, MATURE_TRAIT_DIRECT],
-    [CHORUS_EXCHANGES, MATURE_CHORUS_EXCHANGES]
-  ];
-  pairsOf.forEach(([base, extra]) => {
-    const known = new Set(base.map(serialize));
-    extra.forEach(e => assert.ok(!known.has(serialize(e)), `mature entry duplicates a base entry: ${serialize(e)}`));
-  });
-  const baseFrag = new Set(FRAGMENTS.concat(NEIGHBOUR_FRAGMENTS));
-  MATURE_FRAGMENTS.concat(MATURE_NEIGHBOUR_FRAGMENTS)
-    .forEach(l => assert.ok(!baseFrag.has(l), `mature fragment duplicates a base one: ${l}`));
-});
 
-test('mature mode only ever grows the pools it touches', () => {
-  const base = dialoguePools(blankState());
-  const mature = dialoguePools(shelf([makePet('a')], { matureMode: true }));
-  ['generic', 'trait', 'feudTrait', 'reaction', 'direct', 'traitDirect', 'fragment', 'neighbourFragment', 'chorus']
-    .forEach(k => {
-      assert.ok(mature[k].length > base[k].length, `mature pool "${k}" added nothing`);
-      base[k].forEach(entry => assert.ok(mature[k].includes(entry), `mature pool "${k}" dropped a base entry`));
-    });
-  [1, 2, 3].forEach(l => assert.ok(mature.feud[l].length > base.feud[l].length, `mature feud tier ${l} added nothing`));
-});
 
-test('mature content is off unless the toggle is on', () => {
-  const s = shelf([makePet('a', ['gossip']), makePet('b', ['spiteful'])]);
-  assert.equal(s.settings.matureMode, false);
-  assert.equal(dialoguePools(s).generic.length, GENERIC_EXCHANGES.length);
-});
 
 /* ---------------- shelf inspection ---------------- */
 
@@ -405,7 +353,7 @@ test('pickDialogue returns a valid structure across many randomised draws', () =
   for (let i = 0; i < 400; i++) assertValidResult(pickDialogue(s, { now: i % 2 ? DAY : NIGHT }));
 });
 
-test('pickDialogue works in mature mode too', () => {
+test('legacy settings do not break dialogue selection', () => {
   const s = shelf([
     makePet('Doreen', ['hoarder']), makePet('Gnash', ['minimalist']), makePet('Wretch', ['nihilist'])
   ], { matureMode: true });

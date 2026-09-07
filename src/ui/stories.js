@@ -6,6 +6,7 @@ import { generateCreature } from '../art/creatures.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { save } from '../state.js';
 import { toast } from './toast.js';
+import { checkAchievements } from '../engine/achievements.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date = n => Number.isFinite(n) ? new Date(n).toLocaleDateString(undefined, { month:'short', day:'numeric' }) : 'Earlier';
@@ -16,7 +17,7 @@ export function residentStory(state, pet) {
   if (request) {
     html += '<p>“' + esc(request.text) + '”</p>' + (pet.refusedRequests ? '<small>It remembers the last refusal. The new form is shorter.</small>' : '') +
       (request.status === 'offered' ? '<div class="request-actions"><button class="btn btn-sm" data-request="accept" data-pet="' + pet.id + '">Promise · +1 trust on fulfilment</button><button class="btn btn-ghost btn-sm" data-request="refuse" data-pet="' + pet.id + '">Decline · −1 trust, +1 grudge</button></div>' : '<small class="accepted">Promise accepted. Complete it within ' + Math.max(1, Math.ceil((request.at + 12*3600000 - Date.now()) / 3600000)) + 'h for +1 trust.</small>');
-  } else html += '<p>No outstanding requests. It is revising the next one.</p>';
+  } else html += '<p>No outstanding promises. For once, this is comfortable silence.</p>';
   html += '</div><div class="card-section-title">Made this way</div><div class="anatomy-cards">' + artPersonality(pet).features.map(f => '<div><b>' + esc(f.name) + '</b><p>' + esc(f.text) + '</p></div>').join('') + '</div>';
   const others = state.pets.filter(p => p.id !== pet.id);
   html += '<div class="card-section-title">Relationship cards</div><div class="relationship-list">';
@@ -36,17 +37,7 @@ export function renderStories(state) {
       (c.beat === 6 ? '<small>Filed in the Memory museum. Next file arrives next week; an unfinished case never expires.</small>' : '<p class="case-hint">' + esc(gate.hint) + '</p><div class="case-choices"><button class="btn" data-case-choice="listen"' + (!gate.ready ? ' disabled' : '') + '>' + (c.beat === 5 ? 'Share the solution' : 'Listen & file evidence') + '</button>' + ([3,5].includes(c.beat) ? '<button class="btn btn-ghost" data-case-choice="blame">' + (c.beat === 5 ? 'Close it by decree' : 'Dismiss the testimony') + '</button>' : '') + '</div><small>Listen at least 5 times and keep a resident’s needs at 50+ for a cooperative ending (+2 witness trust). Otherwise: an awkward ending (+12 witness cleanliness).</small>');
   }
   if (focused) host.querySelector('[data-case-choice="'+focused+'"]')?.focus({preventScroll:true});
-  const guest = document.getElementById('visitorCard'), v = s.visitor;
-  const selectedHost = guest.querySelector('select')?.value;
-  if (!v) guest.innerHTML = '<span class="eyebrow">The visiting step</span><h2>No one at the door.</h2><p>Visitors stay for six hours. Another arrives a day after the last departure. Their souvenirs stay in your museum.</p>';
-  else {
-    const d = VISITORS.find(x=>x.id===v.kind);
-    guest.innerHTML = '<div class="guest-portrait" aria-hidden="true"></div><span class="eyebrow">Temporary visitor · ' + Math.max(1,Math.ceil((v.at+VISIT_LENGTH-Date.now())/3600000)) + 'h left</span><h2>' + esc(d.name) + '</h2><span class="guest-title">' + esc(d.title) + '</span><p>' + esc(v.welcomed ? v.host + ' is showing the visitor around. ' + d.gift + ' is safe in the museum.' : d.line) + '</p>' +
-      (v.welcomed ? '<span class="accepted">Souvenir collected · '+s.collection.length+'/'+VISITORS.length+'</span>' : '<label class="visitor-host">Choose a host<select id="visitorHost">'+state.pets.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('')+'</select></label><div class="request-actions"><button class="btn btn-sm" data-visitor="crumbs">Share crumbs · −8 host food, +1 trust</button><button class="btn btn-sm" data-visitor="tour">Give a tour · +8 host attention</button></div><small>Either welcome earns a keepsake. No shelf space needed.</small>');
-    const sprite = renderPetSprite({ id:'guest-'+d.id, art:{creature:generateCreature({seed:d.seed,parts:d.parts})} });
-    sprite.classList.add('sl-mood-content'); guest.querySelector('.guest-portrait').appendChild(sprite);
-    if (selectedHost && state.pets.some(p=>p.id===selectedHost) && guest.querySelector('select')) guest.querySelector('select').value=selectedHost;
-  }
+  renderVisitor(state);
   const highlight = s.highlight;
   const daily = document.getElementById('dailyCard');
   daily.hidden = !state.pets.length;
@@ -57,6 +48,46 @@ export function renderStories(state) {
   const body = fresh ? highlight.text : caption;
   daily.innerHTML = '<div><span class="eyebrow">Postcard of the day</span><b>'+esc(fresh ? highlight.title : 'Wish you were smaller.')+'</b><span>'+esc(body.length>170 ? body.slice(0,168).replace(/\s+\S*$/,'')+'…' : body)+'</span></div><button class="btn btn-sm" data-proxy="postcardBtn">Make postcard ↗</button>';
   document.getElementById('museumCount').textContent = s.archive.length + ' memories · ' + s.collection.length + ' souvenirs';
+}
+function renderVisitor(state) {
+  const s = storyState(state), v = s.visitor, guest = document.getElementById('visitorCard');
+  const d = v && VISITORS.find(x => x.id === v.kind);
+  // Preserve the host selector, keyboard focus, and the animated portrait across
+  // ordinary shelf refreshes. A changed need should never close an open select.
+  const key = JSON.stringify([v?.kind, v?.at, v?.welcomed, v?.response, state.pets.map(p => [p.id,p.name]), s.collection.length]);
+  const hours = v ? Math.max(0, Math.ceil((v.at + VISIT_LENGTH - Date.now()) / 3600000)) : 0;
+  if (guest.dataset.viewKey === key) {
+    const clock = guest.querySelector('.guest-clock');
+    if (clock) clock.textContent = hours + 'h left';
+    return;
+  }
+  const selectedHost = guest.querySelector('select')?.value;
+  const focused = guest.contains(document.activeElement) ? document.activeElement : null;
+  const focusedId = focused?.id, focusedChoice = focused?.dataset.visitor;
+  const visitKey = v ? v.kind + ':' + v.at : '';
+  const sameVisitor = guest.dataset.visitKey === visitKey;
+  const portrait = sameVisitor ? guest.querySelector('.guest-portrait') : null;
+  guest.dataset.viewKey = key; guest.dataset.visitKey = visitKey;
+  guest.classList.toggle('guest-present', !!v);
+  if (!v) {
+    guest.innerHTML = '<span class="eyebrow">The visiting step</span><h2>No one at the door.</h2><p>Nine unusual callers. One questionable doorstep. Visitors stay six hours; the next arrives 8–18 hours after a departure.</p><small>No need to keep the app open. Missed visits never cost trust.</small>';
+    return;
+  }
+  guest.innerHTML = '<div class="guest-topline"><span class="eyebrow">' + (v.returning ? 'A familiar face · visit ' + (v.visitNumber || 2) : 'A new arrival') + '</span><span class="guest-clock">' + hours + 'h left</span></div><div class="guest-portrait" aria-hidden="true"></div><h2>' + esc(d.name) + '</h2><span class="guest-title">' + esc(d.title) + '</span><p class="guest-dialogue">' + esc(v.welcomed ? v.response || v.host + ' has welcomed ' + d.name + '. The keepsake is safe in the museum.' : v.arrival || d.line) + '</p>' +
+    (v.welcomed ? '<div class="guest-receipt"><span class="eyebrow">Safely mislabelled in the museum</span><b>' + esc(d.gift) + '</b><span class="accepted">Souvenirs · ' + s.collection.length + ' / ' + VISITORS.length + '</span><button class="btn btn-ghost btn-sm" data-proxy="museumBtn">View collection ↗</button></div>' : '<label class="visitor-host">Choose a host<select id="visitorHost">' + state.pets.map(p => '<option value="'+p.id+'">'+esc(p.name)+'</option>').join('') + '</select></label><div class="request-actions"><button class="btn btn-sm" data-visitor="crumbs">Share crumbs · −8 host food, +1 trust</button><button class="btn btn-sm" data-visitor="tour">Give a tour · +8 host attention</button></div><small>Either welcome earns '+esc(d.gift.toLowerCase())+'. No shelf space needed.</small>');
+  if (portrait) guest.querySelector('.guest-portrait').replaceWith(portrait);
+  else {
+    const sprite = renderPetSprite({ id: 'guest-' + d.id, art: { creature: generateCreature({ seed:d.seed, body:d.body, palette:d.palette, parts:d.parts }) } });
+    sprite.classList.add('sl-mood-content');
+    guest.querySelector('.guest-portrait').appendChild(sprite);
+  }
+  if (selectedHost && state.pets.some(p => p.id === selectedHost) && guest.querySelector('select')) guest.querySelector('select').value = selectedHost;
+  if (focusedId) guest.querySelector('#' + focusedId)?.focus({preventScroll:true});
+  else if (focusedChoice) {
+    const button = guest.querySelector('[data-visitor="'+focusedChoice+'"]');
+    if (button) button.focus({preventScroll:true});
+    else { guest.tabIndex = -1; guest.focus({preventScroll:true}); }
+  }
 }
 export function renderMuseum(state) {
   const s = storyState(state), host = document.getElementById('museumContent');
@@ -73,8 +104,8 @@ export function initStories(state, refresh, refreshPet) {
     if (caseButton) changed=advanceCase(state,caseButton.dataset.caseChoice);
     if (request) changed=acceptRequest(state,request.dataset.pet,request.dataset.request==='accept');
     if (truce) changed=brokerTruce(state,truce.dataset.pet,truce.dataset.truce);
-    if (visitor) { changed=welcomeVisitor(state,document.getElementById('visitorHost').value,visitor.dataset.visitor); if(!changed) toast('The host needs at least 8 food to share crumbs. A tour is always welcome.'); }
-    if(changed){checkUnlocks(state);save();refresh();if(request||truce)refreshPet((request||truce).dataset.pet);if(caseButton)document.getElementById('caseCard').focus({preventScroll:true});}
+    if (visitor) { changed=welcomeVisitor(state,document.getElementById('visitorHost')?.value,visitor.dataset.visitor); if(!changed) toast('A visitor needs to be here, and sharing needs 8 host food. A tour costs no food.'); }
+    if(changed){checkAchievements(state);checkUnlocks(state);save();refresh();if(request||truce)refreshPet((request||truce).dataset.pet);if(caseButton)document.getElementById('caseCard').focus({preventScroll:true});}
   });
   const veil=document.getElementById('museumVeil');
   document.getElementById('museumBtn').addEventListener('click',()=>{renderMuseum(state);veil.classList.add('open');});

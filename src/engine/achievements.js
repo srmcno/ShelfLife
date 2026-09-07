@@ -1,7 +1,7 @@
+import { VISITORS } from '../content/stories.js';
 import { remember } from './stories.js';
 import { FEUDS, FEUD_LINES, ESCALATION_LINES, TRUCE_LINES } from '../content/feuds.js';
 import { GRUDGE_LINES, STREAK_LINES } from '../content/copy.js';
-import { MATURE_GRUDGE_EXTRA } from '../content/mature.js';
 import { neighborPets, neighborSlots } from './tick.js';
 import { totalBond } from './unlocks.js';
 import { pick, addNote, clamp, petById, GRUDGE_LOG_MAX } from '../state.js';
@@ -97,15 +97,7 @@ export function checkGrudgeEscalation(state, pet) {
   if (newStage <= pet.grudgeStage) return false;
   pet.grudgeStage = newStage;
   remember(state, 'A thicker file', pet.name + ' has reached grievance stage ' + newStage + ' with ' + pet.grudges + ' complaints on record.', Date.now(), 'grudge');
-  // Mature mode has to be mixed in HERE too, not just in engine/loop.js. It was
-  // missed originally, so all 18 MATURE_GRUDGE_EXTRA lines were unreachable: the
-  // mode quietly upgraded complaints, happy notes and events but left grudge
-  // escalation — its darkest beat — tame. A test asserting the pool merely
-  // exists kept the suite green and hid it.
-  let lines = GRUDGE_LINES[newStage] || [];
-  if (state.settings && state.settings.matureMode) {
-    lines = lines.concat(MATURE_GRUDGE_EXTRA[newStage] || []);
-  }
+  const lines = GRUDGE_LINES[newStage] || [];
   if (!lines.length) return false;
   addNote(state, pick(lines).replace(/\{n\}/g, pet.name), pet.name, 'angry');
   if (newStage === 1) {
@@ -177,7 +169,7 @@ export const ACHIEVEMENTS = [
   { id: 'first-case', hint: 'See a weekly case file through to its sixth beat.', label: 'Closed, Not Solved', desc: 'Finished a household mystery.', toastLine: 'The case is closed. Nobody is satisfied. That is a closed case.', check: state => closedCases(state) >= 1 },
   { id: 'three-cases', hint: 'Close three household mysteries.', label: 'A Pattern Of Incidents', desc: 'Closed three case files.', toastLine: 'Three files. At this point the shelf is a jurisdiction.', check: state => closedCases(state) >= 3 },
   { id: 'first-visitor', hint: 'Welcome a temporary visitor before it leaves.', label: 'Hospitality', desc: 'Welcomed a visitor and kept its keepsake.', toastLine: 'It stayed six hours and left something behind. Everyone does.', check: state => ((state.stories || {}).collection || []).length >= 1 },
-  { id: 'all-visitors', hint: 'Collect every visiting curiosity for the museum.', label: 'The Complete Set', desc: 'Every visitor souvenir is in the museum.', toastLine: 'Every curiosity accounted for. You are collecting guests now.', check: state => ((state.stories || {}).collection || []).length >= 3 },
+  { id: 'all-visitors', hint: 'Collect every visiting curiosity for the museum.', label: 'The Complete Set', desc: 'Every visitor souvenir is in the museum.', toastLine: 'Every curiosity accounted for. You are collecting guests now.', check: state => VISITORS.every(v => state.stories?.collection?.some(c => c.id === v.id)) },
   { id: 'first-handshake', hint: 'Learn one resident’s secret handshake.', label: 'Initiated', desc: 'Completed a secret handshake.', toastLine: 'You know the handshake. There is no undoing that.', check: state => state.pets.some(p => (p.handshakes || 0) >= 1) },
   { id: 'handshake-veteran', hint: 'Learn the same resident’s handshake ten times.', label: 'Fluent', desc: 'Ten handshakes with one resident.', toastLine: 'Ten. It has started adding flourishes you did not agree to.', check: state => state.pets.some(p => (p.handshakes || 0) >= 10) },
   { id: 'chase-win', hint: 'Reach the crumb goal in one Crumb Chase.', label: 'Crumb Bailiff', desc: 'Won a Crumb Chase outright.', toastLine: 'Crumb goal reached. The dust bunnies have taken note.', check: state => state.pets.some(p => (p.chaseBest || {}).stars >= 2) },
@@ -240,7 +232,7 @@ export const INCIDENT_PROGRESS = {
   'chase-perfect': state => ({ have: Math.max(0, ...state.pets.map(p => (p.chaseBest || {}).stars || 0)), need: 3 }),
   'promises-five': state => ({ have: state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0), need: 5 }),
   'three-cases': state => ({ have: closedCases(state), need: 3 }),
-  'all-visitors': state => ({ have: (((state.stories || {}).collection) || []).length, need: 3 })
+  'all-visitors': state => ({ have: (((state.stories || {}).collection) || []).length, need: VISITORS.length })
 };
 
 export function incidentProgress(state, id) {

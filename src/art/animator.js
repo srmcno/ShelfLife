@@ -936,6 +936,8 @@ export function reactTo(id, need, delay) {
           const mote = document.createElement('i');
           mote.style.setProperty('--mote-x', ((j - 2) * 19) + 'px');
           mote.style.setProperty('--mote-delay', (j * 55) + 'ms');
+          mote.style.setProperty('--mote-rise', (-48 - (j % 3) * 14) + 'px');
+          mote.style.setProperty('--mote-size', (.7 + (j % 3) * .25));
           motes.appendChild(mote);
         }
         el.appendChild(motes);
