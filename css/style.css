@@ -1500,3 +1500,28 @@ select.voice-select{width:100%}
 @keyframes sl2-pushoff{0%,100%{transform:none}30%{transform:scale(1.08,.9)}70%{transform:scale(.95,1.06)}}
 @media(max-width:720px){.chase-mode .sheet-play{padding-top:19px}.chase-mode .sheet-head{margin-bottom:8px}.chase-mode .play-modes{margin:8px 0}.chase-mode .play-modes .chip{font-size:11px;padding:7px 10px;min-height:38px}.chase-hud{margin:10px 0 8px}.chase-hud b{font-size:21px}.chase-overlay{padding:12px}.chase-overlay p{font-size:11px}.chase-controls{margin-top:10px}}
 @media(prefers-reduced-motion:reduce){.chase-pop.show{opacity:1;animation:none}.chase-item svg{rotate:none}.chase-resident{will-change:auto}}
+
+/* Deliberate creation: a named, ordered catalog with reversible browsing. */
+.variant-picker{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:8px;margin:12px 0 18px;padding:12px;background:rgba(0,0,0,.15);border:1px solid var(--line);border-radius:12px}
+.variant-picker label{grid-column:1/3;font-weight:700;font-size:12px;align-self:center}
+#genVariantCount{font-size:11px;white-space:nowrap;color:var(--ink-2);align-self:center;text-align:right}
+.variant-picker select{min-width:0;width:100%;min-height:44px;border-radius:8px;font:inherit;font-size:14px}
+.variant-picker .btn{padding:0;min-height:44px;font-size:25px}
+#genParts .chip[aria-pressed=true]{background:var(--mint);color:#10281f;border-color:var(--mint)}
+.care-record{margin:12px 0;color:var(--ink-2);font-size:12px;line-height:1.6}
+.care-record summary{cursor:pointer;padding:8px 0;color:var(--ink)}
+.care-record p{margin:4px 0}
+/* Testimony reads as numbered evidence, with explicit verdicts, not colour alone. */
+.alibi-statement{display:grid;grid-template-columns:25px minmax(0,1fr);gap:9px;align-items:start}
+.alibi-number{font:700 12px/24px var(--body);border:1px solid currentColor;border-radius:50%;text-align:center;opacity:.65}
+.alibi-stamp{grid-column:2;font:800 10px/1.4 var(--body);letter-spacing:.16em;color:#315442}
+.was-lie .alibi-stamp{color:#7c2637}
+.alibi-next{display:block;margin:16px auto 4px}
+.alibi-verdict{line-height:1.5;font-size:17px}
+.alibi-mode .play-theatre{max-height:120px;margin:4px auto}
+.alibi-mode #playPortrait{max-height:95px}
+.alibi-mode #playCue,.alibi-mode .play-sparks{display:none}
+.chase-clock{height:5px;border-radius:9px;background:rgba(255,255,255,.09);overflow:hidden;margin:0 0 9px}
+.chase-clock i{display:block;height:100%;background:linear-gradient(90deg,var(--pink),var(--mint));transform-origin:left}
+.chase-field.urgent{box-shadow:inset 0 0 30px rgba(235,112,119,.2)}
+@media(prefers-reduced-motion:reduce){.alibi-statement{transform:none!important;transition:none}}

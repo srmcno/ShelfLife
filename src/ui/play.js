@@ -19,6 +19,7 @@ export function initPlay(state, refresh) {
   const alibiList = document.getElementById('alibiStatements');
   const alibiVerdict = document.getElementById('alibiVerdict');
   const alibiCharge = document.getElementById('alibiCharge');
+  const alibiNext = document.getElementById('alibiNext');
   const gestureGrid = veil.querySelector('.gesture-grid');
   const playControls = veil.querySelector('.play-controls');
   let game = null, pet = null, puppet = null, accepting = false, generation = 0, mode = 'chase';
@@ -45,6 +46,7 @@ export function initPlay(state, refresh) {
     modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.playMode === mode)));
     pads.forEach(p => p.classList.remove('lit'));
     veil.classList.toggle('chase-mode', mode === 'chase');
+    veil.classList.toggle('alibi-mode', mode === 'alibi');
     chaseRoot.hidden = mode !== 'chase'; document.getElementById('gentleOption').hidden = mode !== 'chase';
     // The gesture pads and the replay control belong to the handshake alone; the
     // statement list belongs to the alibi. Neither should be reachable by tab in
@@ -53,7 +55,8 @@ export function initPlay(state, refresh) {
     gestureGrid.hidden = mode !== 'memory';
     playControls.hidden = mode === 'chase';
     alibiList.replaceChildren();
-    alibiVerdict.textContent = '';
+    alibiVerdict.textContent = ''; alibiNext.hidden = true;
+    alibiCharge.textContent = 'Three statements. One false. All suspiciously moist.';
     start.hidden = mode === 'chase'; replay.hidden = true; start.textContent = STARTS[mode] || STARTS.memory;
     document.getElementById('playTitle').textContent = TITLES[mode] || TITLES.memory;
     document.getElementById('playName').textContent = (EYEBROWS[mode] || EYEBROWS.memory) + pet.name;
@@ -78,10 +81,10 @@ export function initPlay(state, refresh) {
   // indicator; whichever one is live supplies the count.
   function progress() {
     const live = mode === 'alibi' ? alibi : game;
-    const round = live ? live.round : 0;
+    const round = live ? live.round + (mode === 'alibi' && currentRound(live)?.answered !== null ? 1 : 0) : 0;
     const total = mode === 'alibi' ? ((alibi && alibi.rounds.length) || ALIBI_ROUNDS)
       : (game && game.rounds) || handshakeRounds(pet);
-    document.getElementById('playProgress').textContent = 'Round ' + Math.min(total, round + 1) + ' of ' + total;
+    document.getElementById('playProgress').textContent = live?.complete ? 'Complete · ' + total + ' rounds' : 'Round ' + Math.min(total, round + 1) + ' of ' + total;
     const steps = veil.querySelector('.play-rounds');
     let pips = [...steps.querySelectorAll('.play-step')];
     while (pips.length < total) { const el = document.createElement('span'); el.className = 'play-step'; steps.appendChild(el); pips.push(el); }
@@ -92,7 +95,7 @@ export function initPlay(state, refresh) {
   /* ---- the alibi ---------------------------------------------------------- */
   function renderAlibi() {
     const round = currentRound(alibi);
-    alibiList.replaceChildren();
+    alibiList.replaceChildren(); alibiNext.hidden = true;
     if (!round) return;
     alibiCharge.textContent = 'Statement ' + (alibi.round + 1) + ' of ' + alibi.rounds.length + '. One of these three is false.';
     round.statements.forEach((text, i) => {
@@ -100,7 +103,9 @@ export function initPlay(state, refresh) {
       b.type = 'button';
       b.className = 'alibi-statement';
       b.dataset.alibi = String(i);
-      b.textContent = '“' + text + '”';
+      const number = document.createElement('span'); number.className = 'alibi-number'; number.textContent = String(i + 1); number.setAttribute('aria-hidden', 'true');
+      const claim = document.createElement('span'); claim.textContent = '“' + text + '”';
+      b.append(number, claim);
       alibiList.appendChild(b);
     });
     progress();
@@ -109,6 +114,7 @@ export function initPlay(state, refresh) {
 
   function startAlibi() {
     alibi = newAlibi(state, pet);
+    alibiNext.hidden = true;
     alibiVerdict.textContent = '';
     if (!alibi.rounds.length) {
       // A brand-new solo shelf cannot supply three rounds of checkable facts yet.
@@ -118,7 +124,7 @@ export function initPlay(state, refresh) {
       return;
     }
     start.hidden = true;
-    status.textContent = 'Tap the statement you believe is false. A wrong call costs nothing but the round.';
+    status.textContent = 'Find the lie. Facts are recorded when you start; take all the time you need.';
     renderAlibi();
   }
 
@@ -127,12 +133,13 @@ export function initPlay(state, refresh) {
     checkUnlocks(state); checkAchievements(state); save(); refresh();
     const caught = alibi.correct, total = alibi.rounds.length;
     alibiCharge.textContent = 'Statement closed. You caught ' + caught + ' of ' + total + '.';
-    alibiVerdict.textContent = result && !result.practice
+    const outcome = result && !result.practice
       ? (result.clean
         ? 'Every lie found. +' + result.fuss + ' attention · +' + result.bond + ' trust. It would like to know how.'
-        : '+' + result.fuss + ' attention. It is not going to tell you which ones you missed.')
+        : '+' + result.fuss + ' attention. It has eaten the carbon copy.')
       : 'Practice statement. Nothing on the record, and it knows it.';
-    status.textContent = caught === total ? 'You know your own shelf.' : 'It got some of that past you.';
+    status.textContent = outcome;
+    document.getElementById('playReward').textContent = 'Games share a 5-minute reward rest per resident. Practice is always available.';
     puppet?.gesture(caught === total ? 'win' : 'bump');
     if (caught === total) playFuss();
     progress();
@@ -140,6 +147,10 @@ export function initPlay(state, refresh) {
     start.focus({ preventScroll: true });
   }
 
+  alibiNext.addEventListener('click', () => {
+    if (mode !== 'alibi' || !alibi || !advanceAlibi(alibi)) return;
+    alibiVerdict.textContent = ''; renderAlibi();
+  });
   alibiList.addEventListener('click', e => {
     const button = e.target.closest('[data-alibi]');
     if (!button || !alibi || alibi.complete) return;
@@ -151,16 +162,18 @@ export function initPlay(state, refresh) {
       el.disabled = true;
       if (i === round.lie) el.classList.add('was-lie');
       else if (i === round.answered) el.classList.add('was-wrong');
+      const stamp = document.createElement('small'); stamp.className = 'alibi-stamp';
+      stamp.textContent = i === round.lie ? 'FALSE' : 'TRUE'; el.appendChild(stamp);
     });
-    alibiVerdict.textContent = verdict === 'right'
-      ? 'That one was false. It does not look sorry.'
-      : 'That one was true. The false one is marked.';
+    alibiVerdict.textContent = (verdict === 'right'
+      ? 'Lie caught. It swore on a crumb. ' : 'That was true. The false statement is marked. ')
+      + 'On record: ' + round.evidence;
     puppet?.gesture(verdict === 'right' ? 'blink' : 'bump');
-    setTimeout(() => {
-      if (!alibi) return;
-      if (alibi.complete) concludeAlibi();
-      else if (advanceAlibi(alibi)) { alibiVerdict.textContent = ''; renderAlibi(); }
-    }, 1500);
+    progress();
+    // No delayed callbacks: the player controls reading time, and a new session
+    // can never inherit an old verdict or consume its next round.
+    if (alibi.complete) concludeAlibi();
+    else { alibiNext.hidden = false; alibiNext.focus({ preventScroll: true }); }
   });
   async function demonstrate() {
     const token = ++generation;
@@ -199,7 +212,7 @@ export function initPlay(state, refresh) {
   window.addEventListener('shelflife:play', e => {
     pet = state.pets.find(p => p.id === e.detail?.petId);
     if (!pet) return;
-    setMode(e.detail?.mode === 'memory' ? 'memory' : 'chase'); veil.classList.add('open');
+    setMode(['memory', 'alibi'].includes(e.detail?.mode) ? e.detail.mode : 'chase'); veil.classList.add('open');
   });
   function conclude() {
     lock(true); replay.disabled = true;

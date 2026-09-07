@@ -10,6 +10,7 @@ export const TRAIT_CARE = {
     ],
     "clean": [
       "You dried it. It is making more.",
+      "The towel has developed a pulse. It wants joint custody.",
       "Stayed in the towel. Warmth without evaporation."
     ]
   },
@@ -21,12 +22,14 @@ export const TRAIT_CARE = {
       "Leaned into your hand very carefully."
     ],
     "clean": [
-      "Polished up nicely. Can now see its own disapproval."
+      "Polished up nicely. Can now see its own disapproval.",
+      "You washed behind its ears. The glaze says dishwasher safe. You both know better."
     ]
   },
   "bitey": {
     "food": [
-      "Bit the food instead of you. Progress."
+      "Bit the food instead of you. Progress.",
+      "Chewed with its eyes shut. Finally, a victim that was meant for this."
     ],
     "fuss": [
       "Held your finger in its mouth without closing. A hug, locally."
@@ -59,7 +62,8 @@ export const TRAIT_CARE = {
   },
   "fungal": {
     "food": [
-      "Shared with the growth on its back. They seem close."
+      "Shared with the growth on its back. They seem close.",
+      "Fed the mushroom first. You are caring for a household within a household."
     ],
     "fuss": [
       "Leaned in. A small mushroom leaned in with it."

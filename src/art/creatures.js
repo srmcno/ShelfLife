@@ -1341,6 +1341,18 @@ export function generateCreature(opts = {}) {
 }
 
 /** Re-roll a single slot, keeping everything else. Returns a NEW creature. */
+export function selectCreaturePart(creature, slot, variant) {
+  const c = normalizeCreature(creature);
+  const library = slot === 'body' ? BODIES : SLOTS[slot]?.lib;
+  if (!library || !Object.hasOwn(library, variant)) return c;
+  // Rebuild anatomy and anchors, but preserve all other choices and proportions.
+  const next = { ...c, body: slot === 'body' ? variant : c.body,
+    parts: slot === 'body' ? { ...c.parts } : { ...c.parts, [slot]: variant } };
+  delete next.anatomy; delete next.rig;
+  return normalizeCreature(next);
+}
+
+/** Re-roll a single slot, keeping everything else. Returns a NEW creature. */
 export function rerollPart(creature, slot, seed) {
   if (!SLOTS[slot]) throw new Error(`unknown slot: ${slot}`);
   const c = normalizeCreature(creature);

@@ -186,7 +186,7 @@
     <div class="studio-tabs" role="tablist" aria-label="How to make a pet">
       <button class="studio-tab" id="tabGenerate" role="tab" aria-selected="true" aria-controls="genPanel">
         <span class="studio-tab-name">Grow one</span>
-        <span class="studio-tab-sub">Roll a body and nudge it</span>
+        <span class="studio-tab-sub">Choose every little part</span>
       </button>
       <button class="studio-tab" id="tabDraw" role="tab" aria-selected="false" aria-controls="drawPanel">
         <span class="studio-tab-name">Draw one</span>
@@ -203,7 +203,13 @@
       </div>
       <div class="tool-block">
         <div class="tool-label">Change one thing</div>
-        <div class="chiprow" id="genParts"></div>
+        <div class="chiprow" id="genParts" role="group" aria-label="Creature features"></div>
+        <div class="variant-picker">
+          <label for="genVariant" id="genVariantLabel">Body</label><span id="genVariantCount" aria-live="polite"></span>
+          <button type="button" class="btn" id="genPrevious" aria-label="Previous variant">‹</button>
+          <select id="genVariant" aria-describedby="genVariantCount"></select>
+          <button type="button" class="btn" id="genNext" aria-label="Next variant">›</button>
+        </div>
       </div>
       <div class="tool-block">
         <div class="tool-label">Colour</div>
@@ -340,6 +346,7 @@
   <div class="play-modes"><button class="chip" data-play-mode="chase" aria-pressed="true">Crumb Chase</button><button class="chip" data-play-mode="memory" aria-pressed="false">Handshake</button><button class="chip" data-play-mode="alibi" aria-pressed="false">The Alibi</button><label id="gentleOption"><input type="checkbox" id="playRelaxed"> Gentle pace</label></div>
   <div id="chaseArea" hidden>
     <div class="chase-hud"><span>Crumbs<b id="chaseCount">0 / 8</b></span><span>Score<b id="chaseScore">0</b></span><span>Best<b id="chaseBest">–</b></span><span>Time<b id="chaseTime">22s</b></span><button class="btn btn-ghost btn-sm" id="chasePause" aria-label="Pause chase">Pause</button></div>
+    <div class="chase-clock" aria-hidden="true"><i id="chaseClockFill"></i></div>
     <div class="chase-combo" id="chaseCombo" aria-hidden="true"><span id="chaseComboLabel">Streak</span><i id="chaseComboBar"></i></div>
     <div class="chase-field" id="chaseField" tabindex="0" role="group" aria-label="Crumb Chase. Drag to steer your resident, or use left and right arrows. Space or the Hop button jumps; land on a dust bunny to stomp it.">
       <div class="chase-window" aria-hidden="true"></div><div class="chase-floor" aria-hidden="true"></div><div id="chaseShadow" class="chase-shadow" aria-hidden="true"></div>
@@ -359,6 +366,7 @@
     <p class="alibi-charge" id="alibiCharge">Three statements. One of them is false.</p>
     <div class="alibi-statements" id="alibiStatements" role="group" aria-label="Sworn statements. Choose the false one."></div>
     <p class="alibi-verdict" id="alibiVerdict" role="status"></p>
+    <button type="button" class="btn btn-primary alibi-next" id="alibiNext" hidden>Next statement</button>
   </div>
   <div class="gesture-grid" aria-label="Handshake gestures">
     <button class="gesture" data-gesture="0"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 35V19a4 4 0 0 1 8 0v9-15a4 4 0 0 1 8 0v15-8a4 4 0 0 1 8 0v13c0 8-5 10-12 10s-12-4-12-8Z"/><path d="M8 12 5 8m5 17H4m10-21v4"/></svg><span>Knock</span></button>

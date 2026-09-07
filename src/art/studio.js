@@ -17,8 +17,8 @@
 // import — never a hidden closure over a duplicated copy of the save data.
 import { CANVAS_SIZE, STAMP_SCALE, BASE_STAMPS, UNLOCK_STAMPS, STAMP_SVG, STAMP_LABELS } from './stamps.js';
 import {
-  generateCreature, rerollPart, normalizeCreature, describeCreature,
-  SLOTS, SLOT_KEYS, PALETTES, PALETTE_IDS, BODY_IDS
+  generateCreature, selectCreaturePart, listVariants, normalizeCreature, describeCreature,
+  SLOTS, SLOT_KEYS, PALETTES, PALETTE_IDS, BODY_IDS, BODIES
 } from './creatures.js';
 import { renderPetSprite } from './sprite.js';
 import { state } from '../state.js';
@@ -63,7 +63,7 @@ function unlockedStampKinds() {
 const PREVIEW_ID = 'studio-preview';
 
 const BLURB = {
-  generate: 'Roll one until it looks like trouble, then change whatever bothers you.',
+  generate: 'Choose a feature, then browse in order or pick its name. Surprise me rolls the whole creature.',
   draw: 'Draw it, stamp it, name it. It takes over from there.'
 };
 
@@ -136,6 +136,7 @@ export function initStudio({ onSave }) {
 
   let mode = 'generate';
   let creature = null;
+  let selectedPart = 'body';
 
   // Slot chips, in the order the SLOTS registry declares them, plus body. Body is
   // deliberately first: it is the one change that alters the silhouette, and the
@@ -158,6 +159,7 @@ export function initStudio({ onSave }) {
     creature = normalizeCreature(next);
     renderPreview();
     syncPalette();
+    syncPartPicker();
   }
 
   function syncPalette() {
@@ -166,28 +168,37 @@ export function initStudio({ onSave }) {
     });
   }
 
+  function syncPartPicker() {
+    const select = document.getElementById('genVariant');
+    if (!select || !creature) return;
+    const options = selectedPart === 'body' ? BODY_IDS.map(id => ({ id, name: BODIES[id].name })) : listVariants(selectedPart);
+    const current = selectedPart === 'body' ? creature.body : creature.parts[selectedPart];
+    select.replaceChildren(...options.map(({ id, name }) => {
+      const option = document.createElement('option'); option.value = id; option.textContent = name; return option;
+    }));
+    select.value = current;
+    const label = PART_CHIPS.find(p => p.key === selectedPart).label;
+    document.getElementById('genVariantLabel').textContent = label;
+    document.getElementById('genVariantCount').textContent = (select.selectedIndex + 1) + ' of ' + options.length;
+    genParts.querySelectorAll('[data-part-key]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.partKey === selectedPart)));
+  }
+
   function buildPartChips() {
-    genParts.innerHTML = '';
+    genParts.replaceChildren();
     PART_CHIPS.forEach(({ key, label }) => {
       const b = document.createElement('button');
-      b.className = 'chip';
-      b.type = 'button';
-      b.textContent = label;
-      b.addEventListener('click', () => {
-        if (key === 'body') {
-          // A new body moves every anchor, so anatomy and rig have to be rebuilt
-          // from scratch — generateCreature does that; a shallow field swap would
-          // leave a rig pointing at the old skeleton.
-          const others = BODY_IDS.filter(id => id !== creature.body);
-          const nextBody = others[Math.floor(Math.random() * others.length)];
-          setCreature(generateCreature({
-            seed: creature.seed, body: nextBody, palette: creature.palette, parts: creature.parts
-          }));
-        } else {
-          setCreature(rerollPart(creature, key));
-        }
-      });
+      b.className = 'chip'; b.type = 'button'; b.textContent = label; b.dataset.partKey = key;
+      b.addEventListener('click', () => { selectedPart = key; syncPartPicker(); });
       genParts.appendChild(b);
+    });
+  }
+  const variantSelect = document.getElementById('genVariant');
+  variantSelect.addEventListener('change', () => setCreature(selectCreaturePart(creature, selectedPart, variantSelect.value)));
+  for (const [id, direction] of [['genPrevious', -1], ['genNext', 1]]) {
+    document.getElementById(id).addEventListener('click', () => {
+      const options = [...variantSelect.options];
+      const next = (variantSelect.selectedIndex + direction + options.length) % options.length;
+      setCreature(selectCreaturePart(creature, selectedPart, options[next].value));
     });
   }
 

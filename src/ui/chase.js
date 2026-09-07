@@ -13,10 +13,10 @@ const SUGAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8l8-4 8 4
 const ART = { crumb: CRUMB, bunny: BUNNY, moth: MOTH, biscuit: BISCUIT, sugar: SUGAR };
 // Deadpan end-screen copy. Short, dry, four inches tall.
 const QUIPS = {
-  lost: ['The crumbs remain at large.', 'It maintains the floor moved.', 'Nothing was lost except the crumbs. And the round.'],
+  lost: ['The crumbs remain at large.', 'Immortal. Outrun by bread.', 'It has requested a smaller floor.', 'It maintains the floor moved.', 'Nothing was lost except the crumbs. And the round.'],
   two: ['Adequate. It will not say so.', 'Serious work, four inches tall.', 'It will accept praise now. Briefly.'],
-  three: ['Flawless. It will be unbearable about this.', 'Three stars. Nobody saw. It knows.', 'The dust has requested a meeting.'],
-  best: ['A new record. The pride was already there.', 'The old best has been quietly disowned.', 'It would like this noted in the museum.']
+  three: ['Flawless. It will be unbearable about this.', 'Three stars. Nobody saw. It knows.', 'The dust has requested a meeting.', 'The dust bunny left a tiny will. You ate it.'],
+  best: ['A new record. The pride was already there.', 'The old best has been quietly disowned.', 'It scratched the score into the wood. With a tooth.', 'It would like this noted in the museum.']
 };
 
 export function createChaseUI(root, onFinish, onStatus) {
@@ -96,6 +96,8 @@ export function createChaseUI(root, onFinish, onStatus) {
     best.classList.toggle('beaten', !!pet?.chaseBest && game.score > pet.chaseBest.score);
     time.textContent = Math.max(0, Math.ceil(CHASE_SECONDS - game.time)) + 's';
     time.classList.toggle('urgent', game.time > CHASE_SECONDS - 5);
+    root.querySelector('#chaseClockFill').style.transform = 'scaleX(' + Math.max(0, 1 - game.time / CHASE_SECONDS) + ')';
+    field.classList.toggle('urgent', running && game.time > CHASE_SECONDS - 5);
     paintCombo();
     root.dataset.score = game.score; root.dataset.caught = game.caught;
     root.dataset.running = String(running); root.dataset.paused = String(paused);
@@ -155,8 +157,8 @@ export function createChaseUI(root, onFinish, onStatus) {
     else if (event.type === 'shield') { puppet.gesture('shield'); message('Horn block! Unbothered.', 'good'); }
     else if (event.type === 'dodge') { spark('float', p.x, p.z + 40, '+' + event.points); message('Clean jump! +' + event.points, 'good'); }
     else if (event.type === 'land') spark('puff', event.x, 0);
-    else if (event.type === 'steal') { spark('puff', event.x, event.z); message('A moth took that one.', 'bad'); }
-    else if (event.type === 'crumble') { spark('puff', event.x, 0); message('The biscuit crumbled. Unclaimed.', ''); }
+    else if (event.type === 'steal') { spark('puff', event.x, event.z); message('Moth theft. No witnesses with spines.', 'bad'); }
+    else if (event.type === 'crumble') { spark('puff', event.x, 0); message('Biscuit deceased. Crumbs inherited nothing.', ''); }
     else if (event.type === 'melt') spark('puff', event.x, 0);
     else if (event.type === 'powerup') onPowerUp(event);
   }

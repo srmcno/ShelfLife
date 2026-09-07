@@ -20,7 +20,7 @@
 
 export const MOOD_BUBBLES = {
   content: [
-    'warm side of the wood.', 'nobody has died today.', 'four inches of calm.',
+    'warm side of the wood.', 'immortal. still needs a bath.', 'a crumb worth haunting.', 'nobody has died today.', 'four inches of calm.',
     'the dust is mine now.', 'this is the good square.', 'hm. acceptable.',
     'i could go another day.', 'they remembered. noted.', 'i forgive the ceiling.',
     'sun on the plank. bliss.', 'the crumb is safe with me.', 'a nap, then revenge. no rush.',
@@ -94,7 +94,7 @@ export const MOOD_BUBBLES = {
 };
 
 export const SLEEP_TALK = [
-  'no, the other jar.', 'not the eraser.', 'i can see the edge.', 'put it back. put it back.',
+  'no, the other jar.', 'bury me in the good sock.', 'the dust has my baby teeth.', 'not the eraser.', 'i can see the edge.', 'put it back. put it back.',
   'the previous owner says hi.', 'it fits. it fits.', 'zzz. the bowl. zzz.', 'nobody counted.',
   'four inches. forever.', 'do not open the box.', 'the raisin knows.', 'i was taller once.',
   'under the shelf. under.', 'dig. dig. good.', 'uncle, no.', 'the crumb had a family.',
@@ -106,7 +106,7 @@ export const SLEEP_TALK = [
 ];
 
 export const PLOTTING_BUBBLES = [
-  'act natural.', 'you saw nothing.', 'entirely legal.', 'a minor undertaking.',
+  'act natural.', 'the spoon fits under the door.', 'first the bowl. then the ceiling.', 'you saw nothing.', 'entirely legal.', 'a minor undertaking.',
   'where is the crumb.', 'phase one: crumb.', 'the lamp suspects nothing.', 'nobody checks the fern.',
   'tonight, the bowl.', 'i need a smaller shovel.', 'the alibi is the dust.', 'step one: look innocent.',
   'the tissue is the parachute.', 'the plan has a plan.', 'do not tell uncle.', 'we strike at dusting time.',
