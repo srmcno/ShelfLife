@@ -31,15 +31,31 @@ export function createChaseUI(root, onFinish, onStatus) {
   const stars = root.querySelector('#chaseStars'), quip = root.querySelector('#chaseQuip');
   const directions = [...root.querySelectorAll('[data-chase-direction]')];
   const controls = [...directions, hop];
+  const world = root.querySelector('#chaseWorld'), clockFill = root.querySelector('#chaseClockFill');
+  const objective = root.querySelector('#chaseObjective');
   const nodes = new Map(), held = new Set();
+  let fieldBox = null, hudKey = '', popAnimation = null, runNumber = 0;
+  function measure() {
+    fieldBox = field.getBoundingClientRect();
+    if (fieldBox.width > 2) world.style.transform = 'scale(' + (field.clientWidth / CHASE_WIDTH) + ')';
+  }
+  new ResizeObserver(measure).observe(field);
+  window.addEventListener('resize', measure);
+  const setText = (el, value) => { if (el.textContent !== String(value)) el.textContent = String(value); };
   let pet = null, game = null, puppet = null, running = false, paused = false, gentle = false;
   let frameId = 0, lastTime = 0, targetX = null, pointerId = null, goalCelebrated = false;
   const resetInput = () => { held.clear(); targetX = null; pointerId = null; };
   const stopFrame = () => { cancelAnimationFrame(frameId); frameId = 0; running = false; resetInput(); };
   function disabled(value) { controls.forEach(b => { b.disabled = value; }); pauseButton.disabled = value; }
-  function message(text, kind = '') { pop.textContent = text; pop.className = 'chase-pop ' + kind; void pop.offsetWidth; pop.classList.add('show'); }
+  function message(text, kind = '') {
+    pop.textContent = text; pop.className = 'chase-pop ' + kind;
+    popAnimation?.cancel();
+    popAnimation = pop.animate([{opacity:0,translate:'0 5px'},{opacity:1,translate:'0 0',offset:.12},{opacity:1,offset:.75},{opacity:0,translate:'0 -4px'}], {duration:1250,fill:'both'});
+  }
   // One-shot effects: a floating score pop or a landing dust puff at a board position.
   function spark(kind, x, z, text = '') {
+    if (kind === 'puff' && document.body.dataset.effects === 'light') return;
+    if (fx.children.length >= 10) fx.firstElementChild.remove();
     const node = document.createElement('div'); node.className = 'chase-' + kind; node.textContent = text;
     node.style.left = x / CHASE_WIDTH * 100 + '%'; node.style.bottom = (CHASE_GROUND + z) / CHASE_HEIGHT * 100 + '%';
     fx.appendChild(node); setTimeout(() => node.remove(), kind === 'float' ? 900 : 500);
@@ -71,36 +87,38 @@ export function createChaseUI(root, onFinish, onStatus) {
       node.setAttribute('aria-hidden', 'true'); node.dataset.kind = item.kind;
       nodes.set(item.id, node); items.appendChild(node);
     }
-    node.style.left = item.x / CHASE_WIDTH * 100 + '%';
-    node.style.bottom = (CHASE_GROUND + item.z) / CHASE_HEIGHT * 100 + '%';
+    node.style.transform = 'translate3d(' + item.x.toFixed(2) + 'px,' + (-CHASE_GROUND - item.z).toFixed(2) + 'px,0) translate(-50%,50%)';
     node.style.setProperty('--tumble', tumbleOf(item) + 'deg');
     if (item.kind === 'moth') node.classList.toggle('carrying', !!item.carrying);
-    node.dataset.x = item.x.toFixed(2); node.dataset.z = item.z.toFixed(2);
+
   }
   function paint() {
     if (!game) return;
     const p = game.player;
-    actor.style.left = p.x / CHASE_WIDTH * 100 + '%';
-    actor.style.bottom = (CHASE_GROUND + p.z) / CHASE_HEIGHT * 100 + '%';
-    actor.dataset.x = p.x.toFixed(2); actor.dataset.z = p.z.toFixed(2);
+    actor.style.transform = 'translate3d(' + p.x.toFixed(2) + 'px,' + (-CHASE_GROUND - p.z).toFixed(2) + 'px,0) translateX(-50%)';
     actor.classList.toggle('protected', p.invincible > 0);
     field.classList.toggle('rush', running && game.rush > 0);
-    shadow.style.left = p.x / CHASE_WIDTH * 100 + '%';
+    shadow.style.translate = p.x.toFixed(2) + 'px 0';
     shadow.style.scale = String(Math.max(.35, 1 - p.z / 170));
     shadow.style.opacity = String(Math.max(.1, .45 - p.z / 260));
     puppet.move(running && p.moving, p.direction, p.z > 3);
-    count.textContent = game.caught + ' / ' + game.goal;
-    count.classList.toggle('met', game.caught >= game.goal);
-    score.textContent = String(game.score);
-    best.textContent = pet?.chaseBest ? String(pet.chaseBest.score) : '–';
-    best.classList.toggle('beaten', !!pet?.chaseBest && game.score > pet.chaseBest.score);
-    time.textContent = Math.max(0, Math.ceil(CHASE_SECONDS - game.time)) + 's';
-    time.classList.toggle('urgent', game.time > CHASE_SECONDS - 5);
-    root.querySelector('#chaseClockFill').style.transform = 'scaleX(' + Math.max(0, 1 - game.time / CHASE_SECONDS) + ')';
-    field.classList.toggle('urgent', running && game.time > CHASE_SECONDS - 5);
-    paintCombo();
-    root.dataset.score = game.score; root.dataset.caught = game.caught;
-    root.dataset.running = String(running); root.dataset.paused = String(paused);
+    clockFill.style.transform = 'scaleX(' + Math.max(0, 1 - game.time / CHASE_SECONDS) + ')';
+    const seconds = Math.max(0, Math.ceil(CHASE_SECONDS - game.time));
+    const record = pet?.chaseRecords?.[gentle ? 'gentle' : 'standard'];
+    const key = [game.caught, game.score, seconds, game.combo, running, paused, record?.score, game.objective?.done].join('|');
+    if (key !== hudKey) {
+      hudKey = key;
+      setText(count, game.caught + ' / ' + game.goal); count.classList.toggle('met', game.caught >= game.goal);
+      setText(score, game.score); setText(best, record?.score ?? '–');
+      best.classList.toggle('beaten', !!record && game.score > record.score);
+      setText(time, seconds + 's'); time.classList.toggle('urgent', seconds <= 5);
+      field.classList.toggle('urgent', running && seconds <= 5);
+      paintCombo();
+      root.dataset.score = game.score; root.dataset.caught = game.caught;
+      root.dataset.running = String(running); root.dataset.paused = String(paused);
+      objective.textContent = game.objective ? (game.objective.done ? '✓ Side quest complete · +40 points' : 'Side quest: ' + game.objective.label + ' · +40 points') : '';
+      objective.classList.toggle('complete', !!game.objective?.done);
+    }
     const present = new Set();
     for (const item of game.items) { present.add(item.id); paintItem(item); }
     for (const [id, node] of nodes) if (!present.has(id)) { node.remove(); nodes.delete(id); }
@@ -126,7 +144,10 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function finish() {
     stopFrame(); paused = false; root.dataset.finished = 'true'; disabled(true);
-    const newBest = recordChase(pet, game), reward = onFinish(game), rating = chaseStars(game);
+    const previous = pet.chaseRecords?.[gentle ? 'gentle' : 'standard'];
+    const newBest = !previous || game.score > previous.score;
+    recordChase(pet, game);
+    const reward = onFinish(game), rating = chaseStars(game);
     paint();
     title.textContent = game.complete ? (newBest ? 'A new personal best!' : rating === 3 ? 'Three stars. Insufferable.' : 'Crumb bandit.') : 'One more chase?';
     description.textContent = summary(reward);
@@ -140,7 +161,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   function onCatch(event) {
     puppet.gesture('catch'); playFeed();
     const mult = streakMultiplier(game.combo);
-    const label = event.kind === 'moth' ? 'Moth caught! ' : event.kind === 'biscuit' ? 'Whole biscuit! ' : event.air ? 'Air catch! ' : event.gold ? 'Golden crumb! ' : '';
+    const label = event.rescued ? 'Crumb rescued! ' : event.kind === 'moth' ? 'Moth caught! ' : event.kind === 'biscuit' ? 'Whole biscuit! ' : event.air ? 'Air catch! ' : event.gold ? 'Golden crumb! ' : '';
     spark('float', event.x, event.z, '+' + event.points);
     message(label + '+' + event.points + (mult > 1 ? ' · streak ×' + mult : ''), 'good');
     if (!goalCelebrated && game.caught >= game.goal) {
@@ -158,18 +179,20 @@ export function createChaseUI(root, onFinish, onStatus) {
     const p = game.player;
     if (event.type === 'catch') onCatch(event);
     else if (event.type === 'stomp') { puppet.gesture('jump'); playStomp(); squash(event.id); spark('float', event.x, event.z + 12, '+' + event.points); message((event.tail ? 'Stomp! Tail bounce ' : 'Stomp! ') + '+' + event.points, 'good'); }
-    else if (event.type === 'bump') { puppet.gesture('bump'); playClean(); shake(); message('Dust ambush! −5 · jump over them', 'bad'); }
-    else if (event.type === 'shield') { puppet.gesture('shield'); message('Horn block! Unbothered.', 'good'); }
+    else if (event.type === 'bump') { puppet.gesture('bump'); playClean(); shake(); message('Dust ambush! −' + event.loss + ' · jump over them', 'bad'); }
+    else if (event.type === 'shield') { puppet.gesture('shield'); message(event.source === 'horns' ? 'Horn block! Unbothered.' : 'Trust shield! It took that one for you.', 'good'); }
     else if (event.type === 'dodge') { spark('float', p.x, p.z + 40, '+' + event.points); message('Clean jump! +' + event.points, 'good'); }
-    else if (event.type === 'land') spark('puff', event.x, 0);
+    else if (event.type === 'land') { puppet.gesture('land'); spark('puff', event.x, 0); }
     else if (event.type === 'steal') { spark('puff', event.x, event.z); message('Moth theft. No witnesses with spines.', 'bad'); }
     else if (event.type === 'crumble') { spark('puff', event.x, 0); message('Biscuit deceased. Crumbs inherited nothing.', ''); }
     else if (event.type === 'miss') message('Crumb escaped. Streak reset. It had dependants.', '');
     else if (event.type === 'melt') spark('puff', event.x, 0);
     else if (event.type === 'powerup') onPowerUp(event);
+    else if (event.type === 'objective') { spark('float', p.x, p.z + 60, 'Quest +40'); playStar({step:1}); onStatus('Side quest complete! Forty extra points. The paperwork has been eaten in celebration.'); }
   }
   function frame(now) {
     if (!running) return;
+    if (now - lastTime > 800) { pause(); return; }
     const axis = Number(held.has('right')) - Number(held.has('left'));
     const events = updateChase(game, { axis, targetX: axis ? null : targetX }, (now - lastTime) / 1000);
     lastTime = now;
@@ -181,13 +204,14 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function run() {
     running = true; paused = false; resetInput(); overlay.hidden = true; disabled(false);
-    lastTime = performance.now(); frameId = requestAnimationFrame(frame);
+    measure(); lastTime = performance.now(); frameId = requestAnimationFrame(frame);
     field.focus({ preventScroll: true });
     onStatus('Collect ' + game.goal + ' crumbs. Jump over dust bunnies or land on them to stomp; airborne catches and streaks score extra.');
   }
   function start() {
     if (!pet || root.hidden) return;
-    stopFrame(); game = newChase(pet, { gentle, mood: moodOf(pet) });
+    stopFrame(); game = newChase(pet, { gentle, mood: moodOf(pet), objective: ['combo', 'air', 'biscuit'][runNumber++ % 3] });
+    hudKey = ''; nodes.clear(); items.replaceChildren();
     goalCelebrated = false;
     root.dataset.finished = 'false'; pop.textContent = ''; stars.hidden = true; quip.hidden = true;
     overlay.classList.remove('best'); fx.replaceChildren(); paint(); run();
@@ -201,12 +225,12 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function jump() { if (running && jumpChase(game)) { puppet.gesture('jump'); if (navigator.vibrate) navigator.vibrate(8); } }
   function moveTo(e) {
-    const box = field.getBoundingClientRect();
+    const box = fieldBox || field.getBoundingClientRect();
     targetX = Math.max(26, Math.min(294, (e.clientX - box.left) / box.width * CHASE_WIDTH));
   }
   field.addEventListener('pointerdown', e => {
     if (!running || e.button !== 0 || e.target.closest('button')) return;
-    e.preventDefault(); pointerId = e.pointerId; field.setPointerCapture(e.pointerId); moveTo(e);
+    e.preventDefault(); measure(); pointerId = e.pointerId; field.setPointerCapture(e.pointerId); moveTo(e);
   });
   field.addEventListener('pointermove', e => { if (running && e.pointerId === pointerId) moveTo(e); });
   field.addEventListener('pointerup', e => { if (e.pointerId === pointerId) pointerId = null; });
@@ -239,7 +263,8 @@ export function createChaseUI(root, onFinish, onStatus) {
   return {
     prepare(resident, useGentle) {
       stopFrame(); puppet?.release(); paused = false; goalCelebrated = false; pet = resident; gentle = useGentle;
-      game = newChase(pet, { gentle, mood: moodOf(pet) });
+      game = newChase(pet, { gentle, mood: moodOf(pet), objective: ['combo', 'air', 'biscuit'][runNumber % 3] });
+      hudKey = ''; nodes.clear(); items.replaceChildren();
       actor.replaceChildren(renderPetSprite(pet)); actor.firstElementChild.classList.add('sl-mood-content');
       puppet = createPuppet(actor.firstElementChild);
       title.textContent = 'The crumbs are escaping.';
@@ -247,12 +272,13 @@ export function createChaseUI(root, onFinish, onStatus) {
       go.textContent = 'Let’s chase'; overlay.hidden = false; disabled(true);
       hop.textContent = game.wings ? 'Flap ↑' : 'Hop ↑';
       const trait = game.wings ? 'Wings: tap Flap again in midair.' : game.horns ? 'Horns block your first dust ambush.' : game.halo ? 'Your halo pulls nearby crumbs closer.' : game.tail ? 'Tail: a bigger stomp bounce.' : 'Keyboard: arrows + Space.';
-      const record = pet.chaseBest ? ' Best: ' + pet.chaseBest.score + (pet.chaseBest.stars ? ' · ' + pet.chaseBest.stars + '★' : '') + '.' : '';
+      const modeRecord = pet.chaseRecords?.[gentle ? 'gentle' : 'standard'];
+      const record = modeRecord ? ' ' + (gentle ? 'Gentle' : 'Standard') + ' best: ' + modeRecord.score + '.' : ' Separate records for Gentle and Standard.';
       tip.textContent = 'Drag to steer or hold ← →. Land on a dust bunny to stomp it; jump clear to dodge. ' + trait + record;
       stars.hidden = true; quip.hidden = true; overlay.classList.remove('best'); fx.replaceChildren();
       pop.textContent = ''; paint();
     },
-    stop() { stopFrame(); paused = false; puppet?.release(); },
+    stop() { stopFrame(); paused = false; popAnimation?.cancel(); puppet?.release(); },
     pause
   };
 }

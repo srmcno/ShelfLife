@@ -44,7 +44,6 @@ function wirePosition(state, id, reopen) {
     [state.slots[from], state.slots[to]] = [state.slots[to], state.slots[from]];
     notePlayerMove(state, id, from, to);
     if (displaced) notePlayerMove(state, displaced, to, from);
-    save();
     renderAll(state);
     if (reopen) reopen();
     else closeCard();
@@ -181,12 +180,11 @@ export function openCard(state, id, keepScroll) {
       else if (need === 'clean') playClean();
       checkUnlocks(state);
       checkAchievements(state);
-      save();
       renderAll(state);
       if (cardVeil.classList.contains('open') && openPetId === pet.id) {
         openCard(state, pet.id, true);
       }
-      // After the re-render: renderAll throws away the element the reaction
+      // After the update: resolve the portrait or shelf element the reaction
       // has to play on. reactTo finds the pet again by id, on the shelf and in
       // the portrait at once.
       reactTo(pet.id, need);

@@ -1,13 +1,14 @@
-import { advanceStories } from '../engine/stories.js';
+import { advanceStories, withStories } from '../engine/stories.js';
 import { renderStories } from './stories.js';
 import { save } from '../state.js';
+import { syncEffects } from './effects.js';
 import { roundsWait } from '../engine/care.js';
 import { checkWait } from '../engine/loop.js';
 import { isDragging } from './drag.js';
 import { playWait } from '../engine/play.js';
 import { renderScheme } from './schemes.js';
 import { moodOf, isAsleep, hasTrait, worstNeed, MOOD_WORD } from '../engine/tick.js';
-import { activeFeuds, feudingIds, ACHIEVEMENTS } from '../engine/achievements.js';
+import { activeFeuds, ACHIEVEMENTS } from '../engine/achievements.js';
 import { totalBond } from '../engine/unlocks.js';
 import { petById } from '../state.js';
 import { renderPetSprite, moodMotionClasses, MOTION_TRAIT_FLAGS } from '../art/sprite.js';
@@ -26,17 +27,20 @@ let shelfSeen = null;
 document.getElementById('notesMore').addEventListener('click', () => { expandedNotes = !expandedNotes; if (notesState) renderNotes(notesState); });
 
 export function renderAll(state) {
-  advanceStories(state);
-  renderStatus(state);
-  renderShelf(state);
-  renderNotes(state);
-  renderScheme(state);
-  renderProgress(state);
-  renderDoors(state);
-  renderBrief(state);
-  renderNeeds(state);
-  renderStories(state);
-  save();
+  return withStories(state, () => {
+    syncEffects(state);
+    advanceStories(state);
+    renderStatus(state);
+    renderShelf(state);
+    renderNotes(state);
+    renderScheme(state);
+    renderProgress(state);
+    renderDoors(state);
+    renderBrief(state);
+    renderNeeds(state);
+    renderStories(state);
+    save();
+  });
 }
 
 // Three figures, and a fourth only when something is wrong. The mood census is
@@ -82,9 +86,9 @@ export function renderStatus(state) {
     '<span class="moon" title="' + escapeHtml(moon.name + '. ' + moon.line) + '" aria-label="' + escapeHtml(moon.name) + '"><i style="--ms:' + moon.shift + 'px"></i><span class="moon-name">' + escapeHtml(moon.name) + '</span></span>';
 }
 
-function feudDirectionFor(state, pet, slotIndex) {
+function feudDirectionFor(state, pet, slotIndex, feuds) {
   const partnerIds = new Set();
-  activeFeuds(state).forEach(([a, b]) => {
+  feuds.forEach(([a, b]) => {
     if (a.id === pet.id) partnerIds.add(b.id);
     else if (b.id === pet.id) partnerIds.add(a.id);
   });
@@ -96,15 +100,17 @@ function feudDirectionFor(state, pet, slotIndex) {
   return null;
 }
 
-function petEl(state, pet, slotIndex) {
+const artForNode = new WeakMap();
+function petEl(state, pet, slotIndex, existing, feuds, feudIds) {
   const mood = moodOf(pet);
   const asleep = isAsleep(pet);
   const plotting = state.schemes?.active?.petId === pet.id;
-  const feuding = feudingIds(state).has(pet.id);
-  const feudDirection = feuding ? feudDirectionFor(state, pet, slotIndex) : null;
+  const feuding = feudIds.has(pet.id);
+  const feudDirection = feuding ? feudDirectionFor(state, pet, slotIndex, feuds) : null;
 
-  const btn = document.createElement('button');
-  btn.className = 'pet piece' + (feuding ? ' feuding' : '') + (mood === 'furious' ? ' furious' : '') + (asleep ? ' asleep' : '');
+  const btn = existing || document.createElement('button');
+  btn.classList.add('pet', 'piece');
+  for (const [name, on] of Object.entries({feuding, furious: mood === 'furious', asleep, scheming: plotting})) btn.classList.toggle(name, on);
   btn.dataset.id = pet.id;
   if (plotting) btn.classList.add('scheming');
   btn.dataset.kind = 'pet';
@@ -121,22 +127,27 @@ function petEl(state, pet, slotIndex) {
   // layer keeps its "no engine/content imports" rule; the animation director
   // reads them back off the element to weight which idle behaviours a pet gets.
   const traits = MOTION_TRAIT_FLAGS.filter(k => hasTrait(pet, k));
-  const sprite = renderPetSprite(pet);
-  sprite.classList.add(...moodMotionClasses(pet, { mood, asleep, feudDirection, traits }));
-  if (plotting) sprite.classList.add('sl-plotting');
-  btn.appendChild(sprite);
-
-  const nameplate = document.createElement('span');
-  nameplate.className = 'nameplate';
-  nameplate.textContent = pet.name;
-  btn.appendChild(nameplate);
-
-  const pips = document.createElement('span');
-  pips.className = 'pips';
-  if (plotting && !asleep) pips.innerHTML += '<span class="pip plotting">plotting</span>';
-  if (asleep) pips.innerHTML += '<span class="pip zzz">asleep</span>';
-  ['food', 'fuss', 'clean'].forEach(k => { if (pet.needs[k] < 42) pips.innerHTML += '<span class="pip ' + k + '"></span>'; });
-  btn.appendChild(pips);
+  let sprite = btn.querySelector('.sprite');
+  if (!sprite || artForNode.get(btn) !== pet.art) {
+    const next = renderPetSprite(pet);
+    if (sprite) sprite.replaceWith(next); else btn.appendChild(next);
+    sprite = next; artForNode.set(btn, pet.art);
+  }
+  const motion = moodMotionClasses(pet, { mood, asleep, feudDirection, traits });
+  const previous = (sprite.dataset.moodClasses || '').split(' ').filter(Boolean);
+  previous.filter(c => !motion.includes(c)).forEach(c => sprite.classList.remove(c));
+  motion.forEach(c => sprite.classList.add(c));
+  sprite.dataset.moodClasses = motion.join(' ');
+  sprite.classList.toggle('sl-plotting', plotting);
+  let nameplate = btn.querySelector('.nameplate');
+  if (!nameplate) { nameplate = document.createElement('span'); nameplate.className = 'nameplate'; btn.appendChild(nameplate); }
+  if (nameplate.textContent !== pet.name) nameplate.textContent = pet.name;
+  let pips = btn.querySelector('.pips');
+  if (!pips) { pips = document.createElement('span'); pips.className = 'pips'; btn.appendChild(pips); }
+  const pipMarkup = (plotting && !asleep ? '<span class="pip plotting">plotting</span>' : '') +
+    (asleep ? '<span class="pip zzz">asleep</span>' : '') +
+    ['food', 'fuss', 'clean'].filter(k => pet.needs[k] < 42).map(k => '<span class="pip ' + k + '"></span>').join('');
+  if (pips.innerHTML !== pipMarkup) pips.innerHTML = pipMarkup;
 
   return btn;
 }
@@ -156,65 +167,56 @@ function propEl(pr, slotIndex) {
   return btn;
 }
 
+let shelfLayout = '';
 export function renderShelf(state) {
-  // A resident being carried keeps the DOM it is holding on to; the next
-  // render after the drop redraws everything.
   if (isDragging()) return;
-  // The cabinet is rebuilt from scratch every render, so a pet that changed
-  // slots is destroyed and recreated somewhere else — it would teleport. Snap
-  // the old positions first and hand them to the animator afterwards, which
-  // replays the difference as an actual walk across the shelf (FLIP).
+  const layout = JSON.stringify(state.slots);
+  const moved = shelfLayout !== layout;
+  const before = moved ? captureShelfPositions(cabinet) : null;
   const focusedId = cabinet.contains(document.activeElement) ? document.activeElement.closest('.piece')?.dataset.id : null;
-  const before = captureShelfPositions(cabinet);
-  cabinet.innerHTML = '';
-  const rows = state.slots.length / 6;
+  const pieces = new Map([...cabinet.querySelectorAll('.piece')].map(el => [el.dataset.id, el]));
+  const pets = new Map(state.pets.map(p => [p.id, p]));
+  const feuds = activeFeuds(state), feudIds = new Set(feuds.flatMap(pair => pair.map(p => p.id)));
+  const props = new Map((state.props || []).map(p => [p.id, p]));
+  const rows = Math.ceil(state.slots.length / 6);
+  while (cabinet.children.length > rows) cabinet.lastElementChild.remove();
   for (let r = 0; r < rows; r++) {
+    let row = cabinet.children[r];
+    if (!row) {
+      row = document.createElement('div'); row.className = 'shelf-row';
+      row.innerHTML = '<div class="slots"></div><div class="plank"></div>'; cabinet.appendChild(row);
+    }
+    const slots = row.firstElementChild;
     const rowEmpty = state.slots.slice(r * 6, r * 6 + 6).every(id => !id);
     const bareShelf = r === 0 && rowEmpty && !state.pets.length;
-    const row = document.createElement('div');
-    row.className = 'shelf-row' + (rowEmpty && !bareShelf ? ' row-empty' : '');
-    const slots = document.createElement('div');
-    slots.className = 'slots';
-    for (let c = 0; c < 6; c++) {
-      const i = r * 6 + c;
-      const slot = document.createElement('div');
-      slot.className = 'slot';
-      slot.dataset.slot = i;
-      const id = state.slots[i];
-      if (id) {
-        const pet = state.pets.find(p => p.id === id);
-        if (pet) {
-          const el = petEl(state, pet, i);
-          if (shelfSeen && !shelfSeen.has(pet.id)) el.classList.add('pet-arrival');
-          slot.appendChild(el);
-        }
-        else {
-          const pr = (state.props || []).find(x => x.id === id);
-          if (pr) slot.appendChild(propEl(pr, i));
-        }
-      }
-      slots.appendChild(slot);
-    }
+    row.classList.toggle('row-empty', rowEmpty && !bareShelf);
     if (bareShelf) {
-      slots.innerHTML = '';
-      const msg = document.createElement('div');
-      msg.className = 'empty-shelf';
-      msg.innerHTML = '<span class="empty-kicker">Vacancy. Eighteen small rooms.</span>' +
-        '<strong>Someone should live here.</strong>' +
-        '<span>Grow a peculiar little creature, or draw your own. They cannot die. They can hold a grudge, and they will hold it against you.</span>' +
-        '<button class="btn btn-primary" type="button">Make your first pet</button>';
-      msg.querySelector('button').addEventListener('click', () => document.getElementById('newPetBtn').click());
-      slots.appendChild(msg);
+      if (!slots.querySelector('.empty-shelf')) {
+        slots.innerHTML = '<div class="empty-shelf"><span class="empty-kicker">Vacancy. Eighteen small rooms.</span><strong>Someone should live here.</strong><span>Grow a peculiar little creature, or draw your own. They cannot die. They can hold a grudge, and they will hold it against you.</span><button class="btn btn-primary" type="button">Make your first pet</button></div>';
+        slots.querySelector('button').addEventListener('click', () => document.getElementById('newPetBtn').click());
+      }
+      continue;
     }
-    row.appendChild(slots);
-    const plank = document.createElement('div');
-    plank.className = 'plank';
-    row.appendChild(plank);
-    cabinet.appendChild(row);
+    slots.querySelector('.empty-shelf')?.remove();
+    for (let c = 0; c < 6; c++) {
+      const i = r * 6 + c, id = state.slots[i];
+      let slot = slots.children[c];
+      if (!slot) { slot = document.createElement('div'); slot.className = 'slot'; slot.dataset.slot = i; slots.appendChild(slot); }
+      const pet = pets.get(id), prop = props.get(id);
+      let piece = pieces.get(id);
+      if (pet) {
+        piece = petEl(state, pet, i, piece?.dataset.kind === 'pet' ? piece : null, feuds, feudIds);
+        if (shelfSeen && !shelfSeen.has(pet.id)) piece.classList.add('pet-arrival');
+      } else if (prop) {
+        if (!piece || piece.dataset.prop !== prop.kind) piece = propEl(prop, i);
+        piece.dataset.slot = i;
+      } else piece = null;
+      if (slot.firstElementChild !== piece) slot.replaceChildren(...(piece ? [piece] : []));
+    }
   }
-  shelfSeen = new Set(state.pets.map(p => p.id));
-  playShelfMoves(cabinet, before);
-  if (focusedId) Array.from(cabinet.querySelectorAll('.piece')).find(el => el.dataset.id === focusedId)?.focus({ preventScroll: true });
+  shelfSeen = new Set(pets.keys()); shelfLayout = layout;
+  if (before) playShelfMoves(cabinet, before);
+  if (focusedId && document.activeElement?.dataset.id !== focusedId) pieces.get(focusedId)?.focus({preventScroll:true});
 }
 
 // Notes the board has already shown, so a fresh one can slide in rather than
@@ -289,8 +291,12 @@ function renderTeaser(state) {
   teaser.querySelector('.teaser-by').textContent = n.from;
 }
 
+let notesKey = null;
 export function renderNotes(state) {
   notesState = state;
+  const key = JSON.stringify([state.notes, noteFilter, petFilter, expandedNotes, !!state.pets.length, document.getElementById('clearNotes').dataset.undo]);
+  if (key === notesKey) return;
+  notesKey = key;
   renderTeaser(state);
   const list = state.notes.filter(n => noteMatches(n, noteFilter));
   const more = document.getElementById('notesMore');
@@ -379,7 +385,7 @@ function syncRounds(state) {
     check.querySelector('span').textContent = wait ? 'Listening · ' + Math.ceil(wait / 1000) + 's' : 'Check the shelf';
   }
 }
-setInterval(() => { if (briefState) syncRounds(briefState); }, 1000);
+setInterval(() => { if (briefState && !document.hidden && !document.body.classList.contains('dialog-open')) syncRounds(briefState); }, 1000);
 function renderBrief(state) {
   briefState = state;
   const host = document.getElementById('shelfBrief');

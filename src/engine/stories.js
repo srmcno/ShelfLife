@@ -1,5 +1,5 @@
 import { CASES, VISITORS } from '../content/stories.js';
-import { addNote, clamp } from '../state.js';
+import { addNote, clamp, grantBonusTrust } from '../state.js';
 import { fileGrudge } from './achievements.js';
 import { neighborPets, neighborProps } from './tick.js';
 import { FEUDS } from '../content/feuds.js';
@@ -16,7 +16,17 @@ export const residentWins = pet => (pet.handshakes || 0) + (pet.chases || 0) + (
 const roll = rng => clamp(Number(rng()) || 0, 0, 0.999999999);
 export const VISIT_GAP_MIN = 8 * 3600000;
 export const VISIT_GAP_MAX = 18 * 3600000;
+// Validate once per synchronous story transaction. Independent public reads still
+// repair imported or edited data; nested lookups share the already checked record.
+const storyTransactions = new WeakMap();
+export function withStories(state, work) {
+  if (storyTransactions.has(state)) return work(storyTransactions.get(state));
+  const stories = storyState(state);
+  storyTransactions.set(state, stories);
+  try { return work(stories); } finally { storyTransactions.delete(state); }
+}
 export function storyState(state) {
+  if (storyTransactions.has(state)) return storyTransactions.get(state);
   if (!safeRecord(state.stories)) state.stories = {};
   const s = state.stories;
   for (const k of ['archive', 'collection', 'postcards', 'residents']) if (!Array.isArray(s[k])) s[k] = [];
@@ -28,7 +38,7 @@ export function storyState(state) {
     if (!VISITORS.some(v => v.id === id) || !safeRecord(s.visitStats[id])) { delete s.visitStats[id]; continue; }
     for (const key of ['visits', 'welcomes']) s.visitStats[id][key] = Math.floor(cleanTime(s.visitStats[id][key]));
   }
-  s.nextVisitAt = cleanTime(s.nextVisitAt);
+  s.nextVisitAt = cleanTime(s.nextVisitAt); s.lastInvitation = cleanTime(s.lastInvitation);
   s.postcards = s.postcards.filter(x => safeRecord(x) && typeof x.image === 'string' && x.image.startsWith('data:image/jpeg;base64,') && x.image.length < 200000).slice(0, 6);
   s.residents = s.residents.filter(x => safeRecord(x) && typeof x.name === 'string').slice(0, 36);
   for (const resident of s.residents) resident.names = (Array.isArray(resident.names) ? resident.names : []).filter(x => safeRecord(x) && typeof x.name === 'string').slice(-30);
@@ -183,13 +193,32 @@ function requestMet(state, pet, r) {
   if (r.kind === 'neighbor') return neighborPets(state, slot).some(p => p.id === r.target);
   return r.kind === 'room' && state.decor.room === 'parlor';
 }
+export const INVITATION_REST = 3600000;
+export function inviteVisitor(state, now = Date.now(), rng = Math.random) {
+  return withStories(state, s => {
+    if (!state.pets.length || s.visitor || s.lastInvitation && now < s.lastInvitation + INVITATION_REST) return false;
+    s.lastInvitation = now; s.nextVisitAt = now;
+    advanceStories(state, now, rng);
+    return !!s.visitor;
+  });
+}
+export function farewellVisitor(state, now = Date.now()) {
+  const s = storyState(state), v = s.visitor;
+  if (!v?.welcomed) return false;
+  const guest = VISITORS.find(d => d.id === v.kind);
+  s.lastVisitor = v.kind; s.lastVisit = now; s.nextVisitAt = now + VISIT_GAP_MIN;
+  s.visitor = null;
+  remember(state, 'Until the next small disaster', guest.name + ' leaves with a wave. The souvenir refuses to follow.', now, 'visitor');
+  return true;
+}
+
 export function welcomeVisitor(state, hostId, choice, now = Date.now()) {
   const s = storyState(state), v = s.visitor, host = state.pets.find(p => p.id === hostId);
   if (!v || v.welcomed || now >= v.at + VISIT_LENGTH || !host || !['crumbs', 'tour'].includes(choice)) return false;
   if (choice === 'crumbs' && host.needs.food < 8) return false;
   const definition = VISITORS.find(x => x.id === v.kind);
   v.welcomed = true; v.host = host.name; v.hostId = host.id; v.choice = choice;
-  if (choice === 'crumbs') { host.needs.food -= 8; host.bond = clamp(host.bond + 1, 0, 25); }
+  if (choice === 'crumbs') { host.needs.food -= 8; grantBonusTrust(host, 1, now); }
   else host.needs.fuss = clamp(host.needs.fuss + 8, 0, 100);
   if (!s.collection.some(x => x.id === v.kind)) s.collection.push({ id: v.kind, at: now, host: host.name });
   const stats = s.visitStats[v.kind] ||= { visits: 1, welcomes: 0 };
@@ -200,6 +229,9 @@ export function welcomeVisitor(state, hostId, choice, now = Date.now()) {
   remember(state, 'An unusual souvenir', text, now, 'visitor'); addNote(state, text, definition.name, 'arrival'); return true;
 }
 export function advanceStories(state, now = Date.now(), rng = Math.random) {
+  return withStories(state, () => advanceStoryTransaction(state, now, rng));
+}
+function advanceStoryTransaction(state, now, rng) {
   const s = storyState(state); if (!state.pets.length) return;
   const week = Math.floor(now / WEEK);
   if (!s.case || s.case.beat === 6 && s.case.week < week) {

@@ -17,7 +17,7 @@
 // import — never a hidden closure over a duplicated copy of the save data.
 import { CANVAS_SIZE, STAMP_SCALE, BASE_STAMPS, UNLOCK_STAMPS, STAMP_SVG, STAMP_LABELS } from './stamps.js';
 import {
-  generateCreature, selectCreaturePart, listVariants, normalizeCreature, describeCreature,
+  generateCreature, selectCreaturePart, listVariants, normalizeCreature, describeCreature, customizeCreature, resolveColors,
   SLOTS, SLOT_KEYS, PALETTES, PALETTE_IDS, BODY_IDS, BODIES
 } from './creatures.js';
 import { renderPetSprite } from './sprite.js';
@@ -137,6 +137,8 @@ export function initStudio({ onSave }) {
   let mode = 'generate';
   let creature = null;
   let selectedPart = 'body';
+  const undo = [];
+  let previewFrame = 0;
 
   // Slot chips, in the order the SLOTS registry declares them, plus body. Body is
   // deliberately first: it is the one change that alters the silhouette, and the
@@ -155,11 +157,14 @@ export function initStudio({ onSave }) {
     genDesc.textContent = describeCreature(creature);
   }
 
-  function setCreature(next) {
+  function setCreature(next, remember = true) {
+    if (remember && creature) { undo.push(creature); if (undo.length > 30) undo.shift(); }
     creature = normalizeCreature(next);
-    renderPreview();
+    cancelAnimationFrame(previewFrame);
+    previewFrame = requestAnimationFrame(renderPreview);
     syncPalette();
     syncPartPicker();
+    syncDetails();
   }
 
   function syncPalette() {
@@ -171,6 +176,9 @@ export function initStudio({ onSave }) {
   function syncPartPicker() {
     const select = document.getElementById('genVariant');
     if (!select || !creature) return;
+    const pickerKey = selectedPart + ':' + (selectedPart === 'body' ? creature.body : creature.parts[selectedPart]);
+    if (select.dataset.pickerKey === pickerKey) return;
+    select.dataset.pickerKey = pickerKey;
     const options = selectedPart === 'body' ? BODY_IDS.map(id => ({ id, name: BODIES[id].name })) : listVariants(selectedPart);
     const current = selectedPart === 'body' ? creature.body : creature.parts[selectedPart];
     select.replaceChildren(...options.map(({ id, name }) => {
@@ -218,11 +226,33 @@ export function initStudio({ onSave }) {
       b.addEventListener('click', () => {
         // Palette is pure colour: keep every rolled part, seed and tune exactly
         // as they are rather than regenerating and drifting the creature.
-        setCreature(Object.assign({}, creature, { palette: id }));
+        setCreature(Object.assign({}, creature, { palette: id, colors: undefined }));
       });
       genPalette.appendChild(b);
     });
   }
+
+  function syncDetails() {
+    document.querySelectorAll('[data-tune]').forEach(input => {
+      const key = input.dataset.tune;
+      input.value = creature.tune[key];
+      document.getElementById(key + 'Value').textContent = key === 'lean' ? creature.tune[key] + '°' : Math.round(creature.tune[key] * 100) + '%';
+    });
+    const colours = resolveColors(creature);
+    document.querySelectorAll('[data-colour]').forEach(input => { input.value = colours[input.dataset.colour]; });
+    document.getElementById('genUndo').disabled = !undo.length;
+  }
+  document.querySelectorAll('[data-tune],[data-colour]').forEach(input => {
+    let editing = false;
+    input.addEventListener('input', () => {
+      const options = input.dataset.tune ? { tune: { [input.dataset.tune]: Number(input.value) } } : { colors: { [input.dataset.colour]: input.value } };
+      setCreature(customizeCreature(creature, options), !editing); editing = true;
+    });
+    input.addEventListener('change', () => { editing = false; });
+    input.addEventListener('blur', () => { editing = false; });
+  });
+  document.getElementById('genUndo').addEventListener('click', () => { if (undo.length) setCreature(undo.pop(), false); });
+  document.getElementById('genResetDetails').addEventListener('click', () => setCreature({ ...creature, colors: undefined, tune: {} }));
 
   genSurprise.addEventListener('click', () => setCreature(generateCreature()));
 
@@ -430,12 +460,14 @@ export function initStudio({ onSave }) {
     // A fresh roll every time the studio opens: the first thing a player sees is
     // a finished creature, not an empty box asking them to be an artist.
     setMode('generate');
-    setCreature(generateCreature());
+    undo.length = 0; creature = null;
+    setCreature(generateCreature(), false);
     studioVeil.classList.add('open');
     document.body.style.overflow = 'hidden';
   }
 
   function close() {
+    cancelAnimationFrame(previewFrame);
     studioVeil.classList.remove('open');
     document.body.style.overflow = '';
     // Drop the preview sprite. art/animator.js scans the whole document each

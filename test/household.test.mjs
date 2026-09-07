@@ -96,7 +96,8 @@ test('contextual notes and dialogue only claim facts currently supported by the 
 test('visitor art uses real variants and each guest has complete arrival, return, and choice writing',()=>{
   for(const d of VISITORS){
     const c=generateCreature({seed:d.seed,body:d.body,palette:d.palette,parts:d.parts});
-    assert.equal(c.body,d.body);assert.equal(c.palette,d.palette);
+    if (d.classic) assert.deepEqual(c, generateCreature({seed:d.seed,parts:d.parts}));
+    else { assert.equal(c.body,d.body);assert.equal(c.palette,d.palette); }
     for(const [slot,id] of Object.entries(d.parts)){assert.ok(SLOTS[slot]?.lib[id],d.id+': '+slot);assert.equal(c.parts[slot],id);}
     for(const key of ['line','returnLine','crumbs','tour'])assert.ok(typeof d[key]==='string'&&d[key].length>20,d.id+': '+key);
   }

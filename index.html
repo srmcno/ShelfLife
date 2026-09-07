@@ -157,6 +157,7 @@
     <button class="btn tray-item" id="incidentsBtn"><span>Incidents</span><small>What has happened so far</small></button>
     <button class="btn tray-item" id="museumBtn"><span>Memory museum</span><small>Cases, visitors, names and postcards</small></button>
     <button class="btn tray-item" id="postcardBtn"><span>Postcard</span><small>Share a picture of the shelf</small></button>
+    <label class="effects-setting" for="effectsMode"><span>Animation & performance</span><select id="effectsMode"><option value="auto">Automatic</option><option value="light">Light effects</option><option value="full">Full effects</option></select><small id="effectsHint"></small></label>
     <button class="btn tray-item" id="muteBtn" aria-pressed="false"><span>Sound</span><small>Small noises</small></button>
     <button class="btn tray-item" id="narratorBtn" aria-pressed="true"><span>Narrator</span><small>Reads the notes aloud</small></button>
     <button class="btn tray-item" id="voiceBtn" title="Choose who reads the notes out loud."><span>Voice</span><small>Who does the reading</small></button>
@@ -213,6 +214,17 @@
       <div class="tool-block">
         <div class="tool-label">Colour</div>
         <div class="swatches gen-palette" id="genPalette"></div>
+        <details class="gen-details"><summary>Fine details & custom colours</summary>
+          <p class="hint">Keep the parts you love. Adjust the face and colours without rerolling anything.</p>
+          <div class="gen-tuning">
+            <label>Eye size <output id="eyeScaleValue"></output><input type="range" id="genEyeScale" data-tune="eyeScale" min="0.7" max="1.4" step="0.01"></label>
+            <label>Eye spacing <output id="eyeSpreadValue"></output><input type="range" id="genEyeSpread" data-tune="eyeSpread" min="0.75" max="1.25" step="0.01"></label>
+            <label>Mouth size <output id="mouthScaleValue"></output><input type="range" id="genMouthScale" data-tune="mouthScale" min="0.7" max="1.4" step="0.01"></label>
+            <label>Posture <output id="leanValue"></output><input type="range" id="genLean" data-tune="lean" min="-7" max="7" step="0.01"></label>
+          </div>
+          <div class="gen-colours"><label>Body <input type="color" id="genBodyColour" data-colour="body"></label><label>Accent <input type="color" id="genAccentColour" data-colour="accent"></label><label>Markings <input type="color" id="genDetailColour" data-colour="detail"></label></div>
+          <div class="tool-block"><button class="btn btn-sm" type="button" id="genResetDetails">Reset fine details</button><button class="btn btn-sm btn-ghost" type="button" id="genUndo">Undo change</button></div>
+        </details>
       </div>
     </div>
 
@@ -342,14 +354,15 @@
 <div class="veil" id="museumVeil"><div class="sheet sheet-museum"><div class="sheet-head"><div><span class="eyebrow">Long memories, short legs</span><h2>Memory museum</h2></div><button class="btn btn-ghost btn-sm" id="museumClose">Close</button></div><div id="museumContent"></div></div></div>
 <div class="veil" id="playVeil"><div class="sheet sheet-play">
   <div class="sheet-head"><div><span class="eyebrow" id="playName">A small secret</span><h2 id="playTitle">Secret handshake</h2></div><button class="btn btn-ghost btn-sm" id="playClose">Close</button></div>
-  <div class="play-modes"><button class="chip" data-play-mode="chase" aria-pressed="true">Crumb Chase</button><button class="chip" data-play-mode="memory" aria-pressed="false">Handshake</button><button class="chip" data-play-mode="alibi" aria-pressed="false">The Alibi</button><label id="gentleOption"><input type="checkbox" id="playRelaxed"> Gentle pace</label><label id="memoryOption" hidden><input type="checkbox" id="playSlow"> Slow demonstration</label></div>
+  <div class="play-modes"><button class="chip" data-play-mode="chase" aria-pressed="true">Crumb Chase</button><button class="chip" data-play-mode="memory" aria-pressed="false">Handshake</button><button class="chip" data-play-mode="alibi" aria-pressed="false">The Alibi</button><label id="gentleOption"><input type="checkbox" id="playRelaxed"> Gentle pace</label><span id="memoryOption" hidden><label><input type="checkbox" id="playSlow"> Slow demonstration</label><label><input type="checkbox" id="playEncore"> Encore · 5 rounds</label></span></div>
   <div id="chaseArea" hidden>
     <div class="chase-hud"><span>Crumbs<b id="chaseCount">0 / 8</b></span><span>Score<b id="chaseScore">0</b></span><span>Best<b id="chaseBest">–</b></span><span>Time<b id="chaseTime">22s</b></span><button class="btn btn-ghost btn-sm" id="chasePause" aria-label="Pause chase">Pause</button></div>
     <div class="chase-clock" aria-hidden="true"><i id="chaseClockFill"></i></div>
     <div class="chase-combo" id="chaseCombo" aria-hidden="true"><span id="chaseComboLabel">Streak</span><i id="chaseComboBar"></i></div>
+    <p class="chase-objective" id="chaseObjective"></p>
     <div class="chase-field" id="chaseField" tabindex="0" role="group" aria-label="Crumb Chase. Drag to steer your resident, or use left and right arrows. Space or the Hop button jumps; land on a dust bunny to stomp it.">
-      <div class="chase-window" aria-hidden="true"></div><div class="chase-lightbeam" aria-hidden="true"></div><div class="chase-motes" aria-hidden="true"><i></i><i></i><i></i><i></i></div><span class="chase-graffiti" aria-hidden="true">WE OUTLIVE<br>THE BISCUITS</span><div class="chase-floor" aria-hidden="true"></div><div id="chaseShadow" class="chase-shadow" aria-hidden="true"></div>
-      <div id="chaseItems"></div><div id="chaseFx" aria-hidden="true"></div><div id="chaseResident" class="chase-resident" aria-hidden="true"></div><div id="chasePop" class="chase-pop" aria-hidden="true"></div>
+      <div class="chase-window" aria-hidden="true"></div><div class="chase-lightbeam" aria-hidden="true"></div><div class="chase-motes" aria-hidden="true"><i></i><i></i><i></i><i></i></div><span class="chase-graffiti" aria-hidden="true">WE OUTLIVE<br>THE BISCUITS</span><div class="chase-floor" aria-hidden="true"></div><div id="chaseWorld" class="chase-world"><div id="chaseShadow" class="chase-shadow" aria-hidden="true"></div>
+      <div id="chaseItems"></div><div id="chaseFx" aria-hidden="true"></div><div id="chaseResident" class="chase-resident" aria-hidden="true"></div></div><div id="chasePop" class="chase-pop" aria-hidden="true"></div>
       <div id="chaseOverlay" class="chase-overlay"><h3 id="chaseHeading">The crumbs are escaping.</h3><div id="chaseStars" class="chase-stars" role="img" aria-label="" hidden></div><p id="chaseDescription">Catch eight crumbs in 22 seconds.</p><p id="chaseQuip" class="chase-quip" hidden></p><button class="btn btn-primary" id="chaseGo">Let’s chase</button></div>
     </div>
     <div class="chase-controls"><button class="btn" data-chase-direction="left" aria-label="Move resident left">←</button><button class="btn btn-primary" id="chaseHop">Hop ↑</button><button class="btn" data-chase-direction="right" aria-label="Move resident right">→</button></div>
@@ -363,6 +376,7 @@
        buttons are filled in at play time rather than written here. -->
   <div id="alibiArea" hidden>
     <p class="alibi-charge" id="alibiCharge">Three statements. One of them is false.</p>
+    <details class="alibi-notebook" id="alibiNotebook" hidden><summary>Open the evidence notebook</summary><p>Facts recorded when this statement began. The witness would prefer you did not read them.</p><ul id="alibiFacts"></ul></details>
     <div class="alibi-statements" id="alibiStatements" role="group" aria-label="Sworn statements. Choose the false one."></div>
     <p class="alibi-verdict" id="alibiVerdict" role="status"></p>
     <button type="button" class="btn btn-primary alibi-next" id="alibiNext" hidden>Next statement</button>

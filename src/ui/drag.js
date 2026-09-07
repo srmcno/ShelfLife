@@ -200,7 +200,6 @@ export function initDrag(state) {
     // halves of a swap were moved by you, so both of them get one.
     notePlayerMove(state, d.id, from, to);
     if (tmp) notePlayerMove(state, tmp, to, from);
-    save();
     renderAll(state);
   }
   // Listened for on the window rather than the cabinet: pointer capture is lost

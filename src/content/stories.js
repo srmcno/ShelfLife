@@ -36,7 +36,7 @@ export const VISITORS = [
 
 // Each caller leaves a different object and reacts differently to hospitality.
 const GUEST_DETAILS = {
-  moth: { body: 'bulb', palette: 'amber', returnLine: 'Madam Moth recognises the lamp. She greets it before anyone with a pulse.', crumbs: 'Madam Moth holds a crumb up to the light. “Opaque,” she says, and eats the evidence.', tour: 'Madam Moth inspects the shadows. One is trying to look taller than its owner.' },
+  moth: { classic: true, returnLine: 'Madam Moth recognises the lamp. She greets it before anyone with a pulse.', crumbs: 'Madam Moth holds a crumb up to the light. “Opaque,” she says, and eats the evidence.', tour: 'Madam Moth inspects the shadows. One is trying to look taller than its owner.' },
   lint: { body: 'tuft', palette: 'ash', returnLine: 'The Lint Baron returns to inspect his holdings. Most are still attached to somebody else.', crumbs: 'The Baron calls the crumb a province. Annexation takes one bite.', tour: 'The Baron surveys the plank from both ends. His empire has doubled without getting any larger.' },
   bell: { body: 'gown', palette: 'lilac', returnLine: 'Miss Afterbell is back. The silence arrives first and looks for its old seat.', crumbs: 'Miss Afterbell eats without a sound. The crumb makes enough fuss for both of them.', tour: 'Miss Afterbell finds a quiet corner and folds it into a quieter corner.' }
 };
@@ -60,4 +60,13 @@ VISITORS.push(
   { id: 'needle', name: 'Mother Needle', title: 'Emergency seamstress', gift: 'A stitch in borrowed time', seed: 'visitor-needle', body: 'spindle', palette: 'cherry', parts: { top: 'none', detail: 'stitches' },
     line: 'Mother Needle has come to mend things. She looks at the residents and asks where to start.', returnLine: 'Mother Needle returns with stronger thread and lower expectations.',
     crumbs: 'Mother Needle threads a crumb onto a hair. “Packed lunch.” Then she eats the packing.', tour: 'Mother Needle inspects the cracks in the wood. “I can close those. The personalities will cost extra.”' }
+  ,{ id: 'clock', name: 'Mr Borrowed Time', title: 'Late by several lifetimes', gift: 'One unused tomorrow', seed: 'visitor-clock', body: 'urn', palette: 'rust', parts: { eyes: 'pair', top: 'halo', wings: 'none' },
+    line: 'Mr Borrowed Time is early for tomorrow and catastrophically late for yesterday. He would like both visits counted.', returnLine: 'Mr Borrowed Time returns the minute he borrowed. It has teeth marks.',
+    crumbs: 'Mr Borrowed Time saves half the crumb for later. Later arrives during chewing.', tour: 'Mr Borrowed Time admires the antiques. The residents object to being included.' },
+  { id: 'receipt', name: 'The Receipt Eater', title: 'Evidence disposal, while you wait', gift: 'A receipt for no known purchase', seed: 'visitor-receipt', body: 'spindle', palette: 'bone', parts: { top: 'none', wings: 'none', detail: 'stitches' },
+    line: 'The Receipt Eater offers to erase your mistakes. It cannot promise to digest them.', returnLine: 'The Receipt Eater is back for seconds. It points at your entire filing system.',
+    crumbs: 'The Receipt Eater eats the crumb and asks for proof. Then it eats the proof.', tour: 'The Receipt Eater calls the case board an all-you-can-eat confession.' },
+  { id: 'rain', name: 'Captain Indoor Rain', title: 'Weather with nowhere to be', gift: 'A cloud on a short lead', seed: 'visitor-rain', body: 'tuft', palette: 'drowned', parts: { top: 'crown', wings: 'stubs' },
+    line: 'Captain Indoor Rain drips on the welcome mat. The forecast is damp with a chance of inherited furniture.', returnLine: 'Captain Indoor Rain returns. The little cloud remembers where you keep the towels.',
+    crumbs: 'The Captain calls the soggy crumb a maritime incident. Rescue efforts are entirely oral.', tour: 'Captain Indoor Rain inspects the ceiling. “Very low sky. I can work with this.”' }
 );

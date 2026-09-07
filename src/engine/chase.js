@@ -11,6 +11,12 @@ const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const FLOOR = 10;   // resting height of anything on the floorboards
 const CHEST = 27;   // the catch box sits this far above the resident's feet
 
+export const CHASE_OBJECTIVES = {
+  combo: { stat: 'bestCombo', target: 6, label: 'build a streak of 6' },
+  air: { stat: 'airCatches', target: 3, label: 'make 3 airborne catches' },
+  biscuit: { stat: 'biscuits', target: 1, label: 'catch a whole biscuit' }
+};
+
 export const streakMultiplier = combo => Math.min(3, 1 + Math.floor(combo / 4));
 
 /* Who you are chasing with used to change only what its body could do — wings
@@ -31,11 +37,12 @@ export const TEMPER = {
 
 export function temperOf(mood) { return TEMPER[mood] || TEMPER.fine; }
 
-export function newChase(pet, { gentle = false, rng = Math.random, mood = 'fine' } = {}) {
+export function newChase(pet, { gentle = false, rng = Math.random, mood = 'fine', objective = null } = {}) {
   const art = artPersonality(pet);
   const temper = temperOf(mood);
   return {
     kind: 'chase', petId: pet.id, time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
+    rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { ...CHASE_OBJECTIVES[objective], done: false } : null,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
     goal: gentle ? 6 : 8, complete: false, finished: false, claimed: false, gentle, stars: 0,
     wings: art.motion.canFlap, horns: art.horns, halo: art.halo, tail: art.motion.tails > 0,
@@ -143,7 +150,7 @@ function award(game, item, base, events) {
   const points = base * streakMultiplier(game.combo) + (air ? CHASE_POINTS.air : 0);
   game.score += points; if (air) game.airCatches++;
   item.remove = true;
-  events.push({ type: 'catch', kind: item.kind, points, air, gold: !!item.gold, x: item.x, z: item.z, id: item.id });
+  events.push({ type: 'catch', kind: item.kind, points, air, gold: !!item.gold, rescued: !!item.carrying, x: item.x, z: item.z, id: item.id });
 }
 
 function stepCrumb(game, item, dt, events) {
@@ -166,10 +173,11 @@ function stomp(game, item, events) {
 function collide(game, item, events) {
   const p = game.player;
   item.remove = true; p.invincible = .85;
-  if (game.shield) { game.shield--; events.push({ type: 'shield' }); return; }
+  if (game.shield) { const source = game.horns && !game.hornSpent ? 'horns' : 'trust'; game.hornSpent = true; game.shield--; events.push({ type: 'shield', source }); return; }
+  const points = Math.max(-game.score, CHASE_POINTS.bump);
   game.bumps++; game.combo = 0; game.score = Math.max(0, game.score + CHASE_POINTS.bump);
   p.x = clamp(p.x + Math.sign(item.vx) * 14, 26, 294);
-  events.push({ type: 'bump', x: p.x });
+  events.push({ type: 'bump', x: p.x, loss: -points });
 }
 function stepBunny(game, item, dt, events, previousZ) {
   const p = game.player;
@@ -204,7 +212,11 @@ function stepMoth(game, item, dt, events) {
     item.x += item.vx * dt;
     item.z = clamp(item.z + (item.carrying ? 80 : Math.cos(item.age * 4) * 60) * dt, FLOOR + 5, 200);
   }
-  if (touching(game, item)) { game.moths++; award(game, item, CHASE_POINTS.moth, events); }
+  if (touching(game, item)) {
+    game.moths++;
+    if (item.carrying) { game.caught++; game.rescued++; }
+    award(game, item, CHASE_POINTS.moth, events);
+  }
   else if (item.x < -35 || item.x > 355 || item.z >= 195) item.remove = true;
 }
 
@@ -235,6 +247,10 @@ function step(game, input, dt, events) {
     STEPPERS[item.kind]?.(game, item, dt, events, previousZ);
   }
   game.items = game.items.filter(x => !x.remove);
+  const quest = game.objective;
+  if (quest && !quest.done && game[quest.stat] >= quest.target) {
+    quest.done = true; game.score += 40; events.push({type:'objective', points:40});
+  }
   if (game.time >= CHASE_SECONDS) {
     game.finished = true; game.complete = game.caught >= game.goal; game.stars = chaseStars(game);
     events.push({ type: 'finish', won: game.complete, stars: game.stars });
@@ -261,6 +277,9 @@ export function chaseStars(game) {
 // A higher score replaces the record; best streak and best star rating only ever climb.
 export function recordChase(pet, game, now = Date.now()) {
   if (!game.finished || game.petId !== pet.id) return false;
+  pet.chaseRecords ||= {};
+  const mode = game.gentle ? 'gentle' : 'standard', modeBest = pet.chaseRecords[mode];
+  if (!modeBest || game.score > modeBest.score) pet.chaseRecords[mode] = { score:game.score, stars:chaseStars(game), at:now };
   const previous = pet.chaseBest;
   const bestStreak = Math.max(game.bestCombo || 0, previous?.bestStreak || 0);
   const stars = Math.max(chaseStars(game), previous?.stars || 0);

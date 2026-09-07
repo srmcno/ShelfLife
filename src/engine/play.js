@@ -53,10 +53,10 @@ export function handshakeRounds(pet) {
 export function playWait(pet, now = Date.now()) {
   return Number.isFinite(pet.lastPlayed) && pet.lastPlayed > 0 ? Math.max(0, pet.lastPlayed + PLAY_COOLDOWN - now) : 0;
 }
-export function newHandshake(pet, rng = Math.random) {
-  const rounds = handshakeRounds(pet);
+export function newHandshake(pet, rng = Math.random, { encore = false } = {}) {
+  const rounds = encore ? 5 : handshakeRounds(pet);
   return {
-    petId: pet.id, rounds,
+    petId: pet.id, rounds, encore, mistakes: 0, replays: 0,
     names: gesturesFor(pet),
     // One more gesture than there are rounds: round 1 asks for two, and the last
     // round asks for the lot.
@@ -66,7 +66,7 @@ export function newHandshake(pet, rng = Math.random) {
 }
 export function tapHandshake(game, gesture) {
   if (game.complete || !Number.isInteger(gesture) || gesture < 0 || gesture > 3) return 'ignored';
-  if (gesture !== game.sequence[game.cursor]) { game.cursor = 0; return 'retry'; }
+  if (gesture !== game.sequence[game.cursor]) { game.cursor = 0; game.mistakes = (game.mistakes || 0) + 1; return 'retry'; }
   game.cursor++;
   if (game.cursor < game.round + 2) return 'correct';
   game.round++;
@@ -78,6 +78,15 @@ export function rewardHandshake(state, game, now = Date.now()) {
   const pet = state.pets.find(p => p.id === game.petId);
   if (!pet || !game.complete || game.claimed) return null;
   game.claimed = true;
+  if (game.kind !== 'chase') {
+    const key = game.encore ? 'encore' : 'standard';
+    pet.handshakeBest ||= {};
+    const previous = pet.handshakeBest[key];
+    const mistakes = game.mistakes || 0, replays = game.replays || 0;
+    if (!previous || game.rounds > previous.rounds || game.rounds === previous.rounds && (mistakes < previous.mistakes || mistakes === previous.mistakes && replays < previous.replays)) {
+      pet.handshakeBest[key] = { rounds:game.rounds, mistakes, replays, at:now };
+    }
+  }
   tick(state, now);
   if (playWait(pet, now) || isAsleep(pet, new Date(now))) return { practice: true, fuss: 0, bond: 0 };
   const need = 'fuss';

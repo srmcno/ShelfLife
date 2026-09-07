@@ -11,6 +11,8 @@ export function initDialogs() {
       panels.find(el => el.classList.contains('open')) || null;
     if (next === active) return;
     release();
+    document.body.classList.toggle('dialog-open', !!next);
+    document.body.dataset.activeDialog = next?.id || '';
     if (!next) {
       active = null;
       document.body.style.overflow = '';
