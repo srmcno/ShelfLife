@@ -1606,3 +1606,7 @@ body[data-effects="light"] .chase-item{filter:none;animation:none}
 @keyframes handshake-reach{0%,100%{rotate:calc(10deg * var(--sl-pose,1))}45%{rotate:calc(65deg * var(--sl-pose,1))}}
 @keyframes handshake-wave{0%,100%{rotate:0deg}35%{rotate:calc(-35deg * var(--sl-mirror,1))}65%{rotate:calc(18deg * var(--sl-mirror,1))}}
 @media(prefers-reduced-motion:reduce){.sl2.sl-reaching .cr-joint,.sl2.sl-waving .sl-part,.sl2.sl-landing .cr-joint{animation:none!important}}
+
+/* Keep the live creature in view while tuning its face farther down the sheet. */
+#genPanel:has(.gen-details[open]) .gen-stage{position:sticky;top:0;z-index:4;background:var(--night-3);box-shadow:0 8px 18px #0003}
+@media(max-height:700px){#genPanel:has(.gen-details[open]) .gen-stage{min-height:125px;height:125px}#genPanel:has(.gen-details[open]) .gen-mount .sprite{--pet-h:110px}}

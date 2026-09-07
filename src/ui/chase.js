@@ -192,7 +192,6 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function frame(now) {
     if (!running) return;
-    if (now - lastTime > 800) { pause(); return; }
     const axis = Number(held.has('right')) - Number(held.has('left'));
     const events = updateChase(game, { axis, targetX: axis ? null : targetX }, (now - lastTime) / 1000);
     lastTime = now;

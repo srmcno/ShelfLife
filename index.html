@@ -217,10 +217,10 @@
         <details class="gen-details"><summary>Fine details & custom colours</summary>
           <p class="hint">Keep the parts you love. Adjust the face and colours without rerolling anything.</p>
           <div class="gen-tuning">
-            <label>Eye size <output id="eyeScaleValue"></output><input type="range" id="genEyeScale" data-tune="eyeScale" min="0.7" max="1.4" step="0.01"></label>
-            <label>Eye spacing <output id="eyeSpreadValue"></output><input type="range" id="genEyeSpread" data-tune="eyeSpread" min="0.75" max="1.25" step="0.01"></label>
-            <label>Mouth size <output id="mouthScaleValue"></output><input type="range" id="genMouthScale" data-tune="mouthScale" min="0.7" max="1.4" step="0.01"></label>
-            <label>Posture <output id="leanValue"></output><input type="range" id="genLean" data-tune="lean" min="-7" max="7" step="0.01"></label>
+            <label for="genEyeScale">Eye size <output aria-hidden="true" id="eyeScaleValue"></output><input type="range" id="genEyeScale" data-tune="eyeScale" min="0.7" max="1.4" step="0.01"></label>
+            <label for="genEyeSpread">Eye spacing <output aria-hidden="true" id="eyeSpreadValue"></output><input type="range" id="genEyeSpread" data-tune="eyeSpread" min="0.75" max="1.25" step="0.01"></label>
+            <label for="genMouthScale">Mouth size <output aria-hidden="true" id="mouthScaleValue"></output><input type="range" id="genMouthScale" data-tune="mouthScale" min="0.7" max="1.4" step="0.01"></label>
+            <label for="genLean">Posture <output aria-hidden="true" id="leanValue"></output><input type="range" id="genLean" data-tune="lean" min="-7" max="7" step="0.01"></label>
           </div>
           <div class="gen-colours"><label>Body <input type="color" id="genBodyColour" data-colour="body"></label><label>Accent <input type="color" id="genAccentColour" data-colour="accent"></label><label>Markings <input type="color" id="genDetailColour" data-colour="detail"></label></div>
           <div class="tool-block"><button class="btn btn-sm" type="button" id="genResetDetails">Reset fine details</button><button class="btn btn-sm btn-ghost" type="button" id="genUndo">Undo change</button></div>
