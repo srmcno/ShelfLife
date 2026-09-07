@@ -15,6 +15,7 @@ export function initPlay(state, refresh) {
   const start = document.getElementById('playStart'), replay = document.getElementById('playReplay');
   const chaseRoot = document.getElementById('chaseArea'), gentle = document.getElementById('playRelaxed');
   const pads = [...veil.querySelectorAll('[data-gesture]')], modeButtons = [...veil.querySelectorAll('[data-play-mode]')];
+  const slow = document.getElementById('playSlow'), trail = document.getElementById('memoryTrail');
   const alibiRoot = document.getElementById('alibiArea');
   const alibiList = document.getElementById('alibiStatements');
   const alibiVerdict = document.getElementById('alibiVerdict');
@@ -35,7 +36,7 @@ export function initPlay(state, refresh) {
   const EYEBROWS = { chase: 'On the loose with ', memory: 'A secret with ', alibi: 'Taking a statement from ' };
   const BRIEFS = {
     chase: 'You steer. They chase. Keep a streak, catch what falls, and jump over or stomp the dust bunnies.',
-    memory: 'Watch your resident perform the gestures, then tap them in order. A wrong tap just means another try.',
+    memory: 'Watch, then repeat the gestures. Tap the pads or press 1–4. Wrong taps cost nothing. It has eternity to rehearse.',
     alibi: 'Three sworn statements about this shelf. Exactly one of them is false. You have to know your own shelf.'
   };
   const STARTS = { chase: 'Let’s chase', memory: 'Learn the handshake', alibi: 'Take their statement' };
@@ -47,6 +48,8 @@ export function initPlay(state, refresh) {
     pads.forEach(p => p.classList.remove('lit'));
     veil.classList.toggle('chase-mode', mode === 'chase');
     veil.classList.toggle('alibi-mode', mode === 'alibi');
+    document.getElementById('memoryOption').hidden = mode !== 'memory';
+    trail.hidden = mode !== 'memory'; trail.replaceChildren();
     chaseRoot.hidden = mode !== 'chase'; document.getElementById('gentleOption').hidden = mode !== 'chase';
     // The gesture pads and the replay control belong to the handshake alone; the
     // statement list belongs to the alibi. Neither should be reachable by tab in
@@ -175,9 +178,18 @@ export function initPlay(state, refresh) {
     if (alibi.complete) concludeAlibi();
     else { alibiNext.hidden = false; alibiNext.focus({ preventScroll: true }); }
   });
+  function paintTrail() {
+    if (!game) return;
+    const length = Math.min(game.sequence.length, game.round + 2);
+    trail.replaceChildren(...Array.from({ length }, (_, i) => {
+      const dot = document.createElement('span'); dot.textContent = i < game.cursor ? '✓' : '·'; dot.className = i < game.cursor ? 'remembered' : ''; return dot;
+    }));
+    trail.setAttribute('aria-label', game.cursor + ' of ' + length + ' gestures remembered');
+  }
   async function demonstrate() {
     const token = ++generation;
-    lock(true); replay.disabled = true; progress();
+    const pace = slow.checked ? 1.6 : 1;
+    lock(true); replay.disabled = true; progress(); paintTrail();
     status.textContent = 'Watch ' + pet.name + '. Then repeat their gestures.';
     const sequence = game.sequence.slice(0, game.round + 2);
     cue.textContent = 'Watch…';
@@ -188,12 +200,12 @@ export function initPlay(state, refresh) {
       if (token !== generation) return;
       pads[gesture].classList.add('lit'); cue.textContent = names[gesture];
       puppet.gesture(GESTURES[gesture].toLowerCase());
-      await wait(700);
+      await wait(700 * pace);
       if (token !== generation) return;
-      pads[gesture].classList.remove('lit'); cue.textContent = '·'; await wait(220);
+      pads[gesture].classList.remove('lit'); cue.textContent = '·'; await wait(220 * pace);
     }
     if (token !== generation) return;
-    cue.textContent = 'Your turn'; status.textContent = 'Repeat ' + sequence.length + ' gestures. Take your time.';
+    cue.textContent = 'Your turn'; status.textContent = 'Repeat ' + sequence.length + ' gestures. Tap or use keys 1–4. Take your time.';
     document.getElementById('playAnnouncement').textContent = 'Your turn. Repeat the pattern.';
     lock(false); replay.disabled = false; pads[0].focus({ preventScroll: true });
   }
@@ -206,7 +218,7 @@ export function initPlay(state, refresh) {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   document.addEventListener('visibilitychange', () => {
     if (mode !== 'memory' || !document.hidden || !game || game.complete || !veil.classList.contains('open')) return;
-    generation++; lock(true); game.cursor = 0; pads.forEach(p => p.classList.remove('lit'));
+    generation++; lock(true); game.cursor = 0; paintTrail(); pads.forEach(p => p.classList.remove('lit'));
     status.textContent = 'Paused. Replay the pattern when you are ready.'; cue.textContent = 'Take your time'; replay.disabled = false;
   });
   window.addEventListener('shelflife:play', e => {
@@ -217,6 +229,7 @@ export function initPlay(state, refresh) {
   function conclude() {
     lock(true); replay.disabled = true;
     const result = reward(game); progress();
+    trail.replaceChildren(); trail.setAttribute('aria-label', 'Handshake complete');
     cue.textContent = 'You are in the club.';
     status.textContent = result && !result.practice ? '+' + result.fuss + ' attention · +' + result.bond + ' trust. They will deny enjoying that.' : 'Practice complete. They insist they were letting you win.';
     puppet.gesture('win'); playFuss();
@@ -228,9 +241,16 @@ export function initPlay(state, refresh) {
     start.hidden = true; replay.hidden = false; demonstrate();
   });
   replay.addEventListener('click', () => { if (game && !game.complete) { game.cursor = 0; demonstrate(); } });
+  document.addEventListener('keydown', e => {
+    if (mode !== 'memory' || !accepting || !veil.classList.contains('open') || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.target?.closest?.('input,select,textarea,[contenteditable=true]')) return;
+    if (/^[1-4]$/.test(e.key)) { e.preventDefault(); pads[Number(e.key) - 1].click(); }
+  });
   pads.forEach((pad, i) => pad.addEventListener('click', () => {
     if (!accepting || !game) return;
-    const result = tapHandshake(game, i); cue.textContent = (game.names || GESTURES)[i];
+    const result = tapHandshake(game, i); paintTrail();
+    pad.classList.remove('tapped'); void pad.offsetWidth; pad.classList.add('tapped');
+    cue.textContent = (game.names || GESTURES)[i];
     puppet.gesture(result === 'retry' ? 'bump' : GESTURES[i].toLowerCase());
     if (navigator.vibrate) navigator.vibrate(8);
     if (result === 'retry') { lock(true); cue.textContent = 'Nearly. They insist.'; status.textContent = 'No points lost. Replay the pattern and try again.'; return; }

@@ -33,7 +33,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   const controls = [...directions, hop];
   const nodes = new Map(), held = new Set();
   let pet = null, game = null, puppet = null, running = false, paused = false, gentle = false;
-  let frameId = 0, lastTime = 0, targetX = null, pointerId = null;
+  let frameId = 0, lastTime = 0, targetX = null, pointerId = null, goalCelebrated = false;
   const resetInput = () => { held.clear(); targetX = null; pointerId = null; };
   const stopFrame = () => { cancelAnimationFrame(frameId); frameId = 0; running = false; resetInput(); };
   function disabled(value) { controls.forEach(b => { b.disabled = value; }); pauseButton.disabled = value; }
@@ -112,7 +112,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function summary(reward) {
     const n = (count, word) => count + ' ' + word + (count === 1 ? '' : 's');
-    const line = n(game.caught, 'crumb') + ' · ' + n(game.dodged, 'dodge') + ' · ' + n(game.stomps, 'stomp') + ' · ' + n(game.score, 'point') + ' · best streak ' + game.bestCombo + '. ';
+    const line = n(game.caught, 'crumb') + ' · ' + n(game.dodged, 'dodge') + ' · ' + n(game.stomps, 'stomp') + ' · ' + n(game.score, 'point') + ' · best streak ' + game.bestCombo + ' · ' + n(game.airCatches, 'air catch') + ' · ' + n(game.bumps, 'bump') + '. ';
     if (!game.complete) return line + 'Reach ' + game.goal + ' crumbs to win. Nothing on your shelf was lost.';
     return line + (reward?.practice ? 'Practice complete. Your best still counts.' : '+' + (reward?.fuss || 0) + ' attention · +' + (reward?.bond || 0) + ' trust.');
   }
@@ -143,6 +143,11 @@ export function createChaseUI(root, onFinish, onStatus) {
     const label = event.kind === 'moth' ? 'Moth caught! ' : event.kind === 'biscuit' ? 'Whole biscuit! ' : event.air ? 'Air catch! ' : event.gold ? 'Golden crumb! ' : '';
     spark('float', event.x, event.z, '+' + event.points);
     message(label + '+' + event.points + (mult > 1 ? ' · streak ×' + mult : ''), 'good');
+    if (!goalCelebrated && game.caught >= game.goal) {
+      goalCelebrated = true; playStar({ step: 1 });
+      spark('float', game.player.x, game.player.z + 65, 'Goal ✓');
+      onStatus('Crumb goal reached! Keep playing for more stars. The floor has become a buffet with casualties.');
+    }
   }
   function onPowerUp(event) {
     playPowerUp(); spark('float', event.x, event.z, 'Sugar!');
@@ -159,6 +164,7 @@ export function createChaseUI(root, onFinish, onStatus) {
     else if (event.type === 'land') spark('puff', event.x, 0);
     else if (event.type === 'steal') { spark('puff', event.x, event.z); message('Moth theft. No witnesses with spines.', 'bad'); }
     else if (event.type === 'crumble') { spark('puff', event.x, 0); message('Biscuit deceased. Crumbs inherited nothing.', ''); }
+    else if (event.type === 'miss') message('Crumb escaped. Streak reset. It had dependants.', '');
     else if (event.type === 'melt') spark('puff', event.x, 0);
     else if (event.type === 'powerup') onPowerUp(event);
   }
@@ -182,6 +188,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   function start() {
     if (!pet || root.hidden) return;
     stopFrame(); game = newChase(pet, { gentle, mood: moodOf(pet) });
+    goalCelebrated = false;
     root.dataset.finished = 'false'; pop.textContent = ''; stars.hidden = true; quip.hidden = true;
     overlay.classList.remove('best'); fx.replaceChildren(); paint(); run();
   }
@@ -231,7 +238,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   window.addEventListener('blur', pause);
   return {
     prepare(resident, useGentle) {
-      stopFrame(); puppet?.release(); paused = false; pet = resident; gentle = useGentle;
+      stopFrame(); puppet?.release(); paused = false; goalCelebrated = false; pet = resident; gentle = useGentle;
       game = newChase(pet, { gentle, mood: moodOf(pet) });
       actor.replaceChildren(renderPetSprite(pet)); actor.firstElementChild.classList.add('sl-mood-content');
       puppet = createPuppet(actor.firstElementChild);
