@@ -1505,7 +1505,7 @@ select.voice-select{width:100%}
 .variant-picker{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:8px;margin:12px 0 18px;padding:12px;background:rgba(0,0,0,.15);border:1px solid var(--line);border-radius:12px}
 .variant-picker label{grid-column:1/3;font-weight:700;font-size:12px;align-self:center}
 #genVariantCount{font-size:11px;white-space:nowrap;color:var(--ink-2);align-self:center;text-align:right}
-.variant-picker select{min-width:0;width:100%;min-height:44px;border-radius:8px;font:inherit;font-size:14px}
+.variant-picker select{background:var(--night-2);color:var(--ink);border:1px solid var(--edge);padding:0 10px;min-width:0;width:100%;min-height:44px;border-radius:8px;font:inherit;font-size:14px}
 .variant-picker .btn{padding:0;min-height:44px;font-size:25px}
 #genParts .chip[aria-pressed=true]{background:var(--mint);color:#10281f;border-color:var(--mint)}
 .care-record{margin:12px 0;color:var(--ink-2);font-size:12px;line-height:1.6}
@@ -1519,7 +1519,8 @@ select.voice-select{width:100%}
 .alibi-next{display:block;margin:16px auto 4px}
 .alibi-verdict{line-height:1.5;font-size:17px}
 .alibi-mode .play-theatre{max-height:120px;margin:4px auto}
-.alibi-mode #playPortrait{max-height:95px}
+.alibi-mode #playPortrait{height:95px}
+.alibi-mode #playPortrait .sprite{--pet-h:95px;width:95px}
 .alibi-mode #playCue,.alibi-mode .play-sparks{display:none}
 .chase-clock{height:5px;border-radius:9px;background:rgba(255,255,255,.09);overflow:hidden;margin:0 0 9px}
 .chase-clock i{display:block;height:100%;background:linear-gradient(90deg,var(--pink),var(--mint));transform-origin:left}
