@@ -11,13 +11,24 @@ export const WEEK = 7 * DAY;
 const safeRecord = x => x && typeof x === 'object' && !Array.isArray(x);
 const cleanTime = x => Number.isFinite(x) && x >= 0 ? x : 0;
 const careCount = state => state.stories?.careActions || 0;
-const playCount = state => (state.stories?.handshakes || 0) + (state.stories?.chases || 0);
+const playCount = state => (state.stories?.handshakes || 0) + (state.stories?.chases || 0) + (state.stories?.alibiWins || 0);
+export const residentWins = pet => (pet.handshakes || 0) + (pet.chases || 0) + (pet.alibiWins || 0);
+const roll = rng => clamp(Number(rng()) || 0, 0, 0.999999999);
+export const VISIT_GAP_MIN = 8 * 3600000;
+export const VISIT_GAP_MAX = 18 * 3600000;
 export function storyState(state) {
   if (!safeRecord(state.stories)) state.stories = {};
   const s = state.stories;
   for (const k of ['archive', 'collection', 'postcards', 'residents']) if (!Array.isArray(s[k])) s[k] = [];
   s.archive = s.archive.filter(x => safeRecord(x) && typeof x.text === 'string').slice(0, 100);
-  s.collection = s.collection.filter(x => safeRecord(x) && VISITORS.some(v => v.id === x.id)).slice(0, VISITORS.length);
+  s.collection = [...new Map(s.collection.filter(x => safeRecord(x) && VISITORS.some(v => v.id === x.id)).map(x => [x.id, x])).values()];
+  s.visitBag = [...new Set((Array.isArray(s.visitBag) ? s.visitBag : []).filter(id => VISITORS.some(v => v.id === id)))];
+  if (!safeRecord(s.visitStats)) s.visitStats = {};
+  for (const id of Object.keys(s.visitStats)) {
+    if (!VISITORS.some(v => v.id === id) || !safeRecord(s.visitStats[id])) { delete s.visitStats[id]; continue; }
+    for (const key of ['visits', 'welcomes']) s.visitStats[id][key] = Math.floor(cleanTime(s.visitStats[id][key]));
+  }
+  s.nextVisitAt = cleanTime(s.nextVisitAt);
   s.postcards = s.postcards.filter(x => safeRecord(x) && typeof x.image === 'string' && x.image.startsWith('data:image/jpeg;base64,') && x.image.length < 200000).slice(0, 6);
   s.residents = s.residents.filter(x => safeRecord(x) && typeof x.name === 'string').slice(0, 36);
   for (const resident of s.residents) resident.names = (Array.isArray(resident.names) ? resident.names : []).filter(x => safeRecord(x) && typeof x.name === 'string').slice(-30);
@@ -27,7 +38,7 @@ export function storyState(state) {
   if (s.visitor && (!safeRecord(s.visitor) || !VISITORS.some(v => v.id === s.visitor.kind) || !Number.isFinite(s.visitor.at))) s.visitor = null;
   s.lastVisit = cleanTime(s.lastVisit); s.visitCount = Math.max(0, Math.floor(Number(s.visitCount) || 0));
   s.lastRelations = cleanTime(s.lastRelations);
-  s.careActions = cleanTime(s.careActions); s.handshakes = cleanTime(s.handshakes); s.chases = cleanTime(s.chases);
+  s.careActions = cleanTime(s.careActions); s.handshakes = cleanTime(s.handshakes); s.chases = cleanTime(s.chases); s.alibiWins = cleanTime(s.alibiWins);
   for (const [key, r] of Object.entries(s.relationships)) {
     if (!safeRecord(r)) { delete s.relationships[key]; continue; }
     r.time = Math.max(0, Number(r.time) || 0); r.plots = Math.max(0, Math.floor(Number(r.plots) || 0));
@@ -39,8 +50,13 @@ export function storyState(state) {
   }
   for (const key of Object.keys(s.requestAt)) s.requestAt[key] = cleanTime(s.requestAt[key]);
   for (const [id, r] of Object.entries(s.requests)) {
-    if (!safeRecord(r) || !['food', 'play', 'prop', 'neighbor', 'room'].includes(r.kind) || !Number.isFinite(r.at) || !['offered', 'accepted'].includes(r.status)) { delete s.requests[id]; continue; }
+    if (!safeRecord(r) || !['food', 'fuss', 'clean', 'play', 'prop', 'neighbor', 'room'].includes(r.kind) || !Number.isFinite(r.at) || !['offered', 'accepted'].includes(r.status)) { delete s.requests[id]; continue; }
     r.baseline = cleanTime(r.baseline);
+    if (r.kind === 'play' && r.status === 'accepted' && !r.winBaseline) {
+      const pet = state.pets.find(p => p.id === id);
+      r.baseline += (pet?.chases || 0) + (pet?.alibiWins || 0);
+      r.winBaseline = true;
+    }
     r.offeredAt = cleanTime(r.offeredAt);
   }
   return s;
@@ -142,14 +158,14 @@ export function advanceCase(state, choice = 'listen', now = Date.now()) {
 export function requestDescription(state, pet) {
   const r = storyState(state).requests[pet.id]; if (!r) return null;
   const other = state.pets.find(p => p.id === r.target);
-  const text = { food: 'Feed me once. Individually. The trolley does not count.', play: 'Learn my secret handshake. No witnesses.', prop: 'Put a ' + (PROPS[r.target]?.name || 'food bowl') + ' beside me.', neighbor: 'Let me stand beside ' + (other?.name || 'another resident') + '.', room: 'Change the room to Bone Parlor. I want to look expensive.' }[r.kind];
+  const text = { food: 'Feed me once, individually. I am deciding which of my feet looks less essential.', fuss: 'Give me some individual attention. I am too small to haunt you from this distance.', clean: 'Wash me individually. Something in the crust has started charging rent.', play: 'Win a rewarded Handshake, Crumb Chase or Alibi with me. I need a shared incident.', prop: 'Put a ' + (PROPS[r.target]?.name || 'food bowl') + ' beside me. I need a neighbour with fewer opinions.', neighbor: 'Let me stand beside ' + (other?.name || 'another resident') + '. I have something small and incriminating to say.', room: 'Change the room to Bone Parlor. I want to look expensive.' }[r.kind];
   return { ...r, text };
 }
 export function acceptRequest(state, petId, accept, now = Date.now()) {
   const s = storyState(state), r = s.requests[petId], pet = state.pets.find(p => p.id === petId);
   if (!r || !pet || r.status !== 'offered') return false;
   if (now >= r.at + REQUEST_LENGTH) { delete s.requests[petId]; s.requestAt[petId] = now; return false; }
-  if (accept) { r.status = 'accepted'; r.offeredAt = r.at; r.at = now; r.baseline = r.kind === 'food' ? pet.careLog?.food || 0 : pet.handshakes || 0; }
+  if (accept) { r.status = 'accepted'; r.offeredAt = r.at; r.at = now; r.baseline = ['food', 'fuss', 'clean'].includes(r.kind) ? pet.careLog?.[r.kind] || 0 : residentWins(pet); r.winBaseline = true; }
   else {
     pet.bond = clamp(pet.bond - 1, 0, 25); pet.refusedRequests = (pet.refusedRequests || 0) + 1;
     fileGrudge(state, pet, 'you declined its request', now, { force: true });
@@ -161,8 +177,8 @@ export function acceptRequest(state, petId, accept, now = Date.now()) {
 }
 function requestMet(state, pet, r) {
   const slot = state.slots.indexOf(pet.id);
-  if (r.kind === 'food') return (pet.careLog?.food || 0) > r.baseline;
-  if (r.kind === 'play') return (pet.handshakes || 0) > r.baseline;
+  if (['food', 'fuss', 'clean'].includes(r.kind)) return (pet.careLog?.[r.kind] || 0) > r.baseline;
+  if (r.kind === 'play') return (r.winBaseline ? residentWins(pet) : pet.handshakes || 0) > r.baseline;
   if (r.kind === 'prop') return neighborProps(state, slot).some(p => p.kind === r.target);
   if (r.kind === 'neighbor') return neighborPets(state, slot).some(p => p.id === r.target);
   return r.kind === 'room' && state.decor.room === 'parlor';
@@ -172,14 +188,18 @@ export function welcomeVisitor(state, hostId, choice, now = Date.now()) {
   if (!v || v.welcomed || now >= v.at + VISIT_LENGTH || !host || !['crumbs', 'tour'].includes(choice)) return false;
   if (choice === 'crumbs' && host.needs.food < 8) return false;
   const definition = VISITORS.find(x => x.id === v.kind);
-  v.welcomed = true; v.host = host.name;
+  v.welcomed = true; v.host = host.name; v.hostId = host.id; v.choice = choice;
   if (choice === 'crumbs') { host.needs.food -= 8; host.bond = clamp(host.bond + 1, 0, 25); }
   else host.needs.fuss = clamp(host.needs.fuss + 8, 0, 100);
   if (!s.collection.some(x => x.id === v.kind)) s.collection.push({ id: v.kind, at: now, host: host.name });
-  const text = definition.name + ' leaves ' + definition.gift.toLowerCase() + ' with ' + host.name + '. It takes up no shelf space. It has already claimed some.';
+  const stats = s.visitStats[v.kind] ||= { visits: 1, welcomes: 0 };
+  stats.welcomes++;
+  const context = host.needs.clean < 35 ? ' ' + host.name + ' is asked whether the crust is a hat.' : host.needs.fuss < 35 ? ' ' + host.name + ' follows the visitor with its whole face.' : host.bond >= 8 ? ' ' + host.name + ' introduces you as the house giant. Fondly.' : '';
+  const text = definition[choice] + context + ' ' + host.name + ' keeps ' + definition.gift.toLowerCase() + '.';
+  v.response = text;
   remember(state, 'An unusual souvenir', text, now, 'visitor'); addNote(state, text, definition.name, 'arrival'); return true;
 }
-export function advanceStories(state, now = Date.now()) {
+export function advanceStories(state, now = Date.now(), rng = Math.random) {
   const s = storyState(state); if (!state.pets.length) return;
   const week = Math.floor(now / WEEK);
   if (!s.case || s.case.beat === 6 && s.case.week < week) {
@@ -190,12 +210,28 @@ export function advanceStories(state, now = Date.now()) {
   }
   if (s.visitor && now >= s.visitor.at + VISIT_LENGTH) {
     const d = VISITORS.find(x => x.id === s.visitor.kind);
-    remember(state, 'Visitor departed', d.name + (s.visitor.welcomed ? ' has gone. ' + s.visitor.host + ' is keeping the souvenir under imaginary lock and key.' : ' left a calling card under the dust. Another visit will come.'), now, 'visitor');
+    remember(state, 'Visitor departed', d.name + (s.visitor.welcomed ? ' has gone. The souvenir remains. It is already taking liberties.' : ' leaves without a welcome. No trust is lost; the calling card bears a tiny, judgemental crease.'), now, 'visitor');
+    s.lastVisitor = s.visitor.kind;
     s.visitor = null; s.lastVisit = now;
-  } else if (!s.visitor && (!s.lastVisit || now - s.lastVisit >= DAY)) {
-    const d = VISITORS[s.visitCount % VISITORS.length];
-    s.visitor = { kind: d.id, at: now, welcomed: false }; s.visitCount++; s.lastVisit = now;
-    addNote(state, d.line, d.name, 'arrival');
+    // Schedule from the observed departure. Offline time never floods the shelf.
+    s.nextVisitAt = now + VISIT_GAP_MIN + Math.floor(roll(rng) * (VISIT_GAP_MAX - VISIT_GAP_MIN));
+  } else if (!s.visitor && now >= (s.nextVisitAt || (s.lastVisit ? s.lastVisit + VISIT_GAP_MIN : 0))) {
+    if (!s.visitBag.length) {
+      s.visitBag = VISITORS.map(d => d.id);
+      for (let i = s.visitBag.length - 1; i > 0; i--) {
+        const j = Math.floor(roll(rng) * (i + 1));
+        [s.visitBag[i], s.visitBag[j]] = [s.visitBag[j], s.visitBag[i]];
+      }
+    }
+    if (s.visitBag[0] === s.lastVisitor && s.visitBag.length > 1) s.visitBag.push(s.visitBag.shift());
+    const visitorId = s.visitBag.shift();
+    const d = VISITORS.find(d => d.id === visitorId);
+    const stats = s.visitStats[d.id] ||= { visits: s.collection.some(x => x.id === d.id) ? 1 : 0, welcomes: 0 };
+    const returning = stats.visits > 0;
+    stats.visits++;
+    s.visitor = { kind: d.id, at: now, welcomed: false, returning, visitNumber: stats.visits, arrival: returning ? d.returnLine : d.line };
+    s.visitCount++; s.lastVisit = now; s.nextVisitAt = 0;
+    addNote(state, s.visitor.arrival, d.name, 'arrival');
   }
   // Cap offline acquaintance at one hour; repeated renders add no elapsed time.
   const elapsed = s.lastRelations ? clamp(now - s.lastRelations, 0, 3600000) : 0;
@@ -215,21 +251,36 @@ export function advanceStories(state, now = Date.now()) {
     }
     if (r?.status === 'accepted' && requestMet(state, pet, r)) {
       pet.bond = clamp(pet.bond + 1, 0, 25); pet.fulfilledRequests = (pet.fulfilledRequests || 0) + 1;
-      const text = pet.name + ' has marked its request fulfilled. The tick is larger than the form.';
+      const endings = { food: 'has eaten the requested meal and most of the receipt.', fuss: 'got the promised attention. It is trying to look less pleased than its entire body.', clean: 'is clean as promised. The old dirt has been given a very small notice period.', play: 'got the promised victory. It has requested shared custody of the triumph.', prop: 'has its requested furnishing nearby. It is explaining the house rules to it.', neighbor: 'is beside its requested neighbour. Both are suddenly speaking much more quietly.', room: 'has the room it asked for. Its reflection is becoming unbearable.' };
+      const text = pet.name + ' ' + endings[r.kind];
       addNote(state, text, pet.name, 'note'); remember(state, 'A promise kept', text, now, 'request');
       delete s.requests[pet.id]; s.requestAt[pet.id] = now;
     } else if (!r && (!s.requestAt[pet.id] || now - s.requestAt[pet.id] >= 6 * 3600000)) {
-      const others = state.pets.filter(p => p.id !== pet.id);
-      const kinds = ['food', 'play', 'prop', 'room', ...(others.length ? ['neighbor'] : [])];
-      const n = (pet.fulfilledRequests || 0) + (pet.refusedRequests || 0);
-      const kind = kinds[n % kinds.length];
-      // The neighbour it asks for is whoever it gets on with best, never a rival,
-      // and never simply whoever was made first.
-      const wanted = others.map(o => ({ o, appeal: relationship(state, pet, o).appeal })).filter(x => x.appeal >= 0)
-        .sort((x, y) => y.appeal - x.appeal || (x.o.id < y.o.id ? -1 : 1));
-      const target = kind === 'neighbor' ? ((wanted[0] || { o: others[0] }).o.id) : kind === 'prop' ? 'bowl' : kind === 'room' ? 'parlor' : null;
-      s.requests[pet.id] = { kind, target, status: 'offered', at: now };
+      const candidate = chooseRequest(state, pet);
+      if (candidate) s.requests[pet.id] = { ...candidate, status: 'offered', at: now };
     }
   }
   for (const id of Object.keys(s.requests)) if (!state.pets.some(p => p.id === id)) delete s.requests[id];
+}
+
+// Needs take priority; comfortable residents ask for a useful change they do not
+// already have. A fulfilled request cannot pay again on the next render.
+export function chooseRequest(state, pet) {
+  const needs = ['food', 'fuss', 'clean'].sort((a,b) => pet.needs[a] - pet.needs[b]);
+  if (pet.needs[needs[0]] < 45) return { kind: needs[0], target: null };
+  const candidates = needs.filter(k => pet.needs[k] < 72).map(kind => ({ kind, target: null }));
+  candidates.push({ kind: 'play', target: null });
+  const slot = state.slots.indexOf(pet.id), nearPets = neighborPets(state, slot), nearProps = neighborProps(state, slot);
+  const wanted = state.pets.filter(p => p.id !== pet.id && !nearPets.some(n => n.id === p.id))
+    .map(p => ({ p, appeal: relationship(state, pet, p).appeal })).filter(x => x.appeal >= 0)
+    .sort((a,b) => b.appeal - a.appeal || a.p.id.localeCompare(b.p.id));
+  if (wanted.length) candidates.push({ kind: 'neighbor', target: wanted[0].p.id });
+  const furnishings = { food: 'bowl', fuss: 'yarn', clean: 'tub' };
+  const target = furnishings[needs[0]];
+  const hasRoom = state.slots.some(x => !x) || state.props.some(p => p.kind === target);
+  const unlocked = state.pets.reduce((n,p) => n + p.bond, 0) >= PROPS[target].at;
+  if (hasRoom && unlocked && !nearProps.some(p => p.kind === target)) candidates.push({ kind: 'prop', target });
+  if (state.decor.room !== 'parlor') candidates.push({ kind: 'room', target: 'parlor' });
+  const n = (pet.fulfilledRequests || 0) + (pet.refusedRequests || 0);
+  return candidates[n % candidates.length];
 }

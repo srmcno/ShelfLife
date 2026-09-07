@@ -118,7 +118,7 @@ if (tray) {
   tray.addEventListener('click', e => {
     if (!trayOpen) return;
     const b = e.target.closest('button');
-    // Toggles (Sound, Narrator, Mature) show their new state in place; anything
+    // Toggles (Sound, Narrator) show their new state in place; anything
     // that opens a sheet closes the tray first.
     if (b && b.id !== 'moreClose' && !b.hasAttribute('aria-pressed')) setTray(false);
   }, true);

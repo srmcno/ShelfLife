@@ -17,7 +17,7 @@ test('blankState has the v4 shape', () => {
   assert.deepEqual(s.feudArcs, {});
   assert.equal(s.streak.count, 0);
   assert.equal(s.settings.narratorOn, true);
-  assert.equal(s.settings.matureMode, false);
+  assert.equal(s.settings.matureMode, undefined);
 });
 
 test('migratePet upgrades a v3 flattened-image pet', () => {

@@ -42,7 +42,7 @@ test('requests reward the promised action once, refusal changes trust and memory
  const s=fixture();advanceStories(s,now);assert.equal(acceptRequest(s,'p0',true,now),true);advanceStories(s,now);assert.equal(s.pets[0].bond,1);
  s.pets[0].careLog={food:1};advanceStories(s,now);assert.equal(s.pets[0].bond,2);assert.equal(s.pets[0].fulfilledRequests,1);
  advanceStories(s,now);assert.equal(s.pets[0].bond,2);
- advanceStories(s,now+6*3600000);assert.equal(s.stories.requests.p0.kind,'play');acceptRequest(s,'p0',false,now+6*3600000);
+ advanceStories(s,now+6*3600000);assert.equal(s.stories.requests.p0.kind,'fuss');acceptRequest(s,'p0',false,now+6*3600000);
  assert.equal(s.pets[0].bond,1);assert.equal(s.pets[0].grudges,1);assert.equal(s.pets[0].refusedRequests,1);
  advanceStories(s,now+12*3600000);advanceStories(s,now+25*3600000);assert.equal(s.pets[0].bond,1);
 });

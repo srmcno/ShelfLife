@@ -1,3 +1,4 @@
+import { observationLines } from './observations.js';
 import { tick, moodOf, worstNeed, isAsleep, neighborProps, neighborPets } from './tick.js';
 import { activeFeuds, feudPairKey, stepFeudArc, fileGrudge, checkinStreak, FEUD_STEP_MS } from './achievements.js';
 import { checkUnlocks } from './unlocks.js';
@@ -14,7 +15,6 @@ import {
   EMPTY_SHELF_NOTES, PROP_EYE_LINES, SLEEPING_NOTES
 } from '../content/copy.js';
 import { TRAIT_INNER, INNER_LINES, DREAM_LINES } from '../content/inner.js';
-import { MATURE_COMPLAINTS_EXTRA, MATURE_HAPPY_EXTRA, MATURE_EVENTS_EXTRA } from '../content/mature.js';
 import {
   pick, addNote, petById, chooseForm, reconcile, recordVisit, firstTouchCounts,
   totalGrudges, formAllowed, wasPickedRecently, rememberPick, forgetPick, HOUR, ROW_WIDTH
@@ -300,10 +300,12 @@ export function petLine(state, pet, ctx = {}) {
   const kind = angry ? 'angry' : 'note';
   const trait = TRAIT_BY_ID[pick(pet.traits || [])] || {};
 
+  const observed = observationLines(state, pet, now);
+  if (observed.length) offer(byForm, 'line', observed, subs, kind);
+
   // Everyday supply. Form 1 is load-bearing and has to stay short and plentiful.
   if (angry) {
     let pool = COMPLAINTS[need][mood];
-    if (state.settings && state.settings.matureMode) pool = pool.concat(MATURE_COMPLAINTS_EXTRA[need] || []);
     offer(byForm, 'line', pool, subs, kind);
     if (neighbor) offer(byForm, 'react', NEIGHBOR_COMPLAINTS[need], subs, kind);
   } else {
@@ -312,7 +314,6 @@ export function petLine(state, pet, ctx = {}) {
     if (subs.q) offer(byForm, 'line', PROP_EYE_LINES, subs, kind);
     if (mood === 'content') {
       let happy = HAPPY_NOTES;
-      if (state.settings && state.settings.matureMode) happy = happy.concat(MATURE_HAPPY_EXTRA);
       offer(byForm, 'line', happy, subs, kind);
     }
     if (neighbor && trait.social) offer(byForm, 'react', trait.social, subs, kind);
@@ -355,7 +356,6 @@ export function shelfNote(state, ctx = {}, now = Date.now()) {
   const subs = subsFor(state, ctx, now);
   const byForm = {};
   let events = EVENTS;
-  if (state.settings && state.settings.matureMode) events = events.concat(MATURE_EVENTS_EXTRA);
   offer(byForm, 'line', events.filter(l => l.length <= 90), subs);
   offer(byForm, 'found', events, subs);
   offer(byForm, 'list', LIST_NOTES, subs);

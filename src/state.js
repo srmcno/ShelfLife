@@ -155,7 +155,7 @@ export function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 export function defaultNeeds() { return { food: 78, fuss: 78, clean: 82 }; }
 export function defaultDecor() { return { room: 'aubergine', wall: 'none', wood: 'rosewood', accent: 'bubblegum' }; }
 export function defaultStreak() { return { count: 0, lastCheckin: 0 }; }
-export function defaultSettings() { return { muted: false, narratorOn: true, narratorVoiceURI: null, matureMode: false }; }
+export function defaultSettings() { return { muted: false, narratorOn: true, narratorVoiceURI: null }; }
 export function defaultCareLog() { return { food: 0, fuss: 0, clean: 0 }; }
 // meeting: how many times the shelf has convened over you. carried: how many times
 // Item 4 has been carried forward. struck: petId -> when that pet closed the matter.
@@ -311,7 +311,8 @@ export function normalizeState(raw) {
   });
   s.notes.forEach(n => { if (n && FORMS.indexOf(n.form) < 0) n.form = 'line'; });
 
-  for (const key of ['muted', 'narratorOn', 'matureMode']) {
+  delete s.settings.matureMode; // Retired setting from older backups.
+  for (const key of ['muted', 'narratorOn']) {
     if (typeof s.settings[key] !== 'boolean') s.settings[key] = defaultSettings()[key];
   }
   s.streak.count = Math.floor(finite(s.streak.count, 0));
@@ -324,7 +325,7 @@ export function normalizeState(raw) {
     p.lastPlayed = finite(p.lastPlayed, 0, 0, now);
     if (record(p.chaseBest)) p.chaseBest = { score: Math.floor(finite(p.chaseBest.score, 0, 0, 100000)), caught: Math.floor(finite(p.chaseBest.caught, 0, 0, 100)), dodged: Math.floor(finite(p.chaseBest.dodged, 0, 0, 100)), at: finite(p.chaseBest.at, now, 0, now), bestStreak: Math.floor(finite(p.chaseBest.bestStreak, 0, 0, 100)), stars: Math.floor(finite(p.chaseBest.stars, 0, 0, 3)) };
     else delete p.chaseBest;
-    for (const key of ['handshakes', 'dustPatrols', 'chases', 'alibis', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
+    for (const key of ['handshakes', 'dustPatrols', 'chases', 'alibis', 'alibiWins', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
     p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];
     p.stats = record(p.stats) ? p.stats : {};
     ['cute', 'menace', 'damp', 'mystique'].forEach(k => { p.stats[k] = finite(p.stats[k], 5, 1, 10); });

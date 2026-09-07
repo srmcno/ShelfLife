@@ -82,8 +82,8 @@ never saw updates.
 - **Decorate** — six room themes, wall patterns, shelf woods, trim colours, and furniture that has
   actual mechanical effects on the pets standing next to it.
 - **Weekly case files.** Six-beat household mysteries live in Plots. File clues, care for a witness, move it to B1 for a reconstruction, and earn confidence through a handshake or useful care. Listening and keeping residents comfortable leads to a cooperative ending; dismissing evidence leads to a different resolution. An unfinished file never expires. Three cases rotate weekly.
-- **Temporary visitors.** Three unusual guests rotate through a separate visiting step, including on solo or full shelves. Welcome one within six hours to collect its souvenir in the museum. Another arrives a day after departure. No notification permission or account is needed.
-- **Resident requests.** In a resident’s card, accept a specific request for food, a handshake, a bowl, a neighbour or a room. Fulfil it within twelve hours for +1 trust. Refusing costs up to one trust and adds a grievance. Requests influence movement toward the promised neighbour or prop.
+- **Temporary visitors.** Nine distinct guests arrive in a saved shuffle bag at a separate visiting step, including on solo or full shelves. Welcome one within six hours to collect its souvenir in the museum. Another arrives 8–18 hours after departure. Guests have unique portraits, return greetings and host-aware replies; a full cycle meets everyone before repeating. No notification permission or account is needed.
+- **Resident requests.** In a resident’s card, accept a request based on actual needs: food, attention, washing, any rewarded game win, useful furniture, a compatible neighbour or a different room. Existing arrangements are not offered as new chores. Fulfil it within twelve hours for +1 trust. Refusing costs up to one trust and adds a grievance. Requests influence movement toward the promised neighbour or prop.
 - **Relationship cards.** Time beside one another builds friendship when both residents have trust; two shared supervised plots make co-conspirators. Rivals can be mediated into uneasy allies once both have three trust. A truce removes active feud unrest.
 - **Made this way.** Wings affect travel and allow longer jumps and a second flap in Crumb Chase; horns intimidate gentle neighbours; halos slow neighbouring attention decay by 10%. Anatomy cards and arrival notes explain the effects for generated and stamped drawings.
 - **Play together.** Crumb Chase puts your resident under direct control for 22 seconds: steer with touch or arrows, hop over dust bunnies or land on them to stomp, catch golden crumbs, and build a combo streak that multiplies every catch. Moths steal floor crumbs unless you catch them first, biscuits are worth 50 if caught before they land, and a sugar cube gives a short rush of speed and a crumb magnet. Catch eight crumbs to win (six at Gentle pace) and earn up to three stars. Wings extend jumps, horns block one collision, halos attract crumbs, and tails bounce higher off a stomp. Each resident keeps a personal best score, streak and star rating. The secret handshake is an alternative memory game: the resident visibly demonstrates each gesture across three short rounds. Winning either game gives up to +24 attention and +1 trust, with a shared five-minute reward rest. Practice can still set records. Collisions and losses never harm shelf needs; leaving the tab pauses the chase.
@@ -98,7 +98,6 @@ never saw updates.
 - **What needs you.** A row of chips under the shelf for anything with a clock on it: a live conspiracy and its countdown, offered requests, a visitor at the door, a case beat ready to file, and anyone below thirty on a need. Each chip goes where the thing is decided.
 - **Grievances, explained.** A resident's card lists its last few grievances with a reason and a time, so a falling trust number is never a mystery. The four particulars act too: cute sweetens fussing, menace wins arguments over furniture, damp attracts grime, and mystique attracts case files.
 - **On a phone.** All six spaces fit the screen with no horizontal scrolling; the rows retain their real adjacency and resident cards provide larger portraits. The app is a three-tab layout (Shelf, Plots, Notes) with a bottom bar and a More tray. Cards and sheets rise from the bottom and can be pulled down to close; the notes tab badges when a check of the shelf adds new notes.
-- **Mature** — off by default. Turns on cruder, sweary variants of the writing.
 - **Narrator** — reads notes aloud. See the note on voices below.
 
 Pets act on their own: they relocate toward furniture they like and away from pets they don't, claim
@@ -115,7 +114,7 @@ css/style.css
 src/
   main.js             boot + all wiring
   state.js            save/load/migration; the only file touching localStorage
-  content/            traits, copy, care voices, conspiracies, feuds, props, decor, dialogue, thought bubbles, postcard captions, mature-mode overlay
+  content/            traits, copy, care voices, conspiracies, feuds, props, decor, dialogue, thought bubbles, postcard captions
   engine/             tick, care, schemes, unlocks, achievements, loop, behavior, dialogue
   art/                stamps, creatures, sprite, animator, anatomy, drawing bounds, studio
   audio/              sound (Web Audio SFX), narrator (SpeechSynthesis)
@@ -187,9 +186,9 @@ and a kill-list of failure modes. Its central rule, if you only keep one:
 > things are four inches tall, wrong-textured, on a numbered grid, and cannot die. Every line should
 > break if you removed that.
 
-Mature mode is opt-in, off by default, and adds profanity for comedic emphasis in the same deadpan
-register. It is crude in-fiction, aimed at the player and at other pets. It contains no slurs and no
-sexual content.
+One voice throughout: contextual dark comedy responds to actual needs, promises, neighbours, games and care history. Older backups automatically discard the retired Mature setting.
+
+Care effects distinguish falling crumbs, floating soap bubbles and hearts. Guest portraits preserve their animation and the host selector during shelf refreshes; reduced-motion preferences are respected.
 
 ## Release checks
 
