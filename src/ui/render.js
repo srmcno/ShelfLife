@@ -1,3 +1,4 @@
+import { renderLife } from './life.js';
 import { advanceStories, withStories } from '../engine/stories.js';
 import { renderStories } from './stories.js';
 import { save } from '../state.js';
@@ -39,6 +40,7 @@ export function renderAll(state) {
     renderBrief(state);
     renderNeeds(state);
     renderStories(state);
+    renderLife(state);
     save();
   });
 }

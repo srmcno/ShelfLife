@@ -1,3 +1,4 @@
+import { blankLife, normalizeLife } from './life-state.js';
 import { PROPS } from './content/props.js';
 export const Store = (function () {
   const mem = Object.create(null);
@@ -163,7 +164,7 @@ export function defaultLedger() { return { meeting: 1, carried: 0, struck: {}, a
 
 export function blankState() {
   return {
-    v: 4, pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
+    v: 4, life: blankLife(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
     notes: [], seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
@@ -318,18 +319,20 @@ export function normalizeState(raw) {
   }
   s.streak.count = Math.floor(finite(s.streak.count, 0));
   s.streak.lastCheckin = finite(s.streak.lastCheckin, 0);
+  s.life = normalizeLife(s.life, s.pets.length > 0);
   s.pets = s.pets.map(migratePet);
   s.pets.forEach(p => {
     p.name = typeof p.name === 'string' && p.name.trim() ? p.name.trim().slice(0, 22) : 'Someone';
     p.bio = typeof p.bio === 'string' ? p.bio.slice(0, 3000) : 'It arrived without references.';
     p.born = finite(p.born, s.started, 1, now);
     p.lastPlayed = finite(p.lastPlayed, 0, 0, now);
+    p.playedAt = Object.fromEntries(Object.entries(record(p.playedAt) ? p.playedAt : {}).filter(([k]) => ['memory','chase','alibi','court'].includes(k)).map(([k,v])=>[k,finite(v,0,0,now)]));
     if (record(p.chaseBest)) p.chaseBest = { score: Math.floor(finite(p.chaseBest.score, 0, 0, 100000)), caught: Math.floor(finite(p.chaseBest.caught, 0, 0, 100)), dodged: Math.floor(finite(p.chaseBest.dodged, 0, 0, 100)), at: finite(p.chaseBest.at, now, 0, now), bestStreak: Math.floor(finite(p.chaseBest.bestStreak, 0, 0, 100)), stars: Math.floor(finite(p.chaseBest.stars, 0, 0, 3)) };
     else delete p.chaseBest;
     p.chaseRecords = record(p.chaseRecords) ? p.chaseRecords : {};
     for (const key of Object.keys(p.chaseRecords)) {
       const r = p.chaseRecords[key];
-      if (!['gentle', 'standard'].includes(key) || !record(r)) { delete p.chaseRecords[key]; continue; }
+      if (!['gentle', 'standard', 'pantry:gentle', 'pantry:standard', 'moon:gentle', 'moon:standard'].includes(key) || !record(r)) { delete p.chaseRecords[key]; continue; }
       p.chaseRecords[key] = { score:Math.floor(finite(r.score,0,0,100000)), stars:Math.floor(finite(r.stars,0,0,3)), at:finite(r.at,now,0,now) };
     }
     p.handshakeBest = record(p.handshakeBest) ? p.handshakeBest : {};
@@ -338,7 +341,7 @@ export function normalizeState(raw) {
       if (!['encore', 'standard'].includes(key) || !record(r)) { delete p.handshakeBest[key]; continue; }
       p.handshakeBest[key] = {rounds:Math.floor(finite(r.rounds,3,3,5)),mistakes:Math.floor(finite(r.mistakes,0,0,10000)),replays:Math.floor(finite(r.replays,0,0,10000)),at:finite(r.at,now,0,now)};
     }
-    for (const key of ['handshakes', 'dustPatrols', 'chases', 'alibis', 'alibiWins', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
+    for (const key of ['expeditions', 'handshakes', 'dustPatrols', 'chases', 'alibis', 'alibiWins', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
     p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];
     p.stats = record(p.stats) ? p.stats : {};
     ['cute', 'menace', 'damp', 'mystique'].forEach(k => { p.stats[k] = finite(p.stats[k], 5, 1, 10); });

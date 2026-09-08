@@ -34,8 +34,9 @@ export function isDragging() { return dragEngaged; }
 
 export function initDrag(state) {
   const cabinet = document.getElementById('cabinet');
+  let swallowClick = false;
   cabinet.addEventListener('click', e => {
-    if (e.detail !== 0) return;
+    if (swallowClick && e.detail !== 0) { swallowClick = false; e.preventDefault(); return; }
     const piece = e.target.closest('.piece');
     if (!piece) return;
     if (piece.dataset.kind === 'pet') openCard(state, piece.dataset.id);
@@ -114,6 +115,7 @@ export function initDrag(state) {
     if (!piece || drag || e.button !== 0) return;
     const d = {
       id: piece.dataset.id, kind: piece.dataset.kind,
+      pointerId: e.pointerId,
       el: piece, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY,
       touch: e.pointerType === 'touch', engaged: false, movedFar: false, ghost: null, hold: 0
     };
@@ -167,18 +169,18 @@ export function initDrag(state) {
   });
 
   function drop(e) {
-    if (!drag) return;
+    if (!drag || e.pointerId !== drag.pointerId) return;
     const d = drag;
     drag = null;
     clear(d);
     // A tap opens the card — and so does a pick-up put straight back down, since
     // a slow tapper trips the 300ms hold without ever meaning to move anything
     // and "nothing happened" is the wrong answer for them.
-    if (!d.movedFar) {
-      if (d.kind === 'pet') openCard(state, d.id);
-      else openPropCard(state, d.id);
-      return;
-    }
+    // Open taps on click, after pointer release. Opening a modal here let the
+    // synthetic click land on its controls (or reopen a stale resident card).
+    if (!d.movedFar) return;
+    swallowClick = true;
+    setTimeout(() => { swallowClick = false; }, 0);
     const under = document.elementFromPoint(e.clientX, e.clientY);
     const slot = under && under.closest ? under.closest('.slot') : null;
     if (!slot) return;

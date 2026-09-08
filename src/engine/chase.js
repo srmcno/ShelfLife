@@ -1,5 +1,7 @@
 import { artPersonality } from './personality.js';
 
+export const CHASE_VENUES = { shelf:{name:'The Floorboards',biscuitEvery:9,gravity:1}, pantry:{name:'The Pantry',biscuitEvery:5,gravity:1}, moon:{name:'The Moonlit Sill',biscuitEvery:9,gravity:.72} };
+export const chaseRecordKey = game => (game.venue && game.venue !== 'shelf' ? game.venue+':' : '')+(game.gentle?'gentle':'standard');
 export const CHASE_WIDTH = 320;
 export const CHASE_HEIGHT = 230;
 export const CHASE_GROUND = 20;
@@ -37,11 +39,11 @@ export const TEMPER = {
 
 export function temperOf(mood) { return TEMPER[mood] || TEMPER.fine; }
 
-export function newChase(pet, { gentle = false, rng = Math.random, mood = 'fine', objective = null } = {}) {
+export function newChase(pet, { gentle = false, rng = Math.random, mood = 'fine', objective = null, venue = 'shelf' } = {}) {
   const art = artPersonality(pet);
   const temper = temperOf(mood);
   return {
-    kind: 'chase', petId: pet.id, time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
+    kind: 'chase', venue: CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
     rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { ...CHASE_OBJECTIVES[objective], done: false } : null,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
     goal: gentle ? 6 : 8, complete: false, finished: false, claimed: false, gentle, stars: 0,
@@ -95,7 +97,7 @@ function spawnMoth(game) {
 // A biscuit is heavy: it falls slowly, and is only worth anything if caught before it lands.
 function spawnBiscuit(game) {
   game.items.push({ id: ++game.serial, kind: 'biscuit', x: 60 + game.rng() * 200, z: 182, vy: game.gentle ? -34 : -42, age: 0 });
-  game.nextBiscuit += 9;
+  game.nextBiscuit += CHASE_VENUES[game.venue || 'shelf'].biscuitEvery;
 }
 // A sugar cube drops on the emptier side of the floor (it has to be gone for), sits three seconds, then melts.
 // Touching it starts a sugar rush: faster steering and a crumb magnet for a few seconds.
@@ -130,7 +132,7 @@ function stepPlayer(game, input, dt, events) {
   p.x = clamp(p.x + dx, 26, 294); p.moving = Math.abs(dx) > .01;
   if (p.moving) p.direction = dx < 0 ? -1 : 1;
   if (p.z > 0 || p.vy > 0) {
-    p.vy -= (game.wings ? 550 : 900) * dt;
+    p.vy -= (game.wings ? 550 : 900) * CHASE_VENUES[game.venue || 'shelf'].gravity * dt;
     p.z = Math.max(0, p.z + p.vy * dt);
     if (!p.z) { p.vy = 0; if (previousZ > 0) events.push({ type: 'land', x: p.x }); }
   }
@@ -278,7 +280,7 @@ export function chaseStars(game) {
 export function recordChase(pet, game, now = Date.now()) {
   if (!game.finished || game.petId !== pet.id) return false;
   pet.chaseRecords ||= {};
-  const mode = game.gentle ? 'gentle' : 'standard', modeBest = pet.chaseRecords[mode];
+  const mode = chaseRecordKey(game), modeBest = pet.chaseRecords[mode];
   if (!modeBest || game.score > modeBest.score) pet.chaseRecords[mode] = { score:game.score, stars:chaseStars(game), at:now };
   const previous = pet.chaseBest;
   const bestStreak = Math.max(game.bestCombo || 0, previous?.bestStreak || 0);

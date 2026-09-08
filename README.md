@@ -9,9 +9,21 @@ shelf, and they get hungry, bored and filthy in real time whether the game is op
 stand next to matters — neighbours feud. So does how you treat them: they keep score, and the notes
 they leave you are the actual point of the game.
 
-No build step, no runtime dependencies, no backend. Fonts and their licenses are included locally for consistent offline rendering. Plain ES modules and one stylesheet.
+No build step, no runtime dependencies, no backend. Fonts and their licenses are included locally for consistent offline rendering. Plain ES modules and local stylesheets.
 
 ---
+
+## A larger small world
+
+- **Beyond the shelf:** three expeditions, equipment and companion choices, nine illustrated curiosities, persistent progress, and shared resident history.
+- **Shelf Court:** six evidence puzzles starring your own residents. Two independent clues identify one suspect, with explanations after every verdict.
+- **Return visitors:** all twelve callers have three distinct chapters. Calling cards rest for fifteen minutes; missing a visit never costs trust.
+- **Your collection:** display three keepsakes, unlock four cabinet finishes through discoveries, and replay short household scenes. Returning players get a factual recap.
+- **More personal creatures:** edit a resident’s appearance without losing its history, and keep up to six reusable generated designs. Feature choices stay ordered and named.
+- **Better active play:** three Crumb Chase grounds with separate records and different mechanics; clear handshake gesture labels; completed practice remembered by the household. Each game has its own reward rest, with the existing daily bonus-trust cap.
+- **A quieter introduction:** meet your first resident, care for it, then play together to open the wider household. Established saves go straight to their shelf.
+
+Scenes use finite animations and local vector artwork. Light effects, reduced motion, hidden-tab pauses, offline caching, and backup restoration remain supported. No accounts, paid shortcuts, ads, or streak penalties were added.
 
 ## Running it
 

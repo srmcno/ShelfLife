@@ -1,3 +1,5 @@
+import { initLife } from './ui/life.js';
+import { lifeState, welcomeBack } from './engine/life.js';
 import { artPersonality } from './engine/personality.js';
 import { initStories } from './ui/stories.js';
 import {
@@ -64,7 +66,15 @@ const studio = initStudio({
   // Grow tab, `{ body, stamps }` from the Draw tab. normalizePetArt reconciles
   // them into the one stored shape (see the art-model note in state.js), so
   // everything downstream of here is identical for both kinds of pet.
-  onSave: (art, name) => {
+  onSave: (art, name, editingId) => {
+    if(editingId){
+      const existing=state.pets.find(p=>p.id===editingId);if(!existing)return;
+      existing.art=normalizePetArt(art);
+      // Renaming has its own history-aware flow in the resident card.
+      document.getElementById('lifeHub').dataset.key='';
+      addNote(state,existing.name+' has updated its appearance. Same unresolved issues, improved packaging.','the dressing room','note');
+      renderAll(state);return;
+    }
     const slot = state.slots.indexOf(null);
     if (slot === -1) { toast('The shelf is full. Rehome someone first.'); return; }
     const finalName = (name || '').trim() || pick(FALLBACK_NAMES);
@@ -80,6 +90,7 @@ const studio = initStudio({
       needs: { food: 58, fuss: 54, clean: 66 },
       bond: 0, cared: 0, grudges: 0, grudgeStage: 0
     };
+    if (!state.pets.length) lifeState(state).introStarted = true;
     state.pets.push(pet);
     state.slots[slot] = pet.id;
     addNote(state, finalName + ' has moved in. ' + TRAIT_BY_ID[traits[0]].blurb + ' ' + pick([
@@ -217,6 +228,7 @@ document.getElementById('restoreConfirm').addEventListener('click', () => {
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
+  welcomeBack(state);
   applyDecor(state);
   syncNight();
   renderAll(state);
@@ -344,8 +356,10 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 
 initSchemeUI(state, () => renderAll(state));
 initPlay(state, () => renderAll(state));
+initLife(state, () => renderAll(state));
 initStories(state, () => renderAll(state), id => openCard(state, id, true));
 window.addEventListener('shelflife:care', e => openCard(state, e.detail?.petId));
+window.addEventListener('shelflife:edit', e => {const pet=state.pets.find(p=>p.id===e.detail?.petId);if(pet){closeCard();studio.open(totalBond(state),pet);}});
 initDecorUI(state);
 initDrag(state);
 // One shared director for every pet on the shelf. getPet lets it read a pet's
@@ -392,6 +406,7 @@ helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.cl
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
+  welcomeBack(state);
   renderAll(state);
   if (state.pets.length && away > 6) {
     const worst = state.pets.slice().sort((a, b) =>
@@ -419,13 +434,14 @@ setInterval(() => {
 
 // Catch up immediately after waking a sleeping phone or returning to the tab.
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { save(); stopSpeech(); return; }
+  if (document.hidden) { lifeState(state).lastSeen = Date.now(); save(); stopSpeech(); return; }
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
+  welcomeBack(state);
   renderAll(state);
 });
-window.addEventListener('pagehide', () => save());
+window.addEventListener('pagehide', () => { lifeState(state).lastSeen = Date.now(); save(); });
 
 // ---------- service worker ----------
 // Without this the manifest still makes the game "installable", but there is no

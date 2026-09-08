@@ -30,7 +30,7 @@ export function initPlay(state, refresh) {
   function reward(finished) {
     const result = rewardHandshake(state, finished);
     checkUnlocks(state); checkAchievements(state); refresh();
-    document.getElementById('playReward').textContent = 'Games share a 5-minute reward rest per resident. Practice and personal bests are always available.';
+    document.getElementById('playReward').textContent = 'Each game has its own 5-minute reward rest. Every completed game counts in your history.';
     return result;
   }
   const chase = createChaseUI(chaseRoot, reward, text => { status.textContent = text; });
@@ -45,6 +45,7 @@ export function initPlay(state, refresh) {
 
   function setMode(next) {
     generation++; chase.stop(); puppet?.release(); puppet = null;
+    document.getElementById('playAnnouncement').textContent = '';
     mode = next; game = mode === 'memory' ? newHandshake(pet, Math.random, {encore:encore.checked}) : null; alibi = null; lock(true);
     modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.playMode === mode)));
     pads.forEach(p => p.classList.remove('lit'));
@@ -68,13 +69,13 @@ export function initPlay(state, refresh) {
     document.getElementById('playName').textContent = (EYEBROWS[mode] || EYEBROWS.memory) + pet.name;
     cue.textContent = mode === 'alibi' ? 'It has had time to prepare.' : 'They have been rehearsing.';
     status.textContent = BRIEFS[mode] || BRIEFS.memory;
-    const resting = playWait(pet) || isAsleep(pet);
+    const resting = playWait(pet, Date.now(), mode) || isAsleep(pet);
     document.getElementById('playReward').textContent = resting
       ? 'Practice round · rewards return when rested and awake.'
       : mode === 'alibi' ? 'Catch all three lies for up to +20 attention and +1 trust.'
       : 'Win for up to +24 attention and +1 trust.';
     const names = gesturesFor(pet);
-    pads.forEach((pad, i) => { const label = pad.querySelector('span'); if (label) label.textContent = names[i]; });
+    pads.forEach((pad, i) => { const label = pad.querySelector('span'); if (label) label.textContent = GESTURES[i]; pad.title=names[i]; pad.setAttribute('aria-label',GESTURES[i]+' · '+names[i]+' · key '+(i+1)); });
     host.replaceChildren();
     if (mode === 'chase') chase.prepare(pet, gentle.checked);
     else { host.appendChild(renderPetSprite(pet)); host.firstElementChild.classList.add('sl-mood-content'); puppet = createPuppet(host.firstElementChild); progress(); }
@@ -145,9 +146,9 @@ export function initPlay(state, refresh) {
       ? (result.clean
         ? 'Every lie found. +' + result.fuss + ' attention · +' + result.bond + ' trust. It would like to know how.'
         : '+' + result.fuss + ' attention. It has eaten the carbon copy.')
-      : 'Practice statement. Nothing on the record, and it knows it.';
+      : 'Practice complete. Your statement and clean wins are recorded.';
     status.textContent = outcome;
-    document.getElementById('playReward').textContent = 'Games share a 5-minute reward rest per resident. Practice is always available.';
+    document.getElementById('playReward').textContent = 'Each game rests separately. Practice always counts in your history.';
     puppet?.gesture(caught === total ? 'win' : 'bump');
     if (caught === total) playFuss();
     progress();
@@ -203,7 +204,7 @@ export function initPlay(state, refresh) {
     await wait(650);
     for (const gesture of sequence) {
       if (token !== generation) return;
-      pads[gesture].classList.add('lit'); cue.textContent = names[gesture];
+      pads[gesture].classList.add('lit'); cue.textContent = GESTURES[gesture]+' · '+names[gesture];
       puppet.gesture(GESTURES[gesture].toLowerCase());
       await wait(700 * pace);
       if (token !== generation) return;
@@ -243,7 +244,7 @@ export function initPlay(state, refresh) {
     const bestRun = pet.handshakeBest?.[game.encore ? 'encore' : 'standard'];
     if (bestRun) status.textContent += ' Personal best: ' + bestRun.rounds + ' rounds with ' + bestRun.mistakes + (bestRun.mistakes === 1 ? ' slip and ' : ' slips and ') + bestRun.replays + (bestRun.replays === 1 ? ' replay.' : ' replays.');
     puppet.gesture('win'); playFuss();
-    start.hidden = false; start.textContent = 'Play again for practice'; replay.hidden = true; start.focus({ preventScroll: true });
+    start.hidden = false; start.textContent = 'Play another handshake'; replay.hidden = true; start.focus({ preventScroll: true });
   }
   start.addEventListener('click', () => {
     if (mode === 'alibi') { startAlibi(); return; }

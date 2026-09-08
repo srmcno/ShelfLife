@@ -12,6 +12,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/life.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
@@ -74,6 +75,7 @@
       <span class="teaser-text"></span>
       <span class="teaser-from"><span class="teaser-by"></span><b>Read the notes</b></span>
     </button>
+    <section id="lifeHub" class="life-hub" hidden aria-label="Your small world"></section>
     <div id="dailyCard" class="daily-card" hidden></div>
     <div class="shelf-progress" id="shelfProgress"></div>
   </section>
@@ -351,11 +353,13 @@
 </div>
 
 <div class="veil" id="incidentsVeil"><div class="sheet" id="incidentsSheet"></div></div>
+<div class="veil" id="lifeVeil"><div class="sheet sheet-life"><div class="sheet-head"><h2 id="lifeTitle">Your small world</h2><button class="btn btn-ghost" id="lifeClose">Close</button></div><div id="lifeContent"></div></div></div>
 <div class="veil" id="museumVeil"><div class="sheet sheet-museum"><div class="sheet-head"><div><span class="eyebrow">Long memories, short legs</span><h2>Memory museum</h2></div><button class="btn btn-ghost btn-sm" id="museumClose">Close</button></div><div id="museumContent"></div></div></div>
 <div class="veil" id="playVeil"><div class="sheet sheet-play">
   <div class="sheet-head"><div><span class="eyebrow" id="playName">A small secret</span><h2 id="playTitle">Secret handshake</h2></div><button class="btn btn-ghost btn-sm" id="playClose">Close</button></div>
   <div class="play-modes"><button class="chip" data-play-mode="chase" aria-pressed="true">Crumb Chase</button><button class="chip" data-play-mode="memory" aria-pressed="false">Handshake</button><button class="chip" data-play-mode="alibi" aria-pressed="false">The Alibi</button><label id="gentleOption"><input type="checkbox" id="playRelaxed"> Gentle pace</label><span id="memoryOption" hidden><label><input type="checkbox" id="playSlow"> Slow demonstration</label><label><input type="checkbox" id="playEncore"> Encore · 5 rounds</label></span></div>
   <div id="chaseArea" hidden>
+    <label class="chase-venue">Chase ground<select id="chaseVenue"><option value="shelf">The Floorboards · balanced</option><option value="pantry">The Pantry · biscuit bonanza</option><option value="moon">The Moonlit Sill · high jumps</option></select></label>
     <div class="chase-hud"><span>Crumbs<b id="chaseCount">0 / 8</b></span><span>Score<b id="chaseScore">0</b></span><span>Best<b id="chaseBest">–</b></span><span>Time<b id="chaseTime">22s</b></span><button class="btn btn-ghost btn-sm" id="chasePause" aria-label="Pause chase">Pause</button></div>
     <div class="chase-clock" aria-hidden="true"><i id="chaseClockFill"></i></div>
     <div class="chase-combo" id="chaseCombo" aria-hidden="true"><span id="chaseComboLabel">Streak</span><i id="chaseComboBar"></i></div>

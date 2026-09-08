@@ -64,14 +64,14 @@ test('time, collisions and scoring stay consistent across 30 and 60 FPS',()=>{
   assert.equal(a.time,b.time);assert.equal(a.score,b.score);assert.equal(a.caught,b.caught);
   const time=a.time;assert.deepEqual(updateChase(a,{},.1),[]);assert.equal(a.time,time);
 });
-test('chase rewards are earned once, share the handshake cooldown, and preserve personal bests',()=>{
+test('chase rewards are earned once, keep separate handshake cooldowns, and preserve personal bests',()=>{
   const s=blankState(),p=pet();s.pets=[p];s.slots[0]=p.id;s.lastTick=now;advanceStories(s,now);
   const unfinished=scene(p);assert.equal(recordChase(p,unfinished,now),false);assert.equal(rewardHandshake(s,unfinished,now),null);
   const g=play(newChase(p,{rng:rng(2)}));assert.equal(recordChase(p,g,now),true);const best=p.chaseBest.score;
   assert.deepEqual(rewardHandshake(s,g,now),{practice:false,fuss:24,bond:1});assert.equal(p.chases,1);assert.equal(s.stories.chases,1);assert.equal(p.needs.clean,70);
   assert.equal(rewardHandshake(s,g,now),null);
   const h=newHandshake(p);for(let n=0;n<3;n++)for(const x of h.sequence.slice(0,n+2))tapHandshake(h,x);
-  assert.equal(rewardHandshake(s,h,now+100).practice,true);
+  assert.equal(rewardHandshake(s,h,now+100).practice,false);
   assert.equal(normalizeState(s).pets[0].chaseBest.score,best);
   const later=play(newChase(p,{rng:rng(3)}));assert.equal(rewardHandshake(s,later,now+PLAY_COOLDOWN).practice,false);
 });

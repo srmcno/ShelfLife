@@ -1,3 +1,4 @@
+import { recordScene } from './life.js';
 import { recordSharedPlot } from './stories.js';
 import { SCHEMES } from '../content/schemes.js';
 import { addNote, clamp, grantBonusTrust } from '../state.js';
@@ -34,6 +35,7 @@ export function resolveScheme(state, option, now = Date.now()) {
   const granted = choice ? grantBonusTrust(plan.pet, choice.bond, now) : 0;
   const text = (choice ? choice.outcome : plan.definition.autonomous).replaceAll('{p}', plan.pet.name);
   addNote(state, text, 'a small conspiracy', 'scheme');
+  recordScene(state,plan.kind,plan.definition.title,text,[plan.petId],now);
   s.lastResult = { title: plan.definition.title, text, at: now };
   s.completed += 1;
   s.lastAt = now;
@@ -43,6 +45,7 @@ export function resolveScheme(state, option, now = Date.now()) {
   return { text, petId: plan.petId, choice: option, bond: granted };
 }
 export function advanceSchemes(state, now = Date.now()) {
+  if(state.life?.introStarted && !state.life.introDone)return false;
   const s = schemeState(state);
   if (s.active && !currentScheme(state)) { s.active = null; s.lastAt = now; return true; }
   if (s.active) {

@@ -70,7 +70,7 @@ test('a new play promise accepts any game win and an old handshake promise migra
     p[counter]=(p[counter]||0)+1;advanceStories(s,now);assert.equal(p.bond,1);
   }
 });
-test('Alibi clean wins advance case evidence; losing testimony and practice do not',()=>{
+test('Alibi clean wins, including practice, advance evidence; losing testimony does not',()=>{
   for(const correct of [0,2,3]){
     const s=fixture(),p=s.pets[0];advanceStories(s,now);advanceCase(s,'listen',now);
     const game={petId:p.id,complete:true,correct,rounds:[{},{},{}]};
@@ -78,9 +78,9 @@ test('Alibi clean wins advance case evidence; losing testimony and practice do n
     assert.equal(p.alibiWins||0,correct===3?1:0);
     assert.equal(rewardAlibi(s,game,now),null);
   }
-  const s=fixture(),p=s.pets[0];advanceStories(s,now);advanceCase(s,'listen',now);p.lastPlayed=now;
+  const s=fixture(),p=s.pets[0];advanceStories(s,now);advanceCase(s,'listen',now);p.lastPlayed=now;p.playedAt={alibi:now};
   assert.equal(rewardAlibi(s,{petId:'a',complete:true,correct:3,rounds:[{},{},{}]},now).practice,true);
-  assert.equal(caseGate(s).ready,false);
+  assert.equal(caseGate(s).ready,true);
 });
 test('contextual notes and dialogue only claim facts currently supported by the save',()=>{
   const s=fixture(),p=s.pets[0];assert.deepEqual(observationLines(s,p,now),[]);assert.deepEqual(contextualExchanges(s,p,now),[]);

@@ -1,3 +1,4 @@
+import { residentLifeHTML } from './life.js';
 import { residentStory } from './stories.js';
 import { storyState, remember } from '../engine/stories.js';
 import { moodOf, isAsleep, MOOD_WORD } from '../engine/tick.js';
@@ -131,9 +132,9 @@ export function openCard(state, id, keepScroll) {
   }).join('') + '</div>';
   html += '<p class="care-explainer">' + (pet.bond >= 25 ? 'Trust is full. The attachment is permanent.' : (3 - (pet.cared % 3)) + ' useful care actions until +1 trust. Care below 72 counts.') + (asleep ? ' Asleep: care has half effect.' : '') + '</p>';
   html += '<button class="play-invite" id="playPet"><span><b>Play together</b><small>' + (playWait(pet) || asleep ? 'Steer, hop and chase · practice available' : 'Chase, handshake or alibi · play + trust') + '</small></span><span aria-hidden="true">↗</span></button>';
-  html += '<details class="care-record"><summary>Care record · it kept the receipts</summary><p>Fed ' + (pet.careLog?.food || 0) + ' · Fussed ' + (pet.careLog?.fuss || 0) + ' · Cleaned ' + (pet.careLog?.clean || 0) + '</p><p>Rewarded games: ' + (pet.handshakes || 0) + ' handshakes · ' + (pet.chases || 0) + ' chases · ' + (pet.alibis || 0) + ' alibis (' + (pet.alibiWins || 0) + ' clean wins).</p></details>';
+  html += '<details class="care-record"><summary>Care record · it kept the receipts</summary><p>Fed ' + (pet.careLog?.food || 0) + ' · Fussed ' + (pet.careLog?.fuss || 0) + ' · Cleaned ' + (pet.careLog?.clean || 0) + '</p><p>Completed games: ' + (pet.handshakes || 0) + ' handshakes · ' + (pet.chases || 0) + ' chases · ' + (pet.alibis || 0) + ' alibis (' + (pet.alibiWins || 0) + ' clean wins).</p></details>';
   html += positionControl(state, pet.id);
-  html += residentStory(state, pet);
+  html += residentLifeHTML(pet) + residentStory(state, pet);
   html += '<p class="bio">' + escapeHtml(pet.bio) + '</p>';
   html += '<div class="card-section-title">On file</div>' + onFile(state, pet);
   html += '<div class="card-section-title">Particulars</div>';
@@ -149,7 +150,7 @@ export function openCard(state, id, keepScroll) {
   html += '</ul>';
 
   html += '<div class="card-actions"><button class="btn btn-danger btn-sm" id="rehomeBtn">Rehome</button>' +
-    '<button class="btn btn-sm" id="renameBtn">Rename</button></div>';
+    '<button class="btn btn-sm" id="renameBtn">Rename</button><button class="btn btn-sm" id="appearanceBtn">Edit appearance</button></div>';
 
   cardSheet.innerHTML = html;
   // The portrait is a live animated sprite (a real DOM element), appended into
@@ -315,3 +316,5 @@ export function closeCard() {
 }
 
 cardVeil.addEventListener('click', e => { if (e.target === cardVeil) closeCard(); });
+
+document.addEventListener('click',e=>{if(e.target.closest('#appearanceBtn'))window.dispatchEvent(new CustomEvent('shelflife:edit',{detail:{petId:getOpenPetId()}}));});

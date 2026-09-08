@@ -1,3 +1,4 @@
+import { lifeState, awardDiscovery, recordScene } from './life.js';
 import { CASES, VISITORS } from '../content/stories.js';
 import { addNote, clamp, grantBonusTrust } from '../state.js';
 import { fileGrudge } from './achievements.js';
@@ -46,6 +47,7 @@ export function storyState(state) {
   for (const k of ['relationships', 'requests', 'requestAt']) if (!safeRecord(s[k])) s[k] = {};
   if (s.case && (!safeRecord(s.case) || !CASES.some(c => c.id === s.case.kind) || !Number.isInteger(s.case.beat) || s.case.beat < 0 || s.case.beat > 6 || !Array.isArray(s.case.cast))) s.case = null;
   if (s.visitor && (!safeRecord(s.visitor) || !VISITORS.some(v => v.id === s.visitor.kind) || !Number.isFinite(s.visitor.at))) s.visitor = null;
+  if(s.visitor){s.visitor.activityDone=s.visitor.activityDone===true;s.visitor.activityResponse=typeof s.visitor.activityResponse==='string'?s.visitor.activityResponse.slice(0,1200):'';}
   s.lastVisit = cleanTime(s.lastVisit); s.visitCount = Math.max(0, Math.floor(Number(s.visitCount) || 0));
   s.lastRelations = cleanTime(s.lastRelations);
   s.careActions = cleanTime(s.careActions); s.handshakes = cleanTime(s.handshakes); s.chases = cleanTime(s.chases); s.alibiWins = cleanTime(s.alibiWins);
@@ -56,7 +58,7 @@ export function storyState(state) {
   if (s.case) {
     s.case.cast = s.case.cast.filter(x => safeRecord(x) && typeof x.id === 'string' && typeof x.name === 'string').slice(0, 2);
     s.case.choices = Array.isArray(s.case.choices) ? s.case.choices.filter(x => ['listen', 'blame'].includes(x)).slice(0, 6) : [];
-    for (const key of ['careStart', 'careClue', 'playStart', 'week']) s.case[key] = cleanTime(s.case[key]);
+    for (const key of ['careStart', 'careClue', 'playStart', 'playClue', 'week']) s.case[key] = cleanTime(s.case[key]);
   }
   for (const key of Object.keys(s.requestAt)) s.requestAt[key] = cleanTime(s.requestAt[key]);
   for (const [id, r] of Object.entries(s.requests)) {
@@ -137,9 +139,9 @@ export function caseText(state) {
 }
 export function caseGate(state) {
   const c = currentCase(state); if (!c || c.beat === 6) return { ready: false, hint: 'Case closed. A new file arrives next week.' };
-  if (c.beat === 1 && careCount(state) <= c.careStart && playCount(state) <= c.playStart) return { ready: false, hint: 'Give useful individual care below 72, or win a rewarded game together.' };
+  if (c.beat === 1 && careCount(state) <= c.careStart && playCount(state) <= c.playStart) return { ready: false, hint: 'Give useful individual care below 72, or complete a game together.' };
   if (c.beat === 2 && state.pets.some(p => p.id === c.cast[0]?.id) && state.slots[6] !== c.cast[0].id) return { ready: false, hint: 'Move ' + caseNames(state).p + ' to B1 using its Place on shelf selector.' };
-  if (c.beat === 4 && playCount(state) <= c.playStart && careCount(state) < c.careClue + 2) return { ready: false, hint: 'Win a rewarded game together, or perform two more useful care actions.' };
+  if (c.beat === 4 && playCount(state) <= (c.playClue ?? c.playStart) && careCount(state) < c.careClue + 2) return { ready: false, hint: 'Complete a game together, or perform two more useful care actions.' };
   return { ready: true, hint: c.beat === 2 ? 'Witness in position. The reconstruction can begin.' : 'Evidence ready to file.' };
 }
 export function advanceCase(state, choice = 'listen', now = Date.now()) {
@@ -148,17 +150,19 @@ export function advanceCase(state, choice = 'listen', now = Date.now()) {
   const definition = CASES.find(x => x.id === c.kind);
   c.choices ||= []; c.choices.push(choice);
   c.beat++;
-  if (c.beat === 4) c.careClue = careCount(state);
+  if (c.beat === 4) { c.careClue = careCount(state); c.playClue = playCount(state); }
   if (c.beat === 6) {
     const gentle = c.choices.filter(x => x === 'listen').length >= 5;
     const comfortable = state.pets.some(p => Math.min(...Object.values(p.needs)) >= 50);
     const cooperative = gentle && comfortable;
     c.outcome = cooperative ? definition.good : definition.messy; c.closedAt = now;
+    const rewarded = awardDiscovery(state, 'case:'+c.kind, 4, now);
     state.pets.filter(p => c.cast.some(x => x.id === p.id)).forEach(p => {
-      if (cooperative) p.bond = clamp(p.bond + 2, 0, 25);
-      else p.needs.clean = clamp(p.needs.clean + 12, 0, 100);
+      if (cooperative && rewarded) p.bond = clamp(p.bond + 2, 0, 25);
+      else if (!cooperative) p.needs.clean = clamp(p.needs.clean + 12, 0, 100);
     });
-    const text = c.outcome + (cooperative ? ' Witnesses gain 2 trust.' : ' The clean-up gives witnesses +12 cleanliness.');
+    const text = c.outcome + (cooperative ? (rewarded ? ' Witnesses gain 2 trust.' : ' This file’s trust was already earned; the shared history remains.') : ' The clean-up gives witnesses +12 cleanliness.');
+    recordScene(state,'case',definition.title,text,c.cast.map(p=>p.id),now);
     remember(state, definition.title, text, now, 'case'); addNote(state, text, 'case closed', 'scheme');
   } else {
     addNote(state, caseText(state), 'case file · ' + (c.beat + 1) + '/6', 'scheme');
@@ -193,7 +197,7 @@ function requestMet(state, pet, r) {
   if (r.kind === 'neighbor') return neighborPets(state, slot).some(p => p.id === r.target);
   return r.kind === 'room' && state.decor.room === 'parlor';
 }
-export const INVITATION_REST = 3600000;
+export const INVITATION_REST = 15 * 60000;
 export function inviteVisitor(state, now = Date.now(), rng = Math.random) {
   return withStories(state, s => {
     if (!state.pets.length || s.visitor || s.lastInvitation && now < s.lastInvitation + INVITATION_REST) return false;
@@ -226,13 +230,16 @@ export function welcomeVisitor(state, hostId, choice, now = Date.now()) {
   const context = host.needs.clean < 35 ? ' ' + host.name + ' is asked whether the crust is a hat.' : host.needs.fuss < 35 ? ' ' + host.name + ' follows the visitor with its whole face.' : host.bond >= 8 ? ' ' + host.name + ' introduces you as the house giant. Fondly.' : '';
   const text = definition[choice] + context + ' ' + host.name + ' keeps ' + definition.gift.toLowerCase() + '.';
   v.response = text;
+  const life=lifeState(state);
+  if (awardDiscovery(state, "guest:"+v.kind, 3, now) && life.displayed.length<3) life.displayed.push(v.kind);
+  recordScene(state,"visitor",definition.name+" has come calling",text,[host.id],now);
   remember(state, 'An unusual souvenir', text, now, 'visitor'); addNote(state, text, definition.name, 'arrival'); return true;
 }
 export function advanceStories(state, now = Date.now(), rng = Math.random) {
   return withStories(state, () => advanceStoryTransaction(state, now, rng));
 }
 function advanceStoryTransaction(state, now, rng) {
-  const s = storyState(state); if (!state.pets.length) return;
+  const s = storyState(state); if (!state.pets.length || state.life?.introStarted && !state.life.introDone) return;
   const week = Math.floor(now / WEEK);
   if (!s.case || s.case.beat === 6 && s.case.week < week) {
     // Mystique attracts case files: the two most mysterious residents are the witnesses.
@@ -315,4 +322,12 @@ export function chooseRequest(state, pet) {
   if (state.decor.room !== 'parlor') candidates.push({ kind: 'room', target: 'parlor' });
   const n = (pet.fulfilledRequests || 0) + (pet.refusedRequests || 0);
   return candidates[n % candidates.length];
+}
+
+export function startNextCase(state, now=Date.now()) {
+ const s=storyState(state); if(!state.pets.length||!s.case||s.case.beat!==6)return false;
+ const index=(CASES.findIndex(c=>c.id===s.case.kind)+1)%CASES.length;
+ const cast=[...state.pets].sort((a,b)=>(b.stats?.mystique||0)-(a.stats?.mystique||0)).slice(0,2).map(p=>({id:p.id,name:p.name}));
+ s.case={kind:CASES[index].id,week:Math.floor(now/WEEK),beat:0,cast,careStart:careCount(state),careClue:careCount(state),playStart:playCount(state),choices:[]};
+ addNote(state,caseText(state),'a new case file','scheme');return true;
 }

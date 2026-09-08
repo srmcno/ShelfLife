@@ -1,3 +1,4 @@
+import { recordGameLife } from './life.js';
 /* ================= THE ALIBI =================
    The third game, and deliberately the third GENRE. Crumb Chase is reflexes and
    Secret Handshake is recall, so this one is deduction: the resident makes three
@@ -76,7 +77,7 @@ export function statementsFor(state, pet, now = Date.now()) {
 
   // --- the shelf at large ---------------------------------------------------
   const n = (state.pets || []).length;
-  push(truths, 'count', 'Counting me, there are ' + n + ' of us living here.');
+  push(truths, 'count', n === 1 ? 'I am the only resident living here.' : 'Counting me, there are ' + n + ' of us living here.');
   push(lies, 'count', 'Counting me, there are ' + (n + 1 + Math.min(2, n)) + ' of us living here.');
   if (slot >= 0) {
     push(truths, 'row', 'I am on the ' + ROW_NAME[rowOf(slot)] + ' row.');
@@ -194,7 +195,10 @@ export function rewardAlibi(state, game, now = Date.now()) {
   game.claimed = true;
   tick(state, now);
   const clean = game.correct === game.rounds.length && game.rounds.length > 0;
-  if (playWait(pet, now) || isAsleep(pet, new Date(now))) return { practice: true, fuss: 0, bond: 0, clean };
+  pet.alibis = (pet.alibis || 0) + 1;
+  if (state.stories) state.stories.alibis = (state.stories.alibis || 0) + 1;
+  if (clean) { pet.alibiWins = (pet.alibiWins || 0) + 1; if (state.stories) state.stories.alibiWins = (state.stories.alibiWins || 0) + 1; recordGameLife(state,pet,'alibi',now); }
+  if (playWait(pet, now, 'alibi') || isAsleep(pet, new Date(now))) return { practice: true, fuss: 0, bond: 0, clean };
   // Attention scales with how much of its testimony you actually caught; trust is
   // only for a clean sweep, and still goes through the daily bonus cap.
   const share = game.rounds.length ? game.correct / game.rounds.length : 0;
@@ -202,12 +206,7 @@ export function rewardAlibi(state, game, now = Date.now()) {
   pet.needs.fuss = clamp(pet.needs.fuss + Math.max(0, fuss), 0, 100);
   const bond = clean ? grantBonusTrust(pet, 1, now) : 0;
   pet.lastPlayed = now;
-  if (clean) {
-    pet.alibiWins = (pet.alibiWins || 0) + 1;
-    if (state.stories) state.stories.alibiWins = (state.stories.alibiWins || 0) + 1;
-  }
-  pet.alibis = (pet.alibis || 0) + 1;
-  if (state.stories) state.stories.alibis = (Number(state.stories.alibis) || 0) + 1;
+  pet.playedAt ||= {}; pet.playedAt.alibi = now;
   addNote(state, clean
     ? pet.name + ' gave three statements and you found every lie. It has asked who told you.'
     : pet.name + ' gave its statements. You believed ' + (game.rounds.length - game.correct) + ' of the false ones. It is not going to correct the record.',

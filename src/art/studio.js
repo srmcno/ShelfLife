@@ -21,7 +21,7 @@ import {
   SLOTS, SLOT_KEYS, PALETTES, PALETTE_IDS, BODY_IDS, BODIES
 } from './creatures.js';
 import { renderPetSprite } from './sprite.js';
-import { state } from '../state.js';
+import { state, save } from '../state.js';
 import { drawingBounds, measureStampInk } from './drawing.js';
 import { reactTo } from './animator.js';
 import { toast } from '../ui/toast.js';
@@ -135,6 +135,7 @@ export function initStudio({ onSave }) {
   // two things — which panel is visible, and which art shape Save hands back.
 
   let mode = 'generate';
+  let editingId=null, openGeneration=0;
   let creature = null;
   let selectedPart = 'body';
   const undo = [];
@@ -446,14 +447,16 @@ export function initStudio({ onSave }) {
     });
   }
 
-  function open(unlockedBond) {
+  function open(unlockedBond, existing=null) {
+    const generation=++openGeneration; editingId=existing?.id||null;
+    savePet.disabled=false; savePet.textContent=existing?"Save appearance":"Move it in";
     ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, pad.width, pad.height);
     undoStack = [];
     stamps = [];
     stampEls = [];
     stampLayer.innerHTML = '';
-    petName.value = '';
+    petName.value = existing?.name||''; petName.disabled=!!existing;
     brush.stamp = null;
     rebuildPalette(unlockedBond);
     rebuildStamps(unlockedBond);
@@ -461,12 +464,26 @@ export function initStudio({ onSave }) {
     // a finished creature, not an empty box asking them to be an artist.
     setMode('generate');
     undo.length = 0; creature = null;
-    setCreature(generateCreature(), false);
+    setCreature(existing?.art?.creature || generateCreature(), false);
+    syncBlueprints();
+    if(existing && !existing.art?.creature){
+      setMode('draw');
+      stamps=(existing.art.stamps||[]).map(s=>({...s}));
+      stampEls=stamps.map(renderStampEl);stampLayer.replaceChildren(...stampEls);
+      if(existing.art.body){
+        savePet.disabled=true;
+        const img=new Image();
+        img.onload=()=>{if(generation!==openGeneration)return;ctx.drawImage(img,0,0,pad.width,pad.height);savePet.disabled=false;previewDrawing();};
+        img.onerror=()=>{if(generation!==openGeneration)return;toast('The existing drawing could not load. Close and try again to preserve it.');};
+        img.src=existing.art.body;
+      }else previewDrawing();
+    }
     studioVeil.classList.add('open');
     document.body.style.overflow = 'hidden';
   }
 
   function close() {
+    openGeneration++;
     cancelAnimationFrame(previewFrame);
     studioVeil.classList.remove('open');
     document.body.style.overflow = '';
@@ -487,16 +504,36 @@ export function initStudio({ onSave }) {
     const name = (petName.value || '').trim();
     if (mode === 'generate') {
       if (!creature) return;
-      onSave({ creature }, name);
+      onSave({ creature }, name, editingId);
       close();
       return;
     }
     if (isEmpty() && !stamps.length) { toast('Draw a body or place a stamp first. It needs something to inhabit.'); return; }
     const art = drawingArt();
-    onSave(art, name);
+    onSave(art, name, editingId);
     close();
   });
 
+  const blueprintBar=document.createElement('div');blueprintBar.className='blueprint-tools';
+  blueprintBar.innerHTML='<button class="btn btn-sm" id="keepBlueprint">Keep this design</button><select id="blueprintPicker" aria-label="Saved creature designs"><option value="">Saved designs</option></select><button class="btn btn-ghost btn-sm" id="forgetBlueprint">Remove selected design</button>';
+  genPanel.appendChild(blueprintBar);
+  function syncBlueprints(){
+    const picker=document.getElementById('blueprintPicker');picker.replaceChildren(new Option('Saved designs · '+(state.life?.blueprints?.length||0)+'/6',''));
+    (state.life?.blueprints||[]).forEach((b,i)=>picker.add(new Option(b.name,String(i))));
+    document.getElementById('forgetBlueprint').disabled=true;
+  }
+  document.getElementById('keepBlueprint').addEventListener('click',()=>{
+    if(!creature||!state.life)return;
+    if(state.life.blueprints.length>=6){toast('Six designs kept. Select and remove one to make room.');return;}
+    state.life.blueprints.push({name:petName.value.trim()||'Design '+(state.life.blueprints.length+1),creature:structuredClone(creature)});save();syncBlueprints();toast('Design kept. The original has retained its lawyer.');
+  });
+  document.getElementById('blueprintPicker').addEventListener('change',e=>{
+    document.getElementById('forgetBlueprint').disabled=e.target.value==='';
+    if(e.target.value==='')return;const b=state.life?.blueprints?.[Number(e.target.value)];if(b)setCreature(b.creature);
+  });
+  document.getElementById('forgetBlueprint').addEventListener('click',()=>{
+    const picker=document.getElementById('blueprintPicker');if(picker.value==='')return;state.life.blueprints.splice(Number(picker.value),1);save();syncBlueprints();
+  });
   buildPartChips();
   buildPalette();
 

@@ -336,7 +336,7 @@ test('a resident that has just played gets practice, not another reward', () => 
   const now = Date.now();
   const s = alibiShelf();
   const pet = s.pets[0];
-  pet.lastPlayed = now - 1000;                       // inside PLAY_COOLDOWN
+  pet.playedAt = {alibi:now - 1000}; pet.lastPlayed = now - 1000;                       // inside PLAY_COOLDOWN
   const game = newAlibi(s, pet);
   while (!game.complete) { answerAlibi(game, currentRound(game).lie); advanceAlibi(game); }
   const reward = rewardAlibi(s, game, now);

@@ -1,3 +1,4 @@
+import { recordGameLife } from './life.js';
 // A short, untimed memory game. Wrong taps cost nothing; rewards are per pet,
 // rate limited, and only awarded after all three sequences are completed.
 import { tick, isAsleep } from './tick.js';
@@ -50,8 +51,9 @@ export const LONG_HANDSHAKE_AT = 12;
 export function handshakeRounds(pet) {
   return (pet && (pet.bond || 0) >= LONG_HANDSHAKE_AT) ? 4 : 3;
 }
-export function playWait(pet, now = Date.now()) {
-  return Number.isFinite(pet.lastPlayed) && pet.lastPlayed > 0 ? Math.max(0, pet.lastPlayed + PLAY_COOLDOWN - now) : 0;
+export function playWait(pet, now = Date.now(), kind = null) {
+  const last = kind ? pet.playedAt?.[kind] || 0 : pet.lastPlayed;
+  return Number.isFinite(last) && last > 0 ? Math.max(0, last + PLAY_COOLDOWN - now) : 0;
 }
 export function newHandshake(pet, rng = Math.random, { encore = false } = {}) {
   const rounds = encore ? 5 : handshakeRounds(pet);
@@ -87,21 +89,19 @@ export function rewardHandshake(state, game, now = Date.now()) {
       pet.handshakeBest[key] = { rounds:game.rounds, mistakes, replays, at:now };
     }
   }
+  const kind = game.kind === 'chase' ? 'chase' : 'memory';
+  const count = kind === 'chase' ? 'chases' : 'handshakes';
+  pet[count] = (pet[count] || 0) + 1;
+  if (state.stories) state.stories[count] = (Number(state.stories[count]) || 0) + 1;
+  recordGameLife(state, pet, kind, now);
   tick(state, now);
-  if (playWait(pet, now) || isAsleep(pet, new Date(now))) return { practice: true, fuss: 0, bond: 0 };
+  if (playWait(pet, now, kind) || isAsleep(pet, new Date(now))) return { practice: true, fuss: 0, bond: 0 };
   const need = 'fuss';
   const fuss = Math.min(24, 100 - pet.needs[need]);
   pet.needs[need] = clamp(pet.needs[need] + fuss, 0, 100);
   const bond = grantBonusTrust(pet, 1, now);
   pet.lastPlayed = now;
-  if (game.kind === 'chase') {
-    pet.chases = (pet.chases || 0) + 1;
-    if (state.stories) state.stories.chases = (Number(state.stories.chases) || 0) + 1;
-  }
-  else {
-    pet.handshakes = (pet.handshakes || 0) + 1;
-    if (state.stories) state.stories.handshakes = (Number(state.stories.handshakes) || 0) + 1;
-  }
-  addNote(state, pet.name + (game.kind === 'chase' ? ' chased down ' + game.caught + ' crumbs and dodged ' + game.dodged + ' dust bunnies. It insists this was serious work.' : ' has taught you the secret handshake. It works without hands. This is now your problem.'), pet.name, 'note');
+  pet.playedAt ||= {}; pet.playedAt[kind] = now;
+  addNote(state, pet.name + (game.kind === 'chase' ? ' chased down ' + game.caught + ' crumbs and dodged ' + game.dodged + (game.dodged === 1 ? ' dust bunny.' : ' dust bunnies.') + ' It insists this was serious work.' : ' has taught you the secret handshake. It works without hands. This is now your problem.'), pet.name, 'note');
   return { practice: false, fuss: Math.round(fuss), bond };
 }

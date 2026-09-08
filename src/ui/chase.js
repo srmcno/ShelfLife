@@ -1,4 +1,4 @@
-import { newChase, updateChase, jumpChase, recordChase, chaseStars, streakMultiplier, CHASE_SECONDS, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND } from '../engine/chase.js';
+import { CHASE_VENUES, chaseRecordKey, newChase, updateChase, jumpChase, recordChase, chaseStars, streakMultiplier, CHASE_SECONDS, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND } from '../engine/chase.js';
 import { moodOf } from '../engine/tick.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { createPuppet } from '../art/animator.js';
@@ -33,6 +33,8 @@ export function createChaseUI(root, onFinish, onStatus) {
   const controls = [...directions, hop];
   const world = root.querySelector('#chaseWorld'), clockFill = root.querySelector('#chaseClockFill');
   const objective = root.querySelector('#chaseObjective');
+  const venuePicker = root.querySelector('#chaseVenue');
+  venuePicker.addEventListener('change',()=>{if(pet)controller.prepare(pet,gentle);});
   const nodes = new Map(), held = new Set();
   let fieldBox = null, hudKey = '', popAnimation = null, runNumber = 0;
   function measure() {
@@ -104,7 +106,7 @@ export function createChaseUI(root, onFinish, onStatus) {
     puppet.move(running && p.moving, p.direction, p.z > 3);
     clockFill.style.transform = 'scaleX(' + Math.max(0, 1 - game.time / CHASE_SECONDS) + ')';
     const seconds = Math.max(0, Math.ceil(CHASE_SECONDS - game.time));
-    const record = pet?.chaseRecords?.[gentle ? 'gentle' : 'standard'];
+    const record = pet?.chaseRecords?.[chaseRecordKey(game)];
     const key = [game.caught, game.score, seconds, game.combo, running, paused, record?.score, game.objective?.done].join('|');
     if (key !== hudKey) {
       hudKey = key;
@@ -143,8 +145,9 @@ export function createChaseUI(root, onFinish, onStatus) {
     return 'Chase complete: ' + rating + ' of 3 stars' + (newBest ? ', a new personal best' : '') + '. Best streak ' + game.bestCombo + '.';
   }
   function finish() {
+    venuePicker.disabled=false;
     stopFrame(); paused = false; root.dataset.finished = 'true'; disabled(true);
-    const previous = pet.chaseRecords?.[gentle ? 'gentle' : 'standard'];
+    const previous = pet.chaseRecords?.[chaseRecordKey(game)];
     const newBest = !previous || game.score > previous.score;
     recordChase(pet, game);
     const reward = onFinish(game), rating = chaseStars(game);
@@ -209,9 +212,10 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function start() {
     if (!pet || root.hidden) return;
-    stopFrame(); game = newChase(pet, { gentle, mood: moodOf(pet), objective: ['combo', 'air', 'biscuit'][runNumber++ % 3] });
+    stopFrame(); game = newChase(pet, { gentle, venue:venuePicker.value, mood: moodOf(pet), objective: ['combo', 'air', 'biscuit'][runNumber++ % 3] });
     hudKey = ''; nodes.clear(); items.replaceChildren();
     goalCelebrated = false;
+    venuePicker.disabled=true;
     root.dataset.finished = 'false'; pop.textContent = ''; stars.hidden = true; quip.hidden = true;
     overlay.classList.remove('best'); fx.replaceChildren(); paint(); run();
   }
@@ -259,20 +263,22 @@ export function createChaseUI(root, onFinish, onStatus) {
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
   window.addEventListener('blur', pause);
-  return {
+  const controller = {
     prepare(resident, useGentle) {
       stopFrame(); puppet?.release(); paused = false; goalCelebrated = false; pet = resident; gentle = useGentle;
-      game = newChase(pet, { gentle, mood: moodOf(pet), objective: ['combo', 'air', 'biscuit'][runNumber % 3] });
+      game = newChase(pet, { gentle, venue:venuePicker.value, mood: moodOf(pet), objective: ['combo', 'air', 'biscuit'][runNumber % 3] });
+      venuePicker.disabled=false;field.dataset.venue=game.venue;
       hudKey = ''; nodes.clear(); items.replaceChildren();
       actor.replaceChildren(renderPetSprite(pet)); actor.firstElementChild.classList.add('sl-mood-content');
       puppet = createPuppet(actor.firstElementChild);
-      title.textContent = 'The crumbs are escaping.';
+      title.textContent = CHASE_VENUES[game.venue].name;
       description.textContent = 'Steer ' + pet.name + '. Catch ' + game.goal + ' crumbs in 22 seconds. Jump over the dust bunnies, or land on them.';
       go.textContent = 'Let’s chase'; overlay.hidden = false; disabled(true);
       hop.textContent = game.wings ? 'Flap ↑' : 'Hop ↑';
       const trait = game.wings ? 'Wings: tap Flap again in midair.' : game.horns ? 'Horns block your first dust ambush.' : game.halo ? 'Your halo pulls nearby crumbs closer.' : game.tail ? 'Tail: a bigger stomp bounce.' : 'Keyboard: arrows + Space.';
-      const modeRecord = pet.chaseRecords?.[gentle ? 'gentle' : 'standard'];
-      const record = modeRecord ? ' ' + (gentle ? 'Gentle' : 'Standard') + ' best: ' + modeRecord.score + '.' : ' Separate records for Gentle and Standard.';
+      const modeRecord = pet.chaseRecords?.[chaseRecordKey(game)];
+      const record = modeRecord ? ' ' + (gentle ? 'Gentle' : 'Standard') + ' best: ' + modeRecord.score + '.' : ' Separate records for every ground and pace.';
+      description.textContent += game.venue==='pantry'?' More falling biscuits, each worth 50 base points.':game.venue==='moon'?' The moon lends you longer, higher jumps.':'';
       tip.textContent = 'Drag to steer or hold ← →. Land on a dust bunny to stomp it; jump clear to dodge. ' + trait + record;
       stars.hidden = true; quip.hidden = true; overlay.classList.remove('best'); fx.replaceChildren();
       pop.textContent = ''; paint();
@@ -280,4 +286,5 @@ export function createChaseUI(root, onFinish, onStatus) {
     stop() { stopFrame(); paused = false; popAnimation?.cancel(); puppet?.release(); },
     pause
   };
+  return controller;
 }

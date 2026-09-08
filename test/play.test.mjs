@@ -19,7 +19,7 @@ test('practice never farms rewards, reload preserves cooldown, and later games r
  const s=fixture(),p=s.pets[0],g=newHandshake(p);finish(g);rewardHandshake(s,g,now);
  const loaded=normalizeState(s);assert.equal(playWait(loaded.pets[0],now),PLAY_COOLDOWN);
  const practice=newHandshake(p);finish(practice);assert.equal(rewardHandshake(s,practice,now).practice,true);
- assert.equal(p.handshakes,1);const later=newHandshake(p);finish(later);rewardHandshake(s,later,now+PLAY_COOLDOWN);assert.equal(p.handshakes,2);
+ assert.equal(p.handshakes,2);const later=newHandshake(p);finish(later);rewardHandshake(s,later,now+PLAY_COOLDOWN);assert.equal(p.handshakes,3);
 });
 test('sleeping pets permit practice but no reward; removed pets cannot receive rewards',()=>{
  const s=fixture(),p=s.pets[0];p.traits=['nocturnal'];const g=newHandshake(p);finish(g);

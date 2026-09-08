@@ -1,3 +1,4 @@
+import { dailyActivity, recordScene } from './life.js';
 import { contextualCare } from './observations.js';
 import { TRAIT_CARE } from '../content/care.js';
 import { tick, isAsleep } from './tick.js';
@@ -43,6 +44,7 @@ export function careFor(state, pet, need, now = Date.now()) {
   // The only choke point where the game learns who you went to, in what order,
   // and how long you kept fussing. Read back by the state-aware notes in loop.js.
   recordCare(state, pet, need, now);
+  if(gain>0 && dailyActivity(state,'care',now)) recordScene(state,'care','A small kindness',pet.name+': '+line,[pet.id],now);
   let bondGained = false;
   if (before < 72) {
     pet.cared++;
