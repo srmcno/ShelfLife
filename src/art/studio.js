@@ -449,6 +449,8 @@ export function initStudio({ onSave }) {
 
   function open(unlockedBond, existing=null) {
     const generation=++openGeneration; editingId=existing?.id||null;
+    studioVeil.querySelector('h2').textContent=existing?'Edit '+existing.name:'Make a pet';
+    document.getElementById('petNameHint').textContent=existing?'Appearance changes keep their traits, needs and history. Rename them from their resident card.':'Leave it blank and one gets picked for you. You may regret that.';
     savePet.disabled=false; savePet.textContent=existing?"Save appearance":"Move it in";
     ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, pad.width, pad.height);

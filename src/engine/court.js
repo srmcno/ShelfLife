@@ -29,7 +29,7 @@ export function accuseCourt(state,game,choice,now=Date.now()) {
  if(correct&&!playWait(p,now,'court')&&!isAsleep(p,new Date(now))){bond=grantBonusTrust(p,1,now);fuss=Math.min(16,100-p.needs.fuss);p.needs.fuss=clamp(p.needs.fuss+fuss,0,100);p.playedAt||={};p.playedAt.court=now;p.lastPlayed=now;}
  if(correct)recordGameLife(state,p,'court',now);
  const culprit=game.suspects[game.answer];
- const text=culprit.name+' was '+culprit.details.join(' and ')+'. Both clues point to them. '+game.end;
+ const text=culprit.name+' matches both clues: '+culprit.details.join('; ')+'. '+game.end;
  if(correct){recordScene(state,'court',game.title,text,state.pets.slice(0,2).map(p=>p.id),now);addNote(state,text,'Shelf Court','scheme');}
- return {correct,bond,fuss,text};
+ return {correct,bond,fuss:Math.round(fuss),text};
 }

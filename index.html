@@ -82,7 +82,7 @@
 
   <!-- ---- plots: the live conspiracy, and the side doors ------------------- -->
   <section class="pane pane-plots" id="panePlots" aria-label="Small conspiracies">
-    <article id="caseCard" class="story-card case-card" tabindex="-1" aria-label="Weekly case file"></article>
+    <article id="caseCard" class="story-card case-card" tabindex="-1" aria-label="Household case file"></article>
     <article id="visitorCard" class="story-card visitor-card" aria-label="Temporary visitor"></article>
     <aside class="scheme-card" id="schemeCard" tabindex="-1" aria-label="Small conspiracies"></aside>
     <button class="museum-door" data-proxy="museumBtn"><span aria-hidden="true">✦</span><div><b>Memory museum</b><small id="museumCount">The evidence is accumulating.</small></div><span aria-hidden="true">↗</span></button>
@@ -263,7 +263,7 @@
     <div class="tool-block">
       <label class="tool-label" for="petName">Name</label>
       <input type="text" id="petName" maxlength="22" placeholder="Bartholomew, Gnash, Miss Teeth..." autocomplete="off">
-      <div class="hint">Leave it blank and one gets picked for you. You may regret that.</div>
+      <div class="hint" id="petNameHint">Leave it blank and one gets picked for you. You may regret that.</div>
     </div>
     <div class="studio-actions">
       <button class="btn btn-ghost" id="cancelPet">Cancel</button>
