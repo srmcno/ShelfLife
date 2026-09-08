@@ -144,8 +144,8 @@ export function initPlay(state, refresh) {
     alibiCharge.textContent = 'Statement closed. You caught ' + caught + ' of ' + total + '.';
     const outcome = result && !result.practice
       ? (result.clean
-        ? 'Every lie found. +' + result.fuss + ' attention · +' + result.bond + ' trust. It would like to know how.'
-        : '+' + result.fuss + ' attention. It has eaten the carbon copy.')
+        ? 'Every lie found. +' + Math.round(result.fuss) + ' attention · +' + result.bond + ' trust. It would like to know how.'
+        : '+' + Math.round(result.fuss) + ' attention. It has eaten the carbon copy.')
       : 'Practice complete. Your statement and clean wins are recorded.';
     status.textContent = outcome;
     document.getElementById('playReward').textContent = 'Each game rests separately. Practice always counts in your history.';
@@ -239,7 +239,7 @@ export function initPlay(state, refresh) {
     encore.disabled = false;
     cue.textContent = game.encore ? 'The inner circle. Six gestures wide.' : 'You are in the club.';
     document.getElementById('playAnnouncement').textContent = 'Handshake complete. ' + game.rounds + ' rounds remembered.';
-    status.textContent = result && !result.practice ? '+' + result.fuss + ' attention · +' + result.bond + ' trust. They will deny enjoying that.' : 'Practice complete. They insist they were letting you win.';
+    status.textContent = result && !result.practice ? '+' + Math.round(result.fuss) + ' attention · +' + result.bond + ' trust. They will deny enjoying that.' : 'Practice complete. They insist they were letting you win.';
     status.textContent += ' ' + game.rounds + ' rounds · ' + game.mistakes + (game.mistakes === 1 ? ' slip · ' : ' slips · ') + game.replays + (game.replays === 1 ? ' replay.' : ' replays.');
     const bestRun = pet.handshakeBest?.[game.encore ? 'encore' : 'standard'];
     if (bestRun) status.textContent += ' Personal best: ' + bestRun.rounds + ' rounds with ' + bestRun.mistakes + (bestRun.mistakes === 1 ? ' slip and ' : ' slips and ') + bestRun.replays + (bestRun.replays === 1 ? ' replay.' : ' replays.');

@@ -30,7 +30,7 @@ export function recordGameLife(state, pet, kind, now=Date.now(), victory=true) {
   const l=lifeState(state);
   dailyActivity(state,'play',now);
   const first=awardDiscovery(state,'game:'+kind,3,now);
-  if(first)recordScene(state,'celebration', 'A shared incident', pet.name+' '+({memory:'has taught you a secret handshake. It now looks for your hand before pretending it was looking for something else.',chase:'has appointed itself Minister of Crumbs. The ministry has one employee and considerable overhead.',alibi:'has discovered you can check its story. It has requested a less observant landlord.',court:'has attended court. It has kept the little hammer. This may prove unwise.'}[kind]||'has taken up a hobby.'),[pet.id],now);
+  if(first)recordScene(state,'celebration', ({memory:'The secret accomplice',chase:'The Ministry of Crumbs',alibi:'An inconveniently observant landlord',court:'The household takes the stand'})[kind] || 'A shared incident', pet.name+' '+({memory:'has taught you a secret handshake. It now looks for your hand before pretending it was looking for something else.',chase:'has appointed itself Minister of Crumbs. The ministry has one employee and considerable overhead.',alibi:'has discovered you can check its story. It has requested a less observant landlord.',court:'has attended court. It has kept the little hammer. This may prove unwise.'}[kind]||'has taken up a hobby.'),[pet.id],now);
   l.introDone=true;
   return first;
 }
