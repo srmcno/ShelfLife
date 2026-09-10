@@ -5,6 +5,9 @@ export const FRAMES = [
   {id:'velvet',name:'Velvet mausoleum',at:32,line:'Nothing has died. The velvet is optimistic.'}
 ];
 export const RELICS = [
+  {id:'market:0',name:'A receipt for questionable judgement',shape:'receipt',line:'All sales final. Several opinions provisional.'},
+  {id:'market:1',name:'The silver shopping thimble',shape:'medal',line:'Awarded for bringing home objects that actually go together. A rare household event.'},
+  {id:'market:2',name:'The crown of suspicious bargains',shape:'crown',line:'The market has recognised your talent. The vendors have raised your rent.'},
   {id:'drawer:0',name:'A sock with diplomatic immunity',shape:'sock',line:'The left sock is still being questioned.'},
   {id:'drawer:1',name:'The missing button’s alibi',shape:'button',line:'It was sewn up. Suspiciously neatly.'},
   {id:'drawer:2',name:'A medal for being lost',shape:'medal',line:'First place. Location unknown.'},
@@ -14,6 +17,49 @@ export const RELICS = [
   {id:'cupboard:0',name:'A thimble full of weather',shape:'rain',line:'Forecast: localised unpleasantness.'},
   {id:'cupboard:1',name:'A formally retired tooth',shape:'tooth',line:'No longer biting. Advising in a consultancy role.'},
   {id:'cupboard:2',name:'The key to a smaller problem',shape:'key',line:'Opens something. Nobody has admitted what.'}
+];
+
+// The market is a small planning game. Every price and future stall is visible;
+// a good basket comes from combining requests, not guessing concealed odds.
+export const MARKET_TAGS = {cozy:'Comfort',odd:'Strange',bright:'Shiny',snack:'Edible'};
+export const MARKET_ITEMS = [
+ {id:'tea-sock',name:'A tea cosy for one toe',shape:'sock',cost:2,charm:2,tags:['cozy'],line:'A snug fit. The other toes have formed a tenants’ association.'},
+ {id:'jam-button',name:'A jam-filled button',shape:'button',cost:3,charm:3,tags:['bright','snack'],line:'Fastens your coat. Slowly attracts a different coat.'},
+ {id:'haunted-pea',name:'The haunted pea',shape:'pea',cost:3,charm:3,tags:['odd','snack'],line:'It rolls upstairs at night. Otherwise an excellent source of fibre.'},
+ {id:'warm-moon',name:'A second-hand moon',shape:'moon',cost:4,charm:4,tags:['cozy','bright'],line:'Only used at night. One careful werewolf.'},
+ {id:'tooth-pillow',name:'A tooth’s retirement pillow',shape:'tooth',cost:3,charm:3,tags:['cozy','odd'],line:'It has bitten through six. This one has a pension.'},
+ {id:'sugar-star',name:'A sugar constellation',shape:'sun',cost:4,charm:4,tags:['bright','snack'],line:'Contains three stars and a disappointing amount of astronomy.'},
+ {id:'bedtime-biscuit',name:'A bedtime biscuit',shape:'medal',cost:2,charm:2,tags:['cozy','snack'],line:'Reads you a story. Becomes progressively harder to hear as you eat it.'},
+ {id:'echo-jar',name:'A jar of polite echoes',shape:'echo',cost:2,charm:2,tags:['odd'],line:'Repeats your last words, but makes them sound better brought up.'},
+ {id:'brass-sun',name:'The brass breakfast sun',shape:'sun',cost:3,charm:4,tags:['bright'],line:'Rises whenever somebody drops the toaster.'},
+ {id:'rain-scarf',name:'A scarf made of mild weather',shape:'rain',cost:4,charm:4,tags:['cozy','odd'],line:'Warm with a chance of sleeves.'},
+ {id:'mirror-spoon',name:'A spoon that flatters you',shape:'spoon',cost:3,charm:3,tags:['bright','odd'],line:'You look magnificent. Your soup looks like it owes the spoon money.'},
+ {id:'crumb-crown',name:'The shortbread crown',shape:'crown',cost:4,charm:4,tags:['bright','snack'],line:'Uneasy lies the head that smells this much like butter.'},
+ {id:'pocket-rug',name:'The pocket-sized rug',shape:'sock',cost:2,charm:3,tags:['cozy'],line:'Ties the room together. The room is a matchbox.'},
+ {id:'tiny-prophecy',name:'Tomorrow’s shopping receipt',shape:'receipt',cost:2,charm:3,tags:['odd'],line:'You bought too many biscuits. The future is devastatingly specific.'},
+ {id:'glow-thread',name:'A spool of borrowed daylight',shape:'needle',cost:3,charm:3,tags:['bright','cozy'],line:'Please return before dusk. The sun checks its inventory.'},
+ {id:'opera-raisin',name:'A raisin with formal training',shape:'pea',cost:3,charm:3,tags:['snack','odd'],line:'Sings for its supper. Is increasingly concerned about the wording.'},
+ {id:'comfort-crumbs',name:'Emergency comfort crumbs',shape:'medal',cost:2,charm:2,tags:['snack','cozy'],line:'Break glass in case of having a small day.'},
+ {id:'button-comet',name:'A comet on a safety pin',shape:'button',cost:4,charm:4,tags:['bright','odd'],line:'An astronomical event with a practical fastening.'}
+];
+export const MARKET_REQUESTS = [
+ {id:'tea',name:'A tea party for the recently strange',tags:['cozy','odd'],line:'Something comforting and something strange. Preferably neither is the guest.'},
+ {id:'midnight',name:'A midnight feast',tags:['snack','snack'],line:'Two edible objects. Calling the napkin a salad will not count.'},
+ {id:'museum',name:'A deeply suspicious museum',tags:['bright','odd'],line:'One shiny exhibit and one inexplicable exhibit. The curator can be both.'},
+ {id:'nest',name:'A nest with standards',tags:['cozy','cozy'],line:'Two comforts. The resident has described one comfort as a hostile environment.'},
+ {id:'gala',name:'The crumb gala',tags:['bright','snack'],line:'Something to admire and something to eat. The guests need clear instructions.'},
+ {id:'spectacle',name:'A very small coronation',tags:['bright','bright'],line:'Two shiny objects. Nobody has the paperwork to stop us.'},
+ {id:'sleepover',name:'A respectable sleepover',tags:['cozy','snack'],line:'Comfort and a snack. Respectability ends when the lights go off.'},
+ {id:'haunting',name:'A haunting with refreshments',tags:['odd','snack'],line:'Something strange and something edible. The ghost has dietary requirements.'},
+ {id:'cabinet',name:'A cabinet of bad ideas',tags:['odd','odd'],line:'Two separate peculiarities. One large peculiarity is still only one.'}
+];
+export const MARKET_STALLS = [
+ {name:'The Sock Exchange',line:'“We accept buttons. We no longer accept explanations.”'},
+ {name:'Mother Needle’s Almost Antiques',line:'“Old enough to be valuable. Too young to testify.”'},
+ {name:'The Pea’s Personal Effects',line:'“Everything must go. The fridge has changed the locks.”'},
+ {name:'The Unlicensed Moon Shop',line:'“Our celestial bodies are locally sourced. Mostly from the ceiling.”'},
+ {name:'Miss Afterbell’s Quiet Sale',line:'The prices are whispered. The receipts apologise.'},
+ {name:'Last Chance, Probably',line:'“Buy now. Or don’t. I am mostly a table.”'}
 ];
 export const GEAR = [{id:'thread',name:'Thread & safety pin',hint:'Bridges gaps; rescues things without a speech.'},{id:'lantern',name:'Pocket lantern',hint:'Reveals small print, warm routes, and things pretending to be furniture.'},{id:'biscuit',name:'Emergency biscuit',hint:'A bribe, a distraction, or a last-minute relative.'}];
 export const OUTINGS = [

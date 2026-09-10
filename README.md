@@ -13,6 +13,17 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
+## After-hours update
+
+- **The Playroom:** one always-visible doorway to all six activities, with an accomplice picker, personal records, activity descriptions and resume indicators. Press P when no dialog or form control is active.
+- **The Unlicensed Night Market:** a saved six-stall strategy game. Ten buttons, three bag spaces, previewable stock, shopping requests and one trade-in. Collect new curiosities, compare your haul with the best attainable score, and replay the same market or visit a new one.
+- **Remix without losing the good bits:** pin a body, individual features or colours before using Surprise me. Undo and redo are available from the creator and its keyboard shortcuts.
+- **Better Crumb Chase practice:** select a side quest, repeat a course, track the next star and receive specific coaching after each run. Venue stars and score records retain their separate personal bests.
+- **A calmer interface:** no independently scrolling desktop case column, a scrollable settings drawer on short screens, and keyboard access to expandable details.
+- **Reliability:** more precise day/night catch-up, corrected care shortcuts and countdown refreshes, less unnecessary DOM replacement, and cancellation of stale animation work.
+
+Existing shelves and backups continue to load. Playroom records come from the existing save, and the market stores its seed and choices so a resumed trip rebuilds the same stock and score. The Pages build includes the new modules in its offline shell and identifies each deployment by its Git commit in `release.json`.
+
 ## A larger small world
 
 - **Beyond the shelf:** three expeditions, equipment and companion choices, nine illustrated curiosities, persistent progress, and shared resident history.

@@ -1,4 +1,5 @@
 import { initLife } from './ui/life.js';
+import { initPlayroom } from './ui/playroom.js';
 import { lifeState, welcomeBack } from './engine/life.js';
 import { artPersonality } from './engine/personality.js';
 import { initStories } from './ui/stories.js';
@@ -357,6 +358,7 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 initSchemeUI(state, () => renderAll(state));
 initPlay(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
+initPlayroom(state);
 initStories(state, () => renderAll(state), id => openCard(state, id, true));
 window.addEventListener('shelflife:care', e => openCard(state, e.detail?.petId));
 window.addEventListener('shelflife:edit', e => {const pet=state.pets.find(p=>p.id===e.detail?.petId);if(pet){closeCard();studio.open(totalBond(state),pet);}});

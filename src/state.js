@@ -255,6 +255,7 @@ export function normalizeState(raw) {
   s.lastTick = finite(s.lastTick, now, 1, now);
   s.started = finite(s.started, now, 1, now);
   s.lastRounds = finite(s.lastRounds, 0, 0, now);
+  s.lastCheck = finite(s.lastCheck, 0, 0, now);
   s.notes = (Array.isArray(s.notes) ? s.notes : []).filter(n => record(n) && typeof n.text === 'string')
     .slice(0, 40).map(n => ({ ...n, text: n.text.slice(0, 10000), from: typeof n.from === 'string' ? n.from : 'the shelf',
       kind: typeof n.kind === 'string' && /^[a-z-]+$/.test(n.kind) ? n.kind : 'note', at: finite(n.at, now) }));
@@ -295,9 +296,9 @@ export function normalizeState(raw) {
   if (!s.ledger.struck || typeof s.ledger.struck !== 'object') s.ledger.struck = {};
   s.roster = s.roster && typeof s.roster === 'object' ? s.roster : {};
   s.rosterSeeded = s.rosterSeeded === true;
-  s.formLog = Array.isArray(s.formLog) ? s.formLog.filter(f => FORMS.indexOf(f) >= 0) : [];
-  s.noteCount = typeof s.noteCount === 'number' ? s.noteCount : s.notes.length;
-  s.lastGoneNote = typeof s.lastGoneNote === 'number' ? s.lastGoneNote : 0;
+  s.formLog = Array.isArray(s.formLog) ? s.formLog.filter(f => FORMS.indexOf(f) >= 0).slice(0, FORM_LOG_MAX) : [];
+  s.noteCount = Math.floor(finite(s.noteCount, s.notes.length, s.notes.length));
+  s.lastGoneNote = Math.floor(finite(s.lastGoneNote, 0, 0, s.noteCount));
   // When this shelf was last written to a file, and when the player last waved the
   // reminder away. Both default to zero, so a save from before the reminder existed
   // is treated as never-backed-up rather than as recently safe.
@@ -318,7 +319,7 @@ export function normalizeState(raw) {
     if (typeof s.settings[key] !== 'boolean') s.settings[key] = defaultSettings()[key];
   }
   s.streak.count = Math.floor(finite(s.streak.count, 0));
-  s.streak.lastCheckin = finite(s.streak.lastCheckin, 0);
+  s.streak.lastCheckin = finite(s.streak.lastCheckin, 0, 0, now);
   s.life = normalizeLife(s.life, s.pets.length > 0);
   s.pets = s.pets.map(migratePet);
   s.pets.forEach(p => {
@@ -363,11 +364,9 @@ export function normalizeState(raw) {
     if (typeof p.cared !== 'number') p.cared = 0;
     if (typeof p.grudges !== 'number') p.grudges = 0;
     if (typeof p.grudgeStage !== 'number') p.grudgeStage = 0;
-    if (!p.careLog || typeof p.careLog !== 'object') p.careLog = defaultCareLog();
-    else ['food', 'fuss', 'clean'].forEach(k => { if (typeof p.careLog[k] !== 'number') p.careLog[k] = 0; });
-    if (typeof p.firstTouch !== 'number') p.firstTouch = 0;
-    if (typeof p.bestFuss !== 'number') p.bestFuss = 0;
-    if (typeof p.fussRun !== 'number') p.fussRun = 0;
+    p.careLog = record(p.careLog) ? p.careLog : defaultCareLog();
+    ['food', 'fuss', 'clean'].forEach(k => { p.careLog[k] = Math.floor(finite(p.careLog[k], 0)); });
+    for (const key of ['firstTouch', 'bestFuss', 'fussRun']) p[key] = Math.floor(finite(p[key], 0));
     if (!Array.isArray(p.names) || !p.names.length) p.names = [{ name: p.name, at: p.born || s.started }];
     p.names = p.names.filter(n => record(n) && typeof n.name === 'string');
     if (!p.names.length) p.names = [{ name: p.name, at: p.born }];

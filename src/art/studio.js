@@ -25,6 +25,7 @@ import { state, save } from '../state.js';
 import { drawingBounds, measureStampInk } from './drawing.js';
 import { reactTo } from './animator.js';
 import { toast } from '../ui/toast.js';
+import { remixCreature } from './studio-model.js';
 
 // Ported verbatim from ~/Documents/shelf-life.html (lines ~475-480). Studio-only concern:
 // which brush colors are available at the shelf's current total bond.
@@ -63,7 +64,7 @@ function unlockedStampKinds() {
 const PREVIEW_ID = 'studio-preview';
 
 const BLURB = {
-  generate: 'Choose a feature, then browse in order or pick its name. Surprise me rolls the whole creature.',
+  generate: 'Choose a feature and browse its variations. Keep your favourites, then remix everything else.',
   draw: 'Draw it, stamp it, name it. It takes over from there.'
 };
 
@@ -139,7 +140,36 @@ export function initStudio({ onSave }) {
   let creature = null;
   let selectedPart = 'body';
   const undo = [];
+  const redo = [];
+  const lockedParts = new Set();
   let previewFrame = 0;
+  const remixTools = document.createElement('div');
+  remixTools.className = 'studio-remix-tools tool-block';
+  remixTools.innerHTML = '<button type="button" class="chip" id="genLockPart" aria-pressed="false">Keep this body</button><button type="button" class="chip" id="genLockPalette" aria-pressed="false">Keep colours</button><button type="button" class="btn btn-ghost btn-sm" id="genUnlockAll">Release all</button><p class="hint" id="genLockSummary" role="status"></p>';
+  genParts.parentElement.appendChild(remixTools);
+  const lockPart = remixTools.querySelector('#genLockPart'), lockPalette = remixTools.querySelector('#genLockPalette');
+  const redoButton = document.createElement('button');
+  redoButton.id = 'genRedo'; redoButton.type = 'button'; redoButton.className = 'btn btn-sm btn-ghost'; redoButton.textContent = 'Redo';
+  genSurprise.parentElement.append(document.getElementById('genUndo'), redoButton);
+  function syncLocks() {
+    const label = PART_CHIPS.find(part => part.key === selectedPart).label.toLowerCase();
+    lockPart.textContent = (lockedParts.has(selectedPart) ? 'Keeping ' : 'Keep ') + label;
+    lockPart.setAttribute('aria-pressed', String(lockedParts.has(selectedPart)));
+    lockPalette.setAttribute('aria-pressed', String(lockedParts.has('palette')));
+    genParts.querySelectorAll('[data-part-key]').forEach(button => {
+      const part = PART_CHIPS.find(p => p.key === button.dataset.partKey);
+      button.textContent = part.label + (lockedParts.has(part.key) ? ' ✓' : '');
+      button.title = lockedParts.has(part.key) ? 'Kept when remixing; you can still edit it.' : 'Choose ' + part.label.toLowerCase();
+    });
+    document.getElementById('genUnlockAll').disabled = !lockedParts.size;
+    document.getElementById('genLockSummary').textContent = lockedParts.size
+      ? lockedParts.size + ' choices kept. Remix changes the rest. Your face adjustments stay.'
+      : 'Keep a feature before remixing to preserve it. Undo and redo let you compare designs.';
+    genSurprise.textContent = lockedParts.size ? 'Remix the rest' : 'Surprise me';
+  }
+  lockPart.addEventListener('click', () => { if (lockedParts.has(selectedPart)) lockedParts.delete(selectedPart); else lockedParts.add(selectedPart); syncLocks(); });
+  lockPalette.addEventListener('click', () => { if (lockedParts.has('palette')) lockedParts.delete('palette'); else lockedParts.add('palette'); syncLocks(); });
+  document.getElementById('genUnlockAll').addEventListener('click', () => { lockedParts.clear(); syncLocks(); });
 
   // Slot chips, in the order the SLOTS registry declares them, plus body. Body is
   // deliberately first: it is the one change that alters the silhouette, and the
@@ -159,7 +189,7 @@ export function initStudio({ onSave }) {
   }
 
   function setCreature(next, remember = true) {
-    if (remember && creature) { undo.push(creature); if (undo.length > 30) undo.shift(); }
+    if (remember && creature) { undo.push(creature); if (undo.length > 30) undo.shift(); redo.length = 0; }
     creature = normalizeCreature(next);
     cancelAnimationFrame(previewFrame);
     previewFrame = requestAnimationFrame(renderPreview);
@@ -197,7 +227,7 @@ export function initStudio({ onSave }) {
     PART_CHIPS.forEach(({ key, label }) => {
       const b = document.createElement('button');
       b.className = 'chip'; b.type = 'button'; b.textContent = label; b.dataset.partKey = key;
-      b.addEventListener('click', () => { selectedPart = key; syncPartPicker(); });
+      b.addEventListener('click', () => { selectedPart = key; syncPartPicker(); syncLocks(); });
       genParts.appendChild(b);
     });
   }
@@ -242,6 +272,7 @@ export function initStudio({ onSave }) {
     const colours = resolveColors(creature);
     document.querySelectorAll('[data-colour]').forEach(input => { input.value = colours[input.dataset.colour]; });
     document.getElementById('genUndo').disabled = !undo.length;
+    redoButton.disabled = !redo.length;
   }
   document.querySelectorAll('[data-tune],[data-colour]').forEach(input => {
     let editing = false;
@@ -252,10 +283,19 @@ export function initStudio({ onSave }) {
     input.addEventListener('change', () => { editing = false; });
     input.addEventListener('blur', () => { editing = false; });
   });
-  document.getElementById('genUndo').addEventListener('click', () => { if (undo.length) setCreature(undo.pop(), false); });
+  function undoCreature() { if (undo.length) { redo.push(creature); setCreature(undo.pop(), false); } }
+  function redoCreature() { if (redo.length) { undo.push(creature); setCreature(redo.pop(), false); } }
+  document.getElementById('genUndo').addEventListener('click', undoCreature);
+  redoButton.addEventListener('click', redoCreature);
+  studioVeil.addEventListener('keydown', event => {
+    if (mode !== 'generate' || !isOpen() || (!event.ctrlKey && !event.metaKey) || event.altKey) return;
+    if (event.target.closest('input,textarea,select,[contenteditable=true]')) return;
+    if (event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redoCreature(); else undoCreature(); }
+    else if (event.key.toLowerCase() === 'y') { event.preventDefault(); redoCreature(); }
+  });
   document.getElementById('genResetDetails').addEventListener('click', () => setCreature({ ...creature, colors: undefined, tune: {} }));
 
-  genSurprise.addEventListener('click', () => setCreature(generateCreature()));
+  genSurprise.addEventListener('click', () => setCreature(lockedParts.size ? remixCreature(creature, lockedParts) : generateCreature()));
 
   // ---- tabs ---------------------------------------------------------------
 
@@ -460,13 +500,15 @@ export function initStudio({ onSave }) {
     stampLayer.innerHTML = '';
     petName.value = existing?.name||''; petName.disabled=!!existing;
     brush.stamp = null;
+    drawing = false; lastPt = null;
     rebuildPalette(unlockedBond);
     rebuildStamps(unlockedBond);
     // A fresh roll every time the studio opens: the first thing a player sees is
     // a finished creature, not an empty box asking them to be an artist.
     setMode('generate');
-    undo.length = 0; creature = null;
+    undo.length = 0; redo.length = 0; lockedParts.clear(); selectedPart = 'body'; creature = null;
     setCreature(existing?.art?.creature || generateCreature(), false);
+    syncLocks();
     syncBlueprints();
     if(existing && !existing.art?.creature){
       setMode('draw');
@@ -487,6 +529,7 @@ export function initStudio({ onSave }) {
   function close() {
     openGeneration++;
     cancelAnimationFrame(previewFrame);
+    drawing = false; lastPt = null;
     studioVeil.classList.remove('open');
     document.body.style.overflow = '';
     // Drop the preview sprite. art/animator.js scans the whole document each

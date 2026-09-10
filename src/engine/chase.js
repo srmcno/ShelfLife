@@ -21,6 +21,27 @@ export const CHASE_OBJECTIVES = {
 
 export const streakMultiplier = combo => Math.min(3, 1 + Math.floor(combo / 4));
 
+export function chaseCourseRng(seed) {
+  let value = Number(seed) >>> 0;
+  return () => { value = (Math.imul(value, 1664525) + 1013904223) >>> 0; return value / 4294967296; };
+}
+
+// Expose both requirements. A large score alone cannot earn the third star.
+export function chaseStarTarget(game) {
+  if (game.caught < game.goal) return { stars: 2, crumbs: game.goal - game.caught, points: 0 };
+  return { stars: 3, crumbs: Math.max(0, game.goal + 5 - game.caught), points: Math.max(0, game.goal * 45 - game.score) };
+}
+
+export function chaseCoaching(game) {
+  if (game.caught < game.goal) return 'Follow the lowest crumbs first. ' + (game.goal - game.caught) + ' more would have reached your goal.';
+  if (game.bumps >= 2) return 'Jump a little before a dust bunny reaches you. Keeping your streak protects the bigger multipliers.';
+  if (game.bestCombo < 8) return 'Eight catches in a streak unlock ×3 points. Sweep up grounded crumbs before they disappear.';
+  const target = chaseStarTarget(game);
+  if (target.crumbs > 0) return 'Your score is growing. Three stars also need ' + (game.goal + 5) + ' crumbs, so keep collecting after the goal.';
+  if (target.points > 0) return 'You collected enough for three stars. Golden crumbs, biscuits and the side quest can supply the remaining ' + target.points + ' points.';
+  return 'Three stars earned. Try another chase ground or challenge to put a different skill to work.';
+}
+
 /* Who you are chasing with used to change only what its body could do — wings
    glide, horns take a hit, a tail bounces higher off a bunny. What it FELT about
    you changed nothing at all, so a furious half-starved resident handled exactly
@@ -39,12 +60,12 @@ export const TEMPER = {
 
 export function temperOf(mood) { return TEMPER[mood] || TEMPER.fine; }
 
-export function newChase(pet, { gentle = false, rng = Math.random, mood = 'fine', objective = null, venue = 'shelf' } = {}) {
+export function newChase(pet, { gentle = false, rng = Math.random, seed = null, mood = 'fine', objective = null, venue = 'shelf' } = {}) {
   const art = artPersonality(pet);
   const temper = temperOf(mood);
   return {
-    kind: 'chase', venue: CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
-    rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { ...CHASE_OBJECTIVES[objective], done: false } : null,
+    kind: 'chase', seed, venue: CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
+    rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { id: objective, ...CHASE_OBJECTIVES[objective], done: false } : null,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
     goal: gentle ? 6 : 8, complete: false, finished: false, claimed: false, gentle, stars: 0,
     wings: art.motion.canFlap, horns: art.horns, halo: art.halo, tail: art.motion.tails > 0,
@@ -54,7 +75,7 @@ export function newChase(pet, { gentle = false, rng = Math.random, mood = 'fine'
     shield: (art.horns ? 1 : 0) + ((pet.bond || 0) >= 15 ? 1 : 0), rush: 0,
     player: { x: 160, z: 0, vy: 0, direction: 1, moving: false, glided: false, invincible: 0 },
     items: [], serial: 0, crumbsMade: 0, nextCrumb: .15, nextBunny: 3.2,
-    nextMoth: gentle ? 11 : 8, nextBiscuit: gentle ? 6 : 5, nextSugar: gentle ? 7 : 8, rng
+    nextMoth: gentle ? 11 : 8, nextBiscuit: gentle ? 6 : 5, nextSugar: gentle ? 7 : 8, rng: seed === null ? rng : chaseCourseRng(seed)
   };
 }
 
@@ -281,7 +302,9 @@ export function recordChase(pet, game, now = Date.now()) {
   if (!game.finished || game.petId !== pet.id) return false;
   pet.chaseRecords ||= {};
   const mode = chaseRecordKey(game), modeBest = pet.chaseRecords[mode];
-  if (!modeBest || game.score > modeBest.score) pet.chaseRecords[mode] = { score:game.score, stars:chaseStars(game), at:now };
+  const modeStars = Math.max(chaseStars(game), modeBest?.stars || 0);
+  if (!modeBest || game.score > modeBest.score) pet.chaseRecords[mode] = { score:game.score, stars:modeStars, at:now };
+  else modeBest.stars = modeStars;
   const previous = pet.chaseBest;
   const bestStreak = Math.max(game.bestCombo || 0, previous?.bestStreak || 0);
   const stars = Math.max(chaseStars(game), previous?.stars || 0);

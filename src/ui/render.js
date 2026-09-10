@@ -25,6 +25,16 @@ const statusBar = document.getElementById('statusBar');
 let expandedNotes = false;
 let notesState = null;
 let shelfSeen = null;
+const markupForNode = new WeakMap();
+function updateMarkup(node, markup, key = markup) {
+  if (markupForNode.get(node) === key) return false;
+  node.innerHTML = markup;
+  markupForNode.set(node, key);
+  return true;
+}
+function updateText(node, text) {
+  if (node && node.textContent !== text) node.textContent = text;
+}
 document.getElementById('notesMore').addEventListener('click', () => { expandedNotes = !expandedNotes; if (notesState) renderNotes(notesState); });
 
 export function renderAll(state) {
@@ -80,12 +90,12 @@ export function renderStatus(state) {
   const unrest = counts.furious + feuds;
   const moon = moonPhase();
   syncRounds(state);
-  statusBar.innerHTML =
+  updateMarkup(statusBar,
     '<span class="day">Day <b>' + days + '</b></span>' +
     '<span class="pop">Living here <b>' + state.pets.length + '</b><span class="of">of ' + state.slots.length + '</span></span>' +
     '<span class="trust">Trust <b>' + totalBond(state) + '</b></span>' +
     (unrest ? '<span class="bad">Unrest <b>' + unrest + '</b></span>' : '') +
-    '<span class="moon" title="' + escapeHtml(moon.name + '. ' + moon.line) + '" aria-label="' + escapeHtml(moon.name) + '"><i style="--ms:' + moon.shift + 'px"></i><span class="moon-name">' + escapeHtml(moon.name) + '</span></span>';
+    '<span class="moon" title="' + escapeHtml(moon.name + '. ' + moon.line) + '" aria-label="' + escapeHtml(moon.name) + '"><i style="--ms:' + moon.shift + 'px"></i><span class="moon-name">' + escapeHtml(moon.name) + '</span></span>');
 }
 
 function feudDirectionFor(state, pet, slotIndex, feuds) {
@@ -361,8 +371,8 @@ function renderProgress(state) {
   const host = document.getElementById('shelfProgress');
   const bond = totalBond(state);
   const next = Object.values(PROPS).filter(p => p.at > bond).sort((a, b) => a.at - b.at)[0];
-  if (!state.pets.length) { host.innerHTML = ''; return; }
-  host.innerHTML = next ? '<div><span class="eyebrow">Next unlock</span><p><strong>' + escapeHtml(next.name) + '</strong> at ' + next.at + ' trust <span>· ' + (next.at - bond) + ' to go. Care for someone individually.</span></p></div><meter min="0" max="' + next.at + '" value="' + bond + '" aria-label="Trust toward ' + escapeHtml(next.name) + '"></meter>' : '<div><span class="eyebrow">In far too deep</span><p>Every furnishing unlocked. They trust your judgment. An error, surely.</p></div>';
+  if (!state.pets.length) { updateMarkup(host, ''); return; }
+  updateMarkup(host, next ? '<div><span class="eyebrow">Next unlock</span><p><strong>' + escapeHtml(next.name) + '</strong> at ' + next.at + ' trust <span>· ' + (next.at - bond) + ' to go. Care for someone individually.</span></p></div><meter min="0" max="' + next.at + '" value="' + bond + '" aria-label="Trust toward ' + escapeHtml(next.name) + '"></meter>' : '<div><span class="eyebrow">In far too deep</span><p>Every furnishing unlocked. They trust your judgment. An error, surely.</p></div>');
 }
 
 function renderDoors(state) {
@@ -370,24 +380,24 @@ function renderDoors(state) {
   if (!sub) return;
   const n = (state.achievements || []).length;
   const streak = state.streak && state.streak.count || 0;
-  sub.textContent = n
+  updateText(sub, n
     ? n + ' of ' + ACHIEVEMENTS.length + ' on record' + (streak > 1 ? ' · ' + streak + ' days running' : '')
-    : 'Nothing on file. Give it time.';
+    : 'Nothing on file. Give it time.');
 }
 
 let briefState;
 const needWords = { food: 'hungry', fuss: 'lonely', clean: 'grubby' };
 function syncRounds(state) {
   const button = document.getElementById('roundsBtn'), remaining = roundsWait(state);
-  button.disabled = !state.pets.length || remaining > 0;
-  button.querySelector('span').textContent = remaining ? 'Restocking · ' + Math.ceil(remaining / 1000) + 's' : 'Do the rounds';
+  const disabled = !state.pets.length || remaining > 0;
+  if (button.disabled !== disabled) button.disabled = disabled;
+  updateText(button.querySelector('span'), remaining ? 'Restocking · ' + Math.ceil(remaining / 1000) + 's' : 'Do the rounds');
   const check = document.getElementById('checkBtn'), wait = checkWait(state);
   if (check) {
-    check.disabled = wait > 0;
-    check.querySelector('span').textContent = wait ? 'Listening · ' + Math.ceil(wait / 1000) + 's' : 'Check the shelf';
+    if (check.disabled !== (wait > 0)) check.disabled = wait > 0;
+    updateText(check.querySelector('span'), wait ? 'Listening · ' + Math.ceil(wait / 1000) + 's' : 'Check the shelf');
   }
 }
-setInterval(() => { if (briefState && !document.hidden && !document.body.classList.contains('dialog-open')) syncRounds(briefState); }, 1000);
 function renderBrief(state) {
   briefState = state;
   const host = document.getElementById('shelfBrief');
@@ -397,10 +407,11 @@ function renderBrief(state) {
   const playful = state.pets.find(p => !isAsleep(p) && !playWait(p)) || state.pets[0];
   const pet = needy || playful;
   if (!pet) {
-    host.innerHTML = '<span class="brief-icon" aria-hidden="true">✦</span><div><b>Make something wonderfully odd.</b><span>Care. Conspire. Collect the evidence.</span></div>';
+    updateMarkup(host, '<span class="brief-icon" aria-hidden="true">✦</span><div><b>Make something wonderfully odd.</b><span>Care. Conspire. Collect the evidence.</span></div>');
     return;
   }
-  host.innerHTML = '<span class="brief-icon" aria-hidden="true">' + (needy ? '!' : '✦') + '</span><div><b>' + escapeHtml(needy ? pet.name + ' is feeling ' + needWords[worstNeed(pet)] + '.' : 'A little time together?') + '</b><span>' + (needy ? 'Tap to help. Individual care builds trust.' : 'Try a secret handshake with ' + escapeHtml(pet.name) + '.') + '</span></div><button class="btn btn-sm">' + (needy ? 'Care' : 'Play') + ' ↗</button>';
+  const markup = '<span class="brief-icon" aria-hidden="true">' + (needy ? '!' : '✦') + '</span><div><b>' + escapeHtml(needy ? pet.name + ' is feeling ' + needWords[worstNeed(pet)] + '.' : 'A little time together?') + '</b><span>' + (needy ? 'Tap to help. Individual care builds trust.' : 'Try a secret handshake with ' + escapeHtml(pet.name) + '.') + '</span></div><button class="btn btn-sm">' + (needy ? 'Care' : 'Play') + ' ↗</button>';
+  if (!updateMarkup(host, markup, JSON.stringify([pet.id, markup]))) return;
   host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent(needy ? 'shelflife:care' : 'shelflife:play', { detail: { petId: pet.id, mode: 'memory' } })));
 }
 
@@ -430,6 +441,7 @@ function needsItems(state) {
 }
 function countdownText(item, now = Date.now()) {
   const left = Math.max(0, item.deadline - now);
+  if (!left) return 'Due now';
   if (item.hours) return Math.max(1, Math.ceil(left / 3600000)) + 'h left';
   const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
   return m + ':' + String(sec).padStart(2, '0');
@@ -439,7 +451,9 @@ function renderNeeds(state) {
   const host = document.getElementById('needsYou');
   if (!host) return;
   const items = needsItems(state);
-  const signature = items.map(i => i.key + (i.small || '') + (i.label || '')).join('|');
+  // The target and deadline matter even when two residents have the same name,
+  // or a new conspiracy happens to have the same visible label as the last one.
+  const signature = JSON.stringify(items);
   if (host.dataset.signature === signature) { tickNeeds(); return; }
   host.dataset.signature = signature;
   host.innerHTML = '';
@@ -467,7 +481,11 @@ function tickNeeds() {
     const deadline = Number(chip.dataset.deadline);
     if (!deadline) return;
     const b = chip.querySelector('[data-countdown]');
-    if (b) b.textContent = countdownText({ deadline, hours: chip.dataset.hours === '1' }, now);
+    updateText(b, countdownText({ deadline, hours: chip.dataset.hours === '1' }, now));
   });
 }
-setInterval(() => { if (needsState) tickNeeds(); }, 1000);
+setInterval(() => {
+  if (document.hidden || document.body.classList.contains('dialog-open')) return;
+  if (briefState) syncRounds(briefState);
+  if (needsState) tickNeeds();
+}, 1000);

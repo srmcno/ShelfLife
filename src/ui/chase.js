@@ -1,4 +1,4 @@
-import { CHASE_VENUES, chaseRecordKey, newChase, updateChase, jumpChase, recordChase, chaseStars, streakMultiplier, CHASE_SECONDS, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND } from '../engine/chase.js';
+import { CHASE_VENUES, chaseRecordKey, chaseStarTarget, chaseCoaching, newChase, updateChase, jumpChase, recordChase, chaseStars, streakMultiplier, CHASE_SECONDS, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND } from '../engine/chase.js';
 import { moodOf } from '../engine/tick.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { createPuppet } from '../art/animator.js';
@@ -34,7 +34,20 @@ export function createChaseUI(root, onFinish, onStatus) {
   const world = root.querySelector('#chaseWorld'), clockFill = root.querySelector('#chaseClockFill');
   const objective = root.querySelector('#chaseObjective');
   const venuePicker = root.querySelector('#chaseVenue');
+  const practiceTools = document.createElement('div');
+  practiceTools.className = 'chase-practice-tools';
+  practiceTools.innerHTML = '<label class="chase-challenge">Side quest<select id="chaseChallenge"><option value="rotate">A different challenge each run</option><option value="combo">Build a streak of 6</option><option value="air">Make 3 airborne catches</option><option value="biscuit">Catch a whole biscuit</option></select></label><label class="chase-repeat"><input type="checkbox" id="chaseRepeat"> Practise the same course</label>';
+  venuePicker.closest('label').after(practiceTools);
+  const challengePicker = practiceTools.querySelector('#chaseChallenge'), repeatCourse = practiceTools.querySelector('#chaseRepeat');
+  const starTarget = document.createElement('p'); starTarget.className = 'chase-star-target';
+  objective.after(starTarget);
+  let courseSeed = null, courseObjective = null;
   venuePicker.addEventListener('change',()=>{if(pet)controller.prepare(pet,gentle);});
+  challengePicker.addEventListener('change', () => { courseObjective = null; if (pet) controller.prepare(pet, gentle); });
+  repeatCourse.addEventListener('change', () => {
+    if (repeatCourse.checked && game?.finished) { courseSeed = game.seed; courseObjective = game.objective?.id; }
+    else if (!repeatCourse.checked) { courseSeed = null; courseObjective = null; }
+  });
   const nodes = new Map(), held = new Set();
   let fieldBox = null, hudKey = '', popAnimation = null, runNumber = 0;
   function measure() {
@@ -52,7 +65,8 @@ export function createChaseUI(root, onFinish, onStatus) {
   function message(text, kind = '') {
     pop.textContent = text; pop.className = 'chase-pop ' + kind;
     popAnimation?.cancel();
-    popAnimation = pop.animate([{opacity:0,translate:'0 5px'},{opacity:1,translate:'0 0',offset:.12},{opacity:1,offset:.75},{opacity:0,translate:'0 -4px'}], {duration:1250,fill:'both'});
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    popAnimation = pop.animate(reduced ? [{ opacity: 1 }, { opacity: 0 }] : [{opacity:0,translate:'0 5px'},{opacity:1,translate:'0 0',offset:.12},{opacity:1,offset:.75},{opacity:0,translate:'0 -4px'}], {duration:1250,fill:'both'});
   }
   // One-shot effects: a floating score pop or a landing dust puff at a board position.
   function spark(kind, x, z, text = '') {
@@ -67,7 +81,7 @@ export function createChaseUI(root, onFinish, onStatus) {
     const node = nodes.get(id); if (!node) return;
     nodes.delete(id); node.classList.add('squashed'); setTimeout(() => node.remove(), 480);
   }
-  function shake() { field.classList.add('shake'); setTimeout(() => field.classList.remove('shake'), 350); }
+  function shake() { if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; field.classList.add('shake'); setTimeout(() => field.classList.remove('shake'), 350); }
   function tumbleOf(item) {
     if (item.kind === 'crumb') return item.age * 75;
     if (item.kind === 'biscuit') return item.age * 40;
@@ -107,7 +121,8 @@ export function createChaseUI(root, onFinish, onStatus) {
     clockFill.style.transform = 'scaleX(' + Math.max(0, 1 - game.time / CHASE_SECONDS) + ')';
     const seconds = Math.max(0, Math.ceil(CHASE_SECONDS - game.time));
     const record = pet?.chaseRecords?.[chaseRecordKey(game)];
-    const key = [game.caught, game.score, seconds, game.combo, running, paused, record?.score, game.objective?.done].join('|');
+    const quest = game.objective, questProgress = quest ? Math.min(quest.target, game[quest.stat]) : 0;
+    const key = [game.caught, game.score, seconds, game.combo, running, paused, record?.score, quest?.done, questProgress].join('|');
     if (key !== hudKey) {
       hudKey = key;
       setText(count, game.caught + ' / ' + game.goal); count.classList.toggle('met', game.caught >= game.goal);
@@ -118,8 +133,12 @@ export function createChaseUI(root, onFinish, onStatus) {
       paintCombo();
       root.dataset.score = game.score; root.dataset.caught = game.caught;
       root.dataset.running = String(running); root.dataset.paused = String(paused);
-      objective.textContent = game.objective ? (game.objective.done ? '✓ Side quest complete · +40 points' : 'Side quest: ' + game.objective.label + ' · +40 points') : '';
+      objective.textContent = quest ? (quest.done ? '✓ Side quest complete · +40 points' : 'Side quest: ' + quest.label + ' · ' + questProgress + '/' + quest.target + ' · +40 points') : '';
       objective.classList.toggle('complete', !!game.objective?.done);
+      const target = chaseStarTarget(game);
+      starTarget.textContent = target.stars === 2 ? '★★ Win: ' + target.crumbs + ' more crumbs' : target.crumbs || target.points
+        ? '★★★ Next: ' + [target.crumbs ? target.crumbs + ' more crumbs' : '', target.points ? target.points + ' more points' : ''].filter(Boolean).join(' + ')
+        : '★★★ Three-star target reached';
     }
     const present = new Set();
     for (const item of game.items) { present.add(item.id); paintItem(item); }
@@ -146,6 +165,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function finish() {
     venuePicker.disabled=false;
+    challengePicker.disabled = false; repeatCourse.disabled = false;
     stopFrame(); paused = false; root.dataset.finished = 'true'; disabled(true);
     const previous = pet.chaseRecords?.[chaseRecordKey(game)];
     const newBest = !previous || game.score > previous.score;
@@ -159,7 +179,7 @@ export function createChaseUI(root, onFinish, onStatus) {
     if (game.complete) { puppet.gesture('win'); playFuss(); playStar({ step: rating, delay: .3 }); }
     else if (newBest) playStar({ step: 1 });
     go.textContent = 'Chase again'; overlay.hidden = false; go.focus({ preventScroll: true });
-    onStatus(statusFor(rating, newBest));
+    onStatus(statusFor(rating, newBest) + ' ' + chaseCoaching(game));
   }
   function onCatch(event) {
     puppet.gesture('catch'); playFeed();
@@ -212,10 +232,15 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function start() {
     if (!pet || root.hidden) return;
-    stopFrame(); game = newChase(pet, { gentle, venue:venuePicker.value, mood: moodOf(pet), objective: ['combo', 'air', 'biscuit'][runNumber++ % 3] });
+    if (!repeatCourse.checked || courseSeed === null) courseSeed = Math.floor(Math.random() * 4294967296);
+    const nextObjective = challengePicker.value === 'rotate' ? ['combo', 'air', 'biscuit'][runNumber % 3] : challengePicker.value;
+    if (!repeatCourse.checked || !courseObjective) courseObjective = nextObjective;
+    runNumber++;
+    stopFrame(); game = newChase(pet, { gentle, seed: courseSeed, venue:venuePicker.value, mood: moodOf(pet), objective: courseObjective });
     hudKey = ''; nodes.clear(); items.replaceChildren();
     goalCelebrated = false;
     venuePicker.disabled=true;
+    challengePicker.disabled = true; repeatCourse.disabled = true;
     root.dataset.finished = 'false'; pop.textContent = ''; stars.hidden = true; quip.hidden = true;
     overlay.classList.remove('best'); fx.replaceChildren(); paint(); run();
   }
@@ -265,9 +290,12 @@ export function createChaseUI(root, onFinish, onStatus) {
   window.addEventListener('blur', pause);
   const controller = {
     prepare(resident, useGentle) {
+      if (pet?.id !== resident.id || gentle !== useGentle || game?.venue !== venuePicker.value) { courseSeed = null; courseObjective = null; }
       stopFrame(); puppet?.release(); paused = false; goalCelebrated = false; pet = resident; gentle = useGentle;
-      game = newChase(pet, { gentle, venue:venuePicker.value, mood: moodOf(pet), objective: ['combo', 'air', 'biscuit'][runNumber % 3] });
+      const nextObjective = challengePicker.value === 'rotate' ? ['combo', 'air', 'biscuit'][runNumber % 3] : challengePicker.value;
+      game = newChase(pet, { gentle, venue:venuePicker.value, mood: moodOf(pet), objective: repeatCourse.checked && courseObjective ? courseObjective : nextObjective });
       venuePicker.disabled=false;field.dataset.venue=game.venue;
+      challengePicker.disabled = false; repeatCourse.disabled = false;
       hudKey = ''; nodes.clear(); items.replaceChildren();
       actor.replaceChildren(renderPetSprite(pet)); actor.firstElementChild.classList.add('sl-mood-content');
       puppet = createPuppet(actor.firstElementChild);

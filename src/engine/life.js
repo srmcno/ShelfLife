@@ -1,5 +1,5 @@
 import { normalizeLife } from '../life-state.js';
-import { OUTINGS, GEAR, RELICS, FRAMES, visitorActFor } from '../content/life.js';
+import { OUTINGS, GEAR, RELICS, FRAMES, MARKET_ITEMS, MARKET_REQUESTS, visitorActFor } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
 import { addNote, clamp } from '../state.js';
 const checked = new WeakSet();
@@ -117,4 +117,89 @@ export function welcomeBack(state, now=Date.now()) {
   l.recap=l.lastSeen&&away>20*60000?l.scenes.filter(s=>s.at>=l.lastSeen).slice(0,3).map(s=>s.id):[];
   l.lastSeen=now;
   return l.recap;
+}
+
+/* ================= The Unlicensed Night Market =================
+   Six stalls, one purchase per stall, ten buttons, three bag slots. All future
+   stock is visible. One trade-in returns one button and frees a slot before a
+   purchase. A finished basket scores charm + four per request + spare buttons.
+   A request always needs TWO DISTINCT items; items may serve other requests.
+   There is no real currency, clock, pet-stat advantage, or repeatable XP payout. */
+export const MARKET_BUDGET=10, MARKET_BAG_SIZE=3, MARKET_ROUNDS=6;
+function marketRandom(seed){let n=seed>>>0;return ()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};}
+function marketShuffle(values,random){const a=values.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+export function marketLayout(seed){
+ const random=marketRandom(seed),items=marketShuffle(MARKET_ITEMS,random).slice(0,MARKET_ROUNDS*2);
+ return {stalls:Array.from({length:MARKET_ROUNDS},(_,i)=>items.slice(i*2,i*2+2)),requests:marketShuffle(MARKET_REQUESTS,random).slice(0,3)};
+}
+export function scoreMarket(bag,buttons,requests){
+ const fulfilled=requests.map(request=>bag.some((item,i)=>item.tags.includes(request.tags[0])&&bag.some((other,j)=>i!==j&&other.tags.includes(request.tags[1]))));
+ const charm=bag.reduce((n,item)=>n+item.charm,0),requestPoints=fulfilled.filter(Boolean).length*4;
+ return {charm,requestPoints,buttons,fulfilled,total:charm+requestPoints+buttons};
+}
+function applyMarketMove(snapshot,move){
+ if(snapshot.step>=MARKET_ROUNDS||!move||!(move.pick===null||typeof move.pick==='string')||!(move.trade===null||typeof move.trade==='string'))return false;
+ const item=snapshot.stalls[snapshot.step].find(x=>x.id===move.pick);
+ if(move.pick!==null&&!item)return false;
+ // Trading and buying happen as one move; rejected purchases keep the old item.
+ const trade=move.trade===null?null:snapshot.bag.find(x=>x.id===move.trade);
+ if(move.trade!==null&&(!trade||snapshot.traded||!item))return false;
+ const bag=trade?snapshot.bag.filter(x=>x.id!==trade.id):snapshot.bag.slice(),buttons=snapshot.buttons+(trade?1:0);
+ if(item&&(bag.length>=MARKET_BAG_SIZE||item.cost>buttons))return false;
+ snapshot.bag=item?[...bag,item]:bag;snapshot.buttons=buttons-(item?.cost||0);snapshot.traded||=!!trade;snapshot.step++;
+ return true;
+}
+export function marketSnapshot(state){
+ const market=lifeState(state).market;if(!market)return null;
+ const layout=marketLayout(market.seed),snapshot={...layout,seed:market.seed,step:0,buttons:MARKET_BUDGET,bag:[],traded:false,complete:false,claimed:false};
+ for(const move of market.moves){if(!applyMarketMove(snapshot,move))break;}
+ // Damaged legacy/imported histories stop at the last legal decision.
+ if(snapshot.step!==market.moves.length){market.moves=market.moves.slice(0,snapshot.step);market.claimed=false;}
+ snapshot.complete=snapshot.step===MARKET_ROUNDS;snapshot.claimed=market.claimed;
+ snapshot.score=scoreMarket(snapshot.bag,snapshot.buttons,snapshot.requests);
+ return snapshot;
+}
+export function startMarket(state,{replay=false}={}){
+ const l=lifeState(state);if(!state.pets.length||l.market&&!l.market.claimed)return false;
+ const previous=l.market?.seed;
+ if(!replay||!previous)l.marketSerial++;
+ // Stable market numbers let players retry an identical planning puzzle.
+ const seed=replay&&previous?previous:(Math.imul(l.marketSerial,2654435761)>>>0)||1;
+ l.market={seed,moves:[],claimed:false};return true;
+}
+export function chooseMarket(state,pick,trade=null){
+ const l=lifeState(state),snapshot=marketSnapshot(state),move={pick,trade};
+ if(!snapshot||snapshot.complete||snapshot.claimed||!applyMarketMove(snapshot,move))return false;
+ l.market.moves.push(move);return true;
+}
+export function claimMarket(state,now=Date.now()){
+ const l=lifeState(state),snapshot=marketSnapshot(state);
+ if(!snapshot?.complete||snapshot.claimed)return null;
+ const score=snapshot.score,tier=score.total===bestMarketScore(snapshot.seed)?2:score.total>=17?1:0,relic=RELICS.find(r=>r.id==='market:'+tier);
+ l.market.claimed=true;l.marketRuns++;l.marketBest=Math.max(l.marketBest,score.total);
+ const fresh=!l.relics.includes(relic.id);
+ if(fresh){l.relics.push(relic.id);l.xp+=4;if(l.displayed.length<3)l.displayed.push(relic.id);}
+ const first=awardDiscovery(state,'game:market',3,now);dailyActivity(state,'market',now);l.introDone=true;
+ const cast=state.pets.slice(0,2).map(p=>p.id),names=state.pets.slice(0,2).map(p=>p.name).join(' and ')||'The household';
+ const text=names+' returned from the night market with '+snapshot.bag.length+' questionable purchase'+(snapshot.bag.length===1?'':'s')+' and '+score.fulfilled.filter(Boolean).length+' of 3 requests filled. '+(tier===2?'The vendors applauded. One of them checked for missing buttons.':tier===1?'The household calls this careful budgeting. The receipt calls it three objects in a bag.':'The bag has been presented as an artistic statement. This is why nobody lets the bag speak.')+' '+relic.line;
+ recordScene(state,'market','The Unlicensed Night Market',text,cast,now);addNote(state,text,'the night market','scheme');
+ return {score,relic,fresh,first};
+}
+
+// A tiny exhaustive planner runs only on the result screen. It gives a truthful
+// attainable target for replay, considering skip, buy and the single trade-in.
+// No solution or advice is revealed before the player's first attempt ends.
+const marketBestCache=new Map();
+export function bestMarketScore(seed){
+ if(marketBestCache.has(seed))return marketBestCache.get(seed);
+ const layout=marketLayout(seed),seen=new Map();let best=0;
+ function visit(s){
+  if(s.step===MARKET_ROUNDS){best=Math.max(best,scoreMarket(s.bag,s.buttons,s.requests).total);return;}
+  const key=[s.step,s.buttons,s.traded?1:0,s.bag.map(i=>i.id).sort().join(',')].join('|');if(seen.has(key))return;seen.set(key,true);
+  for(const pick of [null,...s.stalls[s.step].map(x=>x.id)])for(const trade of [null,...(!s.traded&&pick?s.bag.map(x=>x.id):[])]){
+   const next={...s,bag:s.bag.slice()};if(applyMarketMove(next,{pick,trade}))visit(next);
+  }
+ }
+ visit({...layout,step:0,buttons:MARKET_BUDGET,bag:[],traded:false});
+ if(marketBestCache.size>=20)marketBestCache.delete(marketBestCache.keys().next().value);marketBestCache.set(seed,best);return best;
 }

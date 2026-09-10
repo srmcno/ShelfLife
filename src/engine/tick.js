@@ -65,24 +65,36 @@ export function decayRate(pet, need, state) {
 }
 
 // Elapsed hours between two instants, with the night hours counted at
-// NIGHT_DECAY_FACTOR. Walks the span an hour at a time (it is capped at
-// MAX_OFFLINE_HOURS, so this is at most a couple of dozen steps).
+// NIGHT_DECAY_FACTOR. Split at actual local day/night boundaries: an absence
+// from 19:30 to 20:30 contains half an hour of each, however often tick runs.
+// Local calendar boundaries also account for daylight-saving changes.
 export function effectiveHours(from, to) {
+  if (!Number.isFinite(from) || !Number.isFinite(to) || !Number.isFinite(new Date(to).getTime())) return 0;
   let hours = (to - from) / HOUR;
   if (hours <= 0) return 0;
   hours = Math.min(hours, MAX_OFFLINE_HOURS);
   let out = 0;
   let cursor = to - hours * HOUR;
   while (cursor < to) {
-    const step = Math.min(HOUR, to - cursor);
-    out += (step / HOUR) * (isNight(new Date(cursor)) ? NIGHT_DECAY_FACTOR : 1);
-    cursor += step;
+    const date = new Date(cursor);
+    const boundary = new Date(cursor);
+    const hour = date.getHours();
+    if (hour < 7) boundary.setHours(7, 0, 0, 0);
+    else if (hour < 20) boundary.setHours(20, 0, 0, 0);
+    else { boundary.setDate(boundary.getDate() + 1); boundary.setHours(7, 0, 0, 0); }
+    const end = Math.min(to, boundary.getTime());
+    if (!(end > cursor)) break;
+    out += ((end - cursor) / HOUR) * (isNight(date) ? NIGHT_DECAY_FACTOR : 1);
+    cursor = end;
   }
   return out;
 }
 
 export function tick(state, now = Date.now()) {
-  if (now - state.lastTick <= 0) { state.lastTick = now; return false; }
+  if (!Number.isFinite(now) || !Number.isFinite(new Date(now).getTime())) return false;
+  if (!Number.isFinite(state.lastTick)) { state.lastTick = now; return false; }
+  // A clock correction must not charge the same elapsed time twice.
+  if (now <= state.lastTick) return false;
   const hours = effectiveHours(state.lastTick, now);
   state.pets.forEach(pet => {
     ['food', 'fuss', 'clean'].forEach(k => {

@@ -3,7 +3,7 @@ export function initDialogs() {
   const panels = [...document.querySelectorAll('.veil'), document.getElementById('moreTray')];
   let active = null, returnTo = null, returnPet = null;
   let locked = [];
-  const focusable = panel => [...panel.querySelectorAll('button, input, select, a[href], [tabindex]')]
+  const focusable = panel => [...panel.querySelectorAll('button, input, select, textarea, summary, a[href], [tabindex]')]
     .filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length);
   const release = () => { locked.forEach(el => { el.inert = false; }); locked = []; };
   function sync() {
@@ -46,7 +46,7 @@ export function initDialogs() {
   panels.forEach(panel => {
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'true');
-    panel.setAttribute('aria-label', ({ lifeVeil: 'Your small world', museumVeil: 'Memory museum', playVeil: 'Play together', studioVeil: 'Make a pet', cardVeil: 'Resident details', decorVeil: 'Decorate', voiceVeil: 'Narrator voice', incidentsVeil: 'Incidents', helpVeil: 'A small field guide', restoreVeil: 'Restore a shelf', postcardVeil: 'A postcard', moreTray: 'Everything else' })[panel.id] || 'Dialog');
+    panel.setAttribute('aria-label', ({ playroomVeil: 'The playroom', lifeVeil: 'Your small world', museumVeil: 'Memory museum', playVeil: 'Play together', studioVeil: 'Make a pet', cardVeil: 'Resident details', decorVeil: 'Decorate', voiceVeil: 'Narrator voice', incidentsVeil: 'Incidents', helpVeil: 'A small field guide', restoreVeil: 'Restore a shelf', postcardVeil: 'A postcard', moreTray: 'Everything else' })[panel.id] || 'Dialog');
     new MutationObserver(sync).observe(panel, { attributes: true, attributeFilter: ['class'] });
   });
   document.addEventListener('keydown', e => {

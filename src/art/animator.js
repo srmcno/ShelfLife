@@ -182,6 +182,23 @@ let lastDuet = 0;
 let lastPoke = 0;
 const recentBubbles = [];
 let reduced = null;
+const queuedMotion = new Set();
+// Delayed replies belong to the visible scene. Closing the tab or requesting
+// reduced motion cancels them instead of letting old reactions spill back in.
+function afterMotion(fn, ms) {
+  const id = setTimeout(() => {
+    queuedMotion.delete(id);
+    if (!document.hidden && !reduced?.matches) fn();
+  }, ms);
+  queuedMotion.add(id);
+  return id;
+}
+function cancelQueuedMotion(id) { clearTimeout(id); queuedMotion.delete(id); }
+function visibleSprite(el) {
+  return el.isConnected && !el.closest('[hidden],.veil:not(.open)') &&
+    !el.classList.contains('sl-offscreen') &&
+    !(el.closest('#cabinet') && document.querySelector('.veil.open'));
+}
 
 function rand(lo, hi) { return lo + Math.random() * (hi - lo); }
 function pickOne(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -243,7 +260,7 @@ function playAnim(el, name, ms, ease, dir) {
   else if (typeof dir === 'number' && dir) setDir(el, dir);
   const animation = name + ' ' + ms + 'ms ' + (ease || DUET_EASE) + ' 1';
   if (act.style.animation && activeClipKeys.get(act) === animation) {
-    const active = act.getAnimations().find(a => a.animationName === name);
+    const active = act.getAnimations?.().find(a => a.animationName === name);
     if (active) active.currentTime = 0;
   } else act.style.animation = animation;
   activeClipKeys.set(act, animation);
@@ -253,12 +270,17 @@ function playAnim(el, name, ms, ease, dir) {
 }
 
 const heldClasses = new WeakMap();
+const heldNodes = new Set();
 function holdClass(el, cls, ms) {
   let timers = heldClasses.get(el);
   if (!timers) { timers = new Map(); heldClasses.set(el, timers); }
   clearTimeout(timers.get(cls));
   el.classList.add(cls);
-  timers.set(cls, setTimeout(() => { el.classList.remove(cls); timers.delete(cls); }, ms));
+  heldNodes.add(el);
+  timers.set(cls, setTimeout(() => {
+    el.classList.remove(cls); timers.delete(cls);
+    if (!timers.size) heldNodes.delete(el);
+  }, ms));
 }
 
 function blink(el, deep) {
@@ -288,9 +310,15 @@ function gazeFor(el, kind, dir) {
 
 // Face the way you are going: the whole figure mirrors. Reset a beat after the
 // clip so the pet visibly turns back to the room.
+const faceTimers = new Map();
+function resetFace(el) {
+  clearTimeout(faceTimers.get(el)); faceTimers.delete(el);
+  el.style.removeProperty('--sl-face');
+}
 function face(el, dir, ms) {
+  clearTimeout(faceTimers.get(el));
   el.style.setProperty('--sl-face', dir < 0 ? '-1' : '1');
-  setTimeout(() => el.style.removeProperty('--sl-face'), ms);
+  faceTimers.set(el, setTimeout(() => resetFace(el), ms));
 }
 
 function runAct(el, act) {
@@ -383,10 +411,27 @@ function prepSprite(el) {
 // an ooze stretches forward and hauls the rest of itself after.
 
 const GAIT_PACE = { walk: 8, scuttle: 4, flap: 3.5, hop: 4.5, ooze: 5 };
+const activeMoves = new Map();
+function cancelMove(el) {
+  const move = activeMoves.get(el);
+  if (!move) return;
+  move.animation.cancel();
+  move.finish();
+}
+function trackMove(el, animation, cleanup) {
+  const move = { animation, finish() {
+    // A cancelled clip's event can arrive after its replacement has started.
+    if (activeMoves.get(el) !== move) return;
+    activeMoves.delete(el); cleanup();
+  } };
+  activeMoves.set(el, move);
+  animation.onfinish = move.finish;
+  animation.oncancel = move.finish;
+}
 
 export function captureShelfPositions(root) {
   const map = new Map();
-  if (!root || (reduced && reduced.matches)) return map;
+  if (!root || document.hidden || (reduced && reduced.matches)) return map;
   const base = root.getBoundingClientRect();
   root.querySelectorAll('.pet[data-id]').forEach(el => {
     const r = el.getBoundingClientRect();
@@ -396,7 +441,7 @@ export function captureShelfPositions(root) {
 }
 
 export function playShelfMoves(root, before) {
-  if (!root || !before || !before.size || (reduced && reduced.matches)) return;
+  if (!root || !before || !before.size || document.hidden || (reduced && reduced.matches)) return;
   const base = root.getBoundingClientRect();
   root.querySelectorAll('.pet[data-id]').forEach(el => {
     const prev = before.get(el.dataset.id);
@@ -463,6 +508,7 @@ function travelKeyframes(gait, dx, dy, dist) {
 
 function travel(el, dx, dy) {
   if (typeof el.animate !== 'function') return;
+  cancelMove(el);
   const sprite = el.querySelector('.sprite.sl2');
   // The director's own pass may not have reached this freshly-built element
   // yet, and travel needs its gait, so prep it now if nobody has.
@@ -500,12 +546,11 @@ function travel(el, dx, dy) {
       if (act) act.style.animation = '';
     }
   };
-  anim.onfinish = done;
-  anim.oncancel = done;
+  trackMove(el, anim, done);
 
   const c = clocks.get(el.dataset.id);
   if (c) { c.act = Date.now() + dur + rand(500, 1600); c.busy = Date.now() + dur; }
-  if (sprite && chance(0.3)) setTimeout(() => solo(sprite, pickFresh(TRAVEL_BUBBLES)), Math.round(dur * 0.3));
+  if (sprite && chance(0.3)) afterMotion(() => { if (visibleSprite(sprite)) solo(sprite, pickFresh(TRAVEL_BUBBLES)); }, Math.round(dur * 0.3));
 }
 
 // --- picking what to do ----------------------------------------------------
@@ -599,8 +644,8 @@ function runDuet(el, id, mood, nb, duet, now) {
   if (duet.id === 'nudge' || duet.id === 'poke') holdClass(el, 'sl-reaching', Math.min(900, duet.a.ms));
   if (pinnedA) setTimeout(() => el.style.removeProperty('--sl-dir'), duet.a.ms + 50);
 
-  setTimeout(() => {
-    if (!b.isConnected) return;
+  afterMotion(() => {
+    if (!visibleSprite(b)) return;
     playAnim(b, duet.b.name, duet.b.ms, DUET_EASE, dirB);
     if (moodOfEl(b) !== 'asleep') gaze(b, -dirA, 0.1, duet.b.ms + 400);
     if (duet.squint) holdClass(b, 'sl-squint', duet.b.ms);
@@ -614,7 +659,7 @@ function runDuet(el, id, mood, nb, duet, now) {
     const opened = chance(0.62);
     if (opened) bubble(el.closest('.slot'), pickFresh(lines.a), duet.dark ? 'bubble-dark' : '');
     if (chance(opened ? duet.reply : duet.reply * 0.7)) {
-      setTimeout(() => { if (b.isConnected) bubble(b.closest('.slot'), pickFresh(lines.b), 'bubble-reply' + (duet.dark ? ' bubble-dark' : '')); }, duet.b.delay + 420);
+      afterMotion(() => { if (visibleSprite(b)) bubble(b.closest('.slot'), pickFresh(lines.b), 'bubble-reply' + (duet.dark ? ' bubble-dark' : '')); }, duet.b.delay + 420);
     }
     lastBubble = now;
   }
@@ -636,13 +681,13 @@ function runPoke(el, id, mood, nb, now) {
   gaze(el, nb.dir, 0.3, 1500);
   if (isFeuding(el)) setTimeout(() => el.style.removeProperty('--sl-dir'), 1150);
   const hard = (el.classList.contains('sl-t-thief') && chance(0.45)) || (mood === 'furious' && chance(0.55));
-  setTimeout(() => {
-    if (!prop.isConnected) return;
+  afterMotion(() => {
+    if (!visibleSprite(el) || !prop.isConnected) return;
     holdClass(prop, hard ? 'sl-knocked' : 'sl-jostle', hard ? 1100 : 750);
   }, 480);
   if (chance(0.75)) {
     const pool = PROP_POKE_BUBBLES[kind] || PROP_POKE_BUBBLES._default;
-    setTimeout(() => { if (el.isConnected) solo(el, pickFresh(pool), true); }, 700);
+    afterMotion(() => { if (visibleSprite(el)) solo(el, pickFresh(pool), true); }, 700);
   }
   const c = clockFor(id, now);
   c.act = now + 1100 + rand(1200, 3000); c.busy = now + 1100;
@@ -729,7 +774,7 @@ function zzz(el) {
 // --- the shared loop -------------------------------------------------------
 
 function pass() {
-  if (document.hidden) return;
+  if (document.hidden || reduced?.matches) return;
   const now = Date.now();
   const panel = document.getElementById(document.body.dataset.activeDialog);
   const els = (panel || document).querySelectorAll('.sprite.sl2[data-pet]');
@@ -818,12 +863,25 @@ function pass() {
 
 function stop() {
   if (timer !== null) { clearInterval(timer); timer = null; }
-  document.querySelectorAll('.sl-bubble,.sl-zzz').forEach(b => b.remove());
-  document.querySelectorAll('.pet, .sprite.sl-travel').forEach(el => el.getAnimations().forEach(a => a.cancel()));
+  queuedMotion.forEach(clearTimeout); queuedMotion.clear();
+  activeMoves.forEach((move, el) => cancelMove(el));
+  faceTimers.forEach((id, el) => resetFace(el));
+  heldNodes.forEach(el => {
+    const classes = heldClasses.get(el);
+    classes.forEach((id, cls) => { clearTimeout(id); el.classList.remove(cls); });
+    classes.clear();
+  });
+  heldNodes.clear();
+  document.querySelectorAll('.sl-bubble,.sl-zzz,.care-motes').forEach(b => b.remove());
+  document.querySelectorAll('.sprite .sprite-act').forEach(el => { el.style.animation = ''; });
+  document.querySelectorAll('.sprite.sl2').forEach(el => {
+    el.style.removeProperty('--sl-gaze-x'); el.style.removeProperty('--sl-gaze-y');
+  });
+  clocks.forEach(c => { c.gazeUntil = 0; c.busy = 0; });
 }
 
 function start() {
-  if (timer !== null || (reduced && reduced.matches)) return;
+  if (timer !== null || document.hidden || (reduced && reduced.matches)) return;
   timer = setInterval(pass, TICK_MS);
 }
 
@@ -842,7 +900,7 @@ export function initAnimator(opts) {
   }
   document.addEventListener('visibilitychange', () => {
     document.body.classList.toggle('app-hidden', document.hidden);
-    if (document.hidden) { if (timer !== null) clearInterval(timer); timer = null; }
+    if (document.hidden) stop();
     else { start(); pass(); }
   });
   start();
@@ -881,15 +939,16 @@ export function createPuppet(el) {
     release() {
       delete el.dataset.slControlled;
       el.classList.remove('sl-controlled','sl-travel','sl-airborne',...['walk','scuttle','flap','hop','ooze'].map(g=>'sl-gait-'+g));
-      el.style.removeProperty('--sl-face');
+      resetFace(el);
     }
   };
 }
 
 export function previewMotion(host) {
-  if (!host || reduced?.matches) return false;
+  if (!host || document.hidden || reduced?.matches) return false;
   const el = host.querySelector('.sprite.sl2');
-  if (!el || el.classList.contains('sl-travel') || el.classList.contains('sl-asleep')) return false;
+  if (!el || typeof el.animate !== 'function' || el.classList.contains('sl-travel') || el.classList.contains('sl-asleep')) return false;
+  cancelMove(el);
   prepSprite(el);
   const gait = el.classList.contains('sl-can-flap') ? 'flap' : el.dataset.slGait || 'hop';
   const cls = 'sl-gait-' + gait;
@@ -901,15 +960,15 @@ export function previewMotion(host) {
   el.style.setProperty('--sl-travel-dur', ms + 'ms');
   el.classList.add('sl-travel', cls);
   face(el, 1, ms);
-  const turn = setTimeout(() => { if (el.isConnected) face(el, -1, ms / 2); }, ms / 2);
+  const turn = afterMotion(() => { if (visibleSprite(el)) face(el, -1, ms / 2); }, ms / 2);
   const animation = el.animate([
     { translate: '0px 0px', offset: 0 },
     { translate: '20px 0px', offset: .46 },
     { translate: '20px 0px', offset: .54 },
     { translate: '0px 0px', offset: 1 }
   ], { duration: ms, easing: 'linear' });
-  const done = () => { clearTimeout(turn); el.classList.remove('sl-travel', cls); el.style.removeProperty('--sl-face'); };
-  animation.onfinish = done; animation.oncancel = done;
+  const done = () => { cancelQueuedMotion(turn); el.classList.remove('sl-travel', cls); resetFace(el); };
+  trackMove(el, animation, done);
   return true;
 }
 
@@ -917,12 +976,13 @@ export function previewMotion(host) {
 // 'food' | 'fuss' | 'clean' | 'rounds' | 'notice'. Safe to call before the
 // shelf has re-rendered: it simply finds nothing and does nothing.
 export function reactTo(id, need, delay) {
-  if (!id || (reduced && reduced.matches)) return;
+  if (!id || document.hidden || (reduced && reduced.matches)) return;
   const fire = () => {
     const els = spritesFor(id);
     if (!els.length) return;
     for (let i = 0; i < els.length; i++) {
       const el = els[i];
+      if (!visibleSprite(el)) continue;
       const mood = moodOfEl(el);
       let r = REACTIONS[need];
       let key = need;
@@ -958,10 +1018,10 @@ export function reactTo(id, need, delay) {
       // the rounds and a glance at the shelf only from one or two of them.
       const pool = need === 'notice' ? NOTICE_BUBBLES : CARE_BUBBLES[key];
       const odds = need === 'notice' ? 0.22 : need === 'rounds' ? 0.18 : 0.7;
-      if (pool && chance(odds)) setTimeout(() => { if (el.isConnected) solo(el, pickFresh(pool), need !== 'notice' && need !== 'rounds', key === 'fussbad' ? 'bubble-dark' : ''); }, Math.round(r.ms * 0.45));
+      if (pool && chance(odds)) afterMotion(() => { if (visibleSprite(el)) solo(el, pickFresh(pool), need !== 'notice' && need !== 'rounds', key === 'fussbad' ? 'bubble-dark' : ''); }, Math.round(r.ms * 0.45));
     }
   };
-  if (delay) setTimeout(fire, delay);
+  if (delay) afterMotion(fire, delay);
   else fire();
 }
 
