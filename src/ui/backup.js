@@ -43,12 +43,12 @@ export function initBackupTransfer({ state, download, markBackup }) {
         markBackup(backup.created);
         status.textContent = 'Backup handed to the share menu. Finish saving or sending it in the app you chose; Shelf Life cannot confirm delivery.';
       } else if (result === 'cancelled') {
-        status.textContent = 'Sharing cancelled or no receiving app was available. You can try again or download a copy below.';
+        status.textContent = 'Sharing cancelled or no receiving app was available. You can try again or choose Download backup.';
       } else {
-        status.textContent = 'File sharing is unavailable here. Download a copy below, then attach it to an email to yourself.';
+        status.textContent = 'File sharing is unavailable here. Choose Download backup, then attach the file to an email to yourself.';
       }
     } catch {
-      status.textContent = 'The backup could not be prepared. Try downloading a copy below.';
+      status.textContent = 'The backup could not be prepared. Choose Download backup to try again.';
     } finally {
       busy = false;
       share.disabled = downloadButton.disabled = false;
