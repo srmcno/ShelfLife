@@ -47,8 +47,8 @@ export function initLife(state,refresh) {
  const veil=document.getElementById('lifeVeil'),content=document.getElementById('lifeContent'),title=document.getElementById('lifeTitle');
  let leadId='',companionId='';
  let court=null,selectedRoute='drawer',selectedGear='thread',interlude=false,marketTrade='';
- function open(name){document.querySelectorAll('.veil.open').forEach(v=>{if(v!==veil)v.classList.remove('open');});title.textContent=name;veil.classList.add('open');content.replaceChildren();}
- function close(){veil.classList.remove('open');court=null;}
+ function open(name){document.querySelectorAll('.veil.open').forEach(v=>{if(v!==veil)v.classList.remove('open');});title.textContent=name;veil.querySelector('.court-announcement')?.replaceChildren();veil.classList.add('open');content.replaceChildren();}
+ function close(){veil.classList.remove('open');court=null;veil.querySelector('.court-announcement')?.replaceChildren();}
  document.getElementById('lifeClose').addEventListener('click',close);
  veil.addEventListener('click',e=>{if(e.target===veil)close();});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});

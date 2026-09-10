@@ -26,18 +26,19 @@ export function activityPassport(state) {
 export function activityRecord(activity, state, pet) {
   if (!pet) return 'Make a resident to begin';
   const life = state.life || {};
+  const count = (value, label) => value + ' ' + label + (value === 1 ? '' : 's');
   if (activity.id === 'chase') {
     const records = Object.values(pet.chaseRecords || {});
     const stars = records.reduce((n, r) => n + (r.stars || 0), 0);
-    return records.length ? stars + '/18 venue stars · ' + (pet.chases || 0) + ' runs' : 'Three venues · two difficulty modes';
+    return records.length ? stars + '/18 venue stars · ' + count(pet.chases || 0, 'successful run') : 'Three venues · two difficulty modes';
   }
   if (activity.id === 'memory') {
     const best = pet.handshakeBest?.standard;
-    return best ? 'Best: ' + best.rounds + ' rounds · ' + best.mistakes + ' mistakes' : (pet.handshakes || 0) + ' handshakes completed';
+    return best ? 'Best: ' + count(best.rounds, 'round') + ' · ' + count(best.mistakes, 'mistake') : count(pet.handshakes || 0, 'handshake') + ' completed';
   }
-  if (activity.id === 'alibi') return (pet.alibiWins || 0) + ' clean wins · ' + (pet.alibis || 0) + ' games completed';
-  if (activity.id === 'outing') return life.outing ? 'Expedition in progress · resume anytime' : (life.outings || 0) + ' expeditions completed';
-  if (activity.id === 'court') return (life.courtWins || 0) + ' cases solved';
+  if (activity.id === 'alibi') return count(pet.alibiWins || 0, 'clean win') + ' · ' + count(pet.alibis || 0, 'game') + ' completed';
+  if (activity.id === 'outing') return life.outing ? 'Expedition in progress · resume anytime' : count(life.outings || 0, 'expedition') + ' completed';
+  if (activity.id === 'court') return count(life.courtWins || 0, 'case') + ' solved';
   return life.market && !life.market.claimed ? 'Shopping trip in progress · resume anytime' :
-    (life.marketRuns ? life.marketRuns + ' trips · best haul ' + (life.marketBest || 0) : 'Your first questionable purchase awaits');
+    (life.marketRuns ? count(life.marketRuns, 'trip') + ' · best haul ' + (life.marketBest || 0) : 'Your first questionable purchase awaits');
 }
