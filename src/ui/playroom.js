@@ -1,4 +1,4 @@
-import { ACTIVITIES, activityRecord } from '../content/activities.js';
+import { ACTIVITIES, activityRecord, activityPassport } from '../content/activities.js';
 import { renderPetSprite } from '../art/sprite.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -17,6 +17,7 @@ export function initPlayroom(state) {
   const cards = document.getElementById('activityCards');
   const resident = document.getElementById('playroomResident');
   const portrait = document.getElementById('playroomPortrait');
+  const passport = document.getElementById('playroomPassport');
   let selected = '';
   function close() { veil.classList.remove('open'); }
   function render() {
@@ -30,6 +31,15 @@ export function initPlayroom(state) {
     document.getElementById('playroomEmpty').hidden = !!pet;
     portrait.replaceChildren();
     if (pet) portrait.appendChild(renderPetSprite(pet));
+    passport.hidden = !pet;
+    if (pet) {
+      const progress = activityPassport(state), next = ACTIVITIES.find(a => a.id === progress.next);
+      passport.innerHTML = '<div class="passport-heading"><div><span class="eyebrow">The household record</span><strong>' +
+        (progress.completed === 6 ? 'A thoroughly incriminating evening.' : progress.completed + ' / 6 activities tried') +
+        '</strong></div><span class="passport-seal" aria-hidden="true">' + (progress.completed === 6 ? 'FULL<br>HOUSE' : 'ON<br>FILE') + '</span></div>' +
+        '<div class="passport-stamps">' + progress.stamps.map(s => '<span class="' + (s.earned ? 'earned' : '') + '"><b aria-hidden="true">' + (s.earned ? '✓' : '○') + '</b>' + esc(s.title) + '<span class="sr-only">' + (s.earned ? ', completed' : ', not yet completed') + '</span></span>').join('') + '</div>' +
+        '<div class="passport-next"><p>' + (progress.resume ? 'There is unfinished business.' : progress.completed === 6 ? 'Every activity on record. The witnesses have been separated.' : 'Complete a game to leave your mark. Wins and practice both count.') + '</p><button type="button" class="btn btn-sm" data-activity="' + next.id + '">' + (progress.resume ? 'Resume ' : 'Play ') + esc(next.title) + ' ↗</button></div>';
+    }
     cards.innerHTML = ACTIVITIES.map(a => '<button type="button" class="activity-card activity-' + a.id + '" data-activity="' + a.id + '" ' + (!pet ? 'disabled' : '') + '>' +
       '<span class="activity-top"><span class="activity-icon">' + icon(a.icon) + '</span><span>' + esc(a.kind) + ' · ' + esc(a.time) + '</span></span>' +
       '<strong>' + esc(a.title) + '</strong><span class="activity-line">' + esc(a.line) + '</span><span class="activity-detail">' + esc(a.detail) + '</span>' +
@@ -45,7 +55,7 @@ export function initPlayroom(state) {
   resident.addEventListener('change', () => { selected = resident.value; render(); });
   veil.addEventListener('click', e => { if (e.target === veil) close(); });
   document.getElementById('playroomCreate').addEventListener('click', () => { close(); document.getElementById('newPetBtn').click(); });
-  cards.addEventListener('click', e => {
+  function launch(e) {
     const card = e.target.closest('[data-activity]');
     if (!card || card.disabled) return;
     const a = ACTIVITIES.find(x => x.id === card.dataset.activity);
@@ -53,7 +63,9 @@ export function initPlayroom(state) {
     close();
     if (a.mode) window.dispatchEvent(new CustomEvent('shelflife:play', { detail: { petId:selected, mode:a.mode } }));
     else window.dispatchEvent(new CustomEvent('shelflife:activity', { detail: { action:a.life, petId:selected } }));
-  });
+  }
+  cards.addEventListener('click', launch);
+  passport.addEventListener('click', launch);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { close(); return; }
     if (e.key.toLowerCase() !== 'p' || e.repeat || e.altKey || e.ctrlKey || e.metaKey ||

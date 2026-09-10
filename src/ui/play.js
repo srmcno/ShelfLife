@@ -37,7 +37,7 @@ export function initPlay(state, refresh) {
   const TITLES = { chase: 'Crumb Chase', memory: 'Secret handshake', alibi: 'The Alibi' };
   const EYEBROWS = { chase: 'On the loose with ', memory: 'A secret with ', alibi: 'Taking a statement from ' };
   const BRIEFS = {
-    chase: 'You steer. They chase. Keep a streak, catch what falls, and jump over or stomp the dust bunnies.',
+    chase: 'Catch, hop, dash. Keep a streak, smash the dust, and sweep the gold at last call. The bread had a good run.',
     memory: 'Watch, then repeat the gestures. Tap the pads or press 1–4. Wrong taps cost nothing. It has eternity to rehearse.',
     alibi: 'Three sworn statements about this shelf. Find the false one. Your evidence notebook is available throughout; no timer, no penalties for reading.'
   };
@@ -175,7 +175,7 @@ export function initPlay(state, refresh) {
       stamp.textContent = i === round.lie ? 'FALSE' : 'TRUE'; el.appendChild(stamp);
     });
     alibiVerdict.textContent = (verdict === 'right'
-      ? 'Lie caught. It swore on a crumb. ' : 'That was true. The false statement is marked. ')
+      ? 'Lie caught. It would like that struck from the record, and you removed from the room. ' : 'That was true. The false statement is marked. It is delighted by your instincts. ')
       + 'On record: ' + round.evidence;
     puppet?.gesture(verdict === 'right' ? 'blink' : 'bump');
     progress();

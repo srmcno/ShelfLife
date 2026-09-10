@@ -8,17 +8,17 @@ export const POSTCARD_CAPTIONS = [
   'Having a lovely time. The weather is dust.',
   'Everyone is fine. Do not read the notes.',
   'The residents, at rest. Some of them are pretending.',
-  'A picture of the shelf. The shelf did not consent.',
-  'From four inches up, with love, technically.',
+  'A family portrait. Nobody admits to being related.',
+  'The smallest suspects the police have ever ruled out.',
   'They asked for a group photo. They did not agree on a group.',
   'Nobody blinked. Nobody ever does.',
-  'Home is where the grudge is.',
+  'Every one of them will outlive the photographer.',
   'Send help. Send crumbs. In that order.',
-  'The shelf, on a good day. Adjust expectations accordingly.',
+  'An open casket would be less crowded.',
   'Smile, they were told. This is the result.',
   'Taken moments before something went missing.',
-  'Postmarked from the underside of the shelf.',
+  'The teeth are decorative until you pick them up.',
   'All present. All accounted for. All counting.',
   'They cannot die. They can be photographed.',
-  'Kept in a good light. Not by choice.'
+  'The nice ones are at the back. That is what the front ones told us.'
 ];

@@ -7,6 +7,10 @@ export const CHASE_HEIGHT = 230;
 export const CHASE_GROUND = 20;
 export const CHASE_SECONDS = 22;
 export const RUSH_SECONDS = 4;
+export const DASH_SECONDS = .18;
+export const DASH_COOLDOWN = 2.4;
+export const FINALE_AT = 16.5;
+export const FINALE_BONUS = 60;
 // Base points. Catches (crumb, gold, moth, biscuit) are multiplied by the streak; the rest are flat.
 export const CHASE_POINTS = { crumb: 10, gold: 30, moth: 20, biscuit: 50, stomp: 20, dodge: 15, air: 5, bump: -5 };
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -34,11 +38,11 @@ export function chaseStarTarget(game) {
 
 export function chaseCoaching(game) {
   if (game.caught < game.goal) return 'Follow the lowest crumbs first. ' + (game.goal - game.caught) + ' more would have reached your goal.';
-  if (game.bumps >= 2) return 'Jump a little before a dust bunny reaches you. Keeping your streak protects the bigger multipliers.';
+  if (game.bumps >= 2) return 'Watch for the dust warning at either edge. Hop over it or Dash through it; catches recharge your next Dash sooner.';
   if (game.bestCombo < 8) return 'Eight catches in a streak unlock ×3 points. Sweep up grounded crumbs before they disappear.';
   const target = chaseStarTarget(game);
   if (target.crumbs > 0) return 'Your score is growing. Three stars also need ' + (game.goal + 5) + ' crumbs, so keep collecting after the goal.';
-  if (target.points > 0) return 'You collected enough for three stars. Golden crumbs, biscuits and the side quest can supply the remaining ' + target.points + ' points.';
+  if (target.points > 0) return 'You collected enough for three stars. Biscuits and the final gold sweep can supply the remaining ' + target.points + ' points. Hop, then Dash across the gold arc.';
   return 'Three stars earned. Try another chase ground or challenge to put a different skill to work.';
 }
 
@@ -67,29 +71,43 @@ export function newChase(pet, { gentle = false, rng = Math.random, seed = null, 
     kind: 'chase', seed, venue: CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
     rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { id: objective, ...CHASE_OBJECTIVES[objective], done: false } : null,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
+    dashes: 0, dashSmashes: 0, finaleStarted: false, finaleCaught: 0, finaleComplete: false,
     goal: gentle ? 6 : 8, complete: false, finished: false, claimed: false, gentle, stars: 0,
     wings: art.motion.canFlap, horns: art.horns, halo: art.halo, tail: art.motion.tails > 0,
     mood, speedScale: temper.speed, grip: temper.grip,
     // Horns are a shield. So, once, is a resident that genuinely trusts you: it
     // will take one knock on your behalf before it starts blaming you for them.
     shield: (art.horns ? 1 : 0) + ((pet.bond || 0) >= 15 ? 1 : 0), rush: 0,
-    player: { x: 160, z: 0, vy: 0, direction: 1, moving: false, glided: false, invincible: 0 },
+    player: { x: 160, z: 0, vy: 0, direction: 1, moving: false, glided: false, invincible: 0, dash: 0, dashCooldown: 0, jumpBuffer: 0 },
     items: [], serial: 0, crumbsMade: 0, nextCrumb: .15, nextBunny: 3.2,
     nextMoth: gentle ? 11 : 8, nextBiscuit: gentle ? 6 : 5, nextSugar: gentle ? 7 : 8, rng: seed === null ? rng : chaseCourseRng(seed)
   };
 }
 
-export function jumpChase(game) {
+export function jumpChase(game, { buffer = false } = {}) {
   if (!game || game.finished) return false;
   const p = game.player;
   if (p.z <= .01) {
-    p.vy = game.wings ? 310 : 325; p.z = .1; p.glided = false;
+    p.vy = game.wings ? 310 : 325; p.z = .1; p.glided = false; p.jumpBuffer = 0;
     return true;
   }
   if (game.wings && !p.glided && p.vy < 140) {
-    p.vy = 225; p.glided = true; return true;
+    p.vy = 225; p.glided = true; p.jumpBuffer = 0; return true;
   }
+  // A tap just before landing should become a jump, not disappear. Opt in at
+  // the input boundary so simulations that repeatedly call jump keep their pace.
+  if (buffer && p.vy < 0 && p.z < 38) p.jumpBuffer = .13;
   return false;
+}
+
+export function dashChase(game, direction = 0) {
+  if (!game || game.finished) return false;
+  const p = game.player;
+  if (p.dash > 0 || p.dashCooldown > 0) return false;
+  p.direction = Math.sign(Number(direction)) || p.direction || 1;
+  p.dash = DASH_SECONDS; p.dashCooldown = DASH_COOLDOWN;
+  game.dashes++;
+  return true;
 }
 
 function spawnCrumb(game) {
@@ -105,7 +123,7 @@ function spawnCrumb(game) {
 function spawnBunny(game) {
   const direction = game.rng() < .5 ? 1 : -1;
   game.items.push({ id: ++game.serial, kind: 'bunny', x: direction > 0 ? -18 : 338,
-    z: FLOOR, vx: direction * (game.gentle ? 64 : 90 + game.time * 1.6), age: 0, dodged: false });
+    z: FLOOR, vx: direction * (game.gentle ? 64 : 90 + game.time * 1.6), age: 0, dodged: false, warning: game.gentle ? .65 : .42 });
   game.nextBunny += game.gentle ? Math.max(3.6, 5 - game.time * .07) : Math.max(2.4, 3.8 - game.time * .07);
 }
 // A moth drifts across at eye height, dives for any crumb resting on the floor, and leaves with it.
@@ -127,6 +145,18 @@ function spawnSugar(game) {
   game.items.push({ id: ++game.serial, kind: 'sugar', x: clamp(p.x + side * (90 + game.rng() * 90), 40, 280), z: 182, vy: -70, age: 0, floorTime: 0 });
   game.nextSugar += 7.5;
 }
+// Last call is a visible, optional sweep. Missing these extras never breaks a
+// streak: the player can finish their normal goal or commit to the gold arc.
+function spawnFinale(game, events) {
+  game.finaleStarted = true;
+  // The arc follows a normal hop: run up one side, dash across the crest, land
+  // at the far end. A stationary resident cannot vacuum up the centre for free.
+  for (const [x, z] of [[52, 42], [106, 70], [160, 94], [214, 70], [268, 42]]) {
+    game.items.push({ id: ++game.serial, kind: 'crumb', gold: true, finale: true,
+      x, z, vy: 0, age: 0, floorTime: 0 });
+  }
+  events.push({ type: 'finale', count: 5, bonus: FINALE_BONUS });
+}
 const EARLY = 12;
 // For the first EARLY seconds only one hazard type is on screen at a time; the other waits half a second and retries.
 const hazardClear = (game, other) => game.time >= EARLY || !game.items.some(i => i.kind === other);
@@ -143,6 +173,8 @@ function spawnAll(game) {
 function stepPlayer(game, input, dt, events) {
   const p = game.player, previousZ = p.z;
   p.invincible = Math.max(0, p.invincible - dt);
+  p.dashCooldown = Math.max(0, p.dashCooldown - dt);
+  p.jumpBuffer = Math.max(0, p.jumpBuffer - dt);
   if (game.rush > 0) { game.rush = Math.max(0, game.rush - dt); if (!game.rush) events.push({ type: 'rushEnd' }); }
   // Mood sets the top speed; grip is how much of a drag-to-steer instruction it
   // actually accepts. A furious creature is faster than you can comfortably aim.
@@ -150,12 +182,17 @@ function stepPlayer(game, input, dt, events) {
   const grip = game.grip || 1;
   let dx = clamp(Number(input.axis) || 0, -1, 1) * speed * dt;
   if (!dx && Number.isFinite(input.targetX)) dx = clamp((input.targetX - p.x) * grip, -speed * dt, speed * dt);
+  if (p.dash > 0) dx = p.direction * 470 * dt;
   p.x = clamp(p.x + dx, 26, 294); p.moving = Math.abs(dx) > .01;
   if (p.moving) p.direction = dx < 0 ? -1 : 1;
   if (p.z > 0 || p.vy > 0) {
     p.vy -= (game.wings ? 550 : 900) * CHASE_VENUES[game.venue || 'shelf'].gravity * dt;
     p.z = Math.max(0, p.z + p.vy * dt);
-    if (!p.z) { p.vy = 0; if (previousZ > 0) events.push({ type: 'land', x: p.x }); }
+    if (!p.z) {
+      p.vy = 0;
+      if (previousZ > 0) events.push({ type: 'land', x: p.x });
+      if (p.jumpBuffer > 0 && jumpChase(game)) events.push({ type: 'bufferedJump' });
+    }
   }
   return previousZ;
 }
@@ -172,18 +209,34 @@ function award(game, item, base, events) {
   extendStreak(game);
   const points = base * streakMultiplier(game.combo) + (air ? CHASE_POINTS.air : 0);
   game.score += points; if (air) game.airCatches++;
+  // Good steering buys the next burst sooner; waiting also recharges it fully.
+  p.dashCooldown = Math.max(0, p.dashCooldown - .16);
   item.remove = true;
-  events.push({ type: 'catch', kind: item.kind, points, air, gold: !!item.gold, rescued: !!item.carrying, x: item.x, z: item.z, id: item.id });
+  events.push({ type: 'catch', kind: item.kind, points, air, gold: !!item.gold, finale: !!item.finale, rescued: !!item.carrying, x: item.x, z: item.z, id: item.id });
+  if (item.finale) {
+    game.finaleCaught++;
+    if (game.finaleCaught === 5) {
+      game.finaleComplete = true; game.score += FINALE_BONUS;
+      events.push({ type: 'finaleComplete', points: FINALE_BONUS });
+    }
+  }
 }
 
 function stepCrumb(game, item, dt, events) {
   const p = game.player;
-  if (!item.gold || item.age > 1.2) { item.vy -= 225 * dt; item.z = Math.max(FLOOR, item.z + item.vy * dt); }
+  if (!item.finale && (!item.gold || item.age > 1.2)) { item.vy -= 225 * dt; item.z = Math.max(FLOOR, item.z + item.vy * dt); }
   if (item.z === FLOOR) item.floorTime += dt;
   const distance = Math.hypot(item.x - p.x, item.z - (p.z + CHEST));
   if ((game.halo || game.rush > 0) && distance < 70) item.x += (p.x - item.x) * Math.min(1, dt * 3);
   if (touching(game, item)) { game.caught++; award(game, item, item.gold ? CHASE_POINTS.gold : CHASE_POINTS.crumb, events); }
-  else if (item.floorTime > (game.gentle ? 2.3 : 1.4)) { item.remove = true; game.combo = 0; events.push({ type: 'miss', x: item.x, id: item.id }); }
+  else if (item.finale && item.age > 4.5) item.remove = true;
+  else if (!item.finale && item.floorTime > (game.gentle ? 2.3 : 1.4)) {
+    item.remove = true;
+    // Losing one target trims two catches, instead of erasing the whole run.
+    // Dust collisions and moth theft still reward careful play by breaking it.
+    game.combo = Math.max(0, game.combo - 2);
+    events.push({ type: 'miss', x: item.x, id: item.id, combo: game.combo });
+  }
 }
 
 // Landing on a bunny from above squashes it and bounces the resident; tails bounce higher.
@@ -204,10 +257,15 @@ function collide(game, item, events) {
 }
 function stepBunny(game, item, dt, events, previousZ) {
   const p = game.player;
+  if (item.warning > 0) { item.warning = Math.max(0, item.warning - dt); return; }
   item.x += item.vx * dt;
   if (Math.abs(item.x - p.x) < 29) {
     const fromAbove = previousZ > 3 && p.z < previousZ;
-    if (p.z <= 24 && fromAbove) stomp(game, item, events);
+    if (p.z <= 24 && p.dash > 0) {
+      item.remove = true; game.dashSmashes++; extendStreak(game); game.score += CHASE_POINTS.stomp;
+      events.push({ type: 'dashSmash', points: CHASE_POINTS.stomp, x: item.x, z: item.z, id: item.id });
+    }
+    else if (p.z <= 24 && fromAbove) stomp(game, item, events);
     else if (p.z > 24 && !item.dodged) { item.dodged = true; game.dodged++; game.score += CHASE_POINTS.dodge; events.push({ type: 'dodge', points: CHASE_POINTS.dodge }); }
     else if (p.z <= 24 && !p.invincible && !item.dodged) collide(game, item, events);
   }
@@ -264,12 +322,14 @@ function step(game, input, dt, events) {
   game.time = Math.min(CHASE_SECONDS, game.time + dt);
   const previousZ = stepPlayer(game, input, dt, events);
   spawnAll(game);
+  if (!game.finaleStarted && game.time >= FINALE_AT) spawnFinale(game, events);
   for (const item of game.items) {
     if (item.remove) continue;
     item.age += dt;
     STEPPERS[item.kind]?.(game, item, dt, events, previousZ);
   }
   game.items = game.items.filter(x => !x.remove);
+  game.player.dash = Math.max(0, game.player.dash - dt);
   const quest = game.objective;
   if (quest && !quest.done && game[quest.stat] >= quest.target) {
     quest.done = true; game.score += 40; events.push({type:'objective', points:40});

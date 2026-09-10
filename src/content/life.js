@@ -23,49 +23,49 @@ export const RELICS = [
 // a good basket comes from combining requests, not guessing concealed odds.
 export const MARKET_TAGS = {cozy:'Comfort',odd:'Strange',bright:'Shiny',snack:'Edible'};
 export const MARKET_ITEMS = [
- {id:'tea-sock',name:'A tea cosy for one toe',shape:'sock',cost:2,charm:2,tags:['cozy'],line:'A snug fit. The other toes have formed a tenants’ association.'},
+ {id:'tea-sock',name:'A tea cosy for one toe',shape:'sock',cost:2,charm:2,tags:['cozy'],line:'The matching nine were sold separately. So was the owner.'},
  {id:'jam-button',name:'A jam-filled button',shape:'button',cost:3,charm:3,tags:['bright','snack'],line:'Fastens your coat. Slowly attracts a different coat.'},
- {id:'haunted-pea',name:'The haunted pea',shape:'pea',cost:3,charm:3,tags:['odd','snack'],line:'It rolls upstairs at night. Otherwise an excellent source of fibre.'},
+ {id:'haunted-pea',name:'The haunted pea',shape:'pea',cost:3,charm:3,tags:['odd','snack'],line:'Contains the soul of a man who sent soup back. He can taste the soup from here.'},
  {id:'warm-moon',name:'A second-hand moon',shape:'moon',cost:4,charm:4,tags:['cozy','bright'],line:'Only used at night. One careful werewolf.'},
- {id:'tooth-pillow',name:'A tooth’s retirement pillow',shape:'tooth',cost:3,charm:3,tags:['cozy','odd'],line:'It has bitten through six. This one has a pension.'},
- {id:'sugar-star',name:'A sugar constellation',shape:'sun',cost:4,charm:4,tags:['bright','snack'],line:'Contains three stars and a disappointing amount of astronomy.'},
+ {id:'tooth-pillow',name:'A tooth’s retirement pillow',shape:'tooth',cost:3,charm:3,tags:['cozy','odd'],line:'The tooth still expects something under it each morning. The fairy stopped coming after the finger.'},
+ {id:'sugar-star',name:'A sugar constellation',shape:'sun',cost:4,charm:4,tags:['bright','snack'],line:'Each star is a dead relative. The packet says five a day.'},
  {id:'bedtime-biscuit',name:'A bedtime biscuit',shape:'medal',cost:2,charm:2,tags:['cozy','snack'],line:'Reads you a story. Becomes progressively harder to hear as you eat it.'},
- {id:'echo-jar',name:'A jar of polite echoes',shape:'echo',cost:2,charm:2,tags:['odd'],line:'Repeats your last words, but makes them sound better brought up.'},
+ {id:'echo-jar',name:'A jar of last words',shape:'echo',cost:2,charm:2,tags:['odd'],line:'Mostly “watch this.” The deluxe jar contains “I know what I’m doing.”'},
  {id:'brass-sun',name:'The brass breakfast sun',shape:'sun',cost:3,charm:4,tags:['bright'],line:'Rises whenever somebody drops the toaster.'},
- {id:'rain-scarf',name:'A scarf made of mild weather',shape:'rain',cost:4,charm:4,tags:['cozy','odd'],line:'Warm with a chance of sleeves.'},
- {id:'mirror-spoon',name:'A spoon that flatters you',shape:'spoon',cost:3,charm:3,tags:['bright','odd'],line:'You look magnificent. Your soup looks like it owes the spoon money.'},
+ {id:'rain-scarf',name:'The professional mourner’s scarf',shape:'rain',cost:4,charm:4,tags:['cozy','odd'],line:'Weeps on contact. Has attended seventeen funerals and cared at none of them.'},
+ {id:'mirror-spoon',name:'A spoon that flatters you',shape:'spoon',cost:3,charm:3,tags:['bright','odd'],line:'“You haven’t aged a day.” It said that to the previous owner for six weeks before anyone checked.'},
  {id:'crumb-crown',name:'The shortbread crown',shape:'crown',cost:4,charm:4,tags:['bright','snack'],line:'Uneasy lies the head that smells this much like butter.'},
- {id:'pocket-rug',name:'The pocket-sized rug',shape:'sock',cost:2,charm:3,tags:['cozy'],line:'Ties the room together. The room is a matchbox.'},
- {id:'tiny-prophecy',name:'Tomorrow’s shopping receipt',shape:'receipt',cost:2,charm:3,tags:['odd'],line:'You bought too many biscuits. The future is devastatingly specific.'},
- {id:'glow-thread',name:'A spool of borrowed daylight',shape:'needle',cost:3,charm:3,tags:['bright','cozy'],line:'Please return before dusk. The sun checks its inventory.'},
+ {id:'pocket-rug',name:'The pocket-sized rug',shape:'sock',cost:2,charm:3,tags:['cozy'],line:'Excellent at hiding stains. The salesman refuses to turn it over.'},
+ {id:'tiny-prophecy',name:'Tomorrow’s shopping receipt',shape:'receipt',cost:2,charm:3,tags:['odd'],line:'One shovel. One apology card. The vendor recommends buying the shovel first.'},
+ {id:'glow-thread',name:'A spool of borrowed daylight',shape:'needle',cost:3,charm:3,tags:['bright','cozy'],line:'Removed from a tunnel just as somebody was approaching it.'},
  {id:'opera-raisin',name:'A raisin with formal training',shape:'pea',cost:3,charm:3,tags:['snack','odd'],line:'Sings for its supper. Is increasingly concerned about the wording.'},
- {id:'comfort-crumbs',name:'Emergency comfort crumbs',shape:'medal',cost:2,charm:2,tags:['snack','cozy'],line:'Break glass in case of having a small day.'},
- {id:'button-comet',name:'A comet on a safety pin',shape:'button',cost:4,charm:4,tags:['bright','odd'],line:'An astronomical event with a practical fastening.'}
+ {id:'comfort-crumbs',name:'Emergency comfort crumbs',shape:'medal',cost:2,charm:2,tags:['snack','cozy'],line:'Left over from a wake. The deceased would have wanted them. They were quite greedy.'},
+ {id:'button-comet',name:'A comet on a safety pin',shape:'button',cost:4,charm:4,tags:['bright','odd'],line:'A mass extinction you can wear to dinner. The smaller guests have asked you to take it off.'}
 ];
 export const MARKET_REQUESTS = [
- {id:'tea',name:'A tea party for the recently strange',tags:['cozy','odd'],line:'Something comforting and something strange. Preferably neither is the guest.'},
+ {id:'tea',name:'Tea with the recently deceased',tags:['cozy','odd'],line:'Bring comfort and something strange. They keep asking what happened to their good china.'},
  {id:'midnight',name:'A midnight feast',tags:['snack','snack'],line:'Two edible objects. Calling the napkin a salad will not count.'},
  {id:'museum',name:'A deeply suspicious museum',tags:['bright','odd'],line:'One shiny exhibit and one inexplicable exhibit. The curator can be both.'},
- {id:'nest',name:'A nest with standards',tags:['cozy','cozy'],line:'Two comforts. The resident has described one comfort as a hostile environment.'},
+ {id:'nest',name:'A nest with standards',tags:['cozy','cozy'],line:'Two comforts. It has started calling the empty nest a coffin, then looking at you.'},
  {id:'gala',name:'The crumb gala',tags:['bright','snack'],line:'Something to admire and something to eat. The guests need clear instructions.'},
- {id:'spectacle',name:'A very small coronation',tags:['bright','bright'],line:'Two shiny objects. Nobody has the paperwork to stop us.'},
- {id:'sleepover',name:'A respectable sleepover',tags:['cozy','snack'],line:'Comfort and a snack. Respectability ends when the lights go off.'},
- {id:'haunting',name:'A haunting with refreshments',tags:['odd','snack'],line:'Something strange and something edible. The ghost has dietary requirements.'},
+ {id:'spectacle',name:'A very small coronation',tags:['bright','bright'],line:'Two shiny objects. The previous monarch is under the rug, which is why we need the distraction.'},
+ {id:'sleepover',name:'A respectable sleepover',tags:['cozy','snack'],line:'Comfort and a snack. Bring your own pillow. The host has been using guests as stuffing.'},
+ {id:'haunting',name:'A haunting with refreshments',tags:['odd','snack'],line:'Something strange and something edible. The ghost has been dead nine years and is still a terrible guest.'},
  {id:'cabinet',name:'A cabinet of bad ideas',tags:['odd','odd'],line:'Two separate peculiarities. One large peculiarity is still only one.'}
 ];
 export const MARKET_STALLS = [
- {name:'The Sock Exchange',line:'“We accept buttons. We no longer accept explanations.”'},
+ {name:'The Sock Exchange',line:'“Pairs cost extra. Nobody here died together.”'},
  {name:'Mother Needle’s Almost Antiques',line:'“Old enough to be valuable. Too young to testify.”'},
  {name:'The Pea’s Personal Effects',line:'“Everything must go. The fridge has changed the locks.”'},
- {name:'The Unlicensed Moon Shop',line:'“Our celestial bodies are locally sourced. Mostly from the ceiling.”'},
- {name:'Miss Afterbell’s Quiet Sale',line:'The prices are whispered. The receipts apologise.'},
- {name:'Last Chance, Probably',line:'“Buy now. Or don’t. I am mostly a table.”'}
+ {name:'The Unlicensed Moon Shop',line:'“That dark patch? Previous owner. We tried bleach.”'},
+ {name:'Miss Afterbell’s Quiet Sale',line:'Miss Afterbell is underneath the stall, insisting this is not what she meant by clearing her things out.'},
+ {name:'Last Chance, Probably',line:'“Everything must go. They’re exhuming the landlord at six.”'}
 ];
 export const GEAR = [{id:'thread',name:'Thread & safety pin',hint:'Bridges gaps; rescues things without a speech.'},{id:'lantern',name:'Pocket lantern',hint:'Reveals small print, warm routes, and things pretending to be furniture.'},{id:'biscuit',name:'Emergency biscuit',hint:'A bribe, a distraction, or a last-minute relative.'}];
 export const OUTINGS = [
  {id:'drawer',name:'The Lost Sock Drawer',tone:'lilac',intro:'Beyond the runners lies a nation of single socks. They have paired off politically.',steps:[
   {title:'The elastic frontier',text:'A sock blocks the crossing. It wants a toll. The toll is a smaller sock.',good:'thread',stat:'menace',options:['Build a thread bridge','Negotiate with the sock'],outcomes:['They crossed above the border. The sock has annexed the air.','The sock accepted a promise. It now owns a timeshare in your laundry.']},
-  {title:'The button tribunal',text:'A button insists it has four eyes. It has four holes. This is a sensitive distinction.',good:'lantern',stat:'mystique',options:['Inspect its four eyewitnesses','Distract the tribunal'],outcomes:['All four witnesses could see through the story. None had seen a thing.','The tribunal adjourned to investigate a biscuit-shaped disturbance.']},
+  {title:'The button tribunal',text:'A button insists it has four eyes. It has four holes. This is a sensitive distinction.',quiet:'They waited for recess. The scissors left to cut a ribbon at a memorial they had personally made necessary.',good:'lantern',stat:'mystique',options:['Inspect its four eyewitnesses','Distract the tribunal'],outcomes:['All four witnesses could see through the story. None had seen a thing.','The tribunal adjourned to investigate a biscuit-shaped disturbance.']},
   {title:'The long way home',text:'The drawer starts closing. Someone has found a medal marked OUTSTANDING ABSENCE.',good:'thread',stat:'cute',options:['Lower the treasure on a thread','Ask the socks for safe passage'],outcomes:['The treasure descended with dignity. The residents followed with considerably less.','The socks formed a guard of honour. Half of them had been through this before.']}]},
  {id:'fridge',name:'Under the Fridge',tone:'mint',intro:'A cold kingdom of fossilised dinners. The peas remember your ancestors.',steps:[
   {title:'The frozen pass',text:'A crack in the floor exhales cold air. On the far side, a pea is wearing a crown.',good:'lantern',stat:'damp',options:['Find a warm route with the lantern','Offer a biscuit to the pea'],outcomes:['They followed the warm pipe. The pipe is now their spiritual leader.','The pea accepted tribute and declared winter slightly less personal.']},
@@ -76,6 +76,45 @@ export const OUTINGS = [
   {title:'The jar of teeth',text:'A tooth taps the glass. It says it has retired. The jar is full of references.',good:'lantern',stat:'menace',options:['Read its retirement papers','Offer it a softer career'],outcomes:['The papers were tiny and entirely in bite marks. Early retirement confirmed.','The tooth now opens letters. It has described this as a lateral move.']},
   {title:'A key with no door',text:'A key hangs inside a thimble. A cloud rains on it in a very local way.',good:'biscuit',stat:'damp',options:['Shelter the key under a biscuit','Interview the cloud'],outcomes:['The biscuit roof held until someone remembered it was food.','The cloud said it was going through something. They brought the whole situation home.']}]}
 ];
+
+
+// New expeditions use this field book. The original OUTINGS steps above remain
+// available to trips that were already in progress before the planning upgrade.
+export const OUTING_TRAIL_SCENES = {
+ drawer:[
+  {title:'The next-of-kin desk',text:'A sock blocks the crossing. It declared its missing partner dead after one wash. The pension is paying for a much younger ankle.',quiet:'They went around. The sock reported a death anyway. The paperwork was already printed.',good:'thread',stat:'menace',options:['Build a thread bridge','Ask who collects the pension'],outcomes:['The bridge held. The guard listed them as missing and immediately applied for bereavement leave.','The sock waived the toll. In return, nobody tells its husband he is dead.']},
+  {title:'The button tribunal',text:'A button was cut loose in suspicious circumstances. The scissors have appointed themselves coroner.',good:'lantern',stat:'mystique',options:['Read the suppressed report','Call the scissors as a witness'],outcomes:['The report says natural causes. Every time the scissors visit, another button dies naturally.','The scissors invoked their right to remain sharpened. The tribunal ruled it a wardrobe malfunction.']},
+  {title:'A closing arrangement',text:'The drawer starts closing. An undertaker in a black sock has already measured the crew. He calls the measurements a courtesy.',quiet:'They took the stairs. The undertaker called after them that the first fitting had been free.',good:'thread',stat:'cute',options:['Lower the treasure on a thread','Promise the undertaker a referral'],outcomes:['They escaped on the thread. The undertaker sent an invoice for wasted optimism.','He let them leave with the medal. Their appointment card says REPEAT BUSINESS.']}
+ ],
+ fridge:[
+  {title:'The frost ward',text:'A crowned pea is charging the frozen peas rent. They cannot move out. He describes the occupancy rate as excellent.',quiet:'They walked around the ward. A frozen pea winked. Apparently the rent is lower if the king thinks you are dead.',good:'lantern',stat:'damp',options:['Find the warm maintenance pipe','Threaten a thaw inspection'],outcomes:['They found the warm pipe. The king announced a regrettable loss of tenants and raised the survivors’ rent.','The king waived the toll. Three frozen peas were quietly reclassified as decorative features.']},
+  {title:'The cheese’s last wishes',text:'The cheese has hired a biscuit bodyguard. It has also named the biscuit as sole beneficiary. Neither has read the whole contract.',quiet:'They left the cheese and biscuit to discuss the will. Both asked the crew to come back as a witness. Separately.',good:'biscuit',stat:'mystique',options:['Replace the compromised bodyguard','Read the will aloud'],outcomes:['The replacement biscuit ate the appointment letter. A conflict of interest has become a digestive issue.','The biscuit resigned. The cheese removed it from the will, then asked whether it would stay for dinner.']},
+  {title:'The light at the end',text:'The fridge opens. A pea announces that this is the afterlife. The butter immediately starts charging for better seats.',quiet:'They waited for the door to close. The butter kept the ticket money. Heaven has a strict cancellation policy.',good:'lantern',stat:'menace',options:['Bottle a reflection of the light','Demand a refund from the afterlife'],outcomes:['They brought the light home. The butter is still invoicing the people who blinked.','The butter refunded one seat. The pea insisted the darkness was a premium spiritual experience.']}
+ ],
+ cupboard:[
+  {title:'The teaspoon trustees',text:'A bridge of teaspoons wants the crew to sign a liability waiver. The final clause gives the spoons custody of the bodies.',quiet:'They used the steps. A spoon crossed their names out of its will with rather more pressure than necessary.',good:'thread',stat:'cute',options:['Rig a thread handrail','Point out how little they weigh'],outcomes:['The crew crossed safely. The spoons shredded the waiver with the quiet resentment of disappointed heirs.','The spoons waived the fee. One had already ordered a tiny coffin and is being unpleasant about it.']},
+  {title:'The retirement jar',text:'A tooth says it retired voluntarily. The pliers keep interrupting to confirm this. Nobody asked the pliers.',quiet:'They let the pliers finish talking. The tooth asked them to remember that it had been smiling under duress.',good:'lantern',stat:'menace',options:['Examine the retirement papers','Ask the pliers to step outside'],outcomes:['The signature is a skid mark. The pension consists of being allowed to keep the root.','Without the pliers present, the tooth described its retirement rather differently. It now wants a lawyer with a stronger jaw.']},
+  {title:'The return department',text:'A key is locked inside a thimble. The refund desk says the key is required to open the thimble. The complaints box is the same thimble.',quiet:'They joined a different queue. It led outside. Several applicants wept with relief.',good:'biscuit',stat:'damp',options:['Wedge the lid with a biscuit','Wait until the clerk needs a break'],outcomes:['The biscuit cracked the seal. The clerk marked the claim CUSTOMER DECEASED, then looked annoyed when they left.','The clerk stepped out. They took the key and left a complaint inside. It finally has someone to ignore.']}
+ ]
+};
+// Eight editions combine the familiar stops with these alternate incidents.
+export const OUTING_ALTERNATES = {
+ drawer:[
+  {title:'The Ministry of Loose Ends',text:'A ribbon processes death certificates for missing socks. It is wearing a scarf made from the applicants. Expedited grief costs extra.',quiet:'They took a number and left. The ribbon billed their absence as a private funeral.',good:'thread',stat:'cute',options:['Unpick the office uniform','Request the original death certificates'],outcomes:['Three missing socks fell out of the scarf. The ribbon demanded they repay their own funeral expenses.','The certificates were blank. The ribbon said the bereaved were paying for closure, not accuracy.']},
+  {title:'A very small jailbreak',text:'Three buttons are on death row for coming loose. The warden is selling replacement buttons through a company registered to his mother.',quiet:'They walked past the cells. The warden asked whether they had any loose buttons at home. Strictly for the census.',good:'biscuit',stat:'menace',options:['Bribe the guard with crumbs','Ask to inspect the warden’s accounts'],outcomes:['The guard opened the cell. He has billed the crumbs as execution expenses.','The warden released all three buttons. His mother has inexplicably moved the company offshore.']},
+  {title:'The seam nobody mentions',text:'A silver seam offers a shortcut. A black sock beside it sells return tickets. Every ticket in the drawer is unused.',quiet:'They used the marked exit. The ticket seller called it dangerous. He did not offer to explain the urns.',good:'lantern',stat:'mystique',options:['Check what lies beyond the seam','Ask to see a satisfied customer'],outcomes:['The lantern revealed a dead end and a second ticket booth. Same sock. Different hat.','The sock produced a testimonial in its own handwriting. They took the exit while it was explaining the coincidence.']}
+ ],
+ fridge:[
+  {title:'The butter border',text:'The butter keeps confiscating peas for “health inspections”. The inspection room contains a fork and no medical equipment.',quiet:'They found another crossing. A sign described it as the bereaved entrance. It had suspiciously heavy traffic.',good:'biscuit',stat:'cute',options:['Offer a biscuit instead','Ask for the inspector’s qualifications'],outcomes:['The butter took the biscuit. A pea slipped out carrying a bill for a procedure it very nearly received.','The certificate says TABLE MANNERS, LEVEL ONE. The butter quietly opened the border.']},
+  {title:'The ice-cube farewell',text:'An ice cube is rehearsing its funeral. The peas keep bringing up people who owe it money. It has stopped melting out of spite.',quiet:'They waited through the eulogy. The ice cube interrupted twice to correct how much it was owed.',good:'thread',stat:'damp',options:['Tow it back to the cold pipe','Help collect its final debts'],outcomes:['The cube froze solid again. It has cancelled the funeral but refuses to refund the catering.','One pea paid. The cube immediately extended its life expectancy to cover the remaining accounts.']},
+  {title:'The sealed inquiry',text:'A sealed tub holds a hearing about a missing lasagne. The chairman has sauce on his tie. The transcript already says no evidence found.',quiet:'They waited outside. The verdict arrived before the evidence. The chairman had a table booked.',good:'lantern',stat:'menace',options:['Hold the tub up to the light','Ask the chairman to empty his pockets'],outcomes:['The lantern revealed six witnesses and a fork. Every witness had been threatened with being reheated.','The chairman produced a sheet of pasta. He called it a personal document and ate it.']}
+ ],
+ cupboard:[
+  {title:'The mug’s second handle',text:'A mug has hired a replacement handle without telling the first one. There is a hammer on the table. It has been invited to the meeting.',quiet:'They used another shelf. Behind them, the hammer began explaining that it was only following orders.',good:'biscuit',stat:'mystique',options:['Delay the meeting with biscuits','Ask the hammer who authorised this'],outcomes:['The handles took a biscuit break together. The hammer was removed from the minutes and told to wait outside.','The hammer blamed procurement. Procurement is a teapot with three former spouts buried behind it.']},
+  {title:'The saucer society',text:'The saucer club has expelled a bowl for having depth. The bowl has paid twenty years of dues and brought a list of who sleeps with whose cutlery.',quiet:'They left the bowl to negotiate. The club lowered its blinds when it reached the third name on the list.',good:'thread',stat:'cute',options:['Make the bowl a saucer disguise','Offer to read the list aloud'],outcomes:['The disguise passed. The bowl now sits on the membership committee and remembers every vote.','The club admitted the bowl unanimously. The chair’s wife quietly confiscated the dessert forks.']},
+  {title:'The expiry-date appeal',text:'A preserve is appealing its disposal order. The jar beside it volunteered as character witness, then moved into its shelf space during the recess.',quiet:'They waited in the corridor. The helpful neighbour offered to hold the preserve’s house keys. Again.',good:'lantern',stat:'damp',options:['Read the date in proper light','Cross-examine the helpful neighbour'],outcomes:['The date was a batch number. The preserve has returned home and is making the neighbour unpack one item at a time.','The neighbour admitted it had ordered a commemorative plaque. Delivery was scheduled before the hearing.']}
+ ]
+};
 
 // Each caller brings a distinct, solvable small problem. First visits establish
 // the joke; returning visits remember the previous intervention.

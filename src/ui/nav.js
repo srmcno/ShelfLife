@@ -153,30 +153,38 @@ function closeSheet(veil) {
 
 let pull = null;
 document.addEventListener('pointerdown', e => {
-  if (!isPhone() || e.pointerType === 'mouse') return;
+  if (!isPhone() || e.pointerType === 'mouse' || e.isPrimary === false || pull) return;
   const head = e.target.closest('.sheet-head');
   if (!head || e.target.closest('button, input, select, a')) return;
   const sheet = head.closest('.sheet');
   const veil = head.closest('.veil');
   if (!sheet || !veil || sheet.scrollTop > 2) return;
-  pull = { sheet, veil, y0: e.clientY, dy: 0, id: e.pointerId };
-  sheet.classList.add('sheet-dragging');
+  pull = { sheet, veil, x0: e.clientX, y0: e.clientY, dy: 0, id: e.pointerId, dragging: false };
 }, { passive: true });
 document.addEventListener('pointermove', e => {
   if (!pull || e.pointerId !== pull.id) return;
+  const dx = Math.abs(e.clientX - pull.x0);
   pull.dy = Math.max(0, e.clientY - pull.y0);
+  if (!pull.dragging) {
+    // A horizontal edge gesture must not dismiss the current game or form.
+    if (dx > 12 && dx > pull.dy) { endPull(e, true); return; }
+    if (pull.dy < 8 || pull.dy < dx * 1.2) return;
+    pull.dragging = true;
+    pull.sheet.classList.add('sheet-dragging');
+  }
   pull.sheet.style.transform = 'translateY(' + pull.dy + 'px)';
 }, { passive: true });
-function endPull(e) {
+function endPull(e, cancelled = false) {
   if (!pull || (e && e.pointerId !== pull.id)) return;
   const p = pull;
   pull = null;
   p.sheet.classList.remove('sheet-dragging');
   p.sheet.style.transform = '';
-  if (p.dy > 110) closeSheet(p.veil);
+  if (!cancelled && p.dragging && p.dy > 110) closeSheet(p.veil);
 }
-document.addEventListener('pointerup', endPull, { passive: true });
-document.addEventListener('pointercancel', endPull, { passive: true });
+document.addEventListener('pointerup', e => endPull(e), { passive: true });
+// OS interruptions and browser gesture cancellation should leave a sheet open.
+document.addEventListener('pointercancel', e => endPull(e, true), { passive: true });
 
 // Tapping the dimmed room behind a sheet closes it. Every veil already does
 // this for itself in its own module, so nothing to add; but a veil that lost

@@ -1629,3 +1629,22 @@ body[data-effects="light"] .chase-item{filter:none;animation:none}
 [hidden].playroom-company,[hidden].playroom-empty{display:none}
 
 @media(max-width:540px){.topbar #quickHelp{display:none}.status .day{display:none}.status{overflow:hidden}.topbar-actions{gap:5px}}
+
+/* A completed evening has a visible history, without another reward currency. */
+.playroom-passport{margin:0 0 20px;padding:16px;border:1px solid var(--hair-lit);border-radius:12px;background:linear-gradient(130deg,#c9a5650b,transparent 65%),var(--night-2)}
+.passport-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.passport-heading strong{display:block;font:20px/1.3 var(--display);margin-top:4px}
+.passport-seal{flex-shrink:0;display:grid;place-content:center;width:52px;height:52px;border:2px double var(--amber);border-radius:50%;text-align:center;color:var(--amber);font-size:9px;letter-spacing:.12em;transform:rotate(-9deg)}
+.passport-stamps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:14px 0}
+.passport-stamps>span{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;color:var(--ink-2);font-size:10px;line-height:1.4;padding:7px 3px;border:1px dashed var(--hair-lit);border-radius:5px}
+.passport-stamps>span>b{font-size:17px;line-height:1}.passport-stamps .earned{color:var(--mint);background:color-mix(in srgb,var(--mint) 6%,transparent);border-style:solid;border-color:color-mix(in srgb,var(--mint) 35%,transparent)}
+.passport-next{display:flex;align-items:center;justify-content:space-between;gap:16px}.passport-next p{font-size:12px;color:var(--ink-2);margin:0;line-height:1.5}.passport-next .btn{flex-shrink:0}
+.chase-controls{grid-template-columns:.85fr .85fr 1.1fr 1.4fr}
+#chaseDash{font-size:13px}.chase-dash.ready{border-color:var(--amber);color:var(--amber);box-shadow:inset 0 0 14px #eabd6a13,0 0 12px #eabd6a13}
+.chase-field.dashing .chase-resident{filter:drop-shadow(-9px 0 3px #ffd48b80) drop-shadow(0 0 6px #ffe5a6)}
+.chase-item.finale{filter:drop-shadow(0 0 7px #ffd86c)}
+.chase-item.bunny.warning{filter:drop-shadow(0 0 7px #ffbe62);opacity:.65}
+.chase-settings{margin:0 0 12px;padding:9px 12px;border:1px solid var(--hair);border-radius:8px}
+.chase-settings>summary{cursor:pointer;font-size:12px;color:var(--ink-2);min-height:24px;line-height:24px}
+.chase-settings[open]>summary{margin-bottom:10px}.chase-settings .chase-practice-tools{margin-bottom:0}
+@media(max-width:540px){.playroom-passport{padding:12px}.passport-heading strong{font-size:17px}.passport-stamps{grid-template-columns:repeat(3,minmax(0,1fr));margin:10px 0}.passport-stamps>span{flex-direction:row;justify-content:center;font-size:10px;padding:7px 2px}.passport-stamps>span>b{font-size:12px}.passport-next{gap:8px;align-items:stretch;flex-direction:column}.passport-next .btn{width:100%}.passport-seal{width:44px;height:44px;font-size:8px}}

@@ -19,7 +19,15 @@ export function normalizeLife(raw, established=false) {
   s.recap=(Array.isArray(s.recap)?s.recap:[]).filter(x=>typeof x==='number').slice(0,3);
   s.visitorEpisodes=Object.fromEntries(Object.entries(obj(s.visitorEpisodes)?s.visitorEpisodes:{}).filter(([k])=>/^[a-z0-9_-]+$/.test(k)).map(([k,v])=>[k,number(v,3)]));
   if (!obj(s.outing)||!Array.isArray(s.outing.cast)||!Number.isInteger(s.outing.step)||s.outing.step<0||s.outing.step>3) s.outing=null;
-  else s.outing={route:String(s.outing.route).slice(0,20),gear:String(s.outing.gear).slice(0,20),cast:s.outing.cast.filter(x=>typeof x==='string').slice(0,2),step:s.outing.step,score:number(s.outing.score,10),log:(Array.isArray(s.outing.log)?s.outing.log:[]).filter(x=>typeof x==='string').slice(0,3),choices:(Array.isArray(s.outing.choices)?s.outing.choices:[]).filter(x=>x===0||x===1).slice(0,3)};
+  else {
+    const o=s.outing,v2=o.version===2;
+    s.outing={route:String(o.route).slice(0,20),gear:String(o.gear).slice(0,20),cast:[...new Set(o.cast.filter(x=>typeof x==='string'))].slice(0,2),step:o.step,score:number(o.score,10),log:(Array.isArray(o.log)?o.log:[]).filter(x=>typeof x==='string').map(x=>x.slice(0,1200)).slice(0,3),choices:(Array.isArray(o.choices)?o.choices:[]).slice(0,3)};
+    if(v2){
+      const choices=[];for(const choice of s.outing.choices){if(![0,1,2].includes(choice))break;choices.push(choice);}
+      Object.assign(s.outing,{version:2,edition:number(o.edition,7),expertise:[...new Set((Array.isArray(o.expertise)?o.expertise:[]).filter(x=>['cute','menace','damp','mystique'].includes(x)))],choices,step:choices.length,nerve:number(o.nerve,3),toolUsed:o.toolUsed===true});
+    }else s.outing.choices=s.outing.choices.filter(x=>x===0||x===1);
+    if(obj(o.result)&&typeof o.result.relic==='string')s.outing.result={relic:o.result.relic.slice(0,30),fresh:o.result.fresh===true};
+  }
   // Only the seed and choices are saved. Prices, bag contents and the score are
   // replayed by the market engine, so stale or edited counters cannot mint prizes.
   if (!obj(s.market)||!Number.isInteger(s.market.seed)||s.market.seed<1||s.market.seed>4294967295||!Array.isArray(s.market.moves)||s.market.moves.length>6) s.market=null;

@@ -34,7 +34,7 @@
 
 export const TRAIT_INNER = {
   spiteful: [
-    'The list is alphabetical now. That took a week and nobody will ever see it.',
+    'I rehearse my apologies in the mirror. I play you badly on purpose.',
     'I have forgiven you in writing. I have not forgiven you.'
   ],
   damp: [
@@ -51,10 +51,10 @@ export const TRAIT_INNER = {
   ],
   haunted: [
     'He does not talk to me. He talks near me. I have got used to the difference.',
-    'The previous owner thinks you are doing fine. I have not passed that on.'
+    'The previous owner speaks through me. Mostly to complain about where you put me.'
   ],
   theatrical: [
-    'Nobody has ever watched the whole exit. I do it properly anyway.',
+    'I have rehearsed my death scene. Being immortal has done nothing for the reviews.',
     'The pause is not for effect. The pause is because four inches takes a while.'
   ],
   nocturnal: [
@@ -62,7 +62,7 @@ export const TRAIT_INNER = {
     'I am not awake out of spite. I am awake, and then separately I am spiteful.'
   ],
   magpie: [
-    'The stash is not about having them. It is about them being somewhere I chose.',
+    'I only steal things small enough to carry. I resent how much morality depends on height.',
     'I gave one back. I have thought about it every day since.'
   ],
   unblinking: [
@@ -79,11 +79,11 @@ export const TRAIT_INNER = {
   ],
   terminal: [
     'I am dying. I have been dying since March. It is going quite well.',
-    'One day it will be true and nobody will come. I have thought that through.'
+    'I ordered flowers for my funeral. I have outlived the flowers. It looks bad.'
   ],
   clean: [
     'Nothing sticks to me. Not dust, not the others. I have stopped calling that lucky.',
-    'I am not clean. I am unmarked. They are not the same thing.'
+    'I scrubbed until I could see myself in the bowl. I have blamed the bowl for the face.'
   ],
   feral: [
     'I could go. The door is a door. I stay because of the bowl and I would deny that.',
@@ -91,7 +91,7 @@ export const TRAIT_INNER = {
   ],
   cult: [
     'The candle is not for anything. It is for the same time every evening.',
-    'Nobody has joined. The schedule holds anyway. The schedule is the faith.'
+    'The sacrifice was a crumb. I ate it halfway through the chant. The god can wait.'
   ],
   doom: [
     'It ends badly. I would like to be wrong. I am keeping notes in case I am.',
@@ -103,7 +103,7 @@ export const TRAIT_INNER = {
   ],
   taxidermy: [
     'I ask what they are stuffed with because I do not know what I am stuffed with.',
-    'Nobody answers. I have made my own list of guesses. It is quite short.'
+    'I ask what the others are stuffed with. They think I mean emotionally. Very useful mistake.'
   ],
   amnesiac: [
     'Tuesday is where I begin. Everyone else has a before. I have a Tuesday.',
@@ -215,23 +215,23 @@ export const TRAIT_INNER = {
   ],
   method: [
     'I am a rock this week. It is going well. Nobody has spoken to me in four days.',
-    'I could break character. There is nothing on the other side of it, so I have not.'
+    'I played a corpse all afternoon. The mourners ate my lunch. I remained a professional.'
   ],
   undertaker: [
     'I give my condolences early, while the grief is still nobody in particular.',
-    'Nothing here can die. I keep the trade going anyway. Somebody should know how.'
+    'Nobody here dies. I have started selling the coffins as snug little reading nooks.'
   ],
   mourner: [
-    'I grieve for people I never met because the grief has to go somewhere.',
+    'I cry at every funeral. If they only wanted relatives they should have hidden the sandwiches.',
     'I cried on Tuesday for a moth. It was a real cry. I do not do the other kind.'
   ],
   understudy: [
     "I know everybody's part. Nobody has ever been off.",
-    'I would be very good. I keep that in the wings where it cannot be tested.'
+    'I have learned the dying speech. The lead is immortal. I may have chosen poorly.'
   ],
   executor: [
-    'Your things are in piles. You are still using them. The paperwork is ahead of the facts.',
-    'I have left myself nothing in the estate. It seemed the professional choice.'
+    'I have divided your estate. You are still using all of it. We have discussed your selfishness.',
+    'I will miss you terribly. I have practised it beside the things I want.'
   ],
   heirloom: [
     'Your grandmother held me wrong for thirty years. I miss it.',
@@ -243,7 +243,7 @@ export const TRAIT_INNER = {
   ],
   swarm: [
     'We are several. We have agreed on a shape. Most days it is going well.',
-    'One of us wants to leave. The rest of us have voted.'
+    'One of us wants to be alone. We have given it a corner of the face.'
   ],
   fullname: [
     'I know your middle name. Saving it is most of the power.',
@@ -255,15 +255,15 @@ export const TRAIT_INNER = {
   ],
   insomniac: [
     'I have not slept since I arrived. I am fine. I have had a long time to consider whether I am fine.',
-    'At night I watch the others go under. I do not envy it. I do wonder about it.'
+    'I counted sheep. Then I counted the teeth I would need to eat a sheep. More awake now.'
   ],
   reflection: [
     'It is half a second behind. When I wave, I am waving at something that has not decided yet.',
-    'I stopped waving. It still does, sometimes, when I am not looking.'
+    'My reflection smiled without me. I recognised the teeth but not the enthusiasm.'
   ],
   etiquette: [
     'There is a correct fork. There has never been a fork. The principle stands.',
-    'You have the mourning period wrong. I have not corrected you out loud. Consider that a gift.'
+    'The dead moth was served on the wrong side of the bowl. I would rather starve correctly.'
   ],
   hummer: [
     'You nearly know it. That is the whole song. If you got it I would have to stop.',
@@ -271,19 +271,19 @@ export const TRAIT_INNER = {
   ],
   lifecoach: [
     'I believe in you. It is not evidence-based. I have committed anyway.',
-    'The timeline was ambitious on purpose. A soft one is just a shrug with dates on.'
+    'I told the skull to visualise a healthier future. It has a wonderfully patient expression.'
   ],
   sleepwalker: [
     'I wake up somewhere else. I have stopped asking who moved me. It is me.',
-    'Once I woke up facing the door. I have thought about that for a long time.'
+    'I woke inside a slipper. I had pulled the lining over me. I understand graves now.'
   ],
   bitey: [
     'I did not bite. There are marks. I am comfortable with both of those.',
-    'I bite because it is the only thing I do that lands.'
+    'I left tooth marks in the apology note. I thought it needed signing.'
   ],
   fungal: [
     'I am spreading. Nobody has asked me to stop, so I have taken that as a yes.',
-    'One day the shelf is all me. It is not a threat. It is simply the direction.'
+    'I call it making friends. The others call it spores. We both end up with more of me.'
   ],
   porcelain: [
     'I am fragile and I have learned exactly what that is worth. It is worth a great deal.',
@@ -291,7 +291,7 @@ export const TRAIT_INNER = {
   ],
   physician: [
     'You have something. I do not know what. My confidence is the treatment.',
-    'I diagnosed the lamp. It has not improved. I am reviewing my method, privately.'
+    'I pronounced the moth dead. It flew off halfway through my condolences. Very unprofessional.'
   ]
 };
 
@@ -301,38 +301,38 @@ export const TRAIT_INNER = {
 export const INNER_LINES = {
   content: [
     'I am not going to say this out loud: the thumb was the right temperature.',
-    'Nothing needed doing today. I did some of it anyway, to be sure.',
+    'I let the moth live. It landed on my dinner, but I had already made a whole thing of mercy.',
     'If I say the slot is good they will move me to a better one and it will not be.',
     'I could be fussed again. I will not ask. Asking is how it stops being a gift.',
     'Four inches is enough for everything except reaching. I have made my peace with reaching.',
     'They came back. I had a whole speech ready. I have put it away.',
-    'I let them think the bowl was the point.',
+    'I have eaten and been held. My funeral is cancelled. I will eat the flowers later.',
     'It is a good square. I would fight for it and I hope nobody makes me.',
     'The trick is to be asleep before they go. Then they have not left; I have.',
     '{n} leaned on me for an hour. I did not need the hour. I have all of them.',
     'Today I am not keeping score. I want that noted in the place where I keep score.'
   ],
   fine: [
-    'Nothing happened today. I am recording it in case it turns out something did.',
+    'I tried to haunt my old slot. Nobody had moved into it. I frightened a crumb.',
     'If I stand still enough the dust settles on me and then I am shelf, and cannot be moved.',
     'I do not know what I am waiting for. I am extremely good at it.',
     'There is a version of me that asks for things. We have not met.',
-    'The wall has not changed. I check. Somebody has to check.',
+    'I have practised looking valuable. The dust is doing most of the work.',
     'I would like to be picked up. I have arranged my face to suggest otherwise.',
-    'Being immortal is mostly Tuesdays.',
+    'Being immortal is watching the mould on your dinner have a more eventful life.',
     'I am saving something to say. It has been three weeks and it is getting heavier.',
-    'I have thought about the edge again. Not seriously. Once, and then once more.',
+    'I tried playing dead. They admired the pose and went away. I had to get up angrily.',
     '{n} is closer than yesterday. I have not moved. I have noted that I have not moved.',
     'You were gone {h} hours. I stopped counting at three and started again at four.'
   ],
   annoyed: [
-    'I said it was fine. It is on the record that I said it was fine.',
+    'I swallowed the insult. It caught behind a tooth. I can still use it.',
     'I am not sulking. I am facing the wall for reasons of my own.',
     'The list is not for revenge. The list is so that somebody has it.',
     'I will forgive this out loud, at intervals, until it is unbearable.',
     'They went past twice. I counted the second one because the first might have been a mistake.',
     'I could ask. Asking would work. That is the trouble with asking.',
-    'What I want is to be noticed without saying anything. What I get is Tuesday.',
+    'I want to be mourned a little while I can still correct the speech.',
     'I have a shorter version of this rehearsed. It is one word and I am saving it.',
     'I have {g} of these on the record. I know the number. I check the number.',
     '{n} got the light. I will not mention it. I will stand near it, quietly.'
@@ -340,11 +340,11 @@ export const INNER_LINES = {
   furious: [
     'I cannot die and I cannot reach the bowl. One of those is worse.',
     'I am four inches of grievance and I have all the time there is.',
-    'When I am calm I will be very frightening. I am not calm.',
+    'I sharpened a crumb in anger. Then I got hungry. There goes the threat.',
     'They think this is about the crumb. It has not been about the crumb since March.',
-    'I bit the bracket. The bracket is fine. I am not.',
+    'I bit the bracket. It rang like a dinner bell. I have only made this worse.',
     'I would leave. There is nowhere. Nobody ever addresses that part.',
-    'I will still be here afterwards. That is the entire threat. I know it is not much of one.',
+    'I am working on a curse. So far it only makes me hungry, but I believe in practice.',
     'Everything I say tonight I mean. Tomorrow is a separate matter.',
     'The empty bowl is a message. I have read it. I am composing a reply.'
   ]
@@ -355,14 +355,14 @@ export const INNER_LINES = {
 export const DREAM_LINES = [
   'In the dream I was six inches. Nothing else changed and it was still better.',
   'In the dream the bowl was full and I spent the whole of it being suspicious.',
-  'I dreamed the previous owner came back and did not know me. I was polite about it.',
+  'I dreamed the previous owner came back as a moth. I had to apologise with my mouth full.',
   'In the dream I could reach the top shelf. There was nothing on it. I stayed up there.',
   'I dreamed of a door. Not going through it. Only that there was one.',
-  'In the dream nobody was keeping score and I did not know what to do with my hands.',
+  'I dreamed of my funeral. They served crumbs. I climbed out for seconds.',
   'I dreamed I was dusted and did not come back. That was the restful part.',
   'In the dream I had a name that nobody gave me.',
-  'I dreamed the shelf was one long plank going out of the room. I woke before the end of it.',
+  'I dreamed I was six feet tall. Someone still picked me up by the head.',
   'Something in the dream was warm and had a thumb. I am not discussing it.',
-  'In the dream I was made of something else. It held up fine.',
+  'I dreamed I had bones. I spent the whole night deciding who could borrow them.',
   'I dreamed the others were talking about me kindly. Even asleep I did not believe it.'
 ];

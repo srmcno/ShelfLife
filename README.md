@@ -15,11 +15,16 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ## After-hours update
 
-- **The Playroom:** one always-visible doorway to all six activities, with an accomplice picker, personal records, activity descriptions and resume indicators. Press P when no dialog or form control is active.
+- **A proper Shelf Court:** an illustrated courtroom with a judge, dock, gallery, testimony, exhibits, objections and staged verdicts. Twelve darkly comic offences generate different evidence and suspect lineups. Choose Cozy, Curious or Tangled reasoning, cross-examine with exhibits, ask for hints, then present a deliberate verdict. Every case has exactly one answer, and every exhibit is necessary.
+- **Crumb Chase with teeth:** direction-controlled Dash smashes dust; catches shorten its recharge. Touch Hop and Dash respond on press, jumps buffer before landing, approaching dust gives a warning, and a final five-gold arc rewards a well-timed hop and dash. Missed crumbs soften a streak instead of erasing it.
+- **Expeditions with decisions:** three stops, finite nerve and a single-use packed tool. Preview the trail, weigh safe progress against bold detours, and save your equipment for the right obstacle. Different editions, exact-trail replay and nine relics give each route something to revisit. Existing unfinished expeditions keep their original rules.
+- **Darker resident comedy:** sharper grudges, manipulative affection, mortal envy, macabre shopping stock and consequential trial testimony replace weaker whimsical and bureaucratic filler. Residents remain immortal; their histories and relationships stay intact.
+- **The Playroom:** one always-visible doorway to all six activities, with an accomplice picker, personal records and a six-activity household passport. Suggested activities prioritise saved expeditions and markets, then untried games. Completed practice counts. Press P when no dialog or form control is active.
 - **The Unlicensed Night Market:** a saved six-stall strategy game. Ten buttons, three bag spaces, previewable stock, shopping requests and one trade-in. Collect new curiosities, compare your haul with the best attainable score, and replay the same market or visit a new one.
 - **Remix without losing the good bits:** pin a body, individual features or colours before using Surprise me. Undo and redo are available from the creator and its keyboard shortcuts.
 - **Better Crumb Chase practice:** select a side quest, repeat a course, track the next star and receive specific coaching after each run. Venue stars and score records retain their separate personal bests.
 - **A calmer interface:** no independently scrolling desktop case column, a scrollable settings drawer on short screens, and keyboard access to expandable details.
+- **Phone controls:** collapsible Chase settings, four large controls, scrollable results, larger touch targets and readable form fields. Cancelled or sideways swipes no longer dismiss a game.
 - **Reliability:** more precise day/night catch-up, corrected care shortcuts and countdown refreshes, less unnecessary DOM replacement, and cancellation of stale animation work.
 
 Existing shelves and backups continue to load. Playroom records come from the existing save, and the market stores its seed and choices so a resumed trip rebuilds the same stock and score. The Pages build includes the new modules in its offline shell and identifies each deployment by its Git commit in `release.json`.
@@ -27,7 +32,7 @@ Existing shelves and backups continue to load. Playroom records come from the ex
 ## A larger small world
 
 - **Beyond the shelf:** three expeditions, equipment and companion choices, nine illustrated curiosities, persistent progress, and shared resident history.
-- **Shelf Court:** six evidence puzzles starring your own residents. Two independent clues identify one suspect, with explanations after every verdict.
+- **Shelf Court:** twelve case families starring your own residents, three chosen reasoning levels, and evidence explanations after every verdict.
 - **Return visitors:** all twelve callers have three distinct chapters. Calling cards rest for fifteen minutes; missing a visit never costs trust.
 - **Your collection:** display three keepsakes, unlock four cabinet finishes through discoveries, and replay short household scenes. Returning players get a factual recap.
 - **More personal creatures:** edit a resident’s appearance without losing its history, and keep up to six reusable generated designs. Feature choices stay ordered and named.

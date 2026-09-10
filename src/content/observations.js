@@ -2,9 +2,9 @@
 export const OBSERVATIONS = {
   hungry: [
     '{p} has measured its mouth against the shelf edge. Dinner is becoming a structural question.',
-    '{p} is licking the picture of a crumb. The picture is now a picture of regret.',
+    '{p} licked a picture of dinner until the plate was blank. It has eaten better drawings.',
     '{p}: “I cannot starve to death. You have found a much longer option.”',
-    '{p} has set a place for dinner. Dinner has yet to set a place for itself.'
+    '{p} is chewing its own nameplate. It has reached the surname.'
   ],
   lonely: [
     '{p} is waving with its entire body. At this scale, neglect is a spectator sport.',
@@ -13,22 +13,22 @@ export const OBSERVATIONS = {
     '{p}: “I am small enough to lose and apparently large enough to avoid.”'
   ],
   dirty: [
-    '{p} has developed a crust. It is referring to the inside as the old town.',
+    '{p} has grown mould. The mould looks healthier than {p}.',
     '{p}: “Do not scrape that off. It has started bringing me things.”',
     '{p} tried to leave a footprint. The rest of it stayed attached.',
-    '{p} smells like a damp coffin made for a grape.'
+    '{p} washed one foot. The other one is pretending they have never met.'
   ],
   full: [
-    '{p} is full. The next crumb will need planning permission.',
+    '{p} is full. It has hidden the spare crumb in its mouth, where nobody will think to look.',
     '{p}: “I have eaten enough to become slightly harder to bury.”',
-    '{p} is lying beside its stomach like a proud homeowner.',
+    '{p} tried to suck its stomach in. Something came out of its ear.',
     '{p} has moved the emergency crumb to the other cheek. Both exits are blocked.'
   ],
   spotless: [
-    '{p} is so clean the dust is arriving with references.',
+    '{p} has been washed. The bathwater has more personality than most of its neighbours.',
     '{p} can see its reflection in itself. Neither looks pleased to be related.',
     '{p}: “You have washed off my camouflage. The shelf can see me now.”',
-    '{p} is arranging a tiny funeral for the dirt. Open casket. Very open.'
+    '{p} put the dirt in a little grave. It has come back to check whether the dirt stayed dead.'
   ],
   trust: [
     '{p} has stopped flinching at your hand. It now judges the cuticles.',
@@ -37,21 +37,21 @@ export const OBSERVATIONS = {
     '{p}: “I would bite someone for you. Someone proportionately sized.”'
   ],
   grudge: [
-    '{p} has {count} grievances. The file is holding the resident upright.',
-    '{p}: “Forgiveness would fit in my mouth. I have chosen the other thing.”',
-    '{p} is polishing a grudge with the corner of a much older grudge.',
+    '{p} has {count} grievances. It mouths them during cuddles. You thought it was purring.',
+    '{p}: “I could forgive you. Then I would have to find a hobby.”',
+    '{p} practised forgiving you in the mirror. Even its reflection did not buy it.',
     '{p} has put its grievances under the mattress. It sleeps at an angle.'
   ],
   renamed: [
     '{p} tried to peel off “{old}”. The name came away with a little dignity.',
     '{p}: “{old} is dead. Same body, unfortunately.”',
-    '{p} has crossed out {old} on its toe tag. The toe remains on probation.',
+    '{p} held a funeral for {old}. Same body. Better attendance than expected.',
     '{p} is making {old} answer for its mistakes. An excellent arrangement for {p}.'
   ],
   promise: [
-    '{p} has an accepted promise. It is keeping it warm under its least suspicious foot.',
+    '{p} has accepted your promise. It practised looking surprised in case you keep it.',
     '{p}: “You promised. I have a short body and a very long memory.”',
-    '{p} is pointing at its request. The finger is borrowed; the urgency is its own.',
+    '{p} has pinned its request over its mouth. It can complain through the paper.',
     '{p} has left room beside the promise for the apology. Optimism takes up less space.'
   ],
   kept: [
@@ -61,10 +61,10 @@ export const OBSERVATIONS = {
     '{p} has folded a kept promise into a pillow. It is less lumpy than the grudges.'
   ],
   chase: [
-    '{p} is reliving its last rewarded Crumb Chase. The crumbs have no right of reply.',
+    '{p} re-enacted its last Crumb Chase with a dead moth playing the crumb. Poor casting.',
     '{p}: “I hunted dinner. At last, a reason for all this unnecessary leg.”',
-    '{p} is stretching for another Crumb Chase. One joint has declined in writing.',
-    '{p} has described Crumb Chase as a battle. The casualty was bread.'
+    '{p} is warming up for Crumb Chase. Something inside it clicks on the opposite beat.',
+    '{p} keeps calling Crumb Chase a massacre. It was toast before {p} arrived.'
   ],
   handshake: [
     '{p} is rehearsing the secret handshake behind its back. The back is not cleared to know.',
@@ -88,14 +88,14 @@ export const OBSERVATIONS = {
     '{p} and {n} are sharing a shelf edge. Both have described gravity as an opportunity.',
     '{p} is leaving a gap beside {n}. The gap is getting the silent treatment too.',
     '{p}: “{n} has a lovely face for the underside of a shelf.”',
-    '{p} is measuring {n} for a coffin. The immortality clause has delayed procurement.'
+    '{p} offered to build {n} a coffin. {n} asked for breathing holes. {p} lost interest.'
   ]
 };
 
 export const CARE_CONTEXT = {
   food: {
     urgent: ['Dinner. I had started looking at my own feet as a pair of courses.', 'My mouth was beginning to inventory the furniture.', 'Good. I can cancel the tasting of myself.'],
-    promised: ['A promise you can chew. Already better than most promises.', 'That is the requested dinner. I will eat the receipt.', 'You remembered. I had saved a very nasty little silence.'],
+    promised: ['You kept your promise. Come closer. I have put the teeth away.', 'Exactly what I asked for. I will complain about the bowl tomorrow.', 'You remembered. I had saved a very nasty little silence.'],
     trusted: ['I saved the least wet crumb for you.', 'You know which end the food goes in. That means a lot.', 'Stay until I finish. It is less embarrassing with company.']
   },
   fuss: {
@@ -104,8 +104,8 @@ export const CARE_CONTEXT = {
     trusted: ['Careful. I am getting attached to an enormous flight risk.', 'You may touch the soft bit. Do not tell the others where it is.', 'I like you. I am saying it into your fingerprint so it cannot travel.']
   },
   clean: {
-    urgent: ['There goes a thriving civilisation. Keep the towel; it knows too much.', 'I can bend again. Horrifying range of possibilities.', 'The crust was load-bearing. Hold me while I reconsider.'],
-    promised: ['You promised a wash. The dirt had promised to resist.', 'Clean, as requested. I will miss the extra height.', 'The agreed layer is gone. We will discuss the personality later.'],
+    urgent: ['My dirt had children. Please rinse the children out too.', 'I can bend again. Oh. That is what was under me.', 'Hold me while I dry. The towel is trying to keep me.'],
+    promised: ['You promised a wash. I promised the mould a long life. One of us had to lie.', 'Clean, as requested. I will miss the extra height.', 'You found my face. I thought that was the back.'],
     trusted: ['You kept all my parts in the same order. I appreciate that.', 'You remembered the crack behind my ear. So did the dirt.', 'Wrap me up. I am feeling unnecessarily visible.']
   }
 };
@@ -113,7 +113,7 @@ export const CARE_CONTEXT = {
 export const CONTEXT_EXCHANGES = {
   hungry: [
     { turns: [['a', 'I am wasting away.'], ['b', 'Sideways, somehow.']] },
-    { turns: [['a', 'If I eat the shelf, is that self-defence?'], ['b', 'It is an eviction with seasoning.']] },
+    { turns: [['a', 'I have eaten the shelf under me.'], ['b', 'Then stop swallowing. You are holding us up.']] },
     { turns: [['a', 'I have nothing in my stomach.'], ['b', 'Enjoy the privacy.']] }
   ],
   dirty: [
@@ -122,8 +122,8 @@ export const CONTEXT_EXCHANGES = {
     { turns: [['a', 'Do I smell alive?'], ['b', 'In several places.']] }
   ],
   promise: [
-    { turns: [['a', 'The giant has promised.'], ['b', 'Get it in a footprint.']] },
-    { turns: [['a', 'I have their word.'], ['b', 'Where will you keep something that big?']] },
+    { turns: [['a', 'The giant has promised.'], ['b', 'The last one promised too. We outlived the excuse.']] },
+    { turns: [['a', 'I have their word.'], ['b', 'Keep asking for the thumb. Harder to forget.']] },
     { turns: [['a', 'I believe they will do it.'], ['b', 'Tuck that in. Your hope is showing.']] }
   ],
   trusted: [

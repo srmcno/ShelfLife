@@ -1,5 +1,5 @@
 import { normalizeLife } from '../life-state.js';
-import { OUTINGS, GEAR, RELICS, FRAMES, MARKET_ITEMS, MARKET_REQUESTS, visitorActFor } from '../content/life.js';
+import { OUTINGS, OUTING_TRAIL_SCENES, OUTING_ALTERNATES, GEAR, RELICS, FRAMES, MARKET_ITEMS, MARKET_REQUESTS, visitorActFor } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
 import { addNote, clamp } from '../state.js';
 const checked = new WeakSet();
@@ -41,32 +41,81 @@ export function favoriteFor(pet) {
   if(traits.some(t=>['damp','fungal'].includes(t)))return {name:'Damp biscuits',kind:'damp',line:'Asks whether you could make it a little less structurally sound.'};
   return {name:'Contraband crackers',kind:'menace',line:'The flavour improves if somebody says it is forbidden.'};
 }
+// A trail has no hidden dice rolls. Decisions trade nerve, points and the one
+// packed tool; a small look-ahead map lets the player plan instead of guess.
+export function outingTrail(routeId, edition=0) {
+  const route=OUTINGS.find(x=>x.id===routeId);
+  if(!route)return null;
+  const n=Number.isInteger(edition)&&edition>=0&&edition<8?edition:0;
+  return route.steps.map((step,i)=>({...((n>>i)&1?OUTING_ALTERNATES[routeId][i]:OUTING_TRAIL_SCENES[routeId][i]),points:2+(i+n%3)%3}));
+}
+function trailMove(step,gear,expertise,nerve,toolUsed,choice) {
+  const cost=expertise.includes(step.stat)?1:2;
+  if(choice===0)return {nerve:Math.min(3,nerve+2),toolUsed,points:0,text:step.quiet+' +2 nerve, up to 3.'};
+  if(choice===1&&nerve>=cost)return {nerve:nerve-cost,toolUsed,points:step.points,text:step.outcomes[1]+' +'+step.points+' trail points. '+cost+' nerve spent.'};
+  if(choice===2&&!toolUsed){const matched=step.good===gear;return {nerve,toolUsed:true,points:matched?3:1,text:(matched?step.outcomes[0]:'They improvised with their packed equipment. The incident report names a witness who had conveniently died before the incident.')+' +'+(matched?3:1)+' trail points. Equipment used for this trip.'};}
+  return null;
+}
+export function outingSnapshot(state) {
+  const o=lifeState(state).outing;
+  if(!o||o.version!==2)return o;
+  const steps=outingTrail(o.route,o.edition);
+  if(!steps||!GEAR.some(g=>g.id===o.gear))return null;
+  const expertise=Array.isArray(o.expertise)?o.expertise:[],choices=[],log=[];
+  let nerve=2,score=0,toolUsed=false;
+  for(const choice of (Array.isArray(o.choices)?o.choices:[]).slice(0,3)){
+    const move=trailMove(steps[choices.length],o.gear,expertise,nerve,toolUsed,choice);
+    if(!move)break;
+    choices.push(choice);log.push(move.text);nerve=move.nerve;toolUsed=move.toolUsed;score+=move.points;
+  }
+  // Rebuild resource counters from legal moves, including after save restoration.
+  Object.assign(o,{choices,log,nerve,score,toolUsed,step:choices.length});
+  const search=(i,n,used)=>i===3?0:Math.max(...[0,1,2].map(c=>{const m=trailMove(steps[i],o.gear,expertise,n,used,c);return m?m.points+search(i+1,m.nerve,m.toolUsed):-Infinity;}));
+  const step=steps[o.step];
+  return {...o,steps,best:search(0,2,false),options:step?[0,1,2].map(choice=>{
+    const move=trailMove(step,o.gear,expertise,nerve,toolUsed,choice),cost=expertise.includes(step.stat)?1:2;
+    return {choice,available:!!move,label:choice===0?'Take the quiet way around':choice===1?step.options[1]:step.good===o.gear?step.options[0]:'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
+  }):[]};
+}
 export function outingPreview(state, routeId, gearId, cast) {
   const route=OUTINGS.find(x=>x.id===routeId);
-  const crew=state.pets.filter(p=>cast.includes(p.id));
+  const crew=state.pets.filter(p=>Array.isArray(cast)&&cast.includes(p.id));
   if(!route||!GEAR.some(x=>x.id===gearId)||!crew.length)return null;
   return route.steps.map(step=>({gear:step.good===gearId,skill:crew.some(p=>(p.stats?.[step.stat]||0)>=7),stat:step.stat}));
 }
-export function startOuting(state, routeId, gearId, cast) {
+export function startOuting(state, routeId, gearId, cast, options={}) {
   const l=lifeState(state);
-  if(l.outing)return false;
+  if(l.outing||!Array.isArray(cast))return false;
   const ids=[...new Set(cast)].filter(id=>state.pets.some(p=>p.id===id)).slice(0,2);
   if(!outingPreview(state,routeId,gearId,ids))return false;
-  l.outing={route:routeId,gear:gearId,cast:ids,step:0,score:0,log:[],choices:[]};
+  const crew=state.pets.filter(p=>ids.includes(p.id));
+  const edition=Number.isInteger(options.edition)&&options.edition>=0&&options.edition<8?options.edition:l.outings%8;
+  const expertise=['cute','menace','damp','mystique'].filter(stat=>crew.some(p=>(p.stats?.[stat]||0)>=7));
+  l.outing={version:2,edition,expertise,route:routeId,gear:gearId,cast:ids,step:0,score:0,log:[],choices:[],nerve:2,toolUsed:false};
   return true;
 }
 export function chooseOuting(state, choice, now=Date.now()) {
   const l=lifeState(state), o=l.outing, route=OUTINGS.find(x=>x.id===o?.route);
-  if(!o||!route||o.step>=3||![0,1].includes(choice))return null;
-  const step=route.steps[o.step], crew=state.pets.filter(p=>o.cast.includes(p.id));
+  if(!o||!route||![0,1,2].includes(choice))return null;
+  const snapshot=outingSnapshot(state);
+  if(!snapshot||o.step>=3)return null;
+  const crew=state.pets.filter(p=>o.cast.includes(p.id));
   if(!crew.length){l.outing=null;return null;}
-  // Gear supports the practical route; a named crew skill supports negotiation.
-  const supported=choice===0 ? o.gear===step.good : crew.some(p=>(p.stats?.[step.stat]||0)>=7);
-  o.score+=supported?1:0; o.choices.push(choice);
-  const line=step.outcomes[choice]+(supported?' Their preparation paid off.':' They improvised. It was not dignified, but it worked.');
-  o.log.push(line);o.step++;
+  let supported,line;
+  if(o.version===2){
+    if(!snapshot.options[choice]?.available)return null;
+    o.choices.push(choice);const after=outingSnapshot(state);line=after.log.at(-1);supported=choice!==0;
+  }else{
+    // In-progress legacy expeditions keep their original two-choice rules.
+    if(choice===2)return null;
+    const step=route.steps[o.step];
+    supported=choice===0?o.gear===step.good:crew.some(p=>(p.stats?.[step.stat]||0)>=7);
+    o.score+=supported?1:0;o.choices.push(choice);
+    line=step.outcomes[choice]+(supported?' Their preparation paid off.':' They improvised. It was not dignified, but it worked.');
+    o.log.push(line);o.step++;
+  }
   if(o.step<3)return {text:line,complete:false,supported};
-  const tier=o.score>=3?2:o.score>=1?1:0, relic=RELICS.find(r=>r.id===o.route+':'+tier);
+  const tier=o.version===2?(o.score>=6?2:o.score>=3?1:0):(o.score>=3?2:o.score>=1?1:0),relic=RELICS.find(r=>r.id===o.route+':'+tier);
   const fresh=!l.relics.includes(relic.id);
   if(fresh){l.relics.push(relic.id);l.xp+=4;if(l.displayed.length<3)l.displayed.push(relic.id);}
   l.outings++;dailyActivity(state,'outing',now);l.introDone=true;
