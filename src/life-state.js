@@ -29,6 +29,7 @@ export function normalizeLife(raw, established=false) {
       Object.assign(s.outing,{version:2,edition:number(o.edition,7),expertise:[...new Set((Array.isArray(o.expertise)?o.expertise:[]).filter(x=>['cute','menace','damp','mystique'].includes(x)))],choices,step:choices.length,nerve:number(o.nerve,3),toolUsed:o.toolUsed===true});
       if(['bold','thrifty','steady'].includes(o.dare))s.outing.dare=o.dare;
       if(o.mission===true)s.outing.mission=true;
+      if(o.mission===true&&Number.isInteger(o.returnedAt)&&o.returnedAt>=1&&o.returnedAt<=2)s.outing.returnedAt=o.returnedAt;
     }else s.outing.choices=s.outing.choices.filter(x=>x===0||x===1);
     if(obj(o.result)&&typeof o.result.relic==='string'){
       s.outing.result={relic:o.result.relic.slice(0,30),fresh:o.result.fresh===true};

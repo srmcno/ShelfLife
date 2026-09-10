@@ -19,7 +19,7 @@ Court now follows one deduction: inspect the crime clues, compare each suspectâ€
 
 Chase restores the original **left / Hop / right** movement row. Dash sits above the arena as an optional extra. Portrait arenas use the available width, movement stops when a drag ends, and touch actions fire on press without double-firing on the following click. Keyboard and assistive clicks remain supported.
 
-Expeditions now offer three recovery contracts: the Button Lift, Midnight Larder and Thimble Bath. Recover any two distinct components through three written encounters to install a working household object. Parts persist across trips. Each object provides its advertised attention, food or cleanliness benefit once a day, and remains playable afterwards. In-progress older expeditions retain their encounters and rewards.
+Expeditions now offer three recovery contracts: the Button Lift, Midnight Larder and Thimble Bath. Recover any two distinct components through three written encounters to install a working household object. Parts persist across trips; once the objective is secured you can return immediately or explore further. Each object provides its advertised attention, food or cleanliness benefit once a day, and remains playable afterwards. In-progress older expeditions retain their encounters and rewards.
 
 The existing Handshake, Alibi, Night Market, household scenes and saved progress remain supported. Browser verification covers the public desktop build; physical phone rendering must still be checked on a phone.
 

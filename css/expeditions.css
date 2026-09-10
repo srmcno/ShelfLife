@@ -120,3 +120,20 @@
 }
 @media(prefers-reduced-motion:reduce){.project-moving{animation:none!important}}
 body[data-effects=light] .project-moving{animation:none!important}
+
+.project-card .project-card-copy>p{color:#564546}
+@media(min-width:721px) and (min-height:541px){
+ #lifeVeil.outing-mode.open{align-items:center;overflow:hidden;padding:20px}
+ #lifeVeil.outing-mode>.sheet{width:min(1060px,96vw);max-height:calc(100dvh - 40px);display:flex;flex-direction:column;overflow:hidden}
+ #lifeVeil.outing-mode .sheet-head{flex:none;margin-bottom:16px}
+ #lifeVeil.outing-mode #lifeContent{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+ #lifeVeil.outing-mode .trail-workspace{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+ #lifeVeil.outing-mode .adventure-scroll{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:12px}
+ #lifeVeil.outing-mode .adventure-actions{flex:none;margin-top:16px;border-top:1px solid var(--hair-lit);padding-top:14px}
+ #lifeVeil.outing-mode .phase-playing{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,1fr);gap:24px}
+ #lifeVeil.outing-mode .phase-playing .adventure-actions{margin:0;border:0;border-left:1px solid var(--hair-lit);padding:14px 0 14px 22px;align-self:center}
+ #lifeVeil.outing-mode .phase-playing .trail-dock-status{display:block;margin:0 0 16px;font-size:14px;line-height:1.5}
+ #lifeVeil.outing-mode .trail-action-dock .expedition-choices .btn{min-height:84px;font-size:14px;padding:14px}
+ #lifeVeil.outing-mode .trail-supplies{margin:12px 0}.trail-supplies>div{padding:10px}
+ #lifeVeil.outing-mode .trail-progress{margin-top:0}
+}

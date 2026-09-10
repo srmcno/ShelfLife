@@ -75,7 +75,8 @@ export function outingSnapshot(state) {
     if(o.mission&&choice===2&&steps[choices.length].good!==o.gear)break;
     const move=trailMove(steps[choices.length],o.gear,expertise,nerve,toolUsed,choice);
     if(!move)break;
-    choices.push(choice);log.push(move.text);nerve=move.nerve;toolUsed=move.toolUsed;score+=move.points;
+    const returning=o.mission&&Number.isInteger(o.returnedAt)&&choices.length>=o.returnedAt;
+    choices.push(choice);log.push(returning?'You left '+steps[choices.length-1].title+' unexplored and carried the recovered parts home.':move.text);nerve=move.nerve;toolUsed=move.toolUsed;score+=move.points;
   }
   // Rebuild resource counters from legal moves, including after save restoration.
   const dare=OUTING_DARES.find(d=>d.id===o.dare),dareMet=!!dare&&trailDareMet(dare.id,choices,nerve,toolUsed),dareBonus=choices.length===3&&dareMet?2:0;
@@ -87,7 +88,9 @@ export function outingSnapshot(state) {
   const stored=lifeState(state).projectParts[o.route]||[],parts=[...new Set([...stored,...recovered])];
   return {...o,steps,baseScore,dareMet,dareBonus,recovered,parts,project:o.mission?PROJECTS.find(p=>p.id===o.route):null,best:search(0,2,false),options:step?[0,1,2].map(choice=>{
     const move=trailMove(step,o.gear,expertise,nerve,toolUsed,choice),cost=expertise.includes(step.stat)?1:2;
-    return {choice,available:!!move&&(!o.mission||choice!==2||step.good===o.gear),label:choice===0?(o.mission?'Leave this part & recover':'Take the quiet way around'):choice===1?step.options[1]:step.good===o.gear?step.options[0]:o.mission?'Save the tool for another stop':'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
+    const part=PROJECTS.find(p=>p.id===o.route)?.parts[o.step],pickup=stored.includes(o.step)?'Already stored · record attempt':'Recover '+part;
+    const missionHint=choice===0?'Leave the part · restore 2 nerve':choice===1?pickup+' · spend '+cost+' nerve':toolUsed?'Equipment already used':step.good===o.gear?pickup+' · use tool · no nerve cost':'Your packed tool fits another stop';
+    return {choice,available:!!move&&(!o.mission||choice!==2||step.good===o.gear),label:choice===0?(o.mission?'Leave this part & recover':'Take the quiet way around'):choice===1?step.options[1]:step.good===o.gear?step.options[0]:o.mission?'Save the tool for another stop':'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:o.mission?missionHint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
   }):[]};
 }
 export function outingPreview(state, routeId, gearId, cast) {
@@ -156,6 +159,15 @@ export function useProject(state,id,now=Date.now()) {
 }
 export function finishOuting(state) {
   const l=lifeState(state);if(!l.outing||l.outing.step!==3)return false;l.outing=null;return true;
+}
+export function returnFromMission(state,now=Date.now()) {
+  const o=outingSnapshot(state);
+  if(!o?.mission||o.step<1||o.step>=3||o.parts.length<2)return false;
+  lifeState(state).outing.returnedAt=o.step;
+  // Cash out over the quiet route. Unvisited stops are explicitly recorded as
+  // unexplored, and completion still passes through the single reward boundary.
+  while(lifeState(state).outing.step<3)if(!chooseOuting(state,0,now))return false;
+  return true;
 }
 export function visitorActivity(state) {
   const v=state.stories?.visitor;if(!v?.welcomed)return null;

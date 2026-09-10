@@ -190,6 +190,12 @@ function replayCourt(saved) {
  // finish an unsolved case or pay a reward.
  saved.moves=legal;saved.claimed=game.claimed;
  setCourtFocus(game,{chapter:saved.ui?.chapter,suspect:saved.ui?.witness,statement:saved.ui?.statement,evidence:saved.ui?.exhibit});
+ // A ruling belongs to its witness. Restoring a different selection must not
+ // put the previous witness's CLEARED stamp over the current person in the dock.
+ const last=legal.at(-1);
+ if(!game.claimed&&validIndex(game.selection,game.suspects.length)&&last?.suspect!==undefined&&last.suspect!==game.selection){
+  const suspect=game.suspects[game.selection];respond(game,'testimony',suspect.name,suspect.defence);
+ }
  if(game.claimed)game.result=investigationResult(game,saved.reward||{bond:0,fuss:0});
  return game;
 }

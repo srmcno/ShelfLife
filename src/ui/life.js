@@ -1,4 +1,4 @@
-import { lifeState, useProject, favoriteFor, outingPreview, outingSnapshot, outingTrail, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
+import { lifeState, useProject, returnFromMission, favoriteFor, outingPreview, outingSnapshot, outingTrail, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
 import { OUTINGS, GEAR, RELICS, FRAMES } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
 import { startCourt, currentCourt, courtAction, finishCourt } from '../engine/court.js';
@@ -86,7 +86,7 @@ export function initLife(state,refresh) {
   }
   const step=modern?o.steps[o.step]:r.steps[o.step];
   if(interlude){
-   content.innerHTML='<span class="eyebrow">Field report · '+o.step+' of 3</span>'+missionStatus(o)+trailTheatre(o.route,Math.max(0,o.step-1),{travel:true,mission:o.mission})+'<p class="scene-script">'+esc(o.log.at(-1))+'</p>'+(modern?'<p class="trail-report-resources">'+o.score+' points · '+o.nerve+' nerve · '+(o.toolUsed?'equipment used':'equipment ready')+'</p>':'')+'<div class="trail-report-actions">'+button('Next stop: '+esc(step.title),'continue-outing')+'</div>'+trailDareStatus(o);wrapTrailLayout(content,'report',o);mountTrailCrew(content,crew);return;
+   content.innerHTML='<span class="eyebrow">Field report · '+o.step+' of 3</span>'+missionStatus(o)+trailTheatre(o.route,Math.max(0,o.step-1),{travel:true,mission:o.mission})+'<p class="scene-script">'+esc(o.log.at(-1))+'</p>'+(modern?'<p class="trail-report-resources">'+o.score+' points · '+o.nerve+' nerve · '+(o.toolUsed?'equipment used':'equipment ready')+'</p>':'')+'<div class="trail-report-actions">'+(o.mission&&o.parts.length>=2?button('Return home with the parts','outing-return'):'')+button('Next stop: '+esc(step.title),'continue-outing')+'</div>'+trailDareStatus(o);wrapTrailLayout(content,'report',o);mountTrailCrew(content,crew);return;
   }
   const p=modern?null:outingPreview(state,o.route,o.gear,o.cast)?.[o.step];
   const choices=modern?o.options.map(option=>button(esc(option.label)+'<small>'+esc(option.hint)+'</small>','outing-choice','data-choice="'+option.choice+'" '+(option.available?'':'disabled'))).join(''):step.options.map((t,i)=>button(esc(t)+'<small>'+esc(i===0?(p?.gear?'Your equipment supports this.':'Best with '+GEAR.find(g=>g.id===step.good).name+'. Improvisation still gets you home.'):(p?.skill?'Your crew has the '+step.stat+' for this.':step.stat+' 7+ helps. Your crew will improvise.'))+'</small>','outing-choice','data-choice="'+i+'"')).join('');
@@ -165,6 +165,7 @@ export function initLife(state,refresh) {
   if(action==='route'){selectedRoute=b.dataset.id;repaintOutingSetup('',selectedRoute);return;}
   if(action==='set-out'){const cast=[document.getElementById('outingLead').value,document.getElementById('outingCompanion').value];if(startOuting(state,selectedRoute,selectedGear,cast,{dare:selectedDare,mission:true})){save();interlude=false;outing();refresh();focusOutingProgress();}return;}
   if(action==='outing-choice'){const result=chooseOuting(state,Number(b.dataset.choice));if(result){interlude=!result.complete;refresh();outing();focusOutingProgress();}return;}
+  if(action==='outing-return'){if(returnFromMission(state)){interlude=false;save();refresh();outing();focusOutingProgress();}return;}
   if(action==='continue-outing'){interlude=false;outing();focusOutingProgress();return;}
   if(action==='outing-retry'||action==='outing-next'){
    const previous=outingSnapshot(state);if(!previous||previous.step!==3)return;

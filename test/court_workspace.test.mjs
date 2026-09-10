@@ -64,3 +64,11 @@ test('court view rejects invalid choices and escapes resident names',()=>{
  assert.equal(courtViewAction(game,'chapter','not-a-chapter'),false);courtViewAction(game,'chapter','hearing');game.ui.exhibit=99;assert.equal(courtView(game).exhibit,0);
  const markup=courtMarkup(game);assert.ok(!markup.includes('<img src=x'));assert.ok(markup.includes('&lt;img src=x'));
 });
+
+test('restoring a different suspect cannot put the previous ruling over their portrait',()=>{
+ let state=fixture();const game=startCourt(state,{},()=>.58),innocent=(game.answer+1)%3;collect(state);
+ courtAction(state,{type:'compare',suspect:innocent,evidence:courtEvidence(game,innocent).findIndex(x=>!x)});
+ focus(state,'verdict',game.answer);state=normalizeState(JSON.parse(JSON.stringify(state)));
+ assert.equal(currentCourt(state).hearing.phase,'testimony');assert.equal(currentCourt(state).hearing.speaker,game.suspects[game.answer].name);
+ assert.ok(!currentCourt(state).hearing.line.includes('is cleared'));
+});

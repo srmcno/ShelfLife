@@ -250,3 +250,9 @@ body[data-effects="light"] .court-playable *{animation:none!important;transition
  .court-deduction .court-charge-brief{font-size:13px}
  .court-cast-art,.court-cast-art>svg,.court-cast-art>.sprite{height:44px;width:44px}
 }
+
+.court-deduction .court-proof-sheet p,.court-deduction .court-fact-pair p,.court-deduction .court-verdict-ledger p,.court-deduction .court-verdict-ledger span{color:#392c30}
+.court-deduction .court-proof-sheet .hint{color:#625148}
+.court-deduction .court-hotspot{background:#ead8ad;border:2px solid #a77d4c;box-shadow:0 3px 8px #0008;color:#2d2330;opacity:1}
+.court-deduction .court-hotspot>span{background:#44323a;color:#fff0c9}
+.court-deduction .court-hotspot.is-bagged{background:#bfcba9}

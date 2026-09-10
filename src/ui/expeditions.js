@@ -78,7 +78,7 @@ export function missionPlan(state,route,gear,lead,companion,dare) {
 }
 export function missionStatus(o) {
  if(!o.project)return '';
- return '<div class="mission-progress"><span><b>'+esc(o.project.name)+'</b><small>'+(o.parts.length>=2?'Parts secured · finish the route to return home':'Recover any 2 distinct parts')+'</small></span><strong>'+Math.min(o.parts.length,2)+' / 2</strong></div>';
+ return '<div class="mission-progress"><span><b>'+esc(o.project.name)+'</b><small>'+(o.parts.length>=2?'Parts secured · return home or explore further':'Recover any 2 distinct parts')+'</small></span><strong>'+Math.min(o.parts.length,2)+' / 2</strong></div>';
 }
 export function missionResult(o) {
  if(!o.project)return '';

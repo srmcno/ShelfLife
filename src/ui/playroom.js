@@ -15,8 +15,8 @@ const cardCopy = {
   chase: { title:'Crumb Chase', time:'22s / 3 acts', hook:'Dodge, dash, steal crumbs.' },
   memory: { title:'Handshake', time:'Your pace', hook:'Copy. Reverse. Duet.' },
   alibi: { title:'The Alibi', time:'No timer', hook:'Catch a lie. Prove it.' },
-  outing: { title:'Expeditions', time:'3 stops', hook:'Three stops. One tool.' },
-  court: { title:'Shelf Court', time:'No timer', hook:'Search. Question. Accuse.' },
+  outing: { title:'Expeditions', time:'3 stops', hook:'Recover parts. Build a home.' },
+  court: { title:'Shelf Court', time:'No timer', hook:'Read. Compare. Accuse.' },
   market: { title:'Night Market', time:'6 stalls', hook:'Buy oddities. Sell secrets.' }
 };
 
