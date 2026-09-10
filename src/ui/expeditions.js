@@ -67,7 +67,7 @@ export function projectArt(id) {
 export function projectBoard(l) {
  return '<section class="household-workshop" aria-label="Household projects"><div class="workshop-heading"><span class="eyebrow">Built by the household</span><h3>Bring the place to life.</h3><p>Expeditions recover the parts. You decide what gets built.</p></div><div class="project-grid">'+PROJECTS.map(p=>{
   const built=l.projects.includes(p.id),n=(l.projectParts[p.id]||[]).length;
-  return '<article class="project-card project-'+p.id+' '+(built?'is-built':'is-blueprint')+'"><div class="project-drawing">'+projectArt(p.id)+'<span>'+(built?'INSTALLED':'PLAN '+String(PROJECTS.indexOf(p)+1).padStart(2,'0'))+'</span></div><div class="project-card-copy"><h4>'+esc(p.name)+'</h4><p>'+esc(p.benefit)+'.</p><button class="btn" data-life="'+(built?'use-project':'project-mission')+'" data-id="'+p.id+'">'+esc(built?p.action:'Recover parts · '+Math.min(n,2)+'/2')+'</button><p class="project-reaction" role="status"></p></div></article>';
+  return '<article class="project-card project-'+p.id+' '+(built?'is-built':'is-blueprint')+'"><div class="project-drawing">'+projectArt(p.id)+(built?'<div class="project-occupant" aria-hidden="true"></div>':'')+'<span>'+(built?'INSTALLED':'PLAN '+String(PROJECTS.indexOf(p)+1).padStart(2,'0'))+'</span></div><div class="project-card-copy"><h4>'+esc(p.name)+'</h4><p>'+esc(p.benefit)+'.</p><button class="btn" data-life="'+(built?'use-project':'project-mission')+'" data-id="'+p.id+'">'+esc(built?p.action:'Recover parts · '+Math.min(n,2)+'/2')+'</button><p class="project-reaction" role="status"></p></div></article>';
  }).join('')+'</div></section>';
 }
 export function missionPlan(state,route,gear,lead,companion,dare) {

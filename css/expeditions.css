@@ -137,3 +137,14 @@ body[data-effects=light] .project-moving{animation:none!important}
  #lifeVeil.outing-mode .trail-supplies{margin:12px 0}.trail-supplies>div{padding:10px}
  #lifeVeil.outing-mode .trail-progress{margin-top:0}
 }
+
+.project-card{display:flex;flex-direction:column}.project-card-copy{flex:1}.project-drawing{flex:none}
+.project-occupant{position:absolute;width:46px;height:53px;left:55%;bottom:34px;pointer-events:none;overflow:hidden}.project-occupant .sprite{width:46px;height:53px}
+.project-drawer .project-occupant{bottom:39px;left:59%}.project-fridge .project-occupant{bottom:21px;left:12%}.project-cupboard .project-occupant{bottom:51px;left:40%}
+.project-drawing>svg{position:relative;z-index:1;pointer-events:none}
+.project-in-use.project-drawer .project-occupant{animation:project-lift 2.5s ease-in-out both}
+.project-in-use.project-fridge .project-occupant,.project-in-use.project-cupboard .project-occupant{animation:project-operate 2.5s ease-in-out both}
+#lifeVeil .trail-workspace:has(.mission-result) .expedition-prize{display:none}
+@media(max-width:720px){.project-card{display:grid}.project-occupant{transform:scale(.72);transform-origin:center bottom}.project-drawer .project-occupant{left:43%;bottom:37%}.project-fridge .project-occupant{left:0;bottom:35%}.project-cupboard .project-occupant{left:22%;bottom:40%}}
+@media(prefers-reduced-motion:reduce){.project-occupant{animation:none!important}}
+body[data-effects=light] .project-occupant{animation:none!important}
