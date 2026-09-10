@@ -1,3 +1,4 @@
+import { errandSnapshot, applyErrandMove, bestErrandScore } from './market-errands.js';
 import { normalizeLife } from '../life-state.js';
 import { OUTINGS, OUTING_TRAIL_SCENES, OUTING_ALTERNATES, GEAR, RELICS, FRAMES, MARKET_ITEMS, MARKET_REQUESTS, MARKET_RARITIES, visitorActFor } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
@@ -247,6 +248,7 @@ function applyMarketMove(snapshot,move){
 }
 export function marketSnapshot(state){
  const market=lifeState(state).market;if(!market)return null;
+ if(market.version===3)return errandSnapshot(market);
  const version=market.version===2?2:1,layout=marketLayout(market.seed,{version}),snapshot={...layout,seed:market.seed,version,step:0,buttons:MARKET_BUDGET,bag:[],traded:false,secret:false,complete:false,claimed:false};
  for(const move of market.moves){if(!applyMarketMove(snapshot,move))break;}
  // Damaged legacy/imported histories stop at the last legal decision.
@@ -255,29 +257,41 @@ export function marketSnapshot(state){
  snapshot.score=scoreMarket(snapshot.bag,snapshot.buttons,snapshot.requests,snapshot.secret);
  return snapshot;
 }
-export function startMarket(state,{replay=false,expanded=false}={}){
+export function startMarket(state,{replay=false,expanded=false,errands=false}={}){
  const l=lifeState(state);if(!state.pets.length||l.market&&!l.market.claimed)return false;
- const previous=l.market?.seed,version=replay&&previous?(l.market.version===2?2:1):(expanded?2:1);
+ const previous=l.market?.seed,version=replay&&previous?(l.market.version||1):(errands?3:expanded?2:1);
  if(!replay||!previous)l.marketSerial++;
  // Stable market numbers let players retry an identical planning puzzle.
  const seed=replay&&previous?previous:(Math.imul(l.marketSerial,2654435761)>>>0)||1;
- l.market={seed,moves:[],claimed:false,...(version===2?{version}: {})};return true;
+ const patrons=replay&&previous?l.market.patrons:state.pets.slice(0,3).map(p=>p.name);
+ l.market={seed,moves:[],claimed:false,...(version>=2?{version}: {}),...(version===3?{patrons}: {})};return true;
 }
 export function chooseMarket(state,pick,trade=null,{secret=false}={}){
  const l=lifeState(state),snapshot=marketSnapshot(state),move={pick,trade,...(secret?{secret:true}: {})};
- if(!snapshot||snapshot.complete||snapshot.claimed||!applyMarketMove(snapshot,move))return false;
+ if(!snapshot||snapshot.complete||snapshot.claimed||!(snapshot.version===3?applyErrandMove(snapshot,move):applyMarketMove(snapshot,move)))return false;
+ l.market.moves.push(move);return true;
+}
+export function deliverMarket(state,request,items){
+ const l=lifeState(state),snapshot=marketSnapshot(state),move={type:'deliver',request,items};
+ if(snapshot?.version!==3||snapshot.claimed||!applyErrandMove(snapshot,move))return false;
+ l.market.moves.push({type:'deliver',request,items:items.slice()});return true;
+}
+export function leaveMarket(state){
+ const l=lifeState(state),snapshot=marketSnapshot(state),move={type:'leave'};
+ if(snapshot?.version!==3||snapshot.claimed||!applyErrandMove(snapshot,move))return false;
  l.market.moves.push(move);return true;
 }
 export function claimMarket(state,now=Date.now()){
  const l=lifeState(state),snapshot=marketSnapshot(state);
  if(!snapshot?.complete||snapshot.claimed)return null;
- const score=snapshot.score,tier=score.total===bestMarketScore(snapshot.seed,{version:snapshot.version})?2:score.total>=17?1:0,relic=RELICS.find(r=>r.id==='market:'+tier);
- l.market.claimed=true;l.marketRuns++;l.marketBest=Math.max(l.marketBest,score.total);
+ const score=snapshot.score,done=score.fulfilled.filter(Boolean).length,tier=snapshot.version===3?(done===3?2:done===2?1:0):score.total===bestMarketScore(snapshot.seed,{version:snapshot.version})?2:score.total>=17?1:0,relic=RELICS.find(r=>r.id==='market:'+tier);
+ l.market.claimed=true;l.marketRuns++;
+ if(snapshot.version===3)l.marketErrandBest=Math.max(l.marketErrandBest||0,score.total);else l.marketBest=Math.max(l.marketBest,score.total);
  const fresh=!l.relics.includes(relic.id);
  if(fresh){l.relics.push(relic.id);l.xp+=4;if(l.displayed.length<3)l.displayed.push(relic.id);}
  const first=awardDiscovery(state,'game:market',3,now);dailyActivity(state,'market',now);l.introDone=true;
  const cast=state.pets.slice(0,2).map(p=>p.id),names=state.pets.slice(0,2).map(p=>p.name).join(' and ')||'The household';
- const text=names+' returned from the night market with '+snapshot.bag.length+' questionable purchase'+(snapshot.bag.length===1?'':'s')+' and '+score.fulfilled.filter(Boolean).length+' of 3 requests filled. '+(tier===2?'The vendors applauded. One of them checked for missing buttons.':tier===1?'The household calls this careful budgeting. The receipt calls it three objects in a bag.':'The bag has been presented as an artistic statement. This is why nobody lets the bag speak.')+' '+relic.line;
+ const text=snapshot.version===3?names+' delivered '+done+' of 3 household errands and brought home '+snapshot.buttons+' buttons. '+(done===3?'Everyone got what they asked for. They are meeting to decide what they meant.':done?'The completed errands are pleased. The others have requested your manager.':'They brought the list back. The list was not one of the errands.')+' '+snapshot.receipts.map(r=>snapshot.requests.find(q=>q.id===r.request).delivered).join(' '):names+' returned from the night market with '+snapshot.bag.length+' questionable purchase'+(snapshot.bag.length===1?'':'s')+' and '+score.fulfilled.filter(Boolean).length+' of 3 requests filled. '+(tier===2?'The vendors applauded. One of them checked for missing buttons.':tier===1?'The household calls this careful budgeting. The receipt calls it three objects in a bag.':'The bag has been presented as an artistic statement. This is why nobody lets the bag speak.')+' '+relic.line;
  recordScene(state,'market','The Unlicensed Night Market',text,cast,now,{key:'market',object:relic.id});addNote(state,text,'the night market','scheme');
  return {score,relic,fresh,first};
 }
@@ -287,6 +301,7 @@ export function claimMarket(state,now=Date.now()){
 // No solution or advice is revealed before the player's first attempt ends.
 const marketBestCache=new Map();
 export function bestMarketScore(seed,{version=1}={}){
+ if(version===3)return bestErrandScore(seed);
  const cacheKey=seed+':'+version;if(marketBestCache.has(cacheKey))return marketBestCache.get(cacheKey);
  const layout=marketLayout(seed,{version}),seen=new Map();let best=0;
  function visit(s){

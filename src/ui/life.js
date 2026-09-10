@@ -1,4 +1,4 @@
-import { lifeState, useProject, returnFromMission, favoriteFor, outingPreview, outingSnapshot, outingTrail, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
+import { lifeState, useProject, returnFromMission, favoriteFor, outingPreview, outingSnapshot, outingTrail, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, deliverMarket, leaveMarket, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
 import { OUTINGS, GEAR, RELICS, FRAMES } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
 import { startCourt, currentCourt, courtAction, finishCourt } from '../engine/court.js';
@@ -110,10 +110,10 @@ export function initLife(state,refresh) {
   content.querySelector('.market-heading h3,.market-results h3')?.focus({preventScroll:true});
  }
 
- let courtLevel=0,courtHostId='';
+ let courtLevel=1,courtHostId='';
  function courtAnnounce(text){let node=veil.querySelector('.court-announcement');if(!node){node=document.createElement('span');node.className='court-announcement sr-only';node.setAttribute('role','status');node.setAttribute('aria-live','polite');node.setAttribute('aria-atomic','true');veil.querySelector('.sheet').appendChild(node);}node.textContent=text;}
  function courtStart(level=courtLevel,fresh=false){
-  const options={level,petId:courtHostId||state.pets[0]?.id};court=fresh?startCourt(state,options):currentCourt(state)||startCourt(state,options);if(!court)return;
+  const options={level,reworked:true,petId:courtHostId||state.pets[0]?.id};court=fresh?startCourt(state,options):currentCourt(state)||startCourt(state,options);if(!court)return;
   courtLevel=court.level;open('Shelf Court');save();courtPaint('#courtCaseTitle,#courtVerdictTitle');courtAnnounce(courtHearing(court).line);
  }
  function courtPaint(focusSelector,resetPanel=false){
@@ -181,15 +181,20 @@ export function initLife(state,refresh) {
   }
   if(action==='finish-outing'){finishOuting(state);refresh();display();return;}
   if(action==='market'){marketTrade='';marketAction=null;marketSelection='';marketPanel='';market();focusMarketProgress();return;}
-  if(action==='market-start'||action==='market-retry'){if(startMarket(state,{replay:action==='market-retry',expanded:true})){marketTrade='';marketAction=null;marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
+  if(action==='market-start'||action==='market-retry'){if(startMarket(state,{replay:action==='market-retry',errands:true})){marketTrade='';marketAction=null;marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
   if(action==='market-select'){const m=marketSnapshot(state);if(!m||m.complete||!m.stalls[m.step].some(item=>item.id===b.dataset.id))return;const scroll=content.querySelector('.adventure-scroll')?.scrollTop||0;marketSelection=b.dataset.id;market();const pane=content.querySelector('.adventure-scroll');if(pane)pane.scrollTop=scroll;content.querySelector('[data-life="market-select"][data-id="'+marketSelection+'"]')?.focus({preventScroll:true});return;}
   if(action==='market-panel'){const panel=b.dataset.panel||'';if(!['','requests','bag','route'].includes(panel))return;marketPanel=panel===marketPanel?'':panel;market();content.querySelector('.adventure-scroll')?.scrollTo({top:0});(content.querySelector('.market-context-panel')||content.querySelector('.market-heading h3'))?.focus({preventScroll:true});return;}
+  if(action==='market-deliver'||action==='market-leave'){
+   const ok=action==='market-deliver'?deliverMarket(state,b.dataset.request,(b.dataset.items||'').split(',')):leaveMarket(state);
+   if(ok){marketTrade='';marketSelection='';marketAction=null;save();refresh();market();focusMarketProgress();}return;
+  }
   if(action==='market-buy'||action==='market-pass'||action==='market-secret'){const before=marketSnapshot(state);if(chooseMarket(state,action==='market-buy'?b.dataset.id:null,action==='market-buy'?marketTrade||null:null,{secret:action==='market-secret'})){marketAction={kind:action.slice(7),step:before.step,item:before.stalls[before.step].find(item=>item.id===b.dataset.id)};marketTrade='';marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
   if(action==='court'){courtStart();return;}
   if(action==='court-new'){courtStart(courtLevel,true);return;}
   if(action==='court-clue'){
    if(!court||court.claimed)return;const clue=Number(b.dataset.clue),rule=court.rules[clue];if(!rule)return;
    courtAction(state,{type:'focus',statement:clue,evidence:rule.first.axis});
+   if(court.version===3){for(const atom of [rule.first,rule.second].filter(Boolean))courtAction(state,{type:'inspect',evidence:atom.axis});court=currentCourt(state);courtResponse(court,{kind:'inspect',speaker:'Court examiner',text:court.clues[clue]});save();courtPaint('#courtPanelTitle');courtAnnounce(courtHearing(court).line);return;}
    if(!court.inspected.includes(rule.first.axis))courtMove({type:'inspect',evidence:rule.first.axis},'#courtPanelTitle');
    else{court=currentCourt(state);save();courtPaint('#courtPanelTitle');}return;
   }

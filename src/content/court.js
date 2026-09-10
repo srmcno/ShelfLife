@@ -3,8 +3,8 @@
 const axis = (name, values) => ({ name, values });
 export const COURT_LEVELS = [
  { name:'Cozy', summary:'3 suspects · 2 direct clues', instructions:'Find the only suspect who fits both exhibits. Read at your own pace; there is no timer.' },
- { name:'Curious', summary:'4 suspects · 3 clues, including exclusions', instructions:'Some evidence tells you what the culprit did not have. The answer must fit every exhibit.' },
- { name:'Tangled', summary:'4 suspects · either/or and conditional clues', instructions:'Exactly one means one statement is true, never both. An “if” rule only rules somebody out when its first part is true and its second part is false.' }
+ { name:'Curious', summary:'4 suspects · exclusions and inclusive either/or', instructions:'Some evidence excludes a fact; an inclusive either/or allows one or both. The answer must fit every exhibit.' },
+ { name:'Tangled', summary:'4 suspects · linked observations and conditionals', instructions:'Exactly one means one statement is true, never both. An “if” rule only rules somebody out when its first part is true and its second part is false.' }
 ];
 export const COURT_CASES = [
  { title:'The biscuit with a bite missing', intro:'Half a biscuit has been eaten. The surviving half has retained counsel. The heirs are arguing over what is left.', object:'The biscuit',

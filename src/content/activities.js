@@ -5,7 +5,7 @@ export const ACTIVITIES = [
   { id: 'alibi', title: 'The Alibi', kind: 'Deduction', time: 'No timer', icon: 'eye', line: 'Three statements. An impressive disregard for facts.', detail: 'Find the lie, select the shelf record that disproves it, then present your accusation. Casual play and an untimed evidence notebook.', mode: 'alibi' },
   { id: 'outing', title: 'Beyond the shelf', kind: 'Adventure', time: '3 decisions', icon: 'map', line: 'Bring a friend. It improves your odds of being the survivor.', detail: 'Recover two distinct parts to build a Button Lift, Midnight Larder or Thimble Bath. Ration nerve, pack the right tool, and return home when the objective is secured. Parts persist between trips.', life: 'outing' },
   { id: 'court', title: 'Shelf Court', kind: 'Detective', time: 'No timer', icon: 'scales', line: 'Presumed innocent. Deeply resented for it.', detail: 'Inspect the crime clues, compare each suspect’s verified facts and clear anyone who conflicts with a clue. Accuse the one who fits every clue. No timer; mistakes are explained and progress is saved.', life: 'court' },
-  { id: 'market', title: 'The Night Market', kind: 'Strategy', time: '6 stalls', icon: 'market', line: 'Estate sale. The estate is still screaming.', detail: 'Balance three bag spaces, shopping requests and rare stock. Trade one purchase or sell a secret for extra buttons and a reputation cost.', life: 'market' }
+  { id: 'market', title: 'The Night Market', kind: 'Strategy', time: '6 stalls', icon: 'market', line: 'Three errands. One very opinionated bag.', detail: 'Buy pairs for household errands. Deliver them to free bag space and earn shopping money. Plan across six stalls.', life: 'market' }
 ];
 
 // Use completed games across the household, including legacy saves. A stamp
@@ -40,5 +40,5 @@ export function activityRecord(activity, state, pet) {
   if (activity.id === 'outing') return life.outing ? 'Expedition in progress · resume anytime' : count(life.outings || 0, 'expedition') + ' completed';
   if (activity.id === 'court') return life.court && !life.court.claimed ? 'Case in progress · resume anytime' : count(life.courtWins || 0, 'case') + ' solved' + (life.courtBest ? ' · best ' + life.courtBest : '');
   return life.market && !life.market.claimed ? 'Shopping trip in progress · resume anytime' :
-    (life.marketRuns ? count(life.marketRuns, 'trip') + ' · best haul ' + (life.marketBest || 0) : 'Your first questionable purchase awaits');
+    (life.marketRuns ? count(life.marketRuns, 'trip') + (life.marketErrandBest ? ' · errand best ' + life.marketErrandBest : ' · legacy best ' + (life.marketBest || 0)) : 'Your first questionable purchase awaits');
 }

@@ -3,7 +3,7 @@ export function blankLife() {
   return { v:1, introDone:false, introStarted:false, xp:0, day:'', daily:[], awards:[], scenes:[], serial:0,
     relics:[], displayed:[], frame:'wood', visitorEpisodes:{}, outing:null, outings:0, projects:[], projectParts:{},
     court:null, courtWins:0, courtPlays:0, courtBest:0, lastSeen:0, recap:[], blueprints:[],
-    market:null, marketSerial:0, marketRuns:0, marketBest:0 };
+    market:null, marketSerial:0, marketRuns:0, marketBest:0, marketErrandBest:0 };
 }
 const obj = x => x && typeof x === 'object' && !Array.isArray(x);
 const number = (x, max=1e9) => Number.isFinite(x) ? Math.max(0,Math.min(max,Math.floor(x))) : 0;
@@ -11,7 +11,7 @@ export function normalizeLife(raw, established=false) {
   const s = Object.assign(blankLife(), obj(raw) ? raw : {});
   s.introDone = raw ? s.introDone === true : established;
   s.v=1; s.introStarted=s.introStarted===true;
-  for (const k of ['xp','serial','outings','courtWins','courtPlays','courtBest','lastSeen','marketSerial','marketRuns','marketBest']) s[k]=number(s[k],k==='lastSeen'?1e14:1e9);
+  for (const k of ['xp','serial','outings','courtWins','courtPlays','courtBest','lastSeen','marketSerial','marketRuns','marketBest','marketErrandBest']) s[k]=number(s[k],k==='lastSeen'?1e14:1e9);
   s.day=typeof s.day==='string'?s.day.slice(0,10):'';
   s.projects=[...new Set((Array.isArray(s.projects)?s.projects:[]).filter(id=>['drawer','fridge','cupboard'].includes(id)))];
   s.projectParts=Object.fromEntries(['drawer','fridge','cupboard'].map(id=>[id,[...new Set((Array.isArray(s.projectParts?.[id])?s.projectParts[id]:[]).filter(i=>Number.isInteger(i)&&i>=0&&i<3))]]));
@@ -38,18 +38,24 @@ export function normalizeLife(raw, established=false) {
   }
   // Only the seed and choices are saved. Prices, bag contents and the score are
   // replayed by the market engine, so stale or edited counters cannot mint prizes.
-  if (!obj(s.market)||!Number.isInteger(s.market.seed)||s.market.seed<1||s.market.seed>4294967295||!Array.isArray(s.market.moves)||s.market.moves.length>6) s.market=null;
+  if (!obj(s.market)||!Number.isInteger(s.market.seed)||s.market.seed<1||s.market.seed>4294967295||!Array.isArray(s.market.moves)||s.market.moves.length>(s.market.version===3?10:6)) s.market=null;
   else {
-    const moves=[];
+    const moves=[],version=s.market.version===3?3:s.market.version===2?2:1;
     for(const move of s.market.moves){
-      if(!obj(move)||!(move.pick===null||typeof move.pick==='string'&&/^[a-z-]{1,30}$/.test(move.pick))||!(move.trade===null||typeof move.trade==='string'&&/^[a-z-]{1,30}$/.test(move.trade)))break;
-      moves.push({pick:move.pick,trade:move.trade,...(s.market.version===2&&move.secret===true?{secret:true}:{})});
+      if(!obj(move))break;
+      if(version===3&&move.type==='deliver'){
+        if(!/^errand-[0-2]$/.test(move.request)||!Array.isArray(move.items)||move.items.length!==2||move.items.some(id=>typeof id!=='string'||!/^[a-z-]{1,30}$/.test(id)))break;
+        moves.push({type:'deliver',request:move.request,items:move.items.slice()});continue;
+      }
+      if(version===3&&move.type==='leave'){moves.push({type:'leave'});continue;}
+      if(move.type!==undefined||version===3&&move.secret||!(move.pick===null||typeof move.pick==='string'&&/^[a-z-]{1,30}$/.test(move.pick))||!(move.trade===null||typeof move.trade==='string'&&/^[a-z-]{1,30}$/.test(move.trade)))break;
+      moves.push({pick:move.pick,trade:move.trade,...(version===2&&move.secret===true?{secret:true}:{})});
     }
-    s.market={seed:s.market.seed,moves,claimed:s.market.claimed===true&&moves.length===6,...(s.market.version===2?{version:2}:{})};
+    s.market={seed:s.market.seed,moves,claimed:s.market.claimed===true&&(version===3?moves.at(-1)?.type==='leave':moves.length===6),...(version>=2?{version}:{}),...(version===3?{patrons:(Array.isArray(s.market.patrons)?s.market.patrons:[]).filter(n=>typeof n==='string').slice(0,3).map(n=>n.slice(0,40))}:{})};
   }
   // Court stores identity snapshots and a bounded legal-action log. Testimony,
   // evidence, guilt and ranks are reconstructed by the seeded engine on load.
-  if(!obj(s.court)||s.court.version!==2||!Number.isInteger(s.court.seed)||s.court.seed<1||s.court.seed>4294967295||!Number.isInteger(s.court.caseIndex)||s.court.caseIndex<0||s.court.caseIndex>=12||!Number.isInteger(s.court.level)||s.court.level<0||s.court.level>2||!Array.isArray(s.court.cast)||!Array.isArray(s.court.moves))s.court=null;
+  if(!obj(s.court)||![2,3].includes(s.court.version)||!Number.isInteger(s.court.seed)||s.court.seed<1||s.court.seed>4294967295||!Number.isInteger(s.court.caseIndex)||s.court.caseIndex<0||s.court.caseIndex>=12||!Number.isInteger(s.court.level)||s.court.level<0||s.court.level>2||!Array.isArray(s.court.cast)||!Array.isArray(s.court.moves))s.court=null;
   else {
     const c=s.court,cast=c.cast.filter(p=>obj(p)&&typeof p.id==='string'&&p.id.length>0&&p.id.length<=80&&typeof p.name==='string').slice(0,4).map(p=>({id:p.id,name:p.name.slice(0,40)}));
     if(!cast.length||new Set(cast.map(p=>p.id)).size!==cast.length||typeof c.petId!=='string'||!cast.some(p=>p.id===c.petId))s.court=null;
@@ -64,7 +70,7 @@ export function normalizeLife(raw, established=false) {
         if(!valid)break;moves.push(clean);
       }
       const ui=obj(c.ui)?c.ui:{};
-      s.court={version:2,seed:c.seed,caseIndex:c.caseIndex,level:c.level,cast,petId:c.petId,moves,claimed:c.claimed===true&&moves.at(-1)?.type==='file',ui:{chapter:['investigation','hearing','verdict'].includes(ui.chapter)?ui.chapter:'investigation',witness:Number.isInteger(ui.witness)&&ui.witness>=0&&ui.witness<4?ui.witness:null,statement:Number.isInteger(ui.statement)&&ui.statement>=0&&ui.statement<3?ui.statement:null,exhibit:Number.isInteger(ui.exhibit)&&ui.exhibit>=0&&ui.exhibit<3?ui.exhibit:null}};
+      s.court={version:c.version,seed:c.seed,caseIndex:c.caseIndex,level:c.level,cast,petId:c.petId,moves,claimed:c.claimed===true&&moves.at(-1)?.type==='file',ui:{chapter:['investigation','hearing','verdict'].includes(ui.chapter)?ui.chapter:'investigation',witness:Number.isInteger(ui.witness)&&ui.witness>=0&&ui.witness<4?ui.witness:null,statement:Number.isInteger(ui.statement)&&ui.statement>=0&&ui.statement<3?ui.statement:null,exhibit:Number.isInteger(ui.exhibit)&&ui.exhibit>=0&&ui.exhibit<3?ui.exhibit:null}};
       // Display-only reward totals are never paid by reconstruction.
       if(s.court.claimed&&obj(c.reward))s.court.reward={bond:number(c.reward.bond,1),fuss:number(c.reward.fuss,16)};
     }

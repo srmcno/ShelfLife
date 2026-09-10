@@ -1,3 +1,4 @@
+import { COURT_BANTER } from '../content/court-banter.js';
 import { addNote, clamp, grantBonusTrust } from '../state.js';
 import { playWait } from './play.js';
 import { tick, isAsleep } from './tick.js';
@@ -17,6 +18,8 @@ export function courtRuleFits(facts, rule) {
  const first=matches(facts,rule.first),second=rule.second?matches(facts,rule.second):false;
  if(rule.type==='is')return first;
  if(rule.type==='not')return !first;
+ if(rule.type==='or')return first||second;
+ if(rule.type==='same')return first===second;
  if(rule.type==='xor')return first!==second;
  if(rule.type==='if')return !first||second;
  return false;
@@ -31,6 +34,8 @@ function ruleText(axes,rule) {
  const a=atomText(axes,rule.first),b=rule.second?atomText(axes,rule.second):'';
  if(rule.type==='is')return 'The culprit '+a+'.';
  if(rule.type==='not')return 'The culprit did not fit this observation: “'+a+'”.';
+ if(rule.type==='or')return 'At least one of these was true of the culprit: “'+a+'” or “'+b+'”. Both is allowed.';
+ if(rule.type==='same')return 'For the culprit, these observations were either both true or both false: “'+a+'” and “'+b+'”.';
  if(rule.type==='xor')return 'Exactly one of these was true of the culprit: “'+a+'” or “'+b+'”. Not both.';
  return 'If the culprit '+a+', they also '+b+'.';
 }
@@ -38,6 +43,8 @@ function ruleHelp(axes,rule) {
  const a=atomText(axes,rule.first),b=rule.second?atomText(axes,rule.second):'';
  if(rule.type==='is')return 'Keep anybody whose record says “'+a+'”. A match to this exhibit alone is not proof.';
  if(rule.type==='not')return 'Rule out anybody whose record says “'+a+'”. Everyone with a different observation still fits this exhibit.';
+ if(rule.type==='or')return 'One or two matches fit. This exhibit excludes only somebody matching neither observation.';
+ if(rule.type==='same')return 'Two matches fit, and zero matches fit. Exactly one match contradicts this exhibit.';
  if(rule.type==='xor')return 'Check “'+a+'” and “'+b+'” separately. One match fits; zero matches or two matches do not.';
  return 'This rule excludes only somebody who '+a+' but did not fit “'+b+'”. If the first part is false, this exhibit does not rule them out.';
 }
@@ -46,13 +53,21 @@ function contradiction(axes,facts,rule) {
  if(rule.type==='is')return 'Their record says “'+actual+'”; this exhibit requires “'+a+'”.';
  if(rule.type==='not')return 'Their record includes “'+a+'”, which this exhibit explicitly rules out.';
  const b=atomText(axes,rule.second);
+ if(rule.type==='or')return 'Their record matches neither “'+a+'” nor “'+b+'”. At least one is required.';
+ if(rule.type==='same')return 'Their record matches only one of “'+a+'” and “'+b+'”. This exhibit requires both to be true or both to be false.';
  if(rule.type==='xor')return 'Their record matches '+(matches(facts,rule.first)?'both':'neither')+' of “'+a+'” and “'+b+'”. This exhibit allows exactly one.';
  return 'They '+a+', but their record says “'+axes[rule.second.axis].values[facts[rule.second.axis]]+'” instead of “'+b+'”. That breaks the if/then rule.';
 }
-function makeRules(level,rng) {
+function makeRules(level,rng,reworked=false) {
  const axes=shuffle([0,1,2],rng),values=axes.map(()=>shuffle([0,1,2],rng));
  const atom=(axis,value)=>({axis:axes[axis],value:values[axis][value]});
  if(level===0)return [{type:'is',first:atom(0,0)},{type:'is',first:atom(1,0)}];
+ if(reworked&&level>0){
+  const variant=draw(rng,3);
+  if(level===1&&variant===0)return shuffle([{type:'or',first:atom(0,0),second:atom(1,0)},{type:'not',first:atom(0,1)},{type:'is',first:atom(2,0)}],rng);
+  if(level===2&&variant===1)return shuffle([{type:'same',first:atom(0,0),second:atom(1,0)},{type:'not',first:atom(0,1)},{type:'is',first:atom(2,0)}],rng);
+  if(level===2&&variant===2)return shuffle([{type:'or',first:atom(0,0),second:atom(1,0)},{type:'if',first:atom(0,0),second:atom(2,0)},{type:'not',first:atom(2,1)}],rng);
+ }
  if(level===1)return shuffle([{type:'not',first:atom(0,0)},{type:'is',first:atom(1,0)},{type:'not',first:atom(2,0)}],rng);
  return shuffle([{type:'xor',first:atom(0,0),second:atom(1,0)},{type:'if',first:atom(2,0),second:atom(0,0)},{type:'not',first:atom(1,1)}],rng);
 }
@@ -61,7 +76,7 @@ export function newCourt(state,rng=Math.random,options={}) {
  const l=lifeState(state),caseIndex=Number.isInteger(options.caseIndex)?clamp(options.caseIndex,0,COURT_CASES.length-1):l.courtPlays%COURT_CASES.length,d=COURT_CASES[caseIndex],trial=COURT_TRANSCRIPTS[caseIndex];
  // Challenge is a player choice, never a punishment for doing well.
  const level=Number.isInteger(options.level)?clamp(options.level,0,2):0;
- const rules=makeRules(level,rng),valid=ALL_FACTS.filter(f=>rules.every(r=>courtRuleFits(f,r)));
+ const rules=makeRules(level,rng,options.reworked),valid=ALL_FACTS.filter(f=>rules.every(r=>courtRuleFits(f,r)));
  const answerFacts=valid[draw(rng,valid.length)].slice();
  // One innocent fails each distinct exhibit while fitting every other one.
  // Consequently the whole dossier is necessary, yet exactly one answer fits.
@@ -73,7 +88,7 @@ export function newCourt(state,rng=Math.random,options={}) {
  const cast=shuffle(state.pets,rng).slice(0,count).map(p=>({id:p.id,name:p.name}));
  const standins=shuffle(['The Reflection','The Unclaimed Sock','A Passing Crumb','The Spare Button'],rng);
  while(cast.length<count)cast.push({id:'witness-'+cast.length,name:standins[cast.length-state.pets.length]||standins[cast.length%standins.length]});
- const defences=shuffle(COURT_DEFENCES,rng);
+ const defences=shuffle(options.reworked?COURT_BANTER[caseIndex].lines:COURT_DEFENCES,rng);
  return {kind:'court',caseIndex,petId:state.pets[0]?.id,level,difficulty:COURT_LEVELS[level].name,instructions:COURT_LEVELS[level].instructions,
   title:d.title,intro:d.intro,object:d.object,axes:d.axes,rules,trial,
   evidenceTitles:rules.map(r=>r.second?trial.reconstruction:trial.exhibits[r.first.axis]),
@@ -90,9 +105,9 @@ const respond = (game,kind,speaker,text) => {
  return response;
 };
 function investigativeCourt(saved) {
- const rng=seeded(saved.seed),game=newCourt({pets:saved.cast,life:{courtPlays:saved.caseIndex}},rng,{level:saved.level,caseIndex:saved.caseIndex});
+ const rng=seeded(saved.seed),game=newCourt({pets:saved.cast,life:{courtPlays:saved.caseIndex}},rng,{level:saved.level,caseIndex:saved.caseIndex,reworked:saved.version===3});
  const story=COURT_INVESTIGATIONS[game.caseIndex],motives=shuffle(story.motives,rng);
- Object.assign(game,{version:2,petId:saved.petId,scene:story.scene,phase:'investigation',inspected:[],questioned:[],pressed:[],exposures:[],attempts:[],comparisons:[],eliminations:[],rejected:[],mistakes:0,appeals:0,canFile:false,ui:{chapter:'investigation',witness:null,statement:null,exhibit:null}});
+ Object.assign(game,{version:saved.version,petId:saved.petId,scene:story.scene,phase:'investigation',inspected:[],questioned:[],pressed:[],exposures:[],attempts:[],comparisons:[],eliminations:[],rejected:[],mistakes:0,appeals:0,canFile:false,ui:{chapter:'investigation',witness:null,statement:null,exhibit:null}});
  // Each account contains exactly one falsifiable claim. It is not safe to
  // convict from testimony alone; the physical record can contradict it.
  game.witnesses=game.suspects.map((suspect,i)=>{
@@ -109,15 +124,16 @@ function investigativeCourt(saved) {
  return game;
 }
 function syncCourt(game) {
- const allClues=game.sceneEvidence.every(e=>!e.clues.length||game.inspected.includes(e.id));
+ const needed=[...new Set(game.rules.flatMap(r=>[r.first,...(game.version===3&&r.second?[r.second]:[])].map(a=>a.axis)))];
+ const allClues=needed.every(axis=>game.inspected.includes(axis));
  // Guilt follows from the crime evidence. Unrelated dishonest testimony is
  // optional character business, never a second prerequisite for a conviction.
  game.canFile=allClues&&validIndex(game.selection,game.suspects.length)&&!game.rejected.includes(game.selection)&&!game.eliminations.includes(game.selection)&&!game.claimed;
  game.phase=game.claimed?'verdict':allClues&&game.exposures.length?'verdict':game.inspected.length||game.questioned.length?'hearing':'investigation';
  game.caseBoard={examined:game.inspected.length,totalEvidence:game.sceneEvidence.length,cluesReady:allClues,exposed:game.exposures.length,
-  missing:game.sceneEvidence.filter(e=>e.clues.length&&!game.inspected.includes(e.id)).map(e=>e.id),rejected:game.rejected.slice()};
+  missing:needed.filter(axis=>!game.inspected.includes(axis)),rejected:game.rejected.slice()};
  game.stats={contradictions:game.exposures.length,eliminations:game.eliminations.length,mistakes:game.mistakes,appeals:game.appeals};
- game.rank=game.appeals?'Case salvaged':game.mistakes?'Relentless counsel':game.exposures.length===game.suspects.length?'The full autopsy':'Evidence with teeth';
+ game.rank=game.appeals?'Case salvaged':game.mistakes?'Relentless counsel':game.version===3?(game.eliminations.length===game.suspects.length-1?'Every innocent accounted for':'A sound deduction'):game.exposures.length===game.suspects.length?'The full autopsy':'Evidence with teeth';
  return game;
 }
 function applyCourtMove(game,move) {
@@ -125,13 +141,14 @@ function applyCourtMove(game,move) {
  const {type,suspect,statement,evidence}=move,witness=game.witnesses[suspect];
  if(type==='compare'){
   const rule=game.rules[evidence],key=suspect+':'+evidence;
-  if(!validIndex(suspect,game.suspects.length)||!rule||!game.inspected.includes(rule.first.axis)||game.comparisons.includes(key))return null;
+  if(!validIndex(suspect,game.suspects.length)||!rule||![rule.first,...(game.version===3&&rule.second?[rule.second]:[])].every(a=>game.inspected.includes(a.axis))||game.comparisons.includes(key))return null;
   game.comparisons.push(key);
   const fits=courtRuleFits(game.suspects[suspect].facts,rule),name=game.suspects[suspect].name;
   if(!fits){
    if(!game.eliminations.includes(suspect))game.eliminations.push(suspect);
-   return respond(game,'sustained','Judge Mortis',name+' is cleared. '+contradiction(game.axes,game.suspects[suspect].facts,rule)+' The jury has removed them from its dinner plans.');
+   return respond(game,'sustained','Judge Mortis',name+' is cleared. '+contradiction(game.axes,game.suspects[suspect].facts,rule)+' '+(game.version===3?COURT_BANTER[game.caseIndex].cleared:'The jury has removed them from its dinner plans.'));
   }
+  if(game.version===3)game.mistakes++;
   return respond(game,'overruled','Judge Mortis',name+' fits this clue, so it cannot clear them. Check another clue. Matching one fact does not prove guilt; the culprit must match all '+game.rules.length+'.');
  }
  if(type==='inspect'){
@@ -204,7 +221,7 @@ export function startCourt(state,options={},rng=Math.random) {
  const level=Number.isInteger(options.level)?clamp(options.level,0,2):0;
  const caseIndex=Number.isInteger(options.caseIndex)?clamp(options.caseIndex,0,COURT_CASES.length-1):l.courtPlays%COURT_CASES.length;
  const host=state.pets.find(p=>p.id===options.petId)||state.pets[0],cast=[host,...state.pets.filter(p=>p!==host)].slice(0,4).map(p=>({id:p.id,name:p.name}));
- l.court={version:2,seed:1+draw(rng,4294967295),level,caseIndex,cast,petId:host.id,moves:[],claimed:false,ui:{chapter:'investigation',witness:null,statement:null,exhibit:null}};
+ l.court={version:options.reworked?3:2,seed:1+draw(rng,4294967295),level,caseIndex,cast,petId:host.id,moves:[],claimed:false,ui:{chapter:'investigation',witness:null,statement:null,exhibit:null}};
  return currentCourt(state);
 }
 export function currentCourt(state) {

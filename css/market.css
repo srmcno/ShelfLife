@@ -66,3 +66,12 @@
  #lifeVeil .market-workspace.phase-playing .market-offer-pick{min-height:96px;padding:9px 8px}
  #lifeVeil .market-workspace.phase-playing .market-offer-pick>b{font-size:16px}
 }
+
+/* The list stays visible while browsing; deliveries are explicit transactions. */
+.market-errand-list{display:grid;gap:6px;margin:12px 0}
+.market-errand-list p{display:flex;justify-content:space-between;gap:12px;margin:0;padding:8px 10px;background:var(--glass);border:1px solid var(--hair-lit);border-radius:8px;font-size:12px}
+.market-errand-list b{min-width:0}.market-errand-list span{flex-shrink:0;color:var(--mint)}
+.market-request p{font-size:13px;line-height:1.5;margin:8px 0}
+.market-request .btn{width:100%;min-height:44px;white-space:normal;text-align:left;line-height:1.4;margin-top:8px}
+.market-delivery-comedy{color:var(--ink)}
+@media(max-width:480px){.market-errand-list p{flex-direction:column;gap:3px}.market-context-nav .btn{font-size:12px}.market-action-dock .btn{white-space:normal}}

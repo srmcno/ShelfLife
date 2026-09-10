@@ -1,3 +1,4 @@
+import { marketErrandMarkup } from './market-errands.js';
 import { MARKET_TAGS, MARKET_STALLS, RELICS } from '../content/life.js';
 import { bestMarketScore, scoreMarket } from '../engine/life.js';
 import { curioSVG } from '../art/curios.js';
@@ -26,6 +27,7 @@ export function marketSelectedOffer(m,selection='',trade=''){
  return stock.find(i=>i.id===selection)||stock.find(i=>i.cost<=buttons)||stock[0]||null;
 }
 export function marketMarkup(state,m,trade='',lastAction=null,selection='',panel=''){
+ if(!m||m.version===3)return marketErrandMarkup(state,m,trade,selection,panel,{workspace:marketWorkspace,stage:marketStage,select:marketSelectedOffer});
  const l=state.life;
  if(!m)return marketWorkspace('<div class="market-welcome"><span class="eyebrow">Six stalls · Ten buttons · No timer</span><h3>Leave before the digging starts.</h3>'+marketStage(0)+'<p>The household needs three pairs of things. You have room for three objects and ten buttons to spend.</p></div><ol class="market-rules"><li><b>Build a basket.</b> Buy one object at a stall or pass. Each request needs two separate objects, and one object can help with several requests.</li><li><b>Plan ahead.</b> The route book shows every object and price. Two stalls carry expensive rare keepsakes.</li><li><b>Change your mind once.</b> Trade one packed object for one button while buying its replacement.</li><li><b>Sell a secret, once.</b> Give up a stall’s stock for three buttons. The scandal costs three final points.</li></ol><div class="market-score-rule"><b>Your score</b><span>Charm + 4 per request + spare buttons − 3 if you sell a secret</span></div><p class="hint">Your choices are saved. No timer, real money or resident penalties.</p>',button('Enter the night market','market-start'),'planning');
  if(m.complete){

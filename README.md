@@ -13,6 +13,16 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
+## Market errands and stronger Court deductions
+
+New Night Market trips are household errands. Start with ten buttons, visit six stalls and carry up to three objects. Each of three errands asks for a pair of distinct objects. Deliver a matching pair through the porter: both objects leave the bag, two spaces open, and the household pays four buttons so shopping can continue. A delivered object cannot fulfil another errand. Deliveries are available between stalls and after the final purchase, before choosing to return home.
+
+The full route and every price are visible. Every generated route has a legal way to fulfil all three errands within the budget. Score is ten points per delivered errand plus buttons returned; purchases left in the bag earn nothing. One return, for one button while buying its replacement, remains available. New trips have no charm score or secret-selling penalty. Delivery receipts name the actual objects and the household's reaction to that errand. Vendor dialogue and item descriptions now respond to the shopping situation.
+
+New Court hearings start at Curious difficulty for a new player. Cozy remains available. The revised puzzles vary exclusions, inclusive either/or, exclusive either/or, conditional evidence and linked observations. Every case has exactly one culprit, and every clue is necessary. Compound exhibits inspect both factual sources. An unsupported attempt to clear someone costs five case points; repeating the same failed argument cannot charge twice, and explanations are free. Incorrect accusations remain recoverable. Suspect remarks and acquittals are specific to each of the twelve cases; exposing a lie is labelled “account corrected”, never “cleared”.
+
+In-progress older Court and Market games keep their original rules and deterministic replay. Existing saves, rewards, keepsakes and market records are preserved. New errand scores have a separate best record. The new version remains offline-capable and included in backup transfers.
+
 ## Court reasoning, restored Chase controls, and recovery missions
 
 Court now follows one deduction: inspect the crime clues, compare each suspect’s verified facts, clear anyone who conflicts with a clue, then accuse the one who fits all of them. Every visible exhibit participates in the solution. An unrelated lie no longer blocks a verdict. Comparisons, acquittals and saved cases retain their explanations. The courtroom has a substantial scene again; on portrait screens the scene and case file share one scrolling column above a persistent action dock.
@@ -29,7 +39,7 @@ The existing Handshake, Alibi, Night Market, household scenes and saved progress
 - **Midnight Run:** three 18-second Chase acts with contracts, two lasting upgrade decisions, telegraphed broom sweeps and a gold finale. Quick Chase remains available; run records and rewards are separate.
 - **Three handshake rituals:** Echo, reverse-order Mirror and alternating-beat Duet, with distinct records, stage lighting and exact challenge replay.
 - **Alibi with proof:** pair the false statement with its matching household record. Unsupported evidence cannot earn a clean win; casual spot-the-lie mode is available.
-- **Expedition wagers and market secrets:** optional route challenges reward careful resource choices. New markets include rare stock and a once-per-trip secret sale with a real score cost. Old trips keep their rules.
+- **Expedition wagers and market secrets:** optional route challenges reward careful resource choices. Earlier market trips include rare stock and a once-per-trip secret sale. Those saved trips keep their rules; new markets use the errand system described above.
 - **Scenes that follow the story:** each household scheme has its own objects and staged actions, selected from the recorded outcome. Visitors retain their actual appearance and returning expeditions show the relic they brought home. Replays have pause, manual steps and a finite ending; previews stay still.
 - **Darker writing throughout:** revised care notes, trait behavior, visitor arcs, testimony, game reactions and shopping outcomes.
 - **Phone navigation:** Shelf, Play, Notes, Stories and More are reachable from the bottom bar. Larger controls, remembered tab positions, readable sheets and a return to the Playroom after games reduce repeated navigation.
@@ -51,7 +61,7 @@ The app does not send email itself or require an account. A completed share acti
 - **Expeditions with decisions:** three stops, finite nerve and a single-use packed tool. Preview the trail, weigh safe progress against bold detours, and save your equipment for the right obstacle. Different editions, exact-trail replay and nine relics give each route something to revisit. Existing unfinished expeditions keep their original rules.
 - **Darker resident comedy:** sharper grudges, manipulative affection, mortal envy, macabre shopping stock and consequential trial testimony replace weaker whimsical and bureaucratic filler. Residents remain immortal; their histories and relationships stay intact.
 - **The Playroom:** one always-visible doorway to all six activities, with an accomplice picker, personal records and a six-activity household passport. Suggested activities prioritise saved expeditions and markets, then untried games. Completed practice counts. Press P when no dialog or form control is active.
-- **The Unlicensed Night Market:** a saved six-stall strategy game. Ten buttons, three bag spaces, previewable stock, shopping requests and one trade-in. Collect new curiosities, compare your haul with the best attainable score, and replay the same market or visit a new one.
+- **The Unlicensed Night Market:** a saved six-stall strategy game. Ten buttons, three bag spaces, previewable stock and three deliverable household errands. Collect new curiosities, compare your haul with the best attainable score, and replay the same market or visit a new one.
 - **Remix without losing the good bits:** pin a body, individual features or colours before using Surprise me. Undo and redo are available from the creator and its keyboard shortcuts.
 - **Better Crumb Chase practice:** select a side quest, repeat a course, track the next star and receive specific coaching after each run. Venue stars and score records retain their separate personal bests.
 - **A calmer interface:** no independently scrolling desktop case column, a scrollable settings drawer on short screens, and keyboard access to expandable details.
