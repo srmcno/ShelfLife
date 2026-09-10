@@ -162,7 +162,7 @@ export function advanceCase(state, choice = 'listen', now = Date.now()) {
       else if (!cooperative) p.needs.clean = clamp(p.needs.clean + 12, 0, 100);
     });
     const text = c.outcome + (cooperative ? (rewarded ? ' Witnesses gain 2 trust.' : ' This file’s trust was already earned; the shared history remains.') : ' The clean-up gives witnesses +12 cleanliness.');
-    recordScene(state,'case',definition.title,text,c.cast.map(p=>p.id),now);
+    recordScene(state,'case',definition.title,text,c.cast.map(p=>p.id),now,{key:'case:'+definition.id,branch:cooperative?'good':'messy'});
     remember(state, definition.title, text, now, 'case'); addNote(state, text, 'case closed', 'scheme');
   } else {
     addNote(state, caseText(state), 'case file · ' + (c.beat + 1) + '/6', 'scheme');
@@ -232,7 +232,7 @@ export function welcomeVisitor(state, hostId, choice, now = Date.now()) {
   v.response = text;
   const life=lifeState(state);
   if (awardDiscovery(state, "guest:"+v.kind, 3, now) && life.displayed.length<3) life.displayed.push(v.kind);
-  recordScene(state,"visitor",definition.name+" has come calling",text,[host.id],now);
+  recordScene(state,"visitor",definition.name+" has come calling",text,[host.id],now,{key:'visitor',guest:definition.id,branch:choice});
   remember(state, 'An unusual souvenir', text, now, 'visitor'); addNote(state, text, definition.name, 'arrival'); return true;
 }
 export function advanceStories(state, now = Date.now(), rng = Math.random) {

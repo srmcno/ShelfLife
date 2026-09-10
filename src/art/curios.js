@@ -23,7 +23,7 @@ const ink={
  scarf:'<path d="M9 35q31-14 62 0l-3 15q-31-13-56 0Z" fill="#b991ae"/><path d="M18 44v23l13 3V43" fill="#b991ae"/><path d="M15 32v16m12-19v15m14-16v14m14-12v14M19 66v7m6-7v7" stroke="#ead5b0"/>'
 };
 const guestShape={moth:'moon',lint:'crown',bell:'bell',undertow:'paper',widow:'button',spore:'portrait',tooth:'medal',echo:'echo',needle:'needle',clock:'clock',receipt:'receipt',rain:'rain'};
-export function curioSVG(id) {
- const shape=guestShape[id]||id;
+export function curioSVG(id, {literal=false}={}) {
+ const shape=literal?id:guestShape[id]||id;
  return '<svg viewBox="0 0 80 80" class="curio-art" aria-hidden="true" fill="none" stroke="#312637" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ink[shape]||ink.key)+'</svg>';
 }

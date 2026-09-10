@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { activityPassport } from '../src/content/activities.js';
+import { activityPassport, activityRecord } from '../src/content/activities.js';
 import { blankState, normalizeState } from '../src/state.js';
 
 test('the household passport recognises completed practice and legacy history without changing saves', () => {
@@ -40,4 +40,18 @@ test('a full losing chase still earns the tried stamp through its saved result',
   const p = activityPassport({ pets:[{ chaseRecords:{ standard:{ score:85, stars:1 } } }], life:{} });
   assert.equal(p.stamps.find(s => s.id === 'chase').earned, true);
   assert.equal(p.next, 'memory');
+});
+
+test('an unfinished hearing is resumable and a verdict returns the next suggestion to other activities', () => {
+  const state={pets:[{id:'a'}],life:{court:{claimed:false},outing:{step:1}}};
+  assert.equal(activityPassport(state).next,'court');
+  assert.equal(activityPassport(state).resume,true);
+  assert.match(activityRecord({id:'court'},state,state.pets[0]),/Case in progress/);
+  state.life.court.claimed=true;
+  assert.equal(activityPassport(state).next,'outing');
+});
+
+test('Midnight Run stars cannot inflate the eighteen Quick Chase venue stars', () => {
+  const p={chaseRecords:{standard:{stars:2},'run:standard':{stars:3},'run:gentle':{stars:3}}};
+  assert.match(activityRecord({id:'chase'},{life:{}},p),/^2\/18 venue stars/);
 });

@@ -2,8 +2,8 @@
 // width, sheets you can pull shut, and the little badges that say something
 // happened while you were looking elsewhere.
 //
-// Nothing here moves a DOM node. The three panes and every button keep the ids
-// the rest of src/ queries; this module only toggles classes and attributes.
+// The three panes and every button keep the ids the rest of src/ queries.
+// Dialog modules still own closing, saving and game cleanup.
 // On a desktop the panes are laid out together and the tab bar does not exist,
 // so most of this simply no-ops there.
 import { state, onNote } from '../state.js';
@@ -20,7 +20,10 @@ const moreClose = document.getElementById('moreClose');
 const tabs = [...document.querySelectorAll('.tabbar .tab[data-tab]')];
 const notesBadge = document.getElementById('notesBadge');
 const plotsDot = document.getElementById('plotsDot');
-const schemeCard = document.getElementById('schemeCard');
+const storyCards = ['schemeCard', 'caseCard', 'visitorCard'].map(id => document.getElementById(id)).filter(Boolean);
+const playTab = document.getElementById('tabPlay');
+const playroomButton = document.getElementById('playroomBtn');
+playTab?.setAttribute('aria-controls', 'playroomVeil');
 
 function isPhone() { return PHONE.matches; }
 
@@ -29,6 +32,7 @@ function isPhone() { return PHONE.matches; }
 // ---------------------------------------------------------------------------
 
 let unseenNotes = 0;
+const tabScroll = new Map(TABS.map(name => [name, 0]));
 
 export function currentTab() {
   return document.body.dataset.tab || 'shelf';
@@ -37,11 +41,13 @@ export function currentTab() {
 export function setTab(name, opts = {}) {
   if (TABS.indexOf(name) < 0) name = 'shelf';
   const changed = currentTab() !== name;
+  if (changed && isPhone()) tabScroll.set(currentTab(), window.scrollY || 0);
   document.body.dataset.tab = name;
   tabs.forEach(t => { if (t.dataset.tab === name) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
   try { localStorage.setItem(TAB_KEY, name); } catch (e) { /* storage is optional */ }
-  if (name === 'notes') { unseenNotes = 0; syncBadges(); }
-  if (changed && !opts.keepScroll) window.scrollTo({ top: 0, behavior: 'auto' });
+  if (name === 'notes') unseenNotes = 0;
+  syncBadges();
+  if (isPhone() && !opts.keepScroll && (changed || opts.top)) window.scrollTo({ top: opts.top ? 0 : tabScroll.get(name) || 0, behavior: 'auto' });
   if (opts.focus) {
     const pane = document.getElementById('pane' + name.charAt(0).toUpperCase() + name.slice(1));
     if (pane) { pane.tabIndex = -1; pane.focus({ preventScroll: true }); }
@@ -53,13 +59,21 @@ function syncBadges() {
     const show = isPhone() && unseenNotes > 0 && currentTab() !== 'notes';
     notesBadge.hidden = !show;
     notesBadge.textContent = unseenNotes > 9 ? '9+' : String(unseenNotes);
+    tabs.find(tab => tab.dataset.tab === 'notes')?.setAttribute('aria-label', show ? 'Notes, ' + unseenNotes + ' unread' : 'Notes');
   }
-  if (plotsDot && schemeCard) {
-    plotsDot.hidden = !(isPhone() && currentTab() !== 'plots' && schemeCard.querySelector('.scheme-choice'));
+  if (plotsDot) {
+    const ready = storyCards.some(card => !card.hidden && [...card.querySelectorAll('.scheme-choice, [data-case-choice], [data-case-next], [data-visitor], [data-life="visitor"]')].some(button => !button.disabled && !button.closest('[hidden]')));
+    const show = isPhone() && currentTab() !== 'plots' && ready;
+    plotsDot.hidden = !show;
+    tabs.find(tab => tab.dataset.tab === 'plots')?.setAttribute('aria-label', show ? 'Stories, a choice is ready' : 'Stories');
   }
 }
 
-tabs.forEach(t => t.addEventListener('click', () => setTab(t.dataset.tab)));
+tabs.forEach(t => t.addEventListener('click', () => setTab(t.dataset.tab, { top: currentTab() === t.dataset.tab })));
+document.querySelectorAll('.wordmark').forEach(link => link.addEventListener('click', e => {
+  if (!isPhone()) return;
+  e.preventDefault(); setTab('shelf', { top: true });
+}));
 document.getElementById('shelfTeaser')?.addEventListener('click', () => setTab('notes', { focus: true }));
 
 // Notes written while another tab is showing count toward the badge. A batch
@@ -74,7 +88,7 @@ window.addEventListener('shelflife:checked', e => {
   const added = e.detail && e.detail.added;
   if (isPhone() && added > 0) setTab('notes');
 });
-if (schemeCard) new MutationObserver(syncBadges).observe(schemeCard, { childList: true });
+storyCards.forEach(card => new MutationObserver(syncBadges).observe(card, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'hidden'] }));
 
 // Restore the last tab a phone was on. A desktop ignores this entirely.
 (function restoreTab() {
@@ -90,8 +104,47 @@ document.addEventListener('click', e => {
   const proxy = e.target.closest('[data-proxy]');
   if (!proxy) return;
   const target = document.getElementById(proxy.dataset.proxy);
-  if (target) target.click();
+  if (target && target !== proxy && !target.disabled) target.click();
 });
+
+// A game opened from Play returns to the same game catalogue. The existing
+// Close handler runs first, so timers, rewards and pending input are cleaned up.
+// Dialogs.js remains the single owner of focus trapping and background inertness.
+let gameReturn = null;
+const gameVeils = [...document.querySelectorAll('#playVeil, #lifeVeil')];
+const closeLabels = new Map(gameVeils.map(veil => {
+  const button = veil.querySelector('.sheet-head button');
+  return [veil.id, { button, text: button?.textContent || 'Close', label: button?.getAttribute('aria-label') }];
+}));
+function resetGameReturn() {
+  for (const { button, text, label } of closeLabels.values()) {
+    if (!button) continue;
+    button.textContent = text;
+    if (label == null) button.removeAttribute('aria-label'); else button.setAttribute('aria-label', label);
+  }
+  gameReturn = null;
+}
+document.addEventListener('click', e => {
+  const activity = e.target.closest('[data-activity]');
+  if (!isPhone() || !activity || activity.disabled || !activity.closest('#playroomVeil.open')) return;
+  resetGameReturn();
+  gameReturn = { id: ['chase', 'memory', 'alibi'].includes(activity.dataset.activity) ? 'playVeil' : 'lifeVeil', entered: false };
+}, true);
+function syncGameReturn() {
+  if (!gameReturn) return;
+  const veil = gameVeils.find(item => item.id === gameReturn.id);
+  if (veil?.classList.contains('open')) {
+    gameReturn.entered = true;
+    const button = closeLabels.get(veil.id)?.button;
+    if (button) { button.textContent = 'Back to games'; button.setAttribute('aria-label', 'Back to games'); }
+    return;
+  }
+  if (!gameReturn.entered) return;
+  const returnToGames = !document.querySelectorAll('.veil.open').length;
+  resetGameReturn();
+  if (returnToGames) playroomButton?.click();
+}
+gameVeils.forEach(veil => new MutationObserver(syncGameReturn).observe(veil, { attributes: true, attributeFilter: ['class'] }));
 
 // ---------------------------------------------------------------------------
 // The More tray
@@ -108,7 +161,8 @@ function setTray(open) {
   // A sheet sets this too. The tray always closes BEFORE a sheet opens (see
   // the capture-phase listener below), so the sheet's own lock lands after
   // this restore rather than being wiped by it.
-  document.body.style.overflow = open ? 'hidden' : '';
+  document.body.style.overflow = open || document.querySelectorAll('.veil.open').length ? 'hidden' : '';
+  if (open) tray.scrollTop = 0;
 }
 
 [moreBtn, tabMore].forEach(b => b && b.addEventListener('click', () => setTray(!trayOpen)));
@@ -131,7 +185,7 @@ window.addEventListener('shelflife:goto', e => {
   if (d.tab) setTab(d.tab, { keepScroll: true });
   const target = d.target ? document.querySelector(d.target) : null;
   if (target) {
-    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    target.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     if (typeof target.focus === 'function') { target.tabIndex = -1; target.focus({ preventScroll: true }); }
   }
 });
@@ -155,10 +209,10 @@ let pull = null;
 document.addEventListener('pointerdown', e => {
   if (!isPhone() || e.pointerType === 'mouse' || e.isPrimary === false || pull) return;
   const head = e.target.closest('.sheet-head');
-  if (!head || e.target.closest('button, input, select, a')) return;
+  if (!head || e.target.closest('button, input, select, textarea, summary, a, [contenteditable="true"]')) return;
   const sheet = head.closest('.sheet');
   const veil = head.closest('.veil');
-  if (!sheet || !veil || sheet.scrollTop > 2) return;
+  if (!sheet || !veil || veil.classList?.contains('court-mode') || sheet.scrollTop > 2) return;
   pull = { sheet, veil, x0: e.clientX, y0: e.clientY, dy: 0, id: e.pointerId, dragging: false };
 }, { passive: true });
 document.addEventListener('pointermove', e => {
@@ -190,6 +244,7 @@ document.addEventListener('pointercancel', e => endPull(e, true), { passive: tru
 // this for itself in its own module, so nothing to add; but a veil that lost
 // its overflow lock on rotate should not strand the page.
 function onBreakpoint() {
+  endPull(null, true);
   if (!isPhone() && trayOpen) setTray(false);
   syncBadges();
 }

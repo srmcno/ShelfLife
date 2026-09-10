@@ -1,0 +1,21 @@
+/* Anticipation, action and recovery make the same residents act in every game.
+   Every gesture is finite. The animation director owns interruption/cleanup. */
+@keyframes sl2-testify{0%,100%{transform:none}12%{transform:translateY(3%) scale(1.05,.96)}28%{transform:translateY(-4%) rotate(-5deg)}44%{transform:translateX(4%) rotate(4deg)}64%{transform:translateX(1%) rotate(-2deg)}82%{transform:translateY(-1%)}}
+@keyframes sl2-deny{0%,100%{transform:none}12%{transform:translateX(4%) rotate(9deg)}27%{transform:translateX(-5%) rotate(-10deg)}43%{transform:translateX(4%) rotate(8deg)}60%{transform:translateX(-3%) rotate(-5deg)}80%{transform:rotate(2deg)}}
+@keyframes sl2-confess{0%{transform:none}12%{transform:translateY(-7%) scale(.94,1.07)}29%{transform:translateY(7%) scale(1.12,.84) rotate(-7deg)}55%,73%{transform:translateY(6%) scale(1.08,.9) rotate(-5deg)}100%{transform:none}}
+@keyframes sl2-inspect{0%,100%{transform:none}18%{transform:translateX(-3%) rotate(-7deg)}42%,64%{transform:translateX(8%) translateY(-3%) rotate(10deg) scale(1.04)}82%{transform:translateX(3%) rotate(3deg)}}
+@keyframes sl2-celebrate{0%,100%{transform:none}12%{transform:translateY(5%) scale(1.12,.85)}29%{transform:translateY(-22%) rotate(-10deg) scale(.91,1.1)}43%{transform:translateY(-18%) rotate(8deg)}57%{transform:translateY(0) scale(1.15,.83)}71%{transform:translateY(-9%) rotate(-4deg)}84%{transform:translateY(0) scale(1.06,.94)}}
+.sl-testifying .sl-part[data-part="mouth"]{animation:sl-speaking .18s ease-in-out 4;transform-box:fill-box;transform-origin:center}
+.sl-testifying .sl-part[data-part="arm"]{animation:sl-testimony-hand .85s ease-out both;transform-box:fill-box;transform-origin:top center}
+.sl-denying .sl-part[data-part="eye"]{animation:sl-eye-flinch .36s ease-in-out 2;transform-box:fill-box;transform-origin:center}
+.sl-confessing .sl-part[data-part="eye"]{scale:1 .6;transition:scale .18s}
+.sl-inspecting .sl-part[data-part="eye"]{scale:1.08 .82;transition:scale .18s}
+.sl-celebrating .sl-part[data-part="arm"]{animation:sl-victory-arms 1s ease-out both;transform-box:fill-box;transform-origin:top center}
+.sl-celebrating .sl-part[data-part="wing"]{animation:wingflap .18s ease-in-out 5}
+@keyframes sl-speaking{0%,100%{scale:1 1}50%{scale:.92 1.2}}
+@keyframes sl-eye-flinch{0%,100%{scale:1 1}45%{scale:1 .3}}
+@keyframes sl-testimony-hand{0%,100%{rotate:0deg}32%{rotate:calc(-30deg * var(--sl-mirror,1))}64%{rotate:calc(-12deg * var(--sl-mirror,1))}}
+@keyframes sl-victory-arms{0%,100%{rotate:0deg}24%,48%{rotate:calc(-65deg * var(--sl-mirror,1))}70%{rotate:calc(-30deg * var(--sl-mirror,1))}}
+@media(prefers-reduced-motion:reduce){.sl2:is(.sl-testifying,.sl-denying,.sl-confessing,.sl-inspecting,.sl-celebrating) *{animation:none!important;transition:none!important;scale:none!important;rotate:none!important}}
+body.app-hidden .sl2 *{animation-play-state:paused!important}
+body[data-effects="light"] .sl2:is(.sl-testifying,.sl-denying,.sl-confessing,.sl-inspecting,.sl-celebrating) .sl-part{animation:none!important;transition:none!important}

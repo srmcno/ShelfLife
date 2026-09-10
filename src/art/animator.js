@@ -912,9 +912,12 @@ export function createPuppet(el) {
   prepSprite(el);
   el.dataset.slControlled = '1'; el.classList.add('sl-controlled');
   el.style.setProperty('--sl-gait-dur', '440ms');
-  let lastPose = '';
+  let lastPose = '', released = false;
+  const gestureClasses = new Set();
+  const holdGesture = (name, duration) => { gestureClasses.add(name); holdClass(el, name, duration); };
   return {
     move(moving, direction = 1, airborne = false) {
+      if (released) return;
       const gait = airborne && el.classList.contains('sl-can-flap') ? 'flap' : el.dataset.slGait;
       const pose = `${moving}:${direction}:${airborne}:${gait}`;
       if (pose === lastPose) return;
@@ -925,18 +928,29 @@ export function createPuppet(el) {
       el.style.setProperty('--sl-face', direction < 0 ? '-1' : '1');
     },
     gesture(kind) {
-      if (reduced?.matches) return;
-      if (kind === 'blink') { holdClass(el, 'sl-blink', 340); return; }
+      if (released || document.hidden || reduced?.matches || document.body.dataset.effects === 'light') return;
+      if (kind === 'blink') { holdGesture('sl-blink', 340); return; }
       const clips = {
         knock: ['sl2-poke', 620, 'sl-reaching'], wiggle: ['sl2-wiggle', 680, 'sl-care-fuss'],
         boop: ['sl2-perk', 480, 'sl-waving'], catch: ['sl2-nibble', 360, 'sl-catching'],
         land: ['sl2-land', 240, 'sl-landing'], jump: ['sl2-pushoff', 230, 'sl-pushing-off'], bump: ['sl2-recoil', 360, 'sl-care-clean'],
-        shield: ['sl2-stomp', 420, 'sl-parry'], win: ['sl2-wiggle', 950, 'sl-care-fuss']
+        shield: ['sl2-stomp', 420, 'sl-parry'], win: ['sl2-celebrate', 1000, 'sl-celebrating'],
+        celebrate: ['sl2-celebrate', 1000, 'sl-celebrating'],
+        testify: ['sl2-testify', 900, 'sl-testifying'], deny: ['sl2-deny', 780, 'sl-denying'],
+        confess: ['sl2-confess', 1100, 'sl-confessing'], inspect: ['sl2-inspect', 950, 'sl-inspecting'],
+        think: ['sl2-inspect', 950, 'sl-inspecting']
       };
       const clip = clips[kind];
-      if (clip) { playAnim(el, clip[0], clip[1], 'ease-out'); holdClass(el, clip[2], clip[1]); }
+      if (clip) { playAnim(el, clip[0], clip[1], 'cubic-bezier(.2,.75,.25,1)'); holdGesture(clip[2], clip[1]); }
     },
     release() {
+      if (released) return;
+      released = true;
+      const timers = heldClasses.get(el);
+      for (const cls of gestureClasses) { clearTimeout(timers?.get(cls)); timers?.delete(cls); el.classList.remove(cls); }
+      if (!timers?.size) heldNodes.delete(el);
+      const act = el.querySelector('.sprite-act');
+      if (act) { act.style.animation = ''; act.onanimationend = null; activeClipKeys.delete(act); }
       delete el.dataset.slControlled;
       el.classList.remove('sl-controlled','sl-travel','sl-airborne',...['walk','scuttle','flap','hop','ooze'].map(g=>'sl-gait-'+g));
       resetFace(el);

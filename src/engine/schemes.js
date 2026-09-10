@@ -35,7 +35,7 @@ export function resolveScheme(state, option, now = Date.now()) {
   const granted = choice ? grantBonusTrust(plan.pet, choice.bond, now) : 0;
   const text = (choice ? choice.outcome : plan.definition.autonomous).replaceAll('{p}', plan.pet.name);
   addNote(state, text, 'a small conspiracy', 'scheme');
-  recordScene(state,plan.kind,plan.definition.title,text,[plan.petId],now);
+  recordScene(state,plan.kind,plan.definition.title,text,[plan.petId],now,{key:'scheme:'+plan.kind,branch:String(option)});
   s.lastResult = { title: plan.definition.title, text, at: now };
   s.completed += 1;
   s.lastAt = now;

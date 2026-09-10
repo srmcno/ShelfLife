@@ -55,20 +55,41 @@ export function playWait(pet, now = Date.now(), kind = null) {
   const last = kind ? pet.playedAt?.[kind] || 0 : pet.lastPlayed;
   return Number.isFinite(last) && last > 0 ? Math.max(0, last + PLAY_COOLDOWN - now) : 0;
 }
-export function newHandshake(pet, rng = Math.random, { encore = false } = {}) {
+export const HANDSHAKE_RITUALS = {
+  echo: { name: 'Echo', rule: 'Repeat every move in the same order.' },
+  mirror: { name: 'Mirror', rule: 'Repeat every move backwards, starting with the last.' },
+  duet: { name: 'Duet', rule: 'Remember only the moves marked YOUR BEAT. Skip their beats.' }
+};
+export function handshakeRecordKey(game) {
+  return !game.ritual || game.ritual === 'echo' ? (game.encore ? 'encore' : 'standard') : game.ritual + (game.encore ? '-encore' : '');
+}
+export function handshakeDemonstration(game) {
+  const count = game.round + 2;
+  return game.sequence.slice(0, count * (game.ritual === 'duet' ? 2 : 1));
+}
+export function handshakePattern(game) {
+  const moves = handshakeDemonstration(game);
+  if (game.ritual === 'mirror') return moves.reverse();
+  if (game.ritual === 'duet') return moves.filter((_, i) => i % 2 === 1);
+  return moves;
+}
+export function restartHandshake(game) {
+  return { ...game, sequence: game.sequence.slice(), names: game.names.slice(), round: 0, cursor: 0, mistakes: 0, replays: 0, complete: false, claimed: false };
+}
+export function newHandshake(pet, rng = Math.random, { encore = false, ritual = 'echo' } = {}) {
   const rounds = encore ? 5 : handshakeRounds(pet);
   return {
-    petId: pet.id, rounds, encore, mistakes: 0, replays: 0,
+    petId: pet.id, rounds, encore, ritual: Object.hasOwn(HANDSHAKE_RITUALS, ritual) ? ritual : 'echo', mistakes: 0, replays: 0,
     names: gesturesFor(pet),
     // One more gesture than there are rounds: round 1 asks for two, and the last
     // round asks for the lot.
-    sequence: Array.from({ length: rounds + 1 }, () => Math.min(3, Math.max(0, Math.floor(rng() * 4)))),
+    sequence: Array.from({ length: (rounds + 1) * (ritual === 'duet' ? 2 : 1) }, () => Math.min(3, Math.max(0, Math.floor(rng() * 4)))),
     round: 0, cursor: 0, complete: false, claimed: false
   };
 }
 export function tapHandshake(game, gesture) {
   if (game.complete || !Number.isInteger(gesture) || gesture < 0 || gesture > 3) return 'ignored';
-  if (gesture !== game.sequence[game.cursor]) { game.cursor = 0; game.mistakes = (game.mistakes || 0) + 1; return 'retry'; }
+  if (gesture !== handshakePattern(game)[game.cursor]) { game.cursor = 0; game.mistakes = (game.mistakes || 0) + 1; return 'retry'; }
   game.cursor++;
   if (game.cursor < game.round + 2) return 'correct';
   game.round++;
@@ -81,7 +102,7 @@ export function rewardHandshake(state, game, now = Date.now()) {
   if (!pet || !game.complete || game.claimed) return null;
   game.claimed = true;
   if (game.kind !== 'chase') {
-    const key = game.encore ? 'encore' : 'standard';
+    const key = handshakeRecordKey(game);
     pet.handshakeBest ||= {};
     const previous = pet.handshakeBest[key];
     const mistakes = game.mistakes || 0, replays = game.replays || 0;

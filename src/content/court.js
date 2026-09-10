@@ -59,6 +59,95 @@ export const COURT_DEFENCES = [
  '“Can the jury be replaced? Several of them stand to inherit.”'
 ];
 
+// These are reasons to conceal a fact, not proof of the charged offence. Every
+// witness has something unpleasant to hide, including the innocent ones.
+export const COURT_INVESTIGATIONS = [
+ { scene:'The plate has been cordoned off with black thread. A relative keeps asking whether the evidence will be returned in time for tea.',
+   pressure:['The residue was collected before anyone was allowed to comfort the remains.','The clock photographed everyone in the room. It invoices by the hour, including this one.','The wrapper kept an impression of every pocket that touched it. The dead are being more cooperative than the living.'],
+   motives:[
+    'I sold the family a closed-packet funeral. There was considerably less inside than the brochure implied.',
+    'I had already bought the victim’s half of the bed. I was waiting for the market to become vacant.',
+    'The biscuit asked me to witness its will. I was checking whether it had named a beneficiary or a serving size.',
+    'I wrote the obituary last Tuesday. Nobody appreciates the amount of unpaid preparation that goes into grief.' ] },
+ { scene:'The headstone says “At peace”. Something underneath has scratched out “At”. The undertaker calls this normal customer feedback.',
+   pressure:['The grave floor preserved the tool marks. It also preserved the victim, against the wishes of the organiser.','A ribbon was trapped under the headstone. The stone weighs more than the alibi.','Everyone crossed the burial sheet. We have their tracks and an unpaid cleaning bill.'],
+   motives:[
+    'I sold the same plot to three families. None of the original occupants had complained until today.',
+    'The crumb kept asking for air. I thought it was negotiating an upgrade.',
+    'I was making a death mask. It kept opening its eyes and spoiling the impression.',
+    'I wanted the deposit back. The policy says the customer must appear in person, which I was helping it do.' ] },
+ { scene:'A chair faces a bare bulb. The appointment book has a column for arrival and a second column headed “eventually”.',
+   pressure:['Fibres under the lamp base identify what each person carried. The cleaning service refused to go near the chair.','The wax trail shows where everyone stood. Nobody stood near the exit for long.','The recovered switch kept the cuff residue. It was the only thing in the room anyone could turn off.'],
+   motives:[
+    'I rented out the chair for apologies. Most customers needed help understanding how sorry they were.',
+    'I was retrieving my confession. They had corrected the spelling and added two offences.',
+    'I sold the business a dimmer switch. Compassion should be available at several price points.',
+    'I booked a session for my neighbour. The gift receipt did not include a release time.' ] },
+ { scene:'The beds have price tags. The eviction notice thanks the tenants for a lifetime of custom and asks them to make it a short one.',
+   pressure:['Ink samples were taken before the landlord could classify them as wear and tear.','The seal left a measurable impression. Unlike the appeal process.','Every sheet was examined. The clause about being buried on the premises was not in the original lease.'],
+   motives:[
+    'I bought the beds in advance. The sales listing described the occupants as a temporary obstruction.',
+    'I was copying the signature for a memorial plaque. They are alive, but I like to catch people before their handwriting declines.',
+    'I charged the tenants an appeal fee. There is no appeals office. It was a difficult conversation to monetise.',
+    'I planned to rent them their own beds back. Displacement is traumatic; I wanted continuity of service.' ] },
+ { scene:'A jar whispers “actually” whenever the lid turns. Beside it, a subscription form offers bereavement in three affordable tiers.',
+   pressure:['The containers were tested separately. One insists its contents are final even after being told they are wrong.','The bedside dust records everybody’s position. The grieving family kept a respectable distance from the invoice.','Fabric was lifted from the lid. The victim asked us to preserve its final word; then supplied fourteen more.'],
+   motives:[
+    'I offered the family a free trial of closure. I knew they would struggle to cancel before the funeral.',
+    'I wanted the word erased. It was the last thing between me and winning an argument from six years ago.',
+    'The fake death was my idea. The subscription was someone else’s. I resent being undercut at my own bereavement.',
+    'I recorded a replacement last word. “Sorry” would have been a better investment, but the family said it sounded nothing like them.' ] },
+ { scene:'The royal decree orders dissenters simmered until tender. The pea has signed it by rolling through the ink.',
+   pressure:['The crown’s paper was matched to everyone’s supplies. The royal archivist has asked us to stop calling it stationery.','Tool marks show how the crown was assembled. The constitution was cut to fit afterward.','The throne pins caught the accessories. One still has a resignation letter attached to it.'],
+   motives:[
+    'I sold the pea a hereditary title. I did not mention that its heirs were in the freezer.',
+    'I accepted a cabinet post because it included immunity. The paperwork said “from washing up”, in very small print.',
+    'I wrote the royal anthem. It is mostly names of residents the pea wants removed.',
+    'I was organising the rebellion. I needed a crown for whoever survived the planning meeting.' ] },
+ { scene:'The evacuation map leads directly to a property-buying desk. The raisin is under a sheet much larger than its medical needs.',
+   pressure:['The bell rope preserved every glove fibre. The emergency operator has billed us for the panic.','The striker kept the tool marks. Someone rang it again when property prices began to recover.','Dust beneath the alarm places everyone on a shelf. The fire exit was being valued at the time.'],
+   motives:[
+    'I sold the residents plague insurance. It covered the plague. It did not cover discovering there was no plague.',
+    'I bought two beds during the evacuation. The sellers seemed motivated. One was still screaming.',
+    'I made the diagnosis. The raisin had no pulse. Neither did my previous eleven patients, but most were buttons.',
+    'I was arranging quarantine accommodation. The rooms became more expensive once people were locked inside.' ] },
+ { scene:'Six moths queue beside an opened envelope. The landlord has deducted the cost of opening it from their deposits.',
+   pressure:['The rent seal was sampled before the landlord could charge us for breaking it.','Fibres from the transport bag were compared. The moths were told the journey counted as a viewing.','The payment slip kept everybody’s fingerprints. It did not keep any money.'],
+   motives:[
+    'I took deposits from all six moths. They each wanted a window. I promised to put a stamp on it.',
+    'I was evicting the moths from my coat. I called it a relocation package because that sounded less like shaking them over a bin.',
+    'I guaranteed the rent. I thought “six occupants” meant somebody would eventually pay.',
+    'I sold the landlord moth insurance last week. There is a waiting period. I was checking whether he had noticed.' ] },
+ { scene:'The portrait now looks recently deceased. Its owner is posing beside it, demanding that the resemblance be corrected.',
+   pressure:['The added marks were sampled. The artist claims the pallor was a technical improvement.','Fibres behind the canvas identify the headwear. The portrait’s black veil is a separate item of evidence.','The studio floor records where everyone stood. The solicitor stood nearest the will.'],
+   motives:[
+    'I ordered the frame in mourning colours. It would have looked insensitive to wait for a discount.',
+    'The will leaves me nothing while they are alive. I was exploring the boundaries of interpretation.',
+    'I had been commissioned to make them look younger. Removing all signs of life was the most convincing method.',
+    'I wanted the portrait off the wall. It watches me eat and has better prospects in the will than I do.' ] },
+ { scene:'A pension form is clipped to a tiny death certificate. The teaspoon is using its bowl to bang on the fraud-office window.',
+   pressure:['Thread was recovered from the handle. The spoon describes the retirement journey as involuntary.','Footprints beside the drawer were measured. The undertaker arrived wearing a delivery uniform.','Tests show what each pocket carried. The pension officer has asked whether the spoon can prove it was ever alive.'],
+   motives:[
+    'I spent the funeral allowance on a replacement spoon. The deceased was proving expensive to keep declaring dead.',
+    'I had promised to care for it in old age. I thought the death certificate settled both problems.',
+    'I was helping it escape the drawer. It wanted to see the world before being inherited by someone with a dishwasher.',
+    'I sold it a resurrection policy. Finding it alive before I had collected the premium was deeply inconvenient.' ] },
+ { scene:'The congregation faces a biscuit on the window. Beneath it, a shoebox promises salvation for the first twelve payments.',
+   pressure:['The adhesive was tested. It held through three sermons and a failed ascent.','The window recorded collar residue. The prophet says the laboratory has misunderstood the nature of revelation.','Support marks show how the false moon reached the glass. The ladder was sold separately from salvation.'],
+   motives:[
+    'I sold priority boarding. Nobody asked how a shoebox gets above the weather.',
+    'I wrote the prophecy. It originally ended in rain, but rain does not convert well.',
+    'I bought the congregation’s possessions. They insisted they would not need them after Tuesday.',
+    'I was collecting refunds for the last apocalypse. This one had better branding and the same treasurer.' ] },
+ { scene:'A tin labelled “witnesses” contains several crumbs wearing moustaches. A second label gives directions for anyone unable to find them.',
+   pressure:['The disguise material was sampled. Several moustaches are more recognisable than their owners.','The offcuts preserve tool marks. The protection service says evidence collection was not in its threat model.','The containers were examined. The tin’s forwarding address points back to the crime scene.'],
+   motives:[
+    'I sold the witnesses new names. The cheap plan gives everyone the same one.',
+    'I printed the hiding-place labels. They said clarity was essential. I am beginning to suspect a failure of management.',
+    'I was buying their old identities. Mine has accumulated obligations I would prefer somebody else to experience.',
+    'I offered lifelong protection. They are crumbs. I had expected a substantially shorter commitment.' ] }
+];
+
 // Each charge is a small, specific story. The factual exhibits remain separate
 // from these interested parties and their very selective remorse.
 export const COURT_TRANSCRIPTS = [
@@ -83,7 +172,7 @@ export const COURT_TRANSCRIPTS = [
    exhibits:['Marks cut into the grave floor','Fibres trapped beneath the headstone','Soil tracked across the burial sheet'],
    reconstruction:'A reconstruction of the burial marks' },
  { charge:'The theft of communal light for a private interrogation business.',
-   opening:'The defendant’s new business has one chair and no satisfied customers.',
+   opening:'The defendant’s booking form asks whether you intend to confess. The only options are dates.',
    prosecution:'The lamp vanished at ten. By eleven, the defendant was charging residents to admit things.',
    plea:'Nobody had to confess. The chair was available indefinitely.',
    conviction:'Calling it a “listening service” does not improve the straps.',
@@ -110,12 +199,12 @@ export const COURT_TRANSCRIPTS = [
    acquittal:'Cruelty is a motive, counsel. Several people in this room have it in abundance.',
    sentence:'The word is returned. It was “actually”. The resident resumes being unbearable without a paywall.',
    objection:'Objection. The relatives have already consumed part of the product.',
-   exhibits:['Sound test of the recovered container','Fibres caught in its lid','Fabric impression on the bedside dust'],
+   exhibits:['Sound test of the recovered container','Positions recorded in the bedside dust','Fabric impression on the bedside dust'],
    reconstruction:'The bedside recording and the container examination' },
  { charge:'Conspiracy to install an edible dictator.',
    opening:'His Majesty has ordered the jury steamed. We will proceed promptly.',
    prosecution:'Within minutes of coronation, the pea abolished elections and declared every spoon a political prisoner.',
-   plea:'It promised stable government. Being round seemed like a manageable flaw.',
+   plea:'It promised me a place in the cabinet. I did not realise it meant the one beside the stock cubes.',
    conviction:'“Only following recipes” is not a defence to treason.',
    acquittal:'Wearing a stupid accessory does not establish guilt. The judge would have to recuse himself.',
    sentence:'The monarchy is dissolved into soup. The cabinet has requested separate bowls.',
@@ -135,7 +224,7 @@ export const COURT_TRANSCRIPTS = [
  { charge:'Rent fraud and the involuntary subletting of six moths.',
    opening:'The rent envelope is moving. The landlord has called this an encouraging market signal.',
    prosecution:'Six moths were delivered as payment. Each had been promised the envelope was a one-bedroom flat.',
-   plea:'They were fully furnished. They all had wings.',
+   plea:'I disclosed that the property could be posted elsewhere. Nobody reads the whole agreement.',
    conviction:'The court rejects “air conditioning included” as a description of a hole in an envelope.',
    acquittal:'Your suspect is a tenant. The court recognises the expression of permanent dread.',
    sentence:'The moths are released. The landlord tries to charge them an exit fee and is added to the docket.',
@@ -159,7 +248,7 @@ export const COURT_TRANSCRIPTS = [
    conviction:'The court observes that the defendant spent the funeral allowance before buying a coffin.',
    acquittal:'The suspect had access to the drawer. So does everyone with a modest amount of ambition.',
    sentence:'The pension is restored. The spoon names a fork as its sole beneficiary out of spite.',
-   objection:'Objection. The witness has been in hot water before.',
+   objection:'Objection. My client paid for a funeral. It is unreasonable for the guest of honour to demand a refund.',
    exhibits:['Thread recovered from the teaspoon handle','Footprints beside the drawer','Magnetic and abrasion tests on the spoon bowl'],
    reconstruction:'The drawer reconstruction and pension-office evidence' },
  { charge:'Operating an apocalypse subscription using a biscuit taped to a window.',

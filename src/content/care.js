@@ -6,7 +6,8 @@ export const TRAIT_CARE = {
       "Ate, then left a grateful little tide mark."
     ],
     "fuss": [
-      "Soaked into your sleeve a little. Affection, probably."
+      "Soaked into your sleeve a little. Affection, probably.",
+      "Purred through a bubble in its shoulder. You chose the other shoulder."
     ],
     "clean": [
       "You dried it. It is making more.",
@@ -16,7 +17,8 @@ export const TRAIT_CARE = {
   },
   "porcelain": {
     "food": [
-      "Clinked against the spoon. You both apologised."
+      "Clinked against the spoon. You both apologised.",
+      "Held a crumb in its mouth and rattled it at you. Full, apparently."
     ],
     "fuss": [
       "Leaned into your hand very carefully."
@@ -35,7 +37,8 @@ export const TRAIT_CARE = {
       "Held your finger in its mouth without closing. A hug, locally."
     ],
     "clean": [
-      "Bit the cloth. Let go when you asked."
+      "Bit the cloth. Let go when you asked.",
+      "Released the flannel when you called it a good pet. The flannel was not as forgiving."
     ]
   },
   "glitter": {
@@ -46,7 +49,8 @@ export const TRAIT_CARE = {
       "Loved that. Your sleeve will remember longer than you."
     ],
     "clean": [
-      "Clean pet. Festive sink."
+      "Clean pet. Festive sink.",
+      "You rinsed until the water ran clear. It sneezed once. Start again."
     ]
   },
   "clingy": {
@@ -57,7 +61,8 @@ export const TRAIT_CARE = {
       "Wrapped itself round your thumb. You have a thumb warmer now."
     ],
     "clean": [
-      "Held on through the rinse. Held on through the drying."
+      "Held on through the rinse. Held on through the drying.",
+      "Wrapped itself in the towel with your hand still inside. This is how you lose an afternoon."
     ]
   },
   "fungal": {
@@ -69,7 +74,8 @@ export const TRAIT_CARE = {
       "Leaned in. A small mushroom leaned in with it."
     ],
     "clean": [
-      "Came out clean. Its mushrooms came out offended."
+      "Came out clean. Its mushrooms came out offended.",
+      "Scrubbed off three mushrooms. It insisted you put them where they could see you."
     ]
   },
   "loadbearing": {
@@ -77,7 +83,8 @@ export const TRAIT_CARE = {
       "Ate without moving. The shelf thanks you."
     ],
     "fuss": [
-      "Relaxed into it. The bracket made a noise."
+      "Relaxed into it. The bracket made a noise.",
+      "You lifted it for a cuddle. The shelf held. It went rigid for an entirely different reason."
     ],
     "clean": [
       "Lifted a corner for the cloth. The whole row held its breath."
@@ -91,7 +98,7 @@ export const TRAIT_CARE = {
       "Bowed. Hit its head on the shelf above. Bowed lower."
     ],
     "clean": [
-      "Played a drowning scene in a damp flannel. Took a bow."
+      "Drowned in two teaspoons of water. Rose for the towel. Drowned again when you stopped watching."
     ]
   },
   "napoleon": {
@@ -107,7 +114,8 @@ export const TRAIT_CARE = {
   },
   "heirloom": {
     "food": [
-      "Ate off the modern spoon. Survived the indignity."
+      "Ate off the modern spoon. Survived the indignity.",
+      "Refused the spoon until you called it antique. It has eaten from that spoon every day."
     ],
     "fuss": [
       "Nestled into your palm. Apparently this is how it used to be done."
@@ -121,7 +129,8 @@ export const TRAIT_CARE = {
       "Everyone got some. It took longer than the size suggested."
     ],
     "fuss": [
-      "Purred in several directions."
+      "Purred in several directions.",
+      "You scratched its chin. Three chins lowered into place."
     ],
     "clean": [
       "All clean. A faint round of applause from inside."
@@ -129,10 +138,12 @@ export const TRAIT_CARE = {
   },
   "undertaker": {
     "food": [
-      "Laid the crumb to rest. In its mouth."
+      "Laid the crumb to rest. In its mouth.",
+      "Straightened the peas before eating them. It likes to fit everyone in."
     ],
     "fuss": [
-      "Went limp. Opened an eye to check you were impressed."
+      "Went limp. Opened an eye to check you were impressed.",
+      "You rubbed its back. It stopped measuring your hand and held it instead."
     ],
     "clean": [
       "Asked to be dried with dignity. Got the corner of a tea towel."
@@ -147,7 +158,8 @@ export const TRAIT_CARE = {
       "Leaned into your hand. So did something a little to the left of it."
     ],
     "clean": [
-      "Came out clean. The cold spot came with it, freshly rinsed."
+      "Came out clean. The cold spot came with it, freshly rinsed.",
+      "Washed out the previous owner. The previous owner climbed back in while you rinsed the sink."
     ]
   },
   "magpie": {
@@ -155,7 +167,8 @@ export const TRAIT_CARE = {
       "Ate the food. Kept the spoon. The spoon is in the stash."
     ],
     "fuss": [
-      "Held your finger and checked it for rings."
+      "Held your finger and checked it for rings.",
+      "You scratched its belly. A button fell out. It put a hand over the rest."
     ],
     "clean": [
       "Was rinsed. Three small shiny things came out in the water. It wants them back."
@@ -169,12 +182,14 @@ export const TRAIT_CARE = {
       "Went soft under your hand. Its eyes stayed exactly where they were."
     ],
     "clean": [
-      "You wiped its face. Its eyes were open for it. They are always open for it."
+      "You wiped its face. Its eyes were open for it. They are always open for it.",
+      "You found a tiny eyelash stuck to the cloth. It asked whose."
     ]
   },
   "sugar": {
     "food": [
-      "Ate it in one go and asked, with its whole body, about pudding."
+      "Ate it in one go and asked, with its whole body, about pudding.",
+      "Licked the empty bowl until it squeaked. Went quieter when you looked over. Kept licking."
     ],
     "fuss": [
       "Vibrated under your thumb. That is a purr, at speed."
@@ -188,7 +203,8 @@ export const TRAIT_CARE = {
       "Took the food to the back of the slot and ate it with its back to you. Growled, fondly."
     ],
     "fuss": [
-      "Let you touch it. Once. Then bit the air where your hand had been, gently."
+      "Let you touch it. Once. Then bit the air where your hand had been, gently.",
+      "Allowed a second pat. Bit the shelf to avoid giving you the wrong idea."
     ],
     "clean": [
       "Fought the cloth. Lost. Sat in the cloth afterwards, warm and sulking."
@@ -213,7 +229,8 @@ export const TRAIT_CARE = {
       "Hummed under your thumb. You know the tune. You nearly had it."
     ],
     "clean": [
-      "Hummed in the water. The tune came out clearer. Still eleven notes."
+      "Hummed in the water. The tune came out clearer. Still eleven notes.",
+      "Hummed into the bath. Something beneath the plug hummed back. It changed key."
     ]
   },
   "insomniac": {
@@ -221,7 +238,8 @@ export const TRAIT_CARE = {
       "Ate slowly. It has time. It has all of it."
     ],
     "fuss": [
-      "Closed its eyes under your hand. First time. Opened them at once, furious."
+      "Closed its eyes under your hand. First time. Opened them at once, furious.",
+      "Let its head sag against your thumb. Claimed it was checking the thumb."
     ],
     "clean": [
       "Sat in the warm towel afterwards and nearly, nearly dropped off. Did not."
@@ -229,7 +247,8 @@ export const TRAIT_CARE = {
   },
   "nihilist": {
     "food": [
-      "Ate all of it. Said nothing mattered. Licked the bowl."
+      "Ate all of it. Said nothing mattered. Licked the bowl.",
+      "Says the universe is indifferent. You moved the bowl an inch away. It was not indifferent."
     ],
     "fuss": [
       "Said it meant nothing and leaned into every second of it."
@@ -246,7 +265,8 @@ export const TRAIT_CARE = {
       "Three stars. It has never given three. It looked shaken."
     ],
     "clean": [
-      "Reviewed the cloth. One star. Reviewed being warm afterwards. Did not publish."
+      "Reviewed the cloth. One star. Reviewed being warm afterwards. Did not publish.",
+      "Sniffed the soap. Detected notes of lavender, fear, and the cheap shop."
     ]
   },
   "freegan": {
@@ -262,7 +282,8 @@ export const TRAIT_CARE = {
   },
   "cult": {
     "food": [
-      "Set a crumb aside before eating. For Thursday."
+      "Set a crumb aside before eating. For Thursday.",
+      "Blessed the bowl. Ate the offering. Says the god likes to experience these things through it."
     ],
     "fuss": [
       "Went still under your hand and said something quietly. It was thank you, in the voice."
@@ -284,7 +305,8 @@ export const TRAIT_CARE = {
   },
   "bones": {
     "food": [
-      "Ate round the hard bit and kept the hard bit. For the collection."
+      "Ate round the hard bit and kept the hard bit. For the collection.",
+      "Found a hard bit in the food. Held it against its jaw. Too big. Saved it anyway."
     ],
     "fuss": [
       "Leaned in. Something in it clicked. It said that was normal."
@@ -349,5 +371,6 @@ export const DRAWN_NOTES = [
   "Practised looking intimidating. Still recognisably your doodle.",
   "Its outline wobbled. It checked whether you were holding the pen.",
   "Has no idea what it is. Neither of you is bringing it up.",
-  "Caught its reflection. Recognised the effort."
+  "Caught its reflection. Recognised the effort.",
+  "Found the eraser marks. Asked whether those parts had been bad."
 ];

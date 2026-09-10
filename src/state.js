@@ -333,13 +333,13 @@ export function normalizeState(raw) {
     p.chaseRecords = record(p.chaseRecords) ? p.chaseRecords : {};
     for (const key of Object.keys(p.chaseRecords)) {
       const r = p.chaseRecords[key];
-      if (!['gentle', 'standard', 'pantry:gentle', 'pantry:standard', 'moon:gentle', 'moon:standard'].includes(key) || !record(r)) { delete p.chaseRecords[key]; continue; }
+      if (!['gentle', 'standard', 'pantry:gentle', 'pantry:standard', 'moon:gentle', 'moon:standard', 'run:gentle', 'run:standard'].includes(key) || !record(r)) { delete p.chaseRecords[key]; continue; }
       p.chaseRecords[key] = { score:Math.floor(finite(r.score,0,0,100000)), stars:Math.floor(finite(r.stars,0,0,3)), at:finite(r.at,now,0,now) };
     }
     p.handshakeBest = record(p.handshakeBest) ? p.handshakeBest : {};
     for (const key of Object.keys(p.handshakeBest)) {
       const r = p.handshakeBest[key];
-      if (!['encore', 'standard'].includes(key) || !record(r)) { delete p.handshakeBest[key]; continue; }
+      if (!['encore', 'standard', 'mirror', 'mirror-encore', 'duet', 'duet-encore'].includes(key) || !record(r)) { delete p.handshakeBest[key]; continue; }
       p.handshakeBest[key] = {rounds:Math.floor(finite(r.rounds,3,3,5)),mistakes:Math.floor(finite(r.mistakes,0,0,10000)),replays:Math.floor(finite(r.replays,0,0,10000)),at:finite(r.at,now,0,now)};
     }
     for (const key of ['expeditions', 'handshakes', 'dustPatrols', 'chases', 'alibis', 'alibiWins', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));

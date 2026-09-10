@@ -127,7 +127,7 @@ export function statementsFor(state, pet, now = Date.now()) {
 
 /* Builds three rounds. Each is two truths and a lie, all about different facts,
    and no statement is reused across the whole game. */
-export function newAlibi(state, pet, rng = Math.random) {
+export function newAlibi(state, pet, rng = Math.random, { mode = 'quick' } = {}) {
   const { truths, lies } = statementsFor(state, pet);
   const shuffle = list => {
     const a = list.slice();
@@ -150,10 +150,14 @@ export function newAlibi(state, pet, rng = Math.random) {
     if (picked.length < ALIBI_CHOICES - 1) break;
     const cards = shuffle(picked.concat([lie]));
     const evidence = truths.filter(t => t.key === lie.key).map(t => t.text);
-    rounds.push({ statements: cards.map(c => c.text), lie: cards.indexOf(lie), answered: null,
+    // Every exhibit is true, including the distractors. The question is which
+    // fact actually contradicts the selected claim, not which fact sounds true.
+    const exhibits = shuffle(cards.map(card => ({ key: card.key, text: truths.filter(t => t.key === card.key).map(t => t.text).join(' ') })));
+    rounds.push({ statements: cards.map(c => c.text), keys: cards.map(c => c.key), lie: cards.indexOf(lie), answered: null,
+      exhibits, proof: exhibits.findIndex(e => e.key === lie.key), submittedProof: null, verified: false,
       evidence: evidence.join(' ') || 'That claim does not match the shelf at the start of this statement.' });
   }
-  return { kind: 'alibi', petId: pet.id, notebook: truths.map(t => t.text), rounds, round: 0, correct: 0, complete: !rounds.length, claimed: false };
+  return { kind: 'alibi', mode: mode === 'prove' ? 'prove' : 'quick', proved: 0, petId: pet.id, notebook: truths.map(t => t.text), rounds, round: 0, correct: 0, complete: !rounds.length, claimed: false };
 }
 
 export function currentRound(game) {
@@ -168,15 +172,19 @@ export function currentRound(game) {
    finished showing which statement was false. Keeping those separate is what makes
    a second, faster tap land on 'ignored' instead of silently spending the next
    round's answer on a click the player never saw a question for. */
-export function answerAlibi(game, index) {
+export function answerAlibi(game, index, proofIndex = null) {
   if (!game || game.complete) return 'ignored';
   const round = currentRound(game);
   if (!round || round.answered !== null || !Number.isInteger(index) || index < 0 || index >= round.statements.length) return 'ignored';
+  if (game.mode === 'prove' && (!Number.isInteger(proofIndex) || proofIndex < 0 || proofIndex >= round.exhibits.length)) return 'ignored';
   round.answered = index;
+  round.submittedProof = game.mode === 'prove' ? proofIndex : null;
   const right = index === round.lie;
+  round.verified = right && (game.mode !== 'prove' || proofIndex === round.proof);
+  if (round.verified) game.proved = (game.proved || 0) + 1;
   if (right) game.correct++;
   if (game.round >= game.rounds.length - 1) game.complete = true;
-  return right ? 'right' : 'wrong';
+  return right ? (round.verified ? 'right' : 'unsupported') : 'wrong';
 }
 
 // Moves on to the next statement once the current one has been answered.
@@ -194,7 +202,7 @@ export function rewardAlibi(state, game, now = Date.now()) {
   if (!pet || !game.complete || game.claimed) return null;
   game.claimed = true;
   tick(state, now);
-  const clean = game.correct === game.rounds.length && game.rounds.length > 0;
+  const clean = game.correct === game.rounds.length && game.rounds.length > 0 && (game.mode !== 'prove' || game.proved === game.rounds.length);
   pet.alibis = (pet.alibis || 0) + 1;
   if (state.stories) state.stories.alibis = (state.stories.alibis || 0) + 1;
   if (clean) { pet.alibiWins = (pet.alibiWins || 0) + 1; if (state.stories) state.stories.alibiWins = (state.stories.alibiWins || 0) + 1; recordGameLife(state,pet,'alibi',now); }
@@ -208,8 +216,37 @@ export function rewardAlibi(state, game, now = Date.now()) {
   pet.lastPlayed = now;
   pet.playedAt ||= {}; pet.playedAt.alibi = now;
   addNote(state, clean
-    ? pet.name + ' gave three statements and you found every lie. It has asked who told you.'
+    ? pet.name + ' gave its statements and you proved every lie. It has begun interviewing replacement witnesses.'
+    : game.mode === 'prove' && game.correct === game.rounds.length
+    ? pet.name + ' was caught lying, but the evidence did not hold up. It left carrying your chair.'
     : pet.name + ' gave its statements. You believed ' + (game.rounds.length - game.correct) + ' of the false ones. It is not going to correct the record.',
     pet.name, 'note');
   return { practice: false, fuss: Math.max(0, fuss), bond, clean };
+}
+
+// Reactions follow the exposed fact. The joke cannot silently change the evidence.
+const ALIBI_REPLIES = {
+  left: '“Fine. That is my left. I had hoped one of us would die before this came up.”',
+  right: '“My right. Yes. The side I keep free for an escape.”',
+  prop: '“I know where the furniture is. I have been measuring myself for the drawers.”',
+  count: '“I was counting the one in the wall. Forget I mentioned it.”',
+  row: '“I remember a different height. There was a rope involved.”',
+  grudge: '“Those are the grievances you have found.”',
+  'care-food': '“The food went in. That is where our accounts diverge.”',
+  'care-fuss': '“I remember the touching. My lawyer asked me to stop demonstrating.”',
+  'care-clean': '“You removed a stain. I had nearly taught it to speak.”',
+  trust: '“An exact figure. How intimate. Please stand further away.”',
+  name: '“The old name is still on a headstone. I prefer not to complicate things.”',
+  age: '“We disagree on what qualifies as arriving alive.”',
+  shake: '“I taught you a gesture. You keep calling it a friendship.”'
+};
+export function alibiReaction(round) {
+  return ALIBI_REPLIES[round?.keys?.[round.lie]] || '“I would like to amend my statement to a scream.”';
+}
+export function alibiRank(game) {
+  const total = game?.rounds?.length || 0;
+  if (total && game.correct === total && (game.mode !== 'prove' || game.proved === total)) return 'Airtight';
+  if (game?.correct === total) return 'Right instinct, loose case';
+  if (game?.correct > 0) return 'A few loose teeth';
+  return 'Witness walks';
 }

@@ -139,3 +139,78 @@ test('hidden tabs cancel queued reactions and reduced motion stays stopped when 
     assert.equal(intervals.size, 1);
   });
 });
+
+test('court puppet gestures hold their poses and releasing a scene cancels every owned timer and clip', async () => {
+  await withAnimator('court-release', ({ mod, sprite, act, timers, intervals }) => {
+    const puppet = mod.createPuppet(sprite);
+    puppet.move(true, -1, true);
+    for (const [kind, held] of [['testify', 'sl-testifying'], ['deny', 'sl-denying'], ['confess', 'sl-confessing']]) {
+      puppet.gesture(kind);
+      assert.equal(sprite.classList.contains(held), true, kind + ' holds an anatomy pose for the clip');
+      assert.ok(act.style.animation.startsWith('sl2-' + kind + ' '));
+    }
+    assert.equal(timers.size, 3);
+    puppet.gesture('confess');
+    assert.equal(timers.size, 3, 'repeating a gesture replaces its expiry instead of leaking a timer');
+    puppet.release();
+    assert.equal(timers.size, 0);
+    assert.equal(act.style.animation, '');
+    assert.equal(act.onanimationend, null);
+    assert.equal(sprite.dataset.slControlled, undefined);
+    assert.equal(sprite.style.getPropertyValue('--sl-face'), '');
+    for (const held of ['sl-testifying', 'sl-denying', 'sl-confessing', 'sl-controlled', 'sl-travel', 'sl-airborne', 'sl-gait-walk']) {
+      assert.equal(sprite.classList.contains(held), false, 'release clears ' + held);
+    }
+    assert.equal(intervals.size, 1, 'closing one scene leaves the shelf director available');
+    const replacement = mod.createPuppet(sprite);
+    replacement.gesture('testify');
+    const replacementClip = act.style.animation;
+    puppet.gesture('deny'); puppet.move(true, -1, true); puppet.release();
+    assert.equal(act.style.animation, replacementClip, 'late calls from the old scene cannot interrupt its replacement');
+    assert.equal(timers.size, 1);
+    assert.equal(sprite.classList.contains('sl-denying'), false);
+    assert.equal(sprite.classList.contains('sl-travel'), false);
+    assert.equal(sprite.classList.contains('sl-controlled'), true);
+    replacement.release();
+    assert.equal(timers.size, 0);
+  });
+});
+
+test('hidden and reduced-motion courtroom scenes cancel held gestures and reject new animation work', async () => {
+  await withAnimator('court-visibility', ({ mod, sprite, act, timers, intervals, doc, listeners, media, preferenceListeners }) => {
+    const puppet = mod.createPuppet(sprite);
+    puppet.gesture('testify'); puppet.gesture('deny'); puppet.gesture('confess');
+    assert.equal(timers.size, 3);
+    doc.hidden = true; listeners.visibilitychange();
+    for (const held of ['sl-testifying', 'sl-denying', 'sl-confessing']) assert.equal(sprite.classList.contains(held), false);
+    assert.equal(timers.size, 0); assert.equal(intervals.size, 0); assert.equal(act.style.animation, '');
+    for (const gesture of ['testify', 'deny', 'confess']) puppet.gesture(gesture);
+    assert.equal(timers.size, 0); assert.equal(act.style.animation, '');
+    media.matches = true; preferenceListeners.change();
+    doc.hidden = false; listeners.visibilitychange();
+    for (const gesture of ['testify', 'deny', 'confess']) puppet.gesture(gesture);
+    assert.equal(timers.size, 0); assert.equal(intervals.size, 0); assert.equal(act.style.animation, '');
+    media.matches = false; preferenceListeners.change();
+    puppet.gesture('confess');
+    assert.equal(sprite.classList.contains('sl-confessing'), true); assert.equal(timers.size, 1);
+    media.matches = true; preferenceListeners.change();
+    assert.equal(sprite.classList.contains('sl-confessing'), false); assert.equal(timers.size, 0); assert.equal(act.style.animation, '');
+    puppet.release();
+  });
+});
+
+test('light effects skip puppet gesture clips and pose timers until full effects return', async () => {
+  await withAnimator('court-light-effects', ({ mod, sprite, act, timers, doc }) => {
+    const puppet = mod.createPuppet(sprite);
+    doc.body.dataset.effects = 'light';
+    for (const kind of ['blink', 'testify', 'deny', 'confess', 'inspect', 'celebrate']) puppet.gesture(kind);
+    assert.equal(timers.size, 0); assert.equal(act.style.animation, '');
+    for (const held of ['sl-blink', 'sl-testifying', 'sl-denying', 'sl-confessing', 'sl-inspecting', 'sl-celebrating']) {
+      assert.equal(sprite.classList.contains(held), false);
+    }
+    doc.body.dataset.effects = 'full';
+    puppet.gesture('testify');
+    assert.equal(timers.size, 1); assert.ok(act.style.animation.startsWith('sl2-testify '));
+    puppet.release(); assert.equal(timers.size, 0);
+  });
+});

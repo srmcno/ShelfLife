@@ -1,0 +1,80 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
+
+// Exercise real navigation handlers and owner cleanup without asserting layout.
+// These are behavioural checks, not a substitute for a physical phone preview.
+function navigation() {
+  const events = new Map(), observers = [], elements = new Map();
+  const make = (id, dataset = {}) => {
+    const listeners = new Map(), attributes = new Map(), classes = new Set();
+    const element = { id, dataset, style: {}, textContent: 'Close',
+      classList: { contains: value => classes.has(value), add: value => classes.add(value), remove: (...values) => values.forEach(value => classes.delete(value)), toggle: (value, enabled) => enabled ? classes.add(value) : classes.delete(value) },
+      setAttribute: (name, value) => attributes.set(name, value), getAttribute: name => attributes.get(name) ?? null, removeAttribute: name => attributes.delete(name),
+      addEventListener: (name, listener) => listeners.set(name, listener), fire: (name, event) => listeners.get(name)?.(event),
+      closest: () => null, querySelector: () => null, focus() {}
+    };
+    elements.set(id, element); return element;
+  };
+  const tabs = ['shelf', 'notes', 'plots'].map(name => make('tab-' + name, { tab: name }));
+  const logo = make('logo'), playroom = make('playroomVeil'), play = make('playVeil'), life = make('lifeVeil');
+  const playClose = make('playClose'), lifeClose = make('lifeClose'), playroomButton = make('playroomBtn');
+  play.querySelector = () => playClose; life.querySelector = () => lifeClose;
+  let cleaned = 0, returned = 0;
+  playClose.click = () => { cleaned++; play.classList.remove('open'); };
+  lifeClose.click = () => { cleaned++; life.classList.remove('open'); };
+  playroomButton.click = () => { returned++; playroom.classList.add('open'); };
+  const document = {
+    body: { dataset: {}, style: {} },
+    getElementById: id => elements.get(id) || null,
+    querySelectorAll: selector => selector === '.tabbar .tab[data-tab]' ? tabs : selector === '.wordmark' ? [logo] : selector === '#playVeil, #lifeVeil' ? [play, life] : selector === '.veil.open' ? [playroom, play, life].filter(veil => veil.classList.contains('open')) : [],
+    addEventListener(name, listener) { const list = events.get(name) || []; list.push(listener); events.set(name, list); }
+  };
+  const window = { scrollY: 0, matchMedia: () => ({ matches: true, addEventListener() {} }), addEventListener() {}, scrollTo({ top }) { this.scrollY = top; } };
+  const source = readFileSync(new URL('../src/ui/nav.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/m, '').replace(/export function /g, 'function ');
+  const context = { document, window, localStorage: { getItem: () => null, setItem() {} }, state: {}, onNote() {}, MutationObserver: class { constructor(callback) { this.callback = callback; } observe() { observers.push(this.callback); } } };
+  runInNewContext(source + '\nglobalThis.api={setTab,currentTab};', context);
+  return { ...context.api, window, logo, play, playroom, playClose,
+    get cleaned() { return cleaned; }, get returned() { return returned; },
+    flush() { observers.forEach(callback => callback()); },
+    chooseGame() {
+      playroom.classList.add('open');
+      const activity = { dataset: { activity: 'chase' }, closest: selector => selector === '#playroomVeil.open' ? playroom : null };
+      const target = { closest: selector => selector === '[data-activity]' ? activity : null };
+      for (const listener of events.get('click') || []) listener({ target });
+      playroom.classList.remove('open'); play.classList.add('open'); this.flush();
+    }
+  };
+}
+
+test('phone tabs preserve separate reading positions and an explicit top action resets only the active pane', () => {
+  const nav = navigation(); nav.window.scrollY = 185;
+  nav.setTab('notes'); assert.equal(nav.window.scrollY, 0);
+  nav.window.scrollY = 470; nav.setTab('plots'); nav.window.scrollY = 90;
+  nav.setTab('notes'); assert.equal(nav.window.scrollY, 470);
+  nav.setTab('shelf'); assert.equal(nav.window.scrollY, 185);
+  nav.setTab('shelf', { top: true }); assert.equal(nav.window.scrollY, 0);
+  nav.setTab('plots'); assert.equal(nav.window.scrollY, 90);
+});
+
+test('the logo returns from a hidden notes pane to the shelf instead of following an invisible anchor', () => {
+  const nav = navigation(); nav.setTab('notes'); nav.window.scrollY = 300;
+  let prevented = false; nav.logo.fire('click', { preventDefault() { prevented = true; } });
+  assert.equal(prevented, true); assert.equal(nav.currentTab(), 'shelf'); assert.equal(nav.window.scrollY, 0);
+});
+
+test('Back to games runs the game close handler once before reopening the catalogue', () => {
+  const nav = navigation(); nav.chooseGame();
+  assert.equal(nav.playClose.textContent, 'Back to games');
+  nav.playClose.click(); nav.flush();
+  assert.equal(nav.cleaned, 1); assert.equal(nav.returned, 1);
+  assert.equal(nav.playroom.classList.contains('open'), true); assert.equal(nav.playClose.textContent, 'Close');
+  nav.flush(); assert.equal(nav.returned, 1);
+});
+
+test('a game opened directly from a resident closes normally without an invented return destination', () => {
+  const nav = navigation(); nav.play.classList.add('open'); nav.flush();
+  assert.equal(nav.playClose.textContent, 'Close'); nav.playClose.click(); nav.flush();
+  assert.equal(nav.cleaned, 1); assert.equal(nav.returned, 0);
+});

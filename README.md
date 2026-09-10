@@ -13,6 +13,17 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
+## The full household update
+
+- **Investigative Shelf Court:** inspect three physical records, question specific witness claims, and prove a contradiction before exposing a motive. Twelve case families, three levels, scoring, appeals and a fully saved hearing. The current action stays in a visible Court footer on phones.
+- **Midnight Run:** three 18-second Chase acts with contracts, two lasting upgrade decisions, telegraphed broom sweeps and a gold finale. Quick Chase remains available; run records and rewards are separate.
+- **Three handshake rituals:** Echo, reverse-order Mirror and alternating-beat Duet, with distinct records, stage lighting and exact challenge replay.
+- **Alibi with proof:** pair the false statement with its matching household record. Unsupported evidence cannot earn a clean win; casual spot-the-lie mode is available.
+- **Expedition wagers and market secrets:** optional route challenges reward careful resource choices. New markets include rare stock and a once-per-trip secret sale with a real score cost. Old trips keep their rules.
+- **Scenes that follow the story:** each household scheme has its own objects and staged actions, selected from the recorded outcome. Visitors retain their actual appearance and returning expeditions show the relic they brought home. Replays have pause, manual steps and a finite ending; previews stay still.
+- **Darker writing throughout:** revised care notes, trait behavior, visitor arcs, testimony, game reactions and shopping outcomes.
+- **Phone navigation:** Shelf, Play, Notes, Stories and More are reachable from the bottom bar. Larger controls, remembered tab positions, readable sheets and a return to the Playroom after games reduce repeated navigation.
+
 ## After-hours update
 
 - **A proper Shelf Court:** an illustrated courtroom with a judge, dock, gallery, testimony, exhibits, objections and staged verdicts. Twelve darkly comic offences generate different evidence and suspect lineups. Choose Cozy, Curious or Tangled reasoning, cross-examine with exhibits, ask for hints, then present a deliberate verdict. Every case has exactly one answer, and every exhibit is necessary.

@@ -1,0 +1,55 @@
+/* Midnight Run adds depth with four fixed scenery nodes. Gameplay still owns
+   positioning; decorative animation stops whenever its simulation stops. */
+.chase-formats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.chase-formats .btn{display:grid;gap:4px;white-space:normal;min-width:0;text-align:left;min-height:56px;padding:10px 12px}
+.chase-formats b{font-size:14px}.chase-formats span{font-size:11px;color:var(--ink-2)}
+.chase-formats [aria-pressed="true"]{border-color:#edbc73;background:linear-gradient(145deg,#76533740,#372a35)}
+.chase-formats:has(button:disabled){display:none}
+.chase-wave-banner{border-left:3px solid #e8b870;padding:7px 9px;background:#e8b87012;color:#f2d2a3;font-size:11px;font-weight:700;line-height:1.35;margin:7px 0}
+.chase-loadout{font-size:10px;line-height:1.3;color:var(--ink-2);margin:4px 0}
+.chase-overlay{max-height:calc(100% - 24px);overflow:auto;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:thin}
+.chase-field:has(.chase-overlay:not([hidden])){touch-action:pan-y}
+.chase-upgrades{display:grid;gap:7px;margin:10px 0}
+.chase-upgrades .chase-upgrade{display:grid;gap:4px;text-align:left;white-space:normal;min-width:0;width:100%;padding:10px 12px;border-color:#a07d5c}
+.chase-overlay .chase-upgrades .chase-upgrade{position:static;box-shadow:none}
+.chase-upgrade b{font-size:13px;color:#f5d29b}.chase-upgrade span{font-size:11px;line-height:1.35;font-weight:400;color:var(--ink-2)}
+.chase-upgrade:hover{background:#70513055}.chase-upgrade:focus-visible{outline:3px solid var(--mint);outline-offset:-3px}
+.chase-depth{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.65;transform:translateX(var(--track,0px))}
+.chase-orb{position:absolute;width:45px;height:45px;border-radius:50%;left:11%;top:12%;background:radial-gradient(circle at 35% 38%,#ffd9a5 0 5%,#e7b389 40%,#8b647400 70%);opacity:.25;box-shadow:0 0 40px #eabf7930}
+.chase-bottles{position:absolute;right:12%;bottom:29%;width:20px;height:42px;border-radius:6px 6px 4px 4px;background:#786b6035;border:1px solid #a0806950;box-shadow:26px 8px 0 -2px #797e6330,44px -6px 0 -4px #97826e35}
+.chase-bottles::before{content:'';position:absolute;left:5px;top:-9px;width:8px;height:8px;background:#a18c7160}
+.chase-rib{position:absolute;left:40%;bottom:9%;width:44px;height:24px;border-radius:50%;border:4px solid #88766b40;border-bottom:0;transform:rotate(-9deg)}
+.chase-scene-rail{position:absolute;left:-5%;right:-5%;height:7px;top:72%;background:linear-gradient(#9c817e25,#110c1655);box-shadow:0 3px 12px #0003;transform:translateX(calc(var(--track,0px) * -1.5))}
+.chase-field[data-venue="pantry"] .chase-depth{opacity:.85}.chase-field[data-venue="pantry"] .chase-bottles{width:29px;height:59px;right:22%;bottom:29%}
+.chase-field[data-venue="moon"]{background:radial-gradient(ellipse at 15% 22%,#67609655,transparent 50%),linear-gradient(#151d33,#382c48)}
+.chase-field[data-venue="moon"] .chase-orb{width:53px;height:53px;opacity:.8;background:radial-gradient(circle at 32% 34%,#fff9d3,#c2bdd3 70%);box-shadow:0 0 28px #dce0ed55}
+.chase-field[data-venue="moon"] .chase-bottles{opacity:.2}
+.chase-field.is-running .chase-orb{animation:arcade-orbit 5s ease-in-out infinite alternate}
+.chase-field:not(.is-running) .chase-motes i,.chase-field:not(.is-running) .chase-item svg,.chase-field:not(.is-running) .chase-item{animation-play-state:paused}
+.chase-field.dashing .chase-resident::before{content:'';position:absolute;inset:26% 14% 10%;z-index:-1;border-radius:50%;background:#ffe1a050;transform:translateX(calc(var(--dash-side) * 16px));box-shadow:calc(var(--dash-side) * 19px) 0 0 -3px #efbb7055,calc(var(--dash-side) * 38px) 0 0 -7px #e9b76835}
+.chase-item.broom{width:152px;height:54px;z-index:4;filter:drop-shadow(0 3px 2px #0008)}
+.chase-item.broom svg{rotate:0deg;transform-origin:90% 15%;animation:arcade-sweep .3s ease-out both}
+.chase-item.broom span{display:none;position:absolute;left:4px;right:4px;top:4px;color:#ffe6bd;background:#3c1c25;border:1px solid #f9af73;border-radius:4px;text-align:center;font:700 8px/1.4 system-ui;padding:3px 1px;white-space:nowrap}
+.chase-item.broom.warning{height:62px;border-bottom:4px dashed #ffad75;background:linear-gradient(transparent,#c7524840)}
+.chase-item.broom.warning svg{opacity:.3;animation:none;transform:translateY(-18px) rotate(-20deg)}
+.chase-item.broom.warning span{display:block}
+.chase-burst{position:absolute;width:22px;height:22px;margin:0 0 -11px -11px;border:3px solid #ffe4a5;border-radius:50%;pointer-events:none;animation:arcade-catch .42s ease-out both}
+.chase-burst::before,.chase-burst::after{content:'';position:absolute;inset:-7px;border:2px dotted #f5c76a;border-radius:50%}
+.chase-burst::after{inset:-12px;border-color:#fbdfbd70;rotate:45deg}
+.chase-field.final-call{box-shadow:inset 0 0 40px #d9ac572a}
+.chase-field.final-call .chase-scene-rail{background:linear-gradient(#dcad6150,#30231c50)}
+@keyframes arcade-orbit{to{transform:translate3d(2px,-4px,0);opacity:.6}}
+@keyframes arcade-sweep{from{transform:translateX(-20px) rotate(-18deg)}to{transform:translateX(10px) rotate(8deg)}}
+@keyframes arcade-catch{0%{transform:scale(.3);opacity:1}100%{transform:scale(1.5);opacity:0}}
+@media(max-width:720px){
+ .chase-formats .btn{padding:8px;min-height:52px}.chase-formats b{font-size:13px}.chase-formats span{font-size:10px}
+ .chase-wave-banner{margin:4px 0;padding:5px 7px;font-size:10px}.chase-loadout{margin:3px 0;font-size:10px}
+ #chaseArea[data-running="true"] .chase-loadout{display:none}
+ .chase-upgrades .chase-upgrade{padding:10px;min-height:56px}
+}
+@media(prefers-reduced-motion:reduce){
+ .chase-depth,.chase-scene-rail{transform:none}.chase-field.is-running .chase-orb,.chase-item.broom svg{animation:none}
+ .chase-burst,.chase-field.dashing .chase-resident::before{display:none}
+}
+body[data-effects="light"] .chase-orb{animation:none!important}
+body[data-effects="light"] .chase-burst,body[data-effects="light"] .chase-field.dashing .chase-resident::before{display:none}
