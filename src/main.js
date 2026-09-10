@@ -1,4 +1,6 @@
 import { initLife } from './ui/life.js';
+import { createBackup } from './backup.js';
+import { initBackupTransfer } from './ui/backup.js';
 import { initPlayroom } from './ui/playroom.js';
 import { lifeState, welcomeBack } from './engine/life.js';
 import { artPersonality } from './engine/personality.js';
@@ -204,12 +206,17 @@ document.getElementById('backupLater')?.addEventListener('click', () => {
   toast('Noted. They will bring it up again.');
 });
 
-document.getElementById('exportBtn').addEventListener('click', () => {
-  state.lastBackup = Date.now();
+function markBackup(created) {
+  state.lastBackup = created;
   save();
-  offerDownload(JSON.stringify(state), 'shelf-life-backup.json');
   syncBackupBanner();
+}
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const backup = createBackup(state);
+  offerDownload(backup.text, backup.name);
+  markBackup(backup.created);
 });
+initBackupTransfer({ state, download: offerDownload, markBackup });
 
 let pendingRestore = null;
 const restoreVeil = document.getElementById('restoreVeil');
@@ -246,7 +253,7 @@ document.getElementById('importBtn').addEventListener('click', () => importFile.
 importFile.addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
-  if (file.size > 12 * 1024 * 1024) { toast('That backup is too large. Choose a Shelf Life JSON backup under 12 MB.'); e.target.value = ''; return; }
+  if (file.size > 12 * 1024 * 1024) { toast('That backup is too large. Choose a Shelf Life JSON or text backup under 12 MB.'); e.target.value = ''; return; }
   const fr = new FileReader();
   fr.onerror = () => { toast('That file could not be read. Try choosing it again.'); e.target.value = ''; };
   fr.onload = () => {

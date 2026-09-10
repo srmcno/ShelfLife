@@ -944,6 +944,17 @@ body:has(.empty-shelf) .btn-check{opacity:.75}
 .sheet-head>div{min-width:0}
 .sheet-head .btn{flex:none}
 .sheet-grab{display:none}
+.sheet-transfer p,.sheet-transfer li{line-height:1.55}
+.sheet-transfer h3{margin:18px 0 10px}
+.sheet-transfer ol{padding-left:24px}
+.sheet-transfer li+li{margin-top:8px}
+.sheet-transfer .btn{min-height:44px;white-space:normal;text-align:center}
+#transferShare{width:100%;margin-top:16px}
+.transfer-email{border-top:1px solid var(--hair-lit);margin-top:20px}
+.transfer-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.transfer-actions .btn{flex:1 1 180px;min-width:0;justify-content:center}
+#transferFilename{overflow-wrap:anywhere}
+.transfer-status:not(:empty){padding:12px;border:1px solid var(--hair-lit);border-radius:var(--r);margin-top:16px;color:var(--ink)}
 .tool-block{margin-bottom:16px}
 .tool-label{display:block;margin-bottom:8px}
 .chiprow{display:flex;flex-wrap:wrap;gap:7px}

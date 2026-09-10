@@ -171,8 +171,8 @@ export async function renderPostcard(caption) {
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  const ink = cssVar('--ink', '#F2E9DC'), ink2 = cssVar('--ink-2', '#B8AB9D'), ink3 = cssVar('--ink-3', '#8F857A');
-  const key = cssVar('--key', '#F2C083'), roomA = cssVar('--room-a', '#33203D'), roomB = cssVar('--room-b', '#1A1220');
+  const ink3 = cssVar('--ink-3', '#8F857A');
+  const roomA = cssVar('--room-a', '#33203D'), roomB = cssVar('--room-b', '#1A1220');
   const wood = cssVar('--wood', '#5C3A47'), lip = cssVar('--wood-lip', '#7A4C5B');
 
   // the room
@@ -187,14 +187,16 @@ export async function renderPostcard(caption) {
   ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
 
   // the wordmark and the figures
+  // Light room themes need a backing too: UI ink is designed for dark panels.
+  ctx.fillStyle = '#211928'; roundRect(ctx, 42, 54, W - 84, 132, 14); ctx.fill();
   ctx.textBaseline = 'alphabetic';
   ctx.font = '400 74px Gloock';
-  ctx.fillStyle = ink; ctx.textAlign = 'left';
+  ctx.fillStyle = '#F2E9DC'; ctx.textAlign = 'left';
   ctx.fillText('Shelf', 70, 128);
   const shelfW = ctx.measureText('Shelf').width;
-  ctx.fillStyle = key; ctx.fillText('Life', 70 + shelfW + 10, 128);
+  ctx.fillStyle = '#F2C083'; ctx.fillText('Life', 70 + shelfW + 10, 128);
   const days = Math.max(1, Math.floor((Date.now() - state.started) / 86400000) + 1);
-  ctx.font = '600 20px Karla'; ctx.fillStyle = ink2; ctx.textAlign = 'right';
+  ctx.font = '600 20px Karla'; ctx.fillStyle = '#D8CCDB'; ctx.textAlign = 'right';
   if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '3px';
   ctx.fillText(('DAY ' + days + '   ·   ' + state.pets.length + ' LIVING HERE   ·   TRUST ' + totalBond(state)).toUpperCase(), W - 70, 122);
   if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '0px';
@@ -306,10 +308,11 @@ export async function renderPostcard(caption) {
   }
 
   // the caption and the postmark
+  ctx.fillStyle = '#211928'; roundRect(ctx, 42, H - 114, W - 84, 92, 14); ctx.fill();
   ctx.textAlign = 'center';
-  ctx.font = 'italic 400 24px Karla'; ctx.fillStyle = ink2;
+  ctx.font = 'italic 400 24px Karla'; ctx.fillStyle = '#D8CCDB';
   ctx.fillText(caption, W / 2, H - 78);
-  ctx.font = '600 15px Karla'; ctx.fillStyle = ink3;
+  ctx.font = '600 15px Karla'; ctx.fillStyle = '#D8CCDB';
   if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '3px';
   ctx.fillText('SRMCNO.GITHUB.IO/SHELFLIFE', W / 2, H - 42);
   if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '0px';

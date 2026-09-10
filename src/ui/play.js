@@ -1,4 +1,5 @@
 import { GESTURES, newHandshake, tapHandshake, rewardHandshake, playWait, gesturesFor, handshakeRounds, HANDSHAKE_RITUALS, handshakePattern, handshakeDemonstration, handshakeRecordKey, restartHandshake } from '../engine/play.js';
+import { rewardSummary } from './reward-summary.js';
 import { newAlibi, answerAlibi, advanceAlibi, rewardAlibi, currentRound, ALIBI_ROUNDS, alibiReaction, alibiRank } from '../engine/alibi.js';
 import { isAsleep } from '../engine/tick.js';
 import { renderPetSprite } from '../art/sprite.js';
@@ -110,7 +111,7 @@ export function initPlay(state, refresh) {
       : mode === 'alibi' ? (alibiMode.value === 'prove' ? 'Find and prove all three lies for up to +20 attention and +1 trust.' : 'Catch all three lies for up to +20 attention and +1 trust.')
       : 'Win for up to +24 attention and +1 trust.';
     const names = gesturesFor(pet);
-    pads.forEach((pad, i) => { const label = pad.querySelector('span'); if (label) label.textContent = GESTURES[i]; pad.title=names[i]; pad.setAttribute('aria-label',GESTURES[i]+' · '+names[i]+' · key '+(i+1)); });
+    pads.forEach((pad, i) => { const label = pad.querySelector('span'); if (label) label.textContent = names[i]; pad.title=GESTURES[i]; pad.setAttribute('aria-label',names[i]+' · key '+(i+1)); });
     host.replaceChildren();
     if (mode === 'chase') chase.prepare(pet, gentle.checked);
     else { host.appendChild(renderPetSprite(pet)); host.firstElementChild.classList.add('sl-mood-content'); puppet = createPuppet(host.firstElementChild); progress(); }
@@ -183,9 +184,7 @@ export function initPlay(state, refresh) {
     checkUnlocks(state); checkAchievements(state); refresh();
     const caught = alibi.correct, total = alibi.rounds.length;
     alibiCharge.textContent = alibiRank(alibi) + ' · ' + caught + '/' + total + ' lies found' + (alibi.mode === 'prove' ? ' · ' + alibi.proved + '/' + total + ' proved.' : '.');
-    status.textContent = result && !result.practice
-      ? '+' + Math.round(result.fuss) + ' attention · +' + result.bond + ' trust. ' + (result.clean ? 'It is deleting your number with both hands.' : 'The witness leaves. Your chair leaves with it.')
-      : 'Practice complete. Your investigation and clean wins are recorded.';
+    status.textContent = rewardSummary(result) + ' ' + (result?.clean ? 'It is deleting your number with both hands.' : 'The witness leaves. Your chair leaves with it.');
     document.getElementById('playReward').textContent = 'Each game rests separately. Practice always counts in your history.';
     puppet?.gesture(result?.clean ? 'confess' : 'deny'); stage(result?.clean ? 'win' : 'closed', alibiRank(alibi));
     if (result?.clean) playFuss(); progress();
@@ -301,7 +300,7 @@ export function initPlay(state, refresh) {
     encore.disabled = false; ritualSelect.disabled = false; veil.classList.remove('ritual-active'); stage('win', HANDSHAKE_RITUALS[game.ritual || 'echo'].name + ' ritual complete');
     cue.textContent = game.encore ? 'Six moves. Your pulse is optional.' : 'The audience wants you to stay. Forever.';
     document.getElementById('playAnnouncement').textContent = 'Handshake complete. ' + game.rounds + ' rounds remembered.';
-    status.textContent = result && !result.practice ? '+' + Math.round(result.fuss) + ' attention · +' + result.bond + ' trust. The usher has crossed you off the missing persons board.' : 'Practice complete. The audience has requested the same funeral again.';
+    status.textContent = rewardSummary(result) + ' The audience has started practising behind your back.';
     status.textContent += ' ' + game.rounds + ' rounds · ' + game.mistakes + (game.mistakes === 1 ? ' slip · ' : ' slips · ') + game.replays + (game.replays === 1 ? ' replay.' : ' replays.');
     const bestRun = pet.handshakeBest?.[handshakeRecordKey(game)];
     if (bestRun) status.textContent += ' Personal best: ' + bestRun.rounds + ' rounds with ' + bestRun.mistakes + (bestRun.mistakes === 1 ? ' slip and ' : ' slips and ') + bestRun.replays + (bestRun.replays === 1 ? ' replay.' : ' replays.');

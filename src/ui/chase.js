@@ -1,5 +1,6 @@
 import { CHASE_VENUES, chaseRecordKey, chaseStarTarget, chaseCoaching, newChase, updateChase, jumpChase, dashChase, recordChase, chaseStars, streakMultiplier, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND, RUN_WAVES, RUN_UPGRADES, RUN_WAVE_SECONDS, chaseDuration, chaseWaveTime, chaseWaveContract, advanceChaseWave } from '../engine/chase.js';
 import { moodOf } from '../engine/tick.js';
+import { rewardSummary } from './reward-summary.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { createPuppet } from '../art/animator.js';
 import { playFeed, playFuss, playClean, playStomp, playPowerUp, playStar } from '../audio/sound.js';
@@ -266,7 +267,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
     const contracts = game.format === 'run' ? 'Contracts: ' + game.waveResults.filter(result => result.bonus > 0).length + '/3. ' : '';
     const line = contracts + n(game.caught, 'crumb') + ' · ' + n(game.dodged, 'dodge') + ' · ' + n(game.stomps, 'stomp') + ' · ' + n(game.dashSmashes, 'dash smash') + ' · ' + n(game.score, 'point') + ' · best streak ' + game.bestCombo + ' · ' + n(game.airCatches, 'air catch') + ' · ' + n(game.bumps, 'bump') + (game.finaleComplete ? ' · Gold sweep +60' : '') + '. ';
     if (!game.complete) return line + 'Reach ' + game.goal + ' crumbs to win. Nothing on your shelf was lost.';
-    return line + (reward?.practice ? 'Practice complete. Your best still counts.' : '+' + (reward?.fuss || 0) + ' attention · +' + (reward?.bond || 0) + ' trust.');
+    return line + rewardSummary(reward);
   }
   function showStars(rating) {
     stars.replaceChildren(...[1, 2, 3].map(n => { const s = document.createElement('span'); s.textContent = '★'; s.classList.toggle('lit', n <= rating); return s; }));

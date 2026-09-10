@@ -179,9 +179,10 @@
     <button class="btn tray-item" id="narratorBtn" aria-pressed="true"><span>Narrator</span><small>Reads the notes aloud</small></button>
     <button class="btn tray-item" id="voiceBtn" title="Choose who reads the notes out loud."><span>Voice</span><small>Who does the reading</small></button>
     <button class="btn tray-item" id="exportBtn"><span>Back up</span><small>Download this shelf</small></button>
+    <button class="btn tray-item" id="transferBtn"><span>Move to another device</span><small>Email or share a backup</small></button>
     <button class="btn tray-item" id="importBtn"><span>Restore</span><small>Load a backup file</small></button>
     <button class="btn tray-item" id="recoveryBtn" hidden><span>Download recovery file</span><small>Your unreadable old save</small></button>
-    <input type="file" id="importFile" accept="application/json" hidden>
+    <input type="file" id="importFile" accept=".json,.txt,application/json,text/plain" hidden>
   </div>
 </div>
 
@@ -349,6 +350,24 @@
   <p class="guide-footnote">Needs change while you are away, up to eighteen hours at a time, and only half as fast at night. They cannot die. You can take a break. Your shelf saves on this device; More → Back up keeps a copy you can restore elsewhere.</p>
   <p class="guide-footnote">Keyboard: Tab through controls, Enter or Space to activate, Escape to close a sheet. The game respects your device’s reduced-motion preference.</p>
 </div></div>
+<div class="veil" id="transferVeil"><div class="sheet sheet-transfer">
+  <div class="sheet-head"><div><span class="eyebrow">Take everyone with you</span><h2>Email or share your shelf</h2></div><button class="btn btn-ghost btn-sm" id="transferClose">Close</button></div>
+  <p>Take your residents, drawings, game progress and memories to another device. Send a copy to yourself, then restore it there.</p>
+  <button class="btn btn-primary" id="transferShare">Share backup…</button>
+  <p class="hint">Choose Mail, another device, or Files if offered. The backup may be a .json or .txt file; Restore accepts both.</p>
+  <div class="transfer-email">
+    <h3>Or email a downloaded copy</h3>
+    <p>Download the file first. Then address an email to yourself, attach the file from Downloads or Files, and send it.</p>
+    <div class="transfer-actions"><button class="btn" id="transferDownload">1. Download backup</button><a class="btn" id="transferEmail" hidden>2. Open email draft</a></div>
+    <p class="hint" id="transferFilename"></p>
+    <p class="hint">The email draft includes restore instructions. You must attach the backup yourself. You can also use your usual email website.</p>
+  </div>
+  <p class="transfer-status" id="transferStatus" role="status" aria-live="polite"></p>
+  <h3>On the other device</h3>
+  <ol><li>Save the email attachment or shared file.</li><li>Open Shelf Life and choose <strong>More → Restore</strong>.</li><li>Select the file and check the preview before replacing the shelf.</li></ol>
+  <p class="hint">Back up any shelf already on the other device first. This is a snapshot, not automatic sync: send a fresh backup from the device you last played on whenever you switch.</p>
+</div></div>
+
 <div class="veil" id="restoreVeil"><div class="sheet">
   <div class="sheet-head"><h2>Replace this shelf?</h2></div>
   <p id="restoreSummary"></p><p class="hint">Keep a backup of your current residents if you might want them back.</p>

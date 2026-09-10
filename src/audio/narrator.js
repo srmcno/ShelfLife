@@ -310,17 +310,22 @@ function pump() {
 
 function speakBrowser(line) {
   const u = buildUtterance(line);
-  playbackStatus(pickBestVoice()?.native
-    ? 'Enhanced speech is unavailable right now. Using the browser voice.'
-    : 'Speaking with ' + (u.voice?.name || 'the browser voice') + '.');
+  playbackStatus('Waiting for the browser to start narration.');
   lastUtterance = u;
   speaking = true;
   const mine = ++utterSerial;
-  u.onend = u.onerror = () => { if (mine === utterSerial) finish(); };
+  u.onstart = () => { if (mine === utterSerial) playbackStatus('Speaking with ' + (u.voice?.name || 'the browser voice') + '.'); };
+  u.onend = () => { if (mine === utterSerial) finish(); };
+  u.onerror = () => {
+    if (mine !== utterSerial) return;
+    finish();
+    playbackStatus('The browser could not play narration. You can still read every note.');
+  };
   try {
     synth.speak(u);
   } catch (e) {
     finish();
+    playbackStatus('The browser could not start narration. You can still read every note.');
     return;
   }
   watch(line);
@@ -364,7 +369,7 @@ function clearNativeAudio() {
 
 function finish() {
   if (!speaking) return;
-  playbackStatus('Last read by ' + (lastUtterance?.voice?.name || 'the browser voice') + '.');
+  playbackStatus('Narration idle.');
   speaking = false;
   clearNativeAudio();
   unwatch();

@@ -139,9 +139,9 @@ export function caseText(state) {
 }
 export function caseGate(state) {
   const c = currentCase(state); if (!c || c.beat === 6) return { ready: false, hint: 'Case closed. A new file arrives next week.' };
-  if (c.beat === 1 && careCount(state) <= c.careStart && playCount(state) <= c.playStart) return { ready: false, hint: 'Give useful individual care below 72, or complete a game together.' };
+  if (c.beat === 1 && careCount(state) <= c.careStart && playCount(state) <= c.playStart) return { ready: false, hint: 'Give useful individual care below 72, or win a Handshake, Crumb Chase or Alibi. Practice wins count.' };
   if (c.beat === 2 && state.pets.some(p => p.id === c.cast[0]?.id) && state.slots[6] !== c.cast[0].id) return { ready: false, hint: 'Move ' + caseNames(state).p + ' to B1 using its Place on shelf selector.' };
-  if (c.beat === 4 && playCount(state) <= (c.playClue ?? c.playStart) && careCount(state) < c.careClue + 2) return { ready: false, hint: 'Complete a game together, or perform two more useful care actions.' };
+  if (c.beat === 4 && playCount(state) <= (c.playClue ?? c.playStart) && careCount(state) < c.careClue + 2) return { ready: false, hint: 'Win a Handshake, Crumb Chase or Alibi, or perform two more useful care actions. Practice wins count.' };
   return { ready: true, hint: c.beat === 2 ? 'Witness in position. The reconstruction can begin.' : 'Evidence ready to file.' };
 }
 export function advanceCase(state, choice = 'listen', now = Date.now()) {
@@ -172,7 +172,7 @@ export function advanceCase(state, choice = 'listen', now = Date.now()) {
 export function requestDescription(state, pet) {
   const r = storyState(state).requests[pet.id]; if (!r) return null;
   const other = state.pets.find(p => p.id === r.target);
-  const text = { food: 'Feed me once, individually. I have started thinking of the shelf as a serving suggestion.', fuss: 'Give me some individual attention. I am too small to haunt you from this distance.', clean: 'Wash me individually. Something in the crust has started charging rent.', play: 'Win a rewarded Handshake, Crumb Chase or Alibi with me. I need a shared incident.', prop: 'Put a ' + (PROPS[r.target]?.name || 'food bowl') + ' beside me. I need a neighbour with fewer opinions.', neighbor: 'Let me stand beside ' + (other?.name || 'another resident') + '. I have something small and incriminating to say.', room: 'Change the room to Bone Parlor. I want to look expensive.' }[r.kind];
+  const text = { food: 'Feed me once, individually. I have started thinking of the shelf as a serving suggestion.', fuss: 'Give me some individual attention. I am too small to haunt you from this distance.', clean: 'Wash me individually. Something in the crust has started charging rent.', play: 'Win a Handshake, Crumb Chase or Alibi with me. Practice wins count. I need a shared incident.', prop: 'Put a ' + (PROPS[r.target]?.name || 'food bowl') + ' beside me. I need a neighbour with fewer opinions.', neighbor: 'Let me stand beside ' + (other?.name || 'another resident') + '. I have something small and incriminating to say.', room: 'Change the room to Bone Parlor. I want to look expensive.' }[r.kind];
   return { ...r, text };
 }
 export function acceptRequest(state, petId, accept, now = Date.now()) {
