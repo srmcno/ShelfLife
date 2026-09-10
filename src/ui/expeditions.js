@@ -25,3 +25,34 @@ export function trailDareStatus(o){
  if(o.step===3)progress=o.dareBonus?'+2 wager points earned':'Wager not met. No points lost.';
  return '<div class="trail-dare-status '+(o.step===3&&o.dareBonus?'fulfilled':'')+'"><b>'+esc(dare.name)+'</b><span>'+esc(progress)+'</span>'+(o.step===3&&o.dareBonus?'<p>'+esc(dare.payoff)+'</p>':'<small>'+esc(dare.line)+'</small>')+'</div>';
 }
+
+// Every expedition screen has one reading pane and a separate action dock.
+// Desktop remains a document layout; on phones the dock cannot scroll away.
+export function wrapTrailLayout(host,phase,o=null){
+ const workspace=document.createElement('section'),scroll=document.createElement('div'),dock=document.createElement('footer');
+ workspace.className='adventure-workspace trail-workspace phase-'+phase;scroll.className='adventure-scroll';dock.className='adventure-actions trail-action-dock';
+ const selector=phase==='playing'?'.expedition-choices':phase==='report'?'.trail-report-actions':phase==='result'?'.trail-final-actions':'.life-links';
+ const actions=host.querySelector(selector);if(actions)dock.appendChild(actions);
+ if(phase==='playing'&&o){
+  const label=document.createElement('p');label.className='trail-dock-status';label.textContent=o.version===2?o.score+' points · '+o.nerve+' nerve · '+(o.toolUsed?'tool used':'tool ready'):o.score+' preparation points';dock.prepend(label);
+  for(const b of dock.querySelectorAll('[data-life="outing-choice"]')){
+   const choice=Number(b.dataset.choice),hint=b.querySelector('small');if(!hint)continue;
+   hint.classList.add('trail-option-long');const brief=document.createElement('small');brief.className='trail-option-mobile';
+   if(o.version!==2)brief.textContent=hint.textContent;
+   else if(choice===0)brief.textContent='Restore 2 nerve · 0 points';
+   else if(choice===1){const parts=hint.textContent.match(/\+(\d+) points · costs (\d+) nerve/);brief.textContent=parts?'+'+parts[1]+' points · −'+parts[2]+' nerve':hint.textContent;}
+   else{const points=hint.textContent.match(/\+(\d+) points/);brief.textContent=points?'+'+points[1]+' points · use tool':'Tool already used';}
+   b.appendChild(brief);
+  }
+ }
+ if(phase==='planning'){
+  const wager=host.querySelector('.trail-dare-picker'),rules=host.querySelector('.trail-rules');
+  if(wager){const details=document.createElement('details'),summary=document.createElement('summary');details.className='trail-wager-settings';summary.textContent='Optional wager · bonus points';details.appendChild(summary);wager.before(details);const hint=wager.nextElementSibling;details.appendChild(wager);if(hint?.classList.contains('hint'))details.appendChild(hint);}
+  const map=host.querySelector('.trail-map');if(rules&&map)map.appendChild(rules);
+ }
+ if(phase==='playing'){
+  host.querySelector('.trail-supplies')?.classList.add('trail-supplies-desktop');
+  const wager=host.querySelector('.trail-dare-status'),map=host.querySelector('.trail-map');if(wager&&map)map.querySelector('summary')?.after(wager);
+ }
+ while(host.firstChild)scroll.appendChild(host.firstChild);workspace.append(scroll,dock);host.appendChild(workspace);
+}

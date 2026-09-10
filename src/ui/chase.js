@@ -20,7 +20,9 @@ const QUIPS = {
   best: ['A new record. The pride was already there.', 'The old best has been quietly disowned.', 'It scratched the score into the wood. With a tooth.', 'It would like this noted in the museum.']
 };
 
-export function createChaseUI(root, onFinish, onStatus) {
+export function createChaseUI(root, onFinish, reportStatus) {
+  const announcement = document.createElement('p'); announcement.className = 'sr-only'; announcement.setAttribute('role', 'status'); root.append(announcement);
+  const onStatus = text => { announcement.textContent = text; reportStatus(text); };
   const field = root.querySelector('#chaseField'), actor = root.querySelector('#chaseResident');
   const items = root.querySelector('#chaseItems'), shadow = root.querySelector('#chaseShadow');
   const overlay = root.querySelector('#chaseOverlay'), title = root.querySelector('#chaseHeading');
@@ -70,6 +72,46 @@ export function createChaseUI(root, onFinish, onStatus) {
   const challengePicker = practiceTools.querySelector('#chaseChallenge'), repeatCourse = practiceTools.querySelector('#chaseRepeat');
   const starTarget = document.createElement('p'); starTarget.className = 'chase-star-target';
   objective.after(starTarget);
+  // Desktop keeps its familiar inline layout. A phone gets one bounded arena,
+  // and setup/results use the whole workspace instead of a tiny field inset.
+  const mobileLayout = window.matchMedia('(max-width: 720px), (max-height: 500px) and (pointer: coarse)');
+  const arena = document.createElement('div'); arena.className = 'chase-arena';
+  field.before(arena); arena.append(field);
+  const hudStrip = document.createElement('div'); hudStrip.className = 'chase-hud-strip';
+  const hud = root.querySelector('.chase-hud'), clock = root.querySelector('.chase-clock');
+  hud.before(hudStrip); hudStrip.append(hud, clock);
+  const readout = document.createElement('div'); readout.className = 'chase-readout';
+  combo.before(readout); readout.append(combo, objective, starTarget);
+  const mobileProgress = document.createElement('p'); mobileProgress.className = 'chase-mobile-progress'; readout.append(mobileProgress);
+  const overlayScroll = document.createElement('div'); overlayScroll.className = 'chase-overlay-scroll';
+  const overlayFooter = document.createElement('div'); overlayFooter.className = 'chase-overlay-footer';
+  overlay.prepend(overlayScroll); overlayScroll.append(title, stars, description, quip, upgrades);
+  overlay.append(overlayFooter); overlayFooter.append(go);
+  const configure = document.createElement('button'); configure.type = 'button'; configure.className = 'btn btn-ghost'; configure.textContent = 'Change setup'; configure.hidden = true;
+  overlayFooter.append(configure);
+  const mobileSetup = document.createElement('div'); mobileSetup.className = 'chase-mobile-setup';
+  const mobileGuide = document.createElement('p'); mobileGuide.className = 'chase-mobile-guide'; mobileSetup.append(mobileGuide);
+  overlayScroll.append(mobileSetup);
+  const markers = new Map();
+  for (const element of [formatPicker, settings, overlay]) {
+    const marker = document.createComment('chase original position'); element.before(marker); markers.set(element, marker);
+  }
+  const gentleOption = document.getElementById('gentleOption');
+  if (gentleOption) { const marker = document.createComment('gentle original position'); gentleOption.before(marker); markers.set(gentleOption, marker); }
+  const screen = value => { root.dataset.chaseScreen = value; configure.hidden = value !== 'result'; mobileSetup.hidden = value !== 'setup'; };
+  function fitLayout() {
+    if (mobileLayout.matches) {
+      mobileSetup.append(formatPicker, settings);
+      settings.open = false;
+      if (gentleOption) settings.append(gentleOption);
+      root.append(overlay);
+    } else {
+      for (const [element, marker] of markers) marker.after(element);
+    }
+    requestAnimationFrame(measure);
+  }
+  mobileLayout.addEventListener('change', fitLayout);
+  configure.addEventListener('click', () => { if (pet) controller.prepare(pet, gentle); });
   let courseSeed = null, courseObjective = null;
   venuePicker.addEventListener('change',()=>{if(pet)controller.prepare(pet,gentle);});
   challengePicker.addEventListener('change', () => { courseObjective = null; if (pet) controller.prepare(pet, gentle); });
@@ -80,10 +122,17 @@ export function createChaseUI(root, onFinish, onStatus) {
   const nodes = new Map(), held = new Set();
   let fieldBox = null, hudKey = '', popAnimation = null, runNumber = 0;
   function measure() {
+    if (mobileLayout.matches) {
+      const box = arena.getBoundingClientRect();
+      if (box.width > 0 && box.height > 0) {
+        const width = Math.floor(Math.min(box.width, box.height * CHASE_WIDTH / CHASE_HEIGHT));
+        field.style.width = width + 'px'; field.style.height = (width * CHASE_HEIGHT / CHASE_WIDTH) + 'px';
+      }
+    } else { field.style.removeProperty('width'); field.style.removeProperty('height'); }
     fieldBox = field.getBoundingClientRect();
     if (fieldBox.width > 2) world.style.transform = 'scale(' + (field.clientWidth / CHASE_WIDTH) + ')';
   }
-  new ResizeObserver(measure).observe(field);
+  const fieldObserver = new ResizeObserver(measure); fieldObserver.observe(field); fieldObserver.observe(arena);
   window.addEventListener('resize', measure);
   const setText = (el, value) => { if (el.textContent !== String(value)) el.textContent = String(value); };
   let pet = null, game = null, puppet = null, running = false, paused = false, gentle = false;
@@ -177,6 +226,8 @@ export function createChaseUI(root, onFinish, onStatus) {
       field.classList.toggle('urgent', running && seconds <= 5);
       waveBanner.hidden = !contract; loadout.hidden = !game.upgrades.length;
       if (contract) setText(waveBanner, 'ACT ' + (game.wave + 1) + '/3 · ' + contract.name + ' · ' + Math.min(contract.progress, contract.target) + '/' + contract.target + ' ' + contract.goal + ' · +' + contract.bonus);
+      setText(mobileProgress, contract ? 'Act ' + (game.wave + 1) + '/3 · ' + Math.min(contract.progress, contract.target) + '/' + contract.target + ' ' + contract.goal + ' · ×' + streakMultiplier(game.combo)
+        : 'Streak ' + game.combo + ' · ×' + streakMultiplier(game.combo) + (quest ? ' · Quest ' + (quest.done ? '✓' : questProgress + '/' + quest.target) : ''));
       setText(loadout, game.upgrades.map(id => RUN_UPGRADES[id].name).join(' · '));
       paintCombo();
       root.dataset.score = game.score; root.dataset.caught = game.caught;
@@ -218,6 +269,7 @@ export function createChaseUI(root, onFinish, onStatus) {
     challengePicker.disabled = false; repeatCourse.disabled = false;
     for (const button of formatPicker.children) button.disabled = false;
     stopFrame(); paused = false; root.dataset.finished = 'true'; disabled(true);
+    screen('result');
     const previous = pet.chaseRecords?.[chaseRecordKey(game)];
     const newBest = !previous || game.score > previous.score;
     recordChase(pet, game);
@@ -230,7 +282,7 @@ export function createChaseUI(root, onFinish, onStatus) {
     if (game.complete) { puppet.gesture('win'); playFuss(); playStar({ step: rating, delay: .3 }); }
     else if (newBest) playStar({ step: 1 });
     upgrades.hidden = true; go.hidden = false;
-    go.textContent = game.format === 'run' ? 'Another midnight run' : 'Chase again'; overlay.hidden = false; overlay.scrollTop = 0; go.focus({ preventScroll: true });
+    go.textContent = game.format === 'run' ? 'Another midnight run' : 'Chase again'; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; go.focus({ preventScroll: true });
     onStatus(statusFor(rating, newBest) + ' ' + chaseCoaching(game));
   }
   function onCatch(event) {
@@ -273,6 +325,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function intermission() {
     stopFrame(); disabled(true); paint();
+    screen('upgrade');
     const result = game.waveResults.at(-1), next = RUN_WAVES[game.wave + 1];
     title.textContent = result.bonus ? 'Contract fulfilled. Nobody survived breakfast.' : 'The bread has retained counsel.';
     description.textContent = result.progress + '/' + result.target + ' ' + result.goal + (result.bonus ? ' · +' + result.bonus + ' contract points. ' : '. No contract bonus. ') + 'Next: ' + next.intro;
@@ -290,7 +343,7 @@ export function createChaseUI(root, onFinish, onStatus) {
       });
       return button;
     }));
-    overlay.classList.remove('best'); overlay.hidden = false; overlay.scrollTop = 0;
+    overlay.classList.remove('best'); overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0;
     upgrades.firstElementChild?.focus({ preventScroll: true });
     onStatus('Act ' + (game.wave + 1) + ' complete. ' + (result.bonus ? result.bonus + ' contract points. ' : '') + 'The clock is stopped. Choose one upgrade for the rest of this run.');
   }
@@ -308,6 +361,7 @@ export function createChaseUI(root, onFinish, onStatus) {
   }
   function run() {
     running = true; paused = false; resetInput(); overlay.hidden = true; disabled(false);
+    screen('play');
     settings.open = false;
     measure(); lastTime = performance.now(); frameId = requestAnimationFrame(frame);
     field.focus({ preventScroll: true });
@@ -331,8 +385,9 @@ export function createChaseUI(root, onFinish, onStatus) {
   function pause() {
     if (!running) return;
     stopFrame(); paused = true; disabled(true); paint();
+    screen('paused');
     title.textContent = 'The crumbs can wait.'; description.textContent = 'Paused. Your score and remaining time are safe.';
-    go.textContent = 'Resume chase'; go.hidden = false; upgrades.hidden = true; overlay.hidden = false; overlay.scrollTop = 0; go.focus({ preventScroll: true });
+    go.textContent = 'Resume chase'; go.hidden = false; upgrades.hidden = true; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; go.focus({ preventScroll: true });
     onStatus('Paused. Resume whenever you are ready.');
   }
   function jump() { if (running && jumpChase(game, { buffer: true })) { puppet.gesture('jump'); if (navigator.vibrate) navigator.vibrate(8); } }
@@ -388,6 +443,7 @@ export function createChaseUI(root, onFinish, onStatus) {
     prepare(resident, useGentle) {
       if (pet?.id !== resident.id || gentle !== useGentle || game?.venue !== venuePicker.value) { courseSeed = null; courseObjective = null; }
       stopFrame(); puppet?.release(); paused = false; goalCelebrated = false; pet = resident; gentle = useGentle;
+      screen('setup');
       const nextObjective = challengePicker.value === 'rotate' ? ['combo', 'air', 'biscuit'][runNumber % 3] : challengePicker.value;
       game = newChase(pet, { gentle, venue:venuePicker.value, format, mood: moodOf(pet), objective: repeatCourse.checked && courseObjective ? courseObjective : nextObjective });
       venuePicker.disabled=false;field.dataset.venue=game.venue;
@@ -400,9 +456,10 @@ export function createChaseUI(root, onFinish, onStatus) {
       puppet = createPuppet(actor.firstElementChild);
       title.textContent = format === 'run' ? 'Midnight Run' : CHASE_VENUES[game.venue].name;
       description.textContent = format === 'run' ? 'Three acts. Two upgrades. One increasingly incriminating trail of crumbs. Catch ' + game.goal + ' across the floorboards, pantry and moonlit sill. Each act lasts 18 seconds, with a stopped clock between acts.' : 'Steer ' + pet.name + '. Catch ' + game.goal + ' crumbs in 22 seconds. Hop over dust bunnies or Dash straight through them.';
-      go.textContent = format === 'run' ? 'Begin the midnight run' : 'Let’s chase'; go.hidden = false; upgrades.hidden = true; overlay.hidden = false; overlay.scrollTop = 0; disabled(true);
+      go.textContent = format === 'run' ? 'Begin the midnight run' : 'Let’s chase'; go.hidden = false; upgrades.hidden = true; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; disabled(true);
       hop.textContent = game.wings ? 'Flap ↑' : 'Hop ↑';
       const trait = game.wings ? 'Wings: tap Flap again in midair.' : game.horns ? 'Horns block your first dust ambush.' : game.halo ? 'Your halo pulls nearby crumbs closer.' : game.tail ? 'Tail: a bigger stomp bounce.' : 'Keyboard: arrows + Space.';
+      mobileGuide.textContent = 'Drag the arena or hold ← → to steer. Hop over dust; Dash smashes it. ' + (game.wings || game.horns || game.halo || game.tail ? trait : 'Catches recharge Dash sooner.');
       const modeRecord = pet.chaseRecords?.[chaseRecordKey(game)];
       const record = modeRecord ? ' ' + (format === 'run' ? 'Midnight Run' : gentle ? 'Gentle' : 'Standard') + ' best: ' + modeRecord.score + '.' : ' Separate records for every ground, length and pace.';
       description.textContent += game.venue==='pantry'?' More falling biscuits, each worth 50 base points.':game.venue==='moon'?' The moon lends you longer, higher jumps.':'';
@@ -413,5 +470,6 @@ export function createChaseUI(root, onFinish, onStatus) {
     stop() { stopFrame(); paused = false; popAnimation?.cancel(); fx.replaceChildren(); puppet?.release(); },
     pause
   };
+  fitLayout();
   return controller;
 }

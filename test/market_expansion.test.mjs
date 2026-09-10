@@ -61,11 +61,29 @@ test('a damaged expanded history stops at a repeated secret and cannot claim a p
  const old=normalizeLife({market:{seed:1,moves:[{pick:null,trade:null,secret:true}]}});assert.equal(old.market.moves[0].secret,undefined,'new move properties are not smuggled into an original rules save');
 });
 
-test('market purchasing and passing controls precede the long bag and plan content',()=>{
- const s=fixture();startMarket(s,{expanded:true});let m=marketSnapshot(s),html=marketMarkup(s,m);
- assert.ok(html.indexOf('data-life="market-buy"')<html.indexOf('Your packed objects'));
- assert.ok(html.indexOf('data-life="market-pass"')<html.indexOf('Plan ahead:'));
- assert.ok(html.indexOf('data-life="market-buy"')<html.indexOf('market-object-line'));
- assert.match(html,/data-life="market-secret"/);
- chooseMarket(s,null,null,{secret:true});html=marketMarkup(s,marketSnapshot(s));assert.doesNotMatch(html,/data-life="market-secret"/);
+test('the selected market offer drives a separate purchase dock without changing the basket',()=>{
+ const s=fixture();startMarket(s,{expanded:true});const m=marketSnapshot(s),before=structuredClone(s.life.market);
+ const html=marketMarkup(s,m,'',null,'extracted-halo');
+ assert.equal((html.match(/class="adventure-scroll"/g)||[]).length,1);
+ assert.match(html,/<\/div><footer class="adventure-actions market-action-dock">/);
+ assert.equal((html.match(/data-life="market-buy"/g)||[]).length,1);
+ assert.match(html,/<button[^>]*data-life="market-buy"[^>]*data-id="extracted-halo"/);
+ assert.match(html,/Buy · 5 buttons/);assert.match(html,/data-life="market-pass"/);assert.match(html,/data-life="market-secret"/);
+ assert.deepEqual(s.life.market,before,'selecting or inspecting an offer does not spend buttons');
+ for(const panel of ['bag','requests','route']){
+  const view=marketMarkup(s,m,'',null,'extracted-halo',panel);
+  assert.match(view,/class="market-context-panel"/);assert.doesNotMatch(view,/class="market-offer-selector"/);
+  assert.match(view,/<button[^>]*data-life="market-buy"[^>]*data-id="extracted-halo"/);
+ }
+ chooseMarket(s,null,null,{secret:true});assert.doesNotMatch(marketMarkup(s,marketSnapshot(s)),/data-life="market-secret"/);
+});
+
+test('a full market bag exposes an actionable trade picker instead of a dead purchase button',()=>{
+ const s=fixture();startMarket(s);for(const pick of ['sugar-star','tea-sock','bedtime-biscuit'])chooseMarket(s,pick);
+ const m=marketSnapshot(s),view=marketMarkup(s,m);
+ assert.match(view,/data-life="market-panel" data-panel="bag">Choose a trade-in/);
+ assert.doesNotMatch(view,/data-life="market-buy"/);
+ const trading=marketMarkup(s,m,'sugar-star',null,'comfort-crumbs','bag');
+ assert.match(trading,/Trade &amp; buy|Trade & buy/);
+ assert.match(trading,/<button[^>]*data-life="market-buy"[^>]*data-id="comfort-crumbs"/);
 });

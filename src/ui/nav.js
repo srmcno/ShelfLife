@@ -9,6 +9,7 @@
 import { state, onNote } from '../state.js';
 
 const PHONE = window.matchMedia('(max-width:720px)');
+const GAME_PHONE = window.matchMedia('(max-width:720px), (max-height:500px) and (pointer:coarse)');
 const TAB_KEY = 'shelflife.tab';
 const TABS = ['shelf', 'notes', 'plots'];
 
@@ -126,7 +127,7 @@ function resetGameReturn() {
 }
 document.addEventListener('click', e => {
   const activity = e.target.closest('[data-activity]');
-  if (!isPhone() || !activity || activity.disabled || !activity.closest('#playroomVeil.open')) return;
+  if (!GAME_PHONE.matches || !activity || activity.disabled || !activity.closest('#playroomVeil.open')) return;
   resetGameReturn();
   gameReturn = { id: ['chase', 'memory', 'alibi'].includes(activity.dataset.activity) ? 'playVeil' : 'lifeVeil', entered: false };
 }, true);
@@ -212,7 +213,7 @@ document.addEventListener('pointerdown', e => {
   if (!head || e.target.closest('button, input, select, textarea, summary, a, [contenteditable="true"]')) return;
   const sheet = head.closest('.sheet');
   const veil = head.closest('.veil');
-  if (!sheet || !veil || veil.classList?.contains('court-mode') || sheet.scrollTop > 2) return;
+  if (!sheet || !veil || ['playVeil','playroomVeil'].includes(veil.id) || veil.classList?.contains('court-mode') || veil.classList?.contains('life-game-mode') || sheet.scrollTop > 2) return;
   pull = { sheet, veil, x0: e.clientX, y0: e.clientY, dy: 0, id: e.pointerId, dragging: false };
 }, { passive: true });
 document.addEventListener('pointermove', e => {

@@ -4,3 +4,65 @@
 @media(max-width:560px){.market-theatre{height:107px;margin:9px 0}.market-vendor{left:13%;width:74px;height:78px}.market-counter-stock{left:43%;gap:15px}.market-counter-stock svg{width:35px;height:42px}.market-heading h3{font-size:23px}.market-heading p{font-size:16px;margin-bottom:6px}.market-purse{min-width:59px;padding:8px}.market-purse b{font-size:30px}.market-request-book{margin-bottom:11px}.market-request-book>summary>span{gap:4px}.market-request-pair{font-size:9px;padding:3px 5px}.market-offer h4{font-size:18px}.market-offer>small{font-size:10px}.market-price{font-size:11px}.market-next-actions .btn{font-size:11px}.market-tally.has-scandal{gap:5px}.market-tally.has-scandal>div{padding:11px 3px}.market-tally.has-scandal span{font-size:10px}.sheet-life .market-reaction{font-size:15px;margin:7px 0 11px}}
 .market-rarity{font-size:9px;letter-spacing:.9px;text-transform:uppercase;color:#ddbbe4;margin-bottom:7px}.market-offer>.market-object-line{border-top:1px solid var(--hair-lit);padding-top:10px;font:16px/1.45 var(--hand);margin:3px 0 0}.market-welcome .market-theatre{text-align:left}
 @media(prefers-reduced-motion:reduce){.market-theatre *,.market-reaction,.market-results>svg,.market-tally>div{animation:none!important}.market-purchase-flight,.market-secret-flight{display:none}}
+
+.market-context-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}.market-context-nav .btn{min-height:44px;padding:8px;font-size:12px;white-space:normal}.market-context-nav [aria-pressed=true]{background:#d5ad7922;border-color:var(--amber)}.market-context-panel{padding:5px 0 14px;outline:none}.market-context-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 12px}.market-context-heading h4{font:22px/1.2 var(--display);margin:0}.market-context-heading .btn{min-height:44px;font-size:11px;white-space:normal}.market-context-panel .market-map{margin-top:0;border:0;padding-top:0}.market-context-panel .market-bag-items{grid-template-columns:1fr}.market-offer-selector{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.market-offer-pick{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:14px;text-align:left;background:var(--night-2);color:var(--ink);border:1px solid var(--hair-lit);border-radius:12px;cursor:pointer}.market-offer-pick.selected{border-color:var(--amber);background:#d5ad791a;box-shadow:inset 0 0 0 1px var(--amber)}.market-offer-pick>b{font:21px/1.2 var(--display);overflow-wrap:anywhere}.market-choice-price{font-size:11px;color:var(--amber)}.market-offer-pick .market-tags{margin-top:auto}.market-selection-story{padding:8px 3px 10px}.market-selection-story>.market-object-line{font:19px/1.4 var(--hand);margin:0 0 9px;color:var(--ink)}.market-selection-story>span{font-size:12px;color:var(--mint)}.market-stall-line{font:18px/1.35 var(--hand);margin:9px 0!important}.market-action-dock>.btn{width:100%;min-height:46px;white-space:normal}.market-dock-selection{font-size:12px;line-height:1.4;margin:0 0 9px;color:var(--ink-2)}.market-dock-selection b{color:var(--ink)}.market-result-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.market-result-actions .btn{min-height:46px;white-space:normal}.market-result-actions .btn:last-child{grid-column:1/-1}
+@media(max-width:720px), (max-height:500px) and (pointer:coarse){
+ #lifeVeil .market-workspace .market-heading{gap:9px;min-height:42px}
+ #lifeVeil .market-workspace .market-heading h3{font-size:20px;line-height:1.15;margin:3px 0;overflow-wrap:anywhere}
+ #lifeVeil .market-workspace .market-heading .eyebrow{font-size:9px;letter-spacing:.1em}
+ #lifeVeil .market-workspace .market-purse{min-width:48px;padding:5px 8px;border-radius:9px}
+ #lifeVeil .market-workspace .market-purse b{font-size:26px}
+ #lifeVeil .market-workspace .market-purse span{font-size:10px}
+ #lifeVeil .market-workspace .market-context-nav{margin:8px 0;gap:6px}
+ #lifeVeil .market-workspace .market-context-nav .btn{padding:7px 4px;min-height:44px;font-size:10px;line-height:1.25}
+ #lifeVeil .market-workspace .market-theatre{height:81px;margin:8px 0}
+ #lifeVeil .market-workspace .market-vendor{width:56px;height:61px;left:15%;bottom:14px}
+ #lifeVeil .market-workspace .market-awning{height:14px}
+ #lifeVeil .market-workspace .market-counter-stock{gap:18px;bottom:20px}
+ #lifeVeil .market-workspace .market-counter-stock svg{width:28px;height:35px}
+ #lifeVeil .market-workspace .market-counter{height:22px}
+ #lifeVeil .market-workspace .market-lantern{top:19px;height:13px;width:8px}
+ #lifeVeil .market-workspace .market-stage-bag{width:28px;height:25px;right:6%}
+ #lifeVeil .market-workspace .market-offer-selector{gap:7px;margin:9px 0}
+ #lifeVeil .market-workspace .market-offer-pick{gap:7px;padding:10px 9px;border-radius:9px;min-height:108px}
+ #lifeVeil .market-workspace .market-offer-pick>b{font-size:18px;line-height:1.15}
+ #lifeVeil .market-workspace .market-choice-price{font-size:10px;line-height:1.3}
+ #lifeVeil .market-workspace .market-tag{font-size:9px;padding:3px 5px}
+ #lifeVeil .market-workspace .market-stall-line{font-size:16px;line-height:1.35;margin:7px 0!important}
+ #lifeVeil .market-workspace .market-selection-story{padding:7px 1px 8px}
+ #lifeVeil .market-workspace .market-selection-story>.market-object-line{font-size:17px;line-height:1.4}
+ #lifeVeil .market-workspace .market-selection-story>span{font-size:11px;line-height:1.35;display:block}
+ #lifeVeil .market-action-dock .market-dock-selection{font-size:10px;line-height:1.3;margin-bottom:7px;overflow-wrap:anywhere}
+ #lifeVeil .market-action-dock>.btn{min-height:44px;font-size:13px;padding:9px}
+ #lifeVeil .market-action-dock .market-next-actions{margin-top:7px;gap:7px}
+ #lifeVeil .market-action-dock .market-next-actions .btn{min-height:44px;padding:7px 5px;font-size:11px;line-height:1.25}
+ #lifeVeil .market-action-dock .market-secret-rule{margin:6px 0 0;font-size:10px;line-height:1.3}
+ #lifeVeil .market-workspace .market-context-heading h4{font-size:20px}
+ #lifeVeil .market-workspace .market-context-panel .hint{font-size:12px;line-height:1.45}
+ #lifeVeil .market-workspace .market-context-panel .market-requests{grid-template-columns:1fr}
+ #lifeVeil .market-workspace .market-context-panel .market-trade-label select{font-size:16px;min-height:44px}
+ #lifeVeil .market-workspace.phase-planning .market-welcome{margin:0 auto 16px}
+ #lifeVeil .market-workspace.phase-planning .market-welcome h3{font-size:26px;line-height:1.2;margin:10px 0}
+ #lifeVeil .market-workspace.phase-planning .market-welcome p{font-size:13px;line-height:1.45}
+ #lifeVeil .market-workspace.phase-planning .market-rules{font-size:12px;line-height:1.5;padding-left:18px}
+ #lifeVeil .market-workspace.phase-planning .market-score-rule{padding:11px;font-size:11px;line-height:1.4}
+ #lifeVeil .market-workspace .market-results{margin:4px auto 14px}
+ #lifeVeil .market-workspace .market-results>svg{width:75px;height:75px;margin-bottom:12px}
+ #lifeVeil .market-workspace .market-results h3{font-size:26px;line-height:1.2;margin:10px 0}
+ #lifeVeil .market-workspace .market-results p{font-size:13px;line-height:1.45}
+ #lifeVeil .market-workspace .market-tally{margin:14px 0;gap:7px}
+ #lifeVeil .market-workspace .market-tally>div{padding:10px 4px}
+ #lifeVeil .market-workspace .market-record{margin:14px 0;padding:13px 10px}
+}
+@media(max-width:720px) and (max-height:650px){
+ #lifeVeil .market-workspace.phase-playing .market-theatre{height:56px}
+ #lifeVeil .market-workspace.phase-playing .market-vendor{height:44px;width:41px;bottom:10px}
+ #lifeVeil .market-workspace.phase-playing .market-counter{height:17px}
+ #lifeVeil .market-workspace.phase-playing .market-counter-stock{bottom:16px}
+ #lifeVeil .market-workspace.phase-playing .market-counter-stock svg{width:22px;height:28px}
+ #lifeVeil .market-workspace.phase-playing .market-awning{height:10px}
+ #lifeVeil .market-workspace.phase-playing .market-lantern{top:13px;height:9px}
+ #lifeVeil .market-workspace.phase-playing .market-stage-bag{width:23px;height:19px;bottom:2px}
+ #lifeVeil .market-workspace.phase-playing .market-offer-pick{min-height:96px;padding:9px 8px}
+ #lifeVeil .market-workspace.phase-playing .market-offer-pick>b{font-size:16px}
+}

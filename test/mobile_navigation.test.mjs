@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 
 // Exercise real navigation handlers and owner cleanup without asserting layout.
 // These are behavioural checks, not a substitute for a physical phone preview.
-function navigation() {
+function navigation({widePhone=false}={}) {
   const events = new Map(), observers = [], elements = new Map();
   const make = (id, dataset = {}) => {
     const listeners = new Map(), attributes = new Map(), classes = new Set();
@@ -31,7 +31,7 @@ function navigation() {
     querySelectorAll: selector => selector === '.tabbar .tab[data-tab]' ? tabs : selector === '.wordmark' ? [logo] : selector === '#playVeil, #lifeVeil' ? [play, life] : selector === '.veil.open' ? [playroom, play, life].filter(veil => veil.classList.contains('open')) : [],
     addEventListener(name, listener) { const list = events.get(name) || []; list.push(listener); events.set(name, list); }
   };
-  const window = { scrollY: 0, matchMedia: () => ({ matches: true, addEventListener() {} }), addEventListener() {}, scrollTo({ top }) { this.scrollY = top; } };
+  const window = { scrollY: 0, matchMedia: query => ({ matches: !widePhone || query.includes('pointer:coarse'), addEventListener() {} }), addEventListener() {}, scrollTo({ top }) { this.scrollY = top; } };
   const source = readFileSync(new URL('../src/ui/nav.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/m, '').replace(/export function /g, 'function ');
   const context = { document, window, localStorage: { getItem: () => null, setItem() {} }, state: {}, onNote() {}, MutationObserver: class { constructor(callback) { this.callback = callback; } observe() { observers.push(this.callback); } } };
   runInNewContext(source + '\nglobalThis.api={setTab,currentTab};', context);
@@ -71,6 +71,13 @@ test('Back to games runs the game close handler once before reopening the catalo
   assert.equal(nav.cleaned, 1); assert.equal(nav.returned, 1);
   assert.equal(nav.playroom.classList.contains('open'), true); assert.equal(nav.playClose.textContent, 'Close');
   nav.flush(); assert.equal(nav.returned, 1);
+});
+
+test('wide phone landscape keeps the same return to games without switching the shelf panes', () => {
+  const nav=navigation({widePhone:true});nav.chooseGame();
+  assert.equal(nav.playClose.textContent,'Back to games');
+  nav.playClose.click();nav.flush();
+  assert.equal(nav.cleaned,1);assert.equal(nav.returned,1);
 });
 
 test('a game opened directly from a resident closes normally without an invented return destination', () => {

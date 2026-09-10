@@ -48,16 +48,105 @@
 .alibi-accuse:disabled{opacity:1;background:var(--night-3);color:var(--ink-2);border:1px solid var(--hair-lit);box-shadow:none}
 .alibi-next{min-height:48px;width:100%}
 .alibi-verdict{padding:10px 0;scroll-margin:20px}
-@media(max-width:600px){
- .memory-mode .play-theatre{padding-top:25px;padding-bottom:16px;margin:8px 0}
- .memory-mode #playPortrait{height:80px}.memory-mode #playPortrait .sprite{--pet-h:80px;width:80px}
- .memory-mode #playCue{font-size:18px}.memory-mode .play-rounds{margin-top:10px}
- .memory-mode #playStatus{font-size:13px;margin:8px 0;min-height:0}
- .memory-mode .gesture-grid{position:sticky;bottom:max(6px,env(safe-area-inset-bottom));z-index:3;padding:6px;background:var(--night-2);border-radius:14px}
- .memory-mode .gesture{min-height:78px;padding:10px 2px;font-size:11px}
- .alibi-mode .play-theatre{padding-bottom:14px}.alibi-mode #playPortrait{height:63px}.alibi-mode #playPortrait .sprite{--pet-h:68px;width:68px}
- .alibi-mode .play-rounds{margin-top:8px}.alibi-mode #playStatus{font-size:13px;min-height:0;margin:8px 0}
- .alibi-evidence-panel{padding:10px}.alibi-exhibit{grid-template-columns:52px minmax(0,1fr);padding:9px;font-size:13px}
+/* The desktop still reads as one parlour. The phone layout is a dedicated
+   workspace with a single body scroller and a footer in normal flex flow. */
+.parlour-workspace,.parlour-footer{min-width:0}
+.parlour-setup{margin:10px 0}
+.parlour-options{margin-top:8px;border:1px solid var(--hair-lit);border-radius:10px}
+.parlour-options>summary{min-height:44px;display:flex;align-items:center;padding:8px 12px;font-size:12px;color:var(--ink-2);cursor:pointer}
+.parlour-options #memoryOption{margin:0;border:0;display:flex;flex-wrap:wrap;gap:10px;padding:8px 12px 12px}
+.parlour-options label{display:flex;align-items:center;gap:6px;min-height:32px;font-size:12px}
+#playVeil.ritual-active .parlour-setup{display:none}
+.alibi-selected-claim{display:block;width:100%;text-align:left;color:var(--ink);border:0;cursor:pointer;padding:10px 12px;border-left:3px solid var(--amber);background:var(--glass);font-size:13px;line-height:1.45;margin:0 0 10px}
+.alibi-selected-claim:empty{display:none}
+.alibi-review{display:none}
+.parlour-footer .alibi-accuse{position:static;bottom:auto;box-shadow:none;margin:0}
+.parlour-footer .alibi-next{margin:0}
+.alibi-mode .play-controls{margin-top:16px;gap:8px}
+@media(max-width:720px), (max-height:500px) and (pointer:coarse){
+ #playVeil .play-modes{flex:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:0;padding:0 max(10px,var(--sar)) 6px max(10px,var(--sal));min-width:0}
+ #playVeil .play-modes .chip{width:100%;min-width:0;min-height:44px;padding:7px 3px;font-size:11px;white-space:normal;line-height:1.15}
+ #playVeil .parlour-workspace{flex:1 1 0;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 max(10px,var(--sar)) 10px max(10px,var(--sal));scrollbar-gutter:stable;touch-action:pan-y}
+ #playVeil .parlour-footer{flex:none;margin:0;padding:8px max(10px,var(--sar)) max(8px,env(safe-area-inset-bottom)) max(10px,var(--sal));border-top:1px solid var(--hair-lit);background:var(--night-2)}
+ #playVeil .parlour-footer .play-controls{display:flex;flex-wrap:nowrap;gap:6px;margin:0;min-width:0}
+ #playVeil .parlour-footer .play-controls>.btn{flex:1 1 0;width:auto;min-width:0;min-height:44px;padding:8px 6px;font-size:12px;line-height:1.25;white-space:normal}
+ #playVeil #playReward{font-size:10px;line-height:1.3;margin:5px 0 0;min-height:0;text-align:center}
+ #playVeil .parlour-setup{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin:4px 0 8px}
+ #playVeil .parlour-setup .parlour-select{font-size:10px;gap:3px}
+ #playVeil .parlour-setup select{font-size:16px;min-height:44px;max-width:100%;padding:7px}
+ #playVeil .parlour-options{margin:0;align-self:end;max-width:110px}
+ #playVeil .parlour-options>summary{padding:8px;min-height:44px;font-size:11px;text-align:center}
+ #playVeil .parlour-options[open]{grid-column:1/-1;max-width:none}
+ #playVeil .parlour-options #memoryOption{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px 9px 9px}
+ #playVeil .parlour-options label{font-size:11px;min-height:36px}
+ #playVeil.memory-mode .play-theatre{padding:24px 12px 15px;margin:4px 0 8px}
+ #playVeil.memory-mode #playPortrait{height:74px}
+ #playVeil.memory-mode #playPortrait .sprite{--pet-h:74px;width:74px}
+ #playVeil.memory-mode #playCue{font-size:17px;min-height:22px;line-height:1.2;margin:4px 0 0}
+ #playVeil .parlour-scene-label{font-size:8px;inset:8px 9px auto;letter-spacing:.09em}
+ #playVeil .play-rounds{margin:5px 0 0;min-height:18px;gap:4px}
+ #playVeil .play-rounds>span:first-child{font-size:9px;letter-spacing:.06em}
+ #playVeil .play-step{width:15px;height:4px}
+ #playVeil #playStatus{font-size:12px;line-height:1.4;margin:7px 0;min-height:0}
+ #playVeil .memory-trail{margin:7px 0 0;gap:6px}
+ #playVeil .memory-trail span{width:23px;height:23px}
+ #playVeil .gesture-grid{position:static;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:0;margin:0 0 7px;background:none}
+ #playVeil.memory-mode:not(.ritual-active) .gesture-grid{display:none}
+ #playVeil .gesture{min-width:0;min-height:70px;padding:8px 2px;gap:5px;border-radius:11px;touch-action:manipulation}
+ #playVeil .gesture svg{width:28px;height:28px}
+ #playVeil .gesture span{font-size:11px}
+ #playVeil .gesture.lit{transform:none;box-shadow:inset 0 0 0 2px currentColor}
+ #playVeil.alibi-mode .play-theatre{display:grid;grid-template-columns:65px minmax(0,1fr);align-items:center;min-height:78px;padding:21px 9px 7px;margin:4px 0 7px}
+ #playVeil.alibi-mode #playPortrait{height:50px}
+ #playVeil.alibi-mode #playPortrait .sprite{--pet-h:54px;width:54px}
+ #playVeil.alibi-mode #playCue{font-size:16px;line-height:1.2;min-height:0;margin:0;text-align:left}
+ #playVeil.alibi-mode .play-theatre::after{left:7px;right:auto;width:72px;bottom:5px}
+ #playVeil.alibi-mode:not(.alibi-complete):not([data-investigation-step=setup]) #playStatus{display:none}
+ #playVeil .alibi-charge{font:600 11px/1.4 var(--body);letter-spacing:0;text-align:left;margin:7px 0}
+ #playVeil .alibi-notebook{margin:6px 0 9px;padding:0 10px}
+ #playVeil .alibi-notebook summary{font-size:12px;min-height:44px;padding:9px 0}
+ #playVeil .alibi-notebook ul{max-height:none;overflow:visible;padding-left:17px}
+ #playVeil .alibi-statement{font:400 14px/1.4 var(--body);padding:10px;gap:7px;grid-template-columns:22px minmax(0,1fr);min-height:55px;transform:none;box-shadow:0 2px 5px #0003;border-radius:8px}
+ #playVeil .alibi-statements{gap:8px;margin:0 3px 9px;max-width:none}
+ #playVeil .alibi-statement:hover:not(:disabled){transform:none}
+ #playVeil .alibi-number{font-size:10px;line-height:20px}
+ #playVeil .alibi-evidence-panel{margin:7px 0;padding:10px}
+ #playVeil .alibi-evidence-panel h3{font-size:18px;margin:9px 0}
+ #playVeil .alibi-selected-claim{font-size:12px;padding:8px 9px;margin:0}
+ #playVeil .alibi-selected-claim:not(:disabled)::after{content:"Tap to change statement";display:block;font-size:10px;color:var(--amber);margin-top:4px}
+ #playVeil .alibi-exhibits{gap:7px}
+ #playVeil .alibi-exhibit{grid-template-columns:44px minmax(0,1fr);gap:6px;padding:9px;font-size:12px;line-height:1.4;min-height:52px}
+ #playVeil .alibi-exhibit b{font-size:9px}
+ #playVeil .alibi-review{display:inline-flex;min-height:44px;padding:7px 9px;font-size:12px;white-space:normal}
+ #playVeil .alibi-verdict{font-size:18px;line-height:1.5;padding:10px 3px;margin:0;text-align:left}
+ #playVeil[data-investigation-step=statements] .alibi-evidence-panel,
+ #playVeil[data-investigation-step=statements] .alibi-charge,
+ #playVeil[data-investigation-step=evidence] .play-theatre{display:none}
+ #playVeil[data-investigation-step=evidence] .alibi-statements,
+ #playVeil[data-investigation-step=evidence] .alibi-notebook,
+ #playVeil[data-investigation-step=evidence] .alibi-charge,
+ #playVeil[data-investigation-step=verdict] .alibi-statements,
+ #playVeil[data-investigation-step=verdict] .alibi-evidence-panel,
+ #playVeil[data-investigation-step=verdict] .alibi-notebook{display:none}
+ #playVeil[data-investigation-step=review] .alibi-review{display:flex}
+}
+@media(max-width:720px) and (max-height:650px), (max-height:500px) and (pointer:coarse){
+ #playVeil.memory-mode.ritual-active .play-theatre{padding-top:21px;padding-bottom:12px}
+ #playVeil.memory-mode.ritual-active #playPortrait{height:58px}
+ #playVeil.memory-mode.ritual-active #playPortrait .sprite{--pet-h:58px;width:58px}
+ #playVeil.memory-mode.ritual-active #playStatus{font-size:11px}
+ #playVeil.alibi-mode .play-theatre{min-height:68px;padding-top:18px}
+ #playVeil.alibi-mode #playPortrait{height:42px}
+ #playVeil.alibi-mode #playPortrait .sprite{--pet-h:47px;width:47px}
+}
+@media(max-width:720px) and (max-height:500px), (max-height:500px) and (pointer:coarse){
+ #playVeil .parlour-footer{padding-top:5px}
+ #playVeil #playReward{display:none}
+ #playVeil .gesture{min-height:50px;padding:4px 2px;gap:2px}
+ #playVeil .gesture svg{width:21px;height:21px}
+ #playVeil.memory-mode.ritual-active #playPortrait{height:34px}
+ #playVeil.memory-mode.ritual-active #playPortrait .sprite{--pet-h:36px;width:36px}
+ #playVeil.memory-mode.ritual-active .parlour-audience{display:none}
 }
 @media(prefers-reduced-motion:reduce){
  .memory-mode .play-theatre::before,.memory-mode .play-theatre::after{transition:none}

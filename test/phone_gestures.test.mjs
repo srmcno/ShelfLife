@@ -5,14 +5,14 @@ import { runInNewContext } from 'node:vm';
 
 // Exercise the real document handlers without a browser. These checks cover
 // gesture cancellation, not viewport layout or physical-device behaviour.
-function sheetGesture() {
+function sheetGesture({id='',mode=''}={}) {
   const events = new Map(), classes = new Set();
   let closed = 0;
   const sheet = {
     scrollTop: 0, style: {},
     classList: { add: name => classes.add(name), remove: name => classes.delete(name) }
   };
-  const veil = { querySelector: () => ({ click: () => closed++ }) };
+  const veil = { id, classList:{contains:name=>name===mode}, querySelector: () => ({ click: () => closed++ }) };
   const head = { closest: name => name === '.sheet' ? sheet : name === '.veil' ? veil : null };
   const target = { closest: name => name === '.sheet-head' ? head : null };
   const document = {
@@ -61,6 +61,16 @@ test('an intentional downward pull still closes through the game close button', 
   g.fire('pointerup', { clientY: 240 });
   assert.equal(g.closed, 1);
   assert.equal(g.sheet.style.transform, '');
+});
+
+test('full-screen game workspaces cannot be pulled away while using their headers', () => {
+  for(const config of [{id:'playVeil'},{id:'playroomVeil'},{id:'lifeVeil',mode:'life-game-mode'},{id:'lifeVeil',mode:'court-mode'}]){
+    const g=sheetGesture(config);
+    g.fire('pointerdown');g.fire('pointermove',{clientY:280});g.fire('pointerup',{clientY:280});
+    assert.equal(g.closed,0,config.id+' '+config.mode);
+    assert.equal(g.sheet.style.transform,undefined);
+    assert.equal(g.classes.has('sheet-dragging'),false);
+  }
 });
 
 test('a horizontal browser edge gesture cannot become an accidental sheet dismissal', () => {

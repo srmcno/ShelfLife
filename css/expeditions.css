@@ -11,3 +11,69 @@
 .trail-progress small{font:inherit}.trail-report-resources{font-size:12px;color:var(--mint)!important}
 @media(max-width:560px){.trail-progress{margin:10px 0;gap:8px}.trail-progress li{flex-direction:row;align-items:center;gap:6px}.trail-progress small{display:none}.trail-progress li:after{content:"";display:block;flex:1;height:1px;background:var(--hair-lit)}.trail-progress li:last-child:after{display:none}.trail-progress li.current:after,.trail-progress li.visited:after{background:#94ccb966}}
 @media(prefers-reduced-motion:reduce){.trail-theatre *{animation:none!important;transition:none!important}.trail-dust{display:none}}
+
+.adventure-workspace{min-width:0;width:100%}.adventure-scroll{min-width:0}.adventure-actions{margin-top:18px}.trail-option-mobile{display:none}.trail-dock-status{display:none}.trail-wager-settings{margin:15px 0;border:1px solid var(--hair-lit);border-radius:10px;padding:0 12px}.trail-wager-settings>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:12px;color:var(--mint)}.trail-wager-settings .trail-dare-picker{margin-top:4px}.trail-action-dock .trail-final-actions{margin:0}.trail-action-dock .life-links{margin:0}
+@media(max-width:720px), (max-height:500px) and (pointer:coarse){
+ #lifeVeil.life-game-mode .adventure-workspace{display:grid;grid-template-rows:minmax(0,1fr) auto;flex:1;min-height:0;overflow:hidden}
+ #lifeVeil.life-game-mode .adventure-scroll{min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:12px max(12px,var(--sar)) 16px max(12px,var(--sal));scroll-padding-block:12px;touch-action:pan-y}
+ #lifeVeil.life-game-mode .adventure-actions{min-width:0;margin:0;padding:10px max(12px,var(--sar)) calc(10px + var(--sab)) max(12px,var(--sal));border-top:1px solid var(--hair-lit);background:var(--night-3);box-shadow:0 -8px 25px #0002;z-index:3}
+ #lifeVeil .trail-action-dock .expedition-choices{display:grid;grid-template-columns:1fr;gap:6px}
+ #lifeVeil .trail-action-dock .expedition-choices .btn{display:flex;align-items:flex-start;justify-content:center;gap:3px;min-height:52px;padding:8px 11px;font-size:12px;line-height:1.25;white-space:normal;overflow-wrap:anywhere}
+ #lifeVeil .trail-action-dock .trail-option-long{display:none}
+ #lifeVeil .trail-action-dock .trail-option-mobile{display:block;font-size:10px;line-height:1.25}
+ #lifeVeil .trail-dock-status{display:block;font-size:11px;line-height:1.3;color:var(--mint);margin:0 0 7px}
+ #lifeVeil .trail-supplies-desktop{display:none}
+ #lifeVeil .trail-workspace .trail-theatre{height:90px;margin:9px 0}
+ #lifeVeil .trail-workspace .trail-traveller{width:54px;height:62px}
+ #lifeVeil .trail-workspace .trail-landmark{width:35px;height:40px}
+ #lifeVeil .trail-workspace .trail-travellers{bottom:16px}
+ #lifeVeil .trail-workspace .trail-road{height:25px}
+ #lifeVeil .trail-workspace .trail-choice-heading{font-size:23px!important;line-height:1.2;margin:10px 0 7px!important}
+ #lifeVeil .trail-workspace .scene-script{font-size:20px;line-height:1.4;margin:9px 0 14px}
+ #lifeVeil .trail-workspace .trail-progress{margin:8px 0;gap:7px}
+ #lifeVeil .trail-workspace .trail-progress li{flex-direction:row;align-items:center;font-size:10px}
+ #lifeVeil .trail-workspace .trail-progress small{display:none}
+ #lifeVeil .trail-workspace .trail-progress li>span{width:22px;height:22px}
+ #lifeVeil .trail-workspace .trail-progress li:after{content:"";display:block;flex:1;height:1px;background:var(--hair-lit)}
+ #lifeVeil .trail-workspace .trail-progress li:last-child:after{display:none}
+ #lifeVeil .trail-workspace .trail-map{margin:12px 0 0;padding:0 11px}
+ #lifeVeil .trail-workspace .trail-map>summary{min-height:44px;display:flex;align-items:center;font-size:12px;line-height:1.3}
+ #lifeVeil .trail-workspace .trail-map[open]{padding-bottom:10px}
+ #lifeVeil .trail-action-dock .trail-report-actions,#lifeVeil .trail-action-dock .life-links{display:grid;grid-template-columns:1fr;margin:0;gap:7px}
+ #lifeVeil .trail-action-dock .btn{min-height:46px;font-size:12px;line-height:1.3;white-space:normal}
+ #lifeVeil .trail-action-dock .trail-final-actions{grid-template-columns:1fr 1fr}
+ #lifeVeil .trail-action-dock .trail-final-actions .btn:last-child{grid-column:1/-1}
+ #lifeVeil .trail-workspace.phase-planning .trail-intro h3{font-size:24px;line-height:1.2;margin:6px 0 10px}
+ #lifeVeil .trail-workspace.phase-planning .trail-intro>p{font-size:13px;line-height:1.45}
+ #lifeVeil .trail-workspace .outing-routes{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+ #lifeVeil .trail-workspace .route-card{display:flex;align-items:center;gap:7px;padding:10px 6px;text-align:center;border-radius:10px;font-size:11px;line-height:1.35;min-width:0}
+ #lifeVeil .trail-workspace .route-card svg{width:31px;height:31px}
+ #lifeVeil .trail-workspace .route-card small{display:none}
+ #lifeVeil .trail-workspace .crew-picker{margin-top:14px;gap:9px}
+ #lifeVeil .trail-workspace .crew-picker label{font-size:11px}
+ #lifeVeil .trail-workspace .crew-picker select,#lifeVeil .trail-workspace .trail-dare-picker select{min-height:44px;font-size:16px;padding:7px 5px}
+ #lifeVeil .trail-workspace #gearHint{font-size:11px;line-height:1.45}
+ #lifeVeil .trail-workspace .expedition-prize{margin:10px auto}
+ #lifeVeil .trail-workspace .expedition-prize>svg{width:75px;height:75px}
+ #lifeVeil .trail-workspace .expedition-prize h3{font-size:25px;line-height:1.2;margin:10px 0}
+ #lifeVeil .trail-workspace .expedition-prize .eyebrow{font-size:9px;letter-spacing:.08em;margin-top:10px}
+ #lifeVeil .trail-workspace .expedition-prize p{font-size:13px;line-height:1.45}
+ #lifeVeil .trail-workspace .trail-final-score{margin:15px 0}
+ #lifeVeil .trail-workspace .trail-final-score>b{font-size:40px}
+}
+@media(max-width:720px) and (max-height:650px){
+ #lifeVeil .trail-workspace.phase-playing .trail-theatre{height:61px}
+ #lifeVeil .trail-workspace.phase-playing .trail-traveller{width:41px;height:45px}
+ #lifeVeil .trail-workspace.phase-playing .trail-landmark{width:28px;height:32px;bottom:19px}
+ #lifeVeil .trail-workspace.phase-playing .trail-road{height:19px}
+ #lifeVeil .trail-workspace.phase-playing .trail-travellers{bottom:11px}
+ #lifeVeil .trail-workspace.phase-playing .scene-script{font-size:18px;line-height:1.4}
+ #lifeVeil .trail-workspace.phase-playing .trail-choice-heading{font-size:20px!important}
+}
+@media(min-width:721px) and (max-height:500px) and (pointer:coarse){
+ #lifeVeil.life-game-mode .adventure-workspace{grid-template-columns:minmax(0,1fr) minmax(235px,32%);grid-template-rows:minmax(0,1fr)}
+ #lifeVeil.life-game-mode .adventure-actions{border-top:0;border-left:1px solid var(--hair-lit);align-content:center;display:grid;gap:7px;padding-top:10px}
+ #lifeVeil .trail-workspace .trail-theatre{height:76px}
+ #lifeVeil .trail-workspace.phase-planning .outing-routes{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #lifeVeil .trail-action-dock .trail-final-actions{grid-template-columns:1fr}
+}

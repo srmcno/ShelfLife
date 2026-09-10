@@ -11,6 +11,27 @@ const drawings = {
   market: '<path d="M4 13h24v17H4zM3 13 6 4h20l3 9M11 4l-1 9m11-9 1 9M4 13q4 7 8 0 4 7 8 0 4 7 8 0M13 22h6v8"/>'
 };
 const icon = name => '<svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + drawings[name] + '</svg>';
+const cardCopy = {
+  chase: { title:'Crumb Chase', time:'22s / 3 acts', hook:'Dodge, dash, steal crumbs.' },
+  memory: { title:'Handshake', time:'Your pace', hook:'Copy. Reverse. Duet.' },
+  alibi: { title:'The Alibi', time:'No timer', hook:'Catch a lie. Prove it.' },
+  outing: { title:'Expeditions', time:'3 stops', hook:'Three stops. One tool.' },
+  court: { title:'Shelf Court', time:'No timer', hook:'Search. Question. Accuse.' },
+  market: { title:'Night Market', time:'6 stalls', hook:'Buy oddities. Sell secrets.' }
+};
+
+function continueLabel(id, life = {}) {
+  if (id === 'court' && life.court && !life.court.claimed) return 'Continue case';
+  if (id === 'outing' && life.outing) return 'Continue expedition';
+  if (id === 'market' && life.market && !life.market.claimed) return 'Continue trip';
+  return '';
+}
+
+function shortRecord(activity, state, pet) {
+  if (!pet) return 'Make a resident';
+  if (activity.id === 'market' && !state.life?.marketRuns) return 'No trips yet';
+  return activityRecord(activity, state, pet).split(' · ')[0].replace(' completed', '');
+}
 
 export function initPlayroom(state) {
   const veil = document.getElementById('playroomVeil');
@@ -18,7 +39,35 @@ export function initPlayroom(state) {
   const resident = document.getElementById('playroomResident');
   const portrait = document.getElementById('playroomPortrait');
   const passport = document.getElementById('playroomPassport');
+  const sheet = veil.querySelector('.sheet');
+  const company = document.getElementById('playroomCompany');
+  const empty = document.getElementById('playroomEmpty');
+  const residentLabel = document.createElement('span');
+  residentLabel.textContent = 'Playing as';
+  resident.parentElement.replaceChildren(residentLabel, resident);
+  const intro = sheet.querySelector('.playroom-intro');
+  const hint = sheet.querySelector(':scope > .hint');
+  // The resident stays above one scrolling catalogue. Long explanations belong
+  // to an optional guide, so every game is a visible destination on a phone.
+  const toolbar = document.createElement('div');
+  toolbar.className = 'playroom-toolbar';
+  toolbar.append(company, passport);
+  const workspace = document.createElement('div');
+  workspace.className = 'playroom-workspace';
+  const guide = document.createElement('details');
+  guide.className = 'playroom-guide';
+  const summary = document.createElement('summary');
+  summary.textContent = 'How to play & full records';
+  const guideBody = document.createElement('div');
+  guideBody.className = 'playroom-guide-body';
+  guide.append(summary);
+  if (intro) guide.append(intro);
+  if (hint) guide.append(hint);
+  guide.append(guideBody);
+  workspace.append(empty, cards, guide);
+  sheet.append(toolbar, workspace);
   let selected = '';
+  let returnActivity = '';
   function close() { veil.classList.remove('open'); }
   function render() {
     const pet = state.pets.find(p => p.id === selected) || state.pets[0];
@@ -27,28 +76,35 @@ export function initPlayroom(state) {
       const option = document.createElement('option'); option.value = p.id; option.textContent = p.name; return option;
     }));
     resident.value = selected;
-    document.getElementById('playroomCompany').hidden = !pet;
-    document.getElementById('playroomEmpty').hidden = !!pet;
+    company.hidden = !pet;
+    empty.hidden = !!pet;
     portrait.replaceChildren();
     if (pet) portrait.appendChild(renderPetSprite(pet));
     passport.hidden = !pet;
     if (pet) {
-      const progress = activityPassport(state), next = ACTIVITIES.find(a => a.id === progress.next);
-      passport.innerHTML = '<div class="passport-heading"><div><span class="eyebrow">The household record</span><strong>' +
-        (progress.completed === 6 ? 'A thoroughly incriminating evening.' : progress.completed + ' / 6 activities tried') +
-        '</strong></div><span class="passport-seal" aria-hidden="true">' + (progress.completed === 6 ? 'FULL<br>HOUSE' : 'ON<br>FILE') + '</span></div>' +
-        '<div class="passport-stamps">' + progress.stamps.map(s => '<span class="' + (s.earned ? 'earned' : '') + '"><b aria-hidden="true">' + (s.earned ? '✓' : '○') + '</b>' + esc(s.title) + '<span class="sr-only">' + (s.earned ? ', completed' : ', not yet completed') + '</span></span>').join('') + '</div>' +
-        '<div class="passport-next"><p>' + (progress.resume ? 'There is unfinished business.' : progress.completed === 6 ? 'Every activity on record. The witnesses have been separated.' : 'Complete a game to leave your mark. Wins and practice both count.') + '</p><button type="button" class="btn btn-sm" data-activity="' + next.id + '">' + (progress.resume ? 'Resume ' : 'Play ') + esc(next.title) + ' ↗</button></div>';
+      const progress = activityPassport(state);
+      passport.innerHTML = '<span class="passport-count">' + progress.completed + '/6 games tried</span>' +
+        '<span class="passport-dots">' + progress.stamps.map(s => '<span class="' + (s.earned ? 'earned' : '') + '" title="' + esc(s.title) + '"><span aria-hidden="true">' + (s.earned ? '✓' : '○') + '</span><span class="sr-only">' + esc(s.title) + (s.earned ? ', completed' : ', not yet completed') + '</span></span>').join('') + '</span>';
     }
-    cards.innerHTML = ACTIVITIES.map(a => '<button type="button" class="activity-card activity-' + a.id + '" data-activity="' + a.id + '" ' + (!pet ? 'disabled' : '') + '>' +
-      '<span class="activity-top"><span class="activity-icon">' + icon(a.icon) + '</span><span>' + esc(a.kind) + ' · ' + esc(a.time) + '</span></span>' +
-      '<strong>' + esc(a.title) + '</strong><span class="activity-line">' + esc(a.line) + '</span><span class="activity-detail">' + esc(a.detail) + '</span>' +
-      '<span class="activity-bottom"><span>' + esc(activityRecord(a, state, pet)) + '</span><b aria-hidden="true">↗</b></span></button>').join('');
+    cards.innerHTML = ACTIVITIES.map(a => {
+      const copy = cardCopy[a.id], resume = pet ? continueLabel(a.id, state.life) : '';
+      const record = resume || shortRecord(a, state, pet);
+      return '<button type="button" class="activity-card activity-' + a.id + (resume ? ' activity-continue' : '') + '" data-activity="' + a.id + '" aria-label="' + esc((resume ? 'Continue ' : 'Play ') + a.title + '. ' + activityRecord(a, state, pet)) + '" ' + (!pet ? 'disabled' : '') + '>' +
+        '<span class="activity-top"><span class="activity-icon">' + icon(a.icon) + '</span><span>' + (resume ? 'IN PROGRESS' : esc(copy.time)) + '</span></span>' +
+        '<strong>' + esc(copy.title) + '</strong><span class="activity-hook">' + esc(copy.hook) + '</span>' +
+        '<span class="activity-bottom"><span>' + esc(record) + '</span><b aria-hidden="true">→</b></span></button>';
+    }).join('');
+    guideBody.innerHTML = ACTIVITIES.map(a => '<article><h3>' + esc(a.title) + '</h3><p class="playroom-guide-joke">' + esc(a.line) + '</p><p>' + esc(a.detail) + '</p><small>' + esc(activityRecord(a, state, pet)) + '</small></article>').join('');
   }
   function open() {
     // Shortcuts never interrupt a game or an unfinished drawing.
     if (document.querySelector('.veil.open')) return;
     render(); veil.classList.add('open');
+    if (returnActivity) {
+      const card = cards.querySelector('[data-activity="' + returnActivity + '"]');
+      returnActivity = '';
+      requestAnimationFrame(() => { if (veil.classList.contains('open')) card?.focus({ preventScroll:true }); });
+    }
   }
   document.getElementById('playroomBtn').addEventListener('click', open);
   document.getElementById('playroomClose').addEventListener('click', close);
@@ -60,12 +116,12 @@ export function initPlayroom(state) {
     if (!card || card.disabled) return;
     const a = ACTIVITIES.find(x => x.id === card.dataset.activity);
     if (!a || !state.pets.some(p => p.id === selected)) { render(); return; }
+    returnActivity = a.id;
     close();
     if (a.mode) window.dispatchEvent(new CustomEvent('shelflife:play', { detail: { petId:selected, mode:a.mode } }));
     else window.dispatchEvent(new CustomEvent('shelflife:activity', { detail: { action:a.life, petId:selected } }));
   }
   cards.addEventListener('click', launch);
-  passport.addEventListener('click', launch);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { close(); return; }
     if (e.key.toLowerCase() !== 'p' || e.repeat || e.altKey || e.ctrlKey || e.metaKey ||

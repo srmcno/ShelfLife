@@ -13,6 +13,12 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
+## Mobile game workspace rebuild
+
+The six games now use screens designed for phones. Chase keeps its HUD, correctly scaled arena and four controls in view; setup, upgrades and results have their own scrolling panel. Handshake keeps the pads and replay control below its performance. Alibi presents statement selection, evidence selection and verdict as separate tasks, with a persistent action footer.
+
+Court reserves more room for evidence, keeps the selected claim visible and opens full dialogue over its compact stage. Expedition choices and market Buy/Pass actions stay in a separate footer while context scrolls. The Playroom shows six compact game cards, a resident picker and a clear resume action. Full game screens use safe-area spacing, support short landscape phones, and cannot be dragged shut like a bottom sheet. Regular care and settings sheets keep their existing controls.
+
 ## The full household update
 
 - **Investigative Shelf Court:** inspect three physical records, question specific witness claims, and prove a contradiction before exposing a motive. Twelve case families, three levels, scoring, appeals and a fully saved hearing. The current action stays in a visible Court footer on phones.

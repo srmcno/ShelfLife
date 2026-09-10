@@ -24,6 +24,9 @@ export function initPlay(state, refresh) {
   const alibiNext = document.getElementById('alibiNext');
   const gestureGrid = veil.querySelector('.gesture-grid');
   const playControls = veil.querySelector('.play-controls');
+  const workspace = veil.querySelector('.parlour-workspace'), footer = veil.querySelector('.parlour-footer');
+  const memorySetup = document.getElementById('memorySetup'), memoryOptions = memorySetup.querySelector('details');
+  const mobileLayout = window.matchMedia('(max-width: 720px), (max-height: 500px) and (pointer: coarse)');
   let game = null, pet = null, puppet = null, accepting = false, generation = 0, mode = 'chase';
   let alibi = null, accusation = null, exhibit = null;
   const theatre = veil.querySelector('.play-theatre');
@@ -32,15 +35,17 @@ export function initPlay(state, refresh) {
   const ritualLabel = document.createElement('label'); ritualLabel.className = 'parlour-select'; ritualLabel.textContent = 'Ritual';
   const ritualSelect = document.createElement('select'); ritualSelect.id = 'handshakeRitual'; ritualSelect.setAttribute('aria-label', 'Handshake ritual');
   for (const [value, ritual] of Object.entries(HANDSHAKE_RITUALS)) { const option = document.createElement('option'); option.value = value; option.textContent = ritual.name + (value === 'echo' ? ' · copy' : value === 'mirror' ? ' · backwards' : ' · alternate beats'); ritualSelect.append(option); }
-  ritualLabel.append(ritualSelect); document.getElementById('memoryOption').prepend(ritualLabel);
+  ritualLabel.append(ritualSelect); document.getElementById('memoryRitualSlot').append(ritualLabel);
   const alibiLabel = document.createElement('label'); alibiLabel.className = 'parlour-select'; alibiLabel.textContent = 'Investigation';
   const alibiMode = document.createElement('select'); alibiMode.id = 'alibiDifficulty'; alibiMode.setAttribute('aria-label', 'Alibi investigation');
   alibiMode.innerHTML = '<option value="prove">Prove it · lie + evidence</option><option value="quick">Spot the lie · casual</option>'; alibiLabel.append(alibiMode); alibiRoot.prepend(alibiLabel);
   const evidencePanel = document.createElement('div'); evidencePanel.className = 'alibi-evidence-panel'; evidencePanel.hidden = true;
   const evidenceTitle = document.createElement('h3'); evidenceTitle.textContent = 'Which record contradicts it?';
   const evidenceList = document.createElement('div'); evidenceList.className = 'alibi-exhibits'; evidenceList.setAttribute('role', 'group'); evidenceList.setAttribute('aria-label', 'Shelf records. Choose contradictory evidence.');
-  evidencePanel.append(evidenceTitle, evidenceList); alibiList.after(evidencePanel);
-  const accuse = document.createElement('button'); accuse.type = 'button'; accuse.className = 'btn btn-primary alibi-accuse'; accuse.textContent = 'Present accusation'; accuse.hidden = true; evidencePanel.after(accuse);
+  const selectedClaim = document.createElement('button'); selectedClaim.type = 'button'; selectedClaim.className = 'alibi-selected-claim';
+  evidencePanel.append(selectedClaim, evidenceTitle, evidenceList); alibiList.after(evidencePanel);
+  const accuse = document.createElement('button'); accuse.type = 'button'; accuse.className = 'btn btn-primary alibi-accuse'; accuse.textContent = 'Present accusation'; accuse.hidden = true; playControls.append(accuse, alibiNext);
+  const review = document.createElement('button'); review.type = 'button'; review.className = 'btn btn-ghost alibi-review'; review.textContent = 'Review statements and records'; review.hidden = true; alibiVerdict.after(review);
   const again = document.createElement('button'); again.type = 'button'; again.className = 'btn'; again.textContent = 'Replay this ritual'; again.hidden = true; playControls.append(again);
   const stageAnimations = new Set();
   function animate(el, frames, options) {
@@ -79,8 +84,9 @@ export function initPlay(state, refresh) {
     modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.playMode === mode)));
     pads.forEach(p => p.classList.remove('lit')); again.hidden = true; ritualSelect.disabled = false; alibiMode.disabled = false; accuse.hidden = true; evidencePanel.hidden = true; accusation = null; exhibit = null;
     veil.classList.toggle('chase-mode', mode === 'chase');
-    veil.classList.toggle('alibi-mode', mode === 'alibi'); veil.classList.toggle('memory-mode', mode === 'memory'); veil.classList.remove('ritual-active');
-    document.getElementById('memoryOption').hidden = mode !== 'memory';
+    veil.classList.toggle('alibi-mode', mode === 'alibi'); veil.classList.toggle('memory-mode', mode === 'memory'); veil.classList.remove('ritual-active', 'alibi-complete');
+    document.getElementById('memoryOption').hidden = mode !== 'memory'; memorySetup.hidden = mode !== 'memory'; memoryOptions.open = false;
+    workspace.hidden = mode === 'chase'; footer.hidden = mode === 'chase'; workspace.scrollTop = 0; veil.dataset.investigationStep = 'setup'; review.hidden = true; selectedClaim.textContent = '';
     trail.hidden = mode !== 'memory'; trail.replaceChildren();
     chaseRoot.hidden = mode !== 'chase'; document.getElementById('gentleOption').hidden = mode !== 'chase';
     // The gesture pads and the replay control belong to the handshake alone; the
@@ -129,10 +135,15 @@ export function initPlay(state, refresh) {
   }
 
   /* ---- the alibi ---------------------------------------------------------- */
+  function investigationStep(step) {
+    veil.dataset.investigationStep = step;
+    if (mobileLayout.matches) workspace.scrollTop = 0;
+  }
   function renderAlibi() {
     const round = currentRound(alibi);
     alibiList.replaceChildren(); evidenceList.replaceChildren(); alibiNext.hidden = true;
-    accusation = null; exhibit = null; accuse.hidden = false; accuse.disabled = true;
+    accusation = null; exhibit = null; accuse.hidden = false; accuse.disabled = true; accuse.textContent = 'Select a statement';
+    review.hidden = true; review.textContent = 'Review statements and records'; selectedClaim.textContent = ''; selectedClaim.disabled = false; investigationStep('statements');
     evidencePanel.hidden = alibi?.mode !== 'prove';
     if (!round) return;
     stage('testimony', 'Interview ' + (alibi.round + 1) + ' · select a lie'); puppet?.gesture('testify');
@@ -148,10 +159,11 @@ export function initPlay(state, refresh) {
       const text = document.createElement('span'); text.textContent = fact.text; button.append(tag, text); evidenceList.append(button);
     });
     animate(alibiList, [{ opacity: .3, transform: 'translateY(10px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 350, easing: 'ease-out' });
-    progress(); alibiList.firstElementChild?.focus({ preventScroll: true }); alibiList.firstElementChild?.scrollIntoView({ block: 'nearest' });
+    progress(); alibiList.firstElementChild?.focus({ preventScroll: true }); if (!mobileLayout.matches) alibiList.firstElementChild?.scrollIntoView({ block: 'nearest' });
   }
 
   function startAlibi() {
+    veil.classList.remove('alibi-complete');
     alibi = newAlibi(state, pet, Math.random, { mode: alibiMode.value }); alibiMode.disabled = true;
     notebook.hidden = false; notebook.open = false;
     facts.replaceChildren(...alibi.notebook.map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
@@ -166,6 +178,7 @@ export function initPlay(state, refresh) {
   }
 
   function concludeAlibi() {
+    veil.classList.add('alibi-complete');
     const result = rewardAlibi(state, alibi, Date.now());
     checkUnlocks(state); checkAchievements(state); refresh();
     const caught = alibi.correct, total = alibi.rounds.length;
@@ -176,7 +189,7 @@ export function initPlay(state, refresh) {
     document.getElementById('playReward').textContent = 'Each game rests separately. Practice always counts in your history.';
     puppet?.gesture(result?.clean ? 'confess' : 'deny'); stage(result?.clean ? 'win' : 'closed', alibiRank(alibi));
     if (result?.clean) playFuss(); progress();
-    start.hidden = false; start.textContent = 'Take another statement'; alibiMode.disabled = false; start.focus({ preventScroll: true }); start.scrollIntoView({ block: 'nearest' });
+    start.hidden = false; start.textContent = 'Take another statement'; alibiMode.disabled = false; start.focus({ preventScroll: true }); if (!mobileLayout.matches) start.scrollIntoView({ block: 'nearest' });
   }
 
   alibiNext.addEventListener('click', () => {
@@ -185,27 +198,33 @@ export function initPlay(state, refresh) {
   });
   function readyAccusation() {
     accuse.disabled = accusation === null || (alibi.mode === 'prove' && exhibit === null);
+    accuse.textContent = accusation === null ? 'Select a statement' : alibi.mode === 'prove' && exhibit === null ? 'Select a record' : 'Present accusation';
     if (accusation !== null) {
       stage('selected', alibi.mode === 'prove' && exhibit === null ? 'Now connect the evidence' : 'Ready to confront the witness');
       cue.textContent = 'It has stopped blinking.'; puppet?.gesture('inspect');
+      selectedClaim.textContent = 'Challenging statement ' + (accusation + 1) + ': “' + currentRound(alibi).statements[accusation] + '”'; selectedClaim.setAttribute('aria-label', 'Change selected statement. ' + currentRound(alibi).statements[accusation]);
     }
   }
   alibiList.addEventListener('click', e => {
     const button = e.target.closest('[data-alibi]');
     if (!button || !alibi || alibi.complete || currentRound(alibi)?.answered !== null) return;
-    accusation = Number(button.dataset.alibi);
+    accusation = Number(button.dataset.alibi); exhibit = null; [...evidenceList.children].forEach(el => el.setAttribute('aria-pressed', 'false'));
     [...alibiList.children].forEach((el, i) => el.setAttribute('aria-pressed', String(i === accusation))); readyAccusation();
+    if (alibi.mode === 'prove') { investigationStep('evidence'); if (mobileLayout.matches) evidenceList.firstElementChild?.focus({ preventScroll: true }); }
   });
   evidenceList.addEventListener('click', e => {
     const button = e.target.closest('[data-exhibit]');
     if (!button || !alibi || alibi.complete || currentRound(alibi)?.answered !== null) return;
     exhibit = Number(button.dataset.exhibit); [...evidenceList.children].forEach((el, i) => el.setAttribute('aria-pressed', String(i === exhibit))); readyAccusation();
   });
+  function changeClaim() { if (currentRound(alibi)?.answered !== null) return; investigationStep('statements'); alibiList.children[accusation ?? 0]?.focus({ preventScroll: true }); }
+  selectedClaim.addEventListener('click', changeClaim);
+  review.addEventListener('click', () => { const open = veil.dataset.investigationStep !== 'review'; investigationStep(open ? 'review' : 'verdict'); review.textContent = open ? 'Back to verdict' : 'Review statements and records'; });
   accuse.addEventListener('click', () => {
     if (mode !== 'alibi' || !alibi || accusation === null) return;
     const round = currentRound(alibi), verdict = answerAlibi(alibi, accusation, exhibit);
     if (verdict === 'ignored') return;
-    accuse.hidden = true;
+    accuse.hidden = true; review.hidden = false; selectedClaim.disabled = true; investigationStep('verdict');
     [...alibiList.children].forEach((el, i) => {
       el.disabled = true;
       if (i === round.lie) el.classList.add('was-lie'); else if (i === round.answered) el.classList.add('was-wrong');
@@ -213,12 +232,12 @@ export function initPlay(state, refresh) {
       animate(stamp, [{ opacity: 0, transform: 'scale(1.8) rotate(-12deg)' }, { opacity: 1, transform: 'scale(1) rotate(0)' }], { duration: 260 });
     });
     [...evidenceList.children].forEach((el, i) => { el.disabled = true; if (i === round.proof) { el.classList.add('proved'); const tag = document.createElement('small'); tag.textContent = 'Contradicts the lie'; el.append(tag); } });
-    const explanation = verdict === 'right' ? (alibi.mode === 'prove' ? 'Caught and proved. ' : 'Lie caught. ') : verdict === 'unsupported' ? 'Right lie, unrelated evidence. Your record is true, but it does not contradict this claim. ' : 'That statement was true. The lie and its contradictory record are marked. ';
+    const explanation = verdict === 'right' ? (alibi.mode === 'prove' ? 'Caught and proved. ' : 'Lie caught. ') : verdict === 'unsupported' ? 'Right lie, unrelated evidence. Your record is true, but it does not contradict this claim. ' : 'That statement was true. The false claim is “' + round.statements[round.lie] + '” ';
     alibiVerdict.textContent = explanation + 'On record: ' + round.evidence + ' ' + alibiReaction(round);
     cue.textContent = verdict === 'right' ? 'The witness has developed a tremor.' : 'It asks whether you work alone.';
     puppet?.gesture(verdict === 'right' ? 'confess' : 'deny'); stage(verdict === 'right' ? 'caught' : 'escaped', verdict === 'right' ? 'The record survives' : 'A hole in the case');
     progress();
-    if (alibi.complete) concludeAlibi(); else { alibiNext.hidden = false; alibiNext.focus({ preventScroll: true }); alibiNext.scrollIntoView({ block: 'nearest' }); }
+    if (alibi.complete) concludeAlibi(); else { alibiNext.hidden = false; alibiNext.focus({ preventScroll: true }); if (!mobileLayout.matches) alibiNext.scrollIntoView({ block: 'nearest' }); }
   });
   alibiMode.addEventListener('change', () => { if (pet && mode === 'alibi' && !alibiMode.disabled) setMode('alibi'); });
   function paintTrail() {
@@ -292,14 +311,14 @@ export function initPlay(state, refresh) {
   start.addEventListener('click', () => {
     if (mode === 'alibi') { startAlibi(); return; }
     if (!game || game.complete) game = freshHandshake();
-    encore.disabled = true; ritualSelect.disabled = true; veil.classList.add('ritual-active'); start.hidden = true; replay.hidden = false; again.hidden = true; demonstrate();
+    encore.disabled = true; ritualSelect.disabled = true; memoryOptions.open = false; workspace.scrollTop = 0; veil.classList.add('ritual-active'); start.hidden = true; replay.hidden = false; again.hidden = true; demonstrate();
   });
-  again.addEventListener('click', () => { if (mode !== 'memory' || !game?.complete) return; game = restartHandshake(game); encore.disabled = true; ritualSelect.disabled = true; veil.classList.add('ritual-active'); start.hidden = true; again.hidden = true; replay.hidden = false; demonstrate(); });
+  again.addEventListener('click', () => { if (mode !== 'memory' || !game?.complete) return; game = restartHandshake(game); encore.disabled = true; ritualSelect.disabled = true; memoryOptions.open = false; workspace.scrollTop = 0; veil.classList.add('ritual-active'); start.hidden = true; again.hidden = true; replay.hidden = false; demonstrate(); });
   ritualSelect.addEventListener('change', () => { if (pet && mode === 'memory' && !ritualSelect.disabled) setMode('memory'); });
   replay.addEventListener('click', () => { if (game && !game.complete) { game.cursor = 0; game.replays++; demonstrate(); } });
   encore.addEventListener('change', () => { if (pet && mode === 'memory') setMode('memory'); });
   document.addEventListener('keydown', e => {
-    if (mode === 'alibi' && veil.classList.contains('open') && !e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey && /^[1-3]$/.test(e.key) && !e.target?.closest?.('input,select,textarea,[contenteditable=true]')) { e.preventDefault(); alibiList.children[Number(e.key)-1]?.click(); return; }
+    if (mode === 'alibi' && veil.classList.contains('open') && !e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey && /^[1-3]$/.test(e.key) && !e.target?.closest?.('input,select,textarea,[contenteditable=true]')) { e.preventDefault(); const choices = mobileLayout.matches && veil.dataset.investigationStep === 'evidence' ? evidenceList : alibiList; choices.children[Number(e.key)-1]?.click(); return; }
     if (mode !== 'memory' || !accepting || !veil.classList.contains('open') || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.target?.closest?.('input,select,textarea,[contenteditable=true]')) return;
     if (/^[1-4]$/.test(e.key)) { e.preventDefault(); pads[Number(e.key) - 1].click(); }
