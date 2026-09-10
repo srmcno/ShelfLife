@@ -92,7 +92,7 @@ const respond = (game,kind,speaker,text) => {
 function investigativeCourt(saved) {
  const rng=seeded(saved.seed),game=newCourt({pets:saved.cast,life:{courtPlays:saved.caseIndex}},rng,{level:saved.level,caseIndex:saved.caseIndex});
  const story=COURT_INVESTIGATIONS[game.caseIndex],motives=shuffle(story.motives,rng);
- Object.assign(game,{version:2,petId:saved.petId,scene:story.scene,phase:'investigation',inspected:[],questioned:[],pressed:[],exposures:[],attempts:[],rejected:[],mistakes:0,appeals:0,canFile:false,ui:{chapter:'investigation',witness:null,statement:null,exhibit:null}});
+ Object.assign(game,{version:2,petId:saved.petId,scene:story.scene,phase:'investigation',inspected:[],questioned:[],pressed:[],exposures:[],attempts:[],comparisons:[],eliminations:[],rejected:[],mistakes:0,appeals:0,canFile:false,ui:{chapter:'investigation',witness:null,statement:null,exhibit:null}});
  // Each account contains exactly one falsifiable claim. It is not safe to
  // convict from testimony alone; the physical record can contradict it.
  game.witnesses=game.suspects.map((suspect,i)=>{
@@ -110,17 +110,30 @@ function investigativeCourt(saved) {
 }
 function syncCourt(game) {
  const allClues=game.sceneEvidence.every(e=>!e.clues.length||game.inspected.includes(e.id));
- game.canFile=allClues&&game.exposures.includes(game.selection)&&!game.rejected.includes(game.selection)&&!game.claimed;
+ // Guilt follows from the crime evidence. Unrelated dishonest testimony is
+ // optional character business, never a second prerequisite for a conviction.
+ game.canFile=allClues&&validIndex(game.selection,game.suspects.length)&&!game.rejected.includes(game.selection)&&!game.eliminations.includes(game.selection)&&!game.claimed;
  game.phase=game.claimed?'verdict':allClues&&game.exposures.length?'verdict':game.inspected.length||game.questioned.length?'hearing':'investigation';
  game.caseBoard={examined:game.inspected.length,totalEvidence:game.sceneEvidence.length,cluesReady:allClues,exposed:game.exposures.length,
   missing:game.sceneEvidence.filter(e=>e.clues.length&&!game.inspected.includes(e.id)).map(e=>e.id),rejected:game.rejected.slice()};
- game.stats={contradictions:game.exposures.length,mistakes:game.mistakes,appeals:game.appeals};
+ game.stats={contradictions:game.exposures.length,eliminations:game.eliminations.length,mistakes:game.mistakes,appeals:game.appeals};
  game.rank=game.appeals?'Case salvaged':game.mistakes?'Relentless counsel':game.exposures.length===game.suspects.length?'The full autopsy':'Evidence with teeth';
  return game;
 }
 function applyCourtMove(game,move) {
  if(game.claimed||!move||typeof move!=='object')return null;
  const {type,suspect,statement,evidence}=move,witness=game.witnesses[suspect];
+ if(type==='compare'){
+  const rule=game.rules[evidence],key=suspect+':'+evidence;
+  if(!validIndex(suspect,game.suspects.length)||!rule||!game.inspected.includes(rule.first.axis)||game.comparisons.includes(key))return null;
+  game.comparisons.push(key);
+  const fits=courtRuleFits(game.suspects[suspect].facts,rule),name=game.suspects[suspect].name;
+  if(!fits){
+   if(!game.eliminations.includes(suspect))game.eliminations.push(suspect);
+   return respond(game,'sustained','Judge Mortis',name+' is cleared. '+contradiction(game.axes,game.suspects[suspect].facts,rule)+' The jury has removed them from its dinner plans.');
+  }
+  return respond(game,'overruled','Judge Mortis',name+' fits this clue, so it cannot clear them. Check another clue. Matching one fact does not prove guilt; the culprit must match all '+game.rules.length+'.');
+ }
  if(type==='inspect'){
   if(!validIndex(evidence,game.sceneEvidence.length)||game.inspected.includes(evidence))return null;
   game.inspected.push(evidence);const item=game.sceneEvidence[evidence];
@@ -152,13 +165,13 @@ function applyCourtMove(game,move) {
   const hint=courtHint(game);return hint?respond(game,'guidance','Court clerk',hint):null;
  }
  if(type==='appeal'){
-  if(!validIndex(suspect,game.suspects.length)||suspect===game.answer||game.rejected.includes(suspect)||!game.exposures.includes(suspect)||!game.caseBoard.cluesReady)return null;
+  if(!validIndex(suspect,game.suspects.length)||suspect===game.answer||game.rejected.includes(suspect)||!game.caseBoard.cluesReady)return null;
   game.rejected.push(suspect);game.appeals++;
   const failed=courtEvidence(game,suspect).findIndex(fit=>!fit);
   return respond(game,'acquittal','Judge Mortis',game.suspects[suspect].name+' is cleared by clue '+(failed+1)+'. '+contradiction(game.axes,game.suspects[suspect].facts,game.rules[failed])+' The case remains open. Find who fits every crime clue.');
  }
  if(type==='file'){
-  if(suspect!==game.answer||!game.exposures.includes(suspect)||!game.caseBoard.cluesReady)return null;
+  if(suspect!==game.answer||!game.caseBoard.cluesReady)return null;
   game.choice=suspect;game.claimed=true;
   return respond(game,'conviction','Judge Mortis',game.trial.conviction);
  }
@@ -209,7 +222,7 @@ export function courtAction(state,action) {
   return respond(game,'overruled','Judge Mortis',action.evidence!==action.statement?'That exhibit records '+game.axes[action.evidence].name.toLowerCase()+'. The claim concerns '+game.axes[action.statement].name.toLowerCase()+'. A threatening gesture is not a chain of evidence.':'The physical record agrees with this statement. The witness has lied elsewhere. Please reserve the gavel for an actual contradiction.');
  }
  if(action.type==='press'&&validIndex(action.suspect,game.suspects.length)&&validIndex(action.statement,3)&&game.pressed.includes(action.suspect+':'+action.statement)&&!game.exposures.includes(action.suspect))return respond(game,'press','Court examiner','The witness repeats: '+game.witnesses[action.suspect].statements[action.statement].text+' '+COURT_INVESTIGATIONS[game.caseIndex].pressure[action.statement]+' Compare that exact claim with the named observation in the record.');
- if(!['inspect','question','press','present','hint'].includes(action.type)||saved.moves.length>=95)return null;
+ if(!['inspect','question','press','present','compare','hint'].includes(action.type)||saved.moves.length>=95)return null;
  const response=applyCourtMove(game,action);if(!response)return null;
  const move={type:action.type};for(const key of ['suspect','statement','evidence'])if(action[key]!==undefined)move[key]=action[key];
  saved.moves.push(move);return response;
@@ -220,7 +233,7 @@ function investigationResult(game,reward) {
   return {name:suspect.name,culprit:i===game.answer,failed,text:i===game.answer?'Fits every crime clue.':'Ruled out by clue '+failed.join(' and ')+'.',explanation:failed.map(n=>contradiction(game.axes,suspect.facts,game.rules[n-1])).join(' ')};
  });
  const culprit=game.suspects[game.answer],text=culprit.name+' is the only suspect who fits all '+game.clues.length+' crime clues. '+game.trial.sentence;
- return {correct:true,retry:false,bond:reward.bond,fuss:reward.fuss,text,reasons,dialogue:[{speaker:'Judge Mortis',text:game.trial.conviction},{speaker:culprit.name,text:game.trial.plea},{speaker:'Judge Mortis',text:game.trial.sentence}],level:game.level,rank:game.rank,stats:{...game.stats},score:Math.max(1,100+game.level*25+game.exposures.length*10-game.mistakes*5-game.appeals*15)};
+ return {correct:true,retry:false,bond:reward.bond,fuss:reward.fuss,text,reasons,dialogue:[{speaker:'Judge Mortis',text:game.trial.conviction},{speaker:culprit.name,text:game.trial.plea},{speaker:'Judge Mortis',text:game.trial.sentence}],level:game.level,rank:game.rank,stats:{...game.stats},score:Math.max(1,100+game.level*25+(game.exposures.length+game.eliminations.length)*10-game.mistakes*5-game.appeals*15)};
 }
 export function finishCourt(state,suspect,now=Date.now()) {
  const game=currentCourt(state),l=lifeState(state),saved=l.court;

@@ -195,3 +195,58 @@ body[data-effects="light"] .court-playable *{animation:none!important;transition
  .court-active-statement{font-size:15px}
 }
 .court-mobile-line>summary:focus-visible,.court-mobile-line>p:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+
+/* The courtroom is a place, with the case file beside it. On a portrait
+   screen the whole case scrolls in one column; the action dock stays put. */
+.court-deduction .court-workspace{grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);gap:22px}
+.court-mode .court-deduction .court-stage{height:auto;max-height:none;min-height:230px;aspect-ratio:720/440}
+.court-deduction .court-charge-brief{font:italic 16px/1.45 var(--display);color:#e0cdaa;margin:0 0 16px;padding:0 0 14px;border-bottom:1px solid #9e805342}
+.court-deduction .court-panel-heading h4{font-size:22px;line-height:1.2}
+.court-clue-tabs{display:flex;gap:6px;margin:12px 0}
+.court-clue-tabs .btn{flex:1;min-width:0;min-height:54px;padding:8px 6px;font-size:11px;line-height:1.3;display:flex;align-items:center;gap:5px;justify-content:center;white-space:normal}
+.court-clue-tabs .btn>span{font:19px var(--display);color:#e2c087}
+.court-clue-tabs .btn[aria-pressed=true]{background:#b78a5830;border-color:#d0a165;color:#fff1ce}
+.court-proof-sheet,.court-fact-pair,.court-verdict-ledger{background:#e7d6b9;color:#342b30;border-radius:3px;padding:16px;box-shadow:3px 4px 0 #91755345}
+.court-proof-sheet .eyebrow{color:#645142}.court-proof-sheet .court-proof{background:none;color:#35262c;border:0;margin:12px 0;font:21px/1.4 var(--display);padding:0}
+.court-proof-sheet .hint{color:#62574d;font-size:12px}
+.court-howto{font-size:13px;line-height:1.55;padding:14px 0;color:#cbb99b}
+.court-howto b{display:block;color:#eed4a7;margin-bottom:4px}
+.court-cast-picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.court-cast-picker:has(>.btn:nth-child(3):last-child){grid-template-columns:repeat(3,minmax(0,1fr))}
+.court-cast-picker .btn{min-width:0;padding:6px 4px;display:flex;align-items:center;flex-direction:column;gap:4px;white-space:normal;justify-content:flex-start}
+.court-cast-picker b{font-size:11px;line-height:1.25}.court-cast-picker small{font-size:9px;line-height:1.2;color:#bcad96}
+.court-cast-picker .btn[aria-pressed=true]{background:#e1b97420;border-color:#e1b974}
+.court-cast-art{display:block;width:54px;height:56px;flex:none}.court-cast-art>svg,.court-cast-art>.sprite{width:54px;height:56px}
+.court-fact-pair{display:grid;gap:12px;margin:12px 0}.court-fact-pair article+article{border-top:1px dashed #7f685b;padding-top:12px}
+.court-fact-pair article>span{font-size:10px;font-weight:800;letter-spacing:.08em;color:#7a453a}.court-fact-pair p{font:18px/1.45 var(--display);margin:6px 0 0}
+.court-deduction-feedback{padding:10px 12px;border-left:3px solid #c29c68;color:#eddbb8;line-height:1.5;font-size:13px;background:#b18c5815}
+.court-character-aside{margin:14px 0;font-size:13px;line-height:1.5}.court-character-aside summary{min-height:44px;padding:12px 0;cursor:pointer}
+.court-character-aside p{font:italic 17px/1.5 var(--display)}.court-character-aside small{color:#b6a993}
+.court-verdict-ledger{margin:14px 0}.court-verdict-ledger article+article{margin-top:15px;padding-top:15px;border-top:1px dashed #84705c}
+.court-verdict-ledger p{font:18px/1.4 var(--display);margin:7px 0}.court-verdict-ledger span{font-size:13px;line-height:1.5;display:block}
+.court-accused-name{font:19px var(--display);margin:18px 0 8px}
+.court-deduction .court-action-bar .btn{min-height:48px;white-space:normal}
+@media(max-width:760px){
+ .court-deduction .court-workspace{display:block;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scroll-padding:12px}
+ .court-deduction .court-live-theatre{width:100%;margin-bottom:18px;max-height:none}
+ .court-mode .court-deduction .court-stage{height:auto;min-height:200px;max-height:none;aspect-ratio:720/440}
+ .court-mode .court-deduction .court-dialogue{padding:10px 12px;min-height:70px;max-height:none;overflow:visible}
+ .court-deduction .court-dialogue>span,.court-deduction .court-desktop-line{display:block}
+ .court-deduction .court-dialogue .court-mobile-line{display:none}
+ .court-mode .court-deduction .court-dialogue p{font-size:16px;line-height:1.4;margin:0}
+ .court-deduction .court-action-panel{overflow:visible;min-height:0;padding:0 5px 16px;scroll-padding:0}
+ .court-deduction .court-charge-brief{font-size:15px;margin-bottom:12px}
+ .court-deduction .court-panel-heading h4{font-size:21px}
+ .court-deduction .court-action-bar{margin-top:5px;background:#211b24;padding-top:7px}
+ .court-deduction .court-action-bar>p{font-size:11px;line-height:1.4}
+ .court-mode .court-deduction .court-hotspot{width:48px;height:48px;top:46%}.court-mode .court-deduction .hotspot-1{top:56%}.court-mode .court-deduction .hotspot-2{top:32%}
+ .court-mode .court-deduction .court-stage-caption{display:block;font-size:7px}
+}
+@media(min-width:560px) and (max-height:540px){
+ .court-deduction .court-workspace{display:grid;grid-template-columns:minmax(230px,1.2fr) minmax(240px,1fr);gap:14px;overflow:auto}
+ .court-deduction .court-action-panel{overflow:auto;height:100%;padding-bottom:15px}
+ .court-mode .court-deduction .court-stage{height:auto;min-height:170px;max-height:none}
+ .court-deduction .court-live-theatre{position:sticky;top:0;margin:0}
+ .court-deduction .court-charge-brief{font-size:13px}
+ .court-cast-art,.court-cast-art>svg,.court-cast-art>.sprite{height:44px;width:44px}
+}

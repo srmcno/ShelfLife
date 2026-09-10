@@ -13,15 +13,19 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
-## Mobile game workspace rebuild
+## Court reasoning, restored Chase controls, and recovery missions
 
-The six games now use screens designed for phones. Chase keeps its HUD, correctly scaled arena and four controls in view; setup, upgrades and results have their own scrolling panel. Handshake keeps the pads and replay control below its performance. Alibi presents statement selection, evidence selection and verdict as separate tasks, with a persistent action footer.
+Court now follows one deduction: inspect the crime clues, compare each suspect’s verified facts, clear anyone who conflicts with a clue, then accuse the one who fits all of them. Every visible exhibit participates in the solution. An unrelated lie no longer blocks a verdict. Comparisons, acquittals and saved cases retain their explanations. The courtroom has a substantial scene again; on portrait screens the scene and case file share one scrolling column above a persistent action dock.
 
-Court reserves more room for evidence, keeps the selected claim visible and opens full dialogue over its compact stage. Expedition choices and market Buy/Pass actions stay in a separate footer while context scrolls. The Playroom shows six compact game cards, a resident picker and a clear resume action. Full game screens use safe-area spacing, support short landscape phones, and cannot be dragged shut like a bottom sheet. Regular care and settings sheets keep their existing controls.
+Chase restores the original **left / Hop / right** movement row. Dash sits above the arena as an optional extra. Portrait arenas use the available width, movement stops when a drag ends, and touch actions fire on press without double-firing on the following click. Keyboard and assistive clicks remain supported.
+
+Expeditions now offer three recovery contracts: the Button Lift, Midnight Larder and Thimble Bath. Recover any two distinct components through three written encounters to install a working household object. Parts persist across trips. Each object provides its advertised attention, food or cleanliness benefit once a day, and remains playable afterwards. In-progress older expeditions retain their encounters and rewards.
+
+The existing Handshake, Alibi, Night Market, household scenes and saved progress remain supported. Browser verification covers the public desktop build; physical phone rendering must still be checked on a phone.
 
 ## The full household update
 
-- **Investigative Shelf Court:** inspect three physical records, question specific witness claims, and prove a contradiction before exposing a motive. Twelve case families, three levels, scoring, appeals and a fully saved hearing. The current action stays in a visible Court footer on phones.
+- **Investigative Shelf Court:** inspect the crime evidence, compare verified observations, and eliminate innocents with specific conflicting clues. Twelve case families, three levels, scoring, appeals and a fully saved hearing. The current action stays in a visible Court footer on phones.
 - **Midnight Run:** three 18-second Chase acts with contracts, two lasting upgrade decisions, telegraphed broom sweeps and a gold finale. Quick Chase remains available; run records and rewards are separate.
 - **Three handshake rituals:** Echo, reverse-order Mirror and alternating-beat Duet, with distinct records, stage lighting and exact challenge replay.
 - **Alibi with proof:** pair the false statement with its matching household record. Unsupported evidence cannot earn a clean win; casual spot-the-lie mode is available.

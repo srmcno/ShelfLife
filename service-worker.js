@@ -52,6 +52,7 @@ const SHELL = [
   "./src/engine/life.js",
   "./src/engine/court.js",
   "./src/content/life.js",
+  "./src/content/projects.js",
   "./src/ui/life.js",
   "./src/ui/court.js",
   "./src/ui/market.js",

@@ -1,6 +1,7 @@
 import { normalizeLife } from '../life-state.js';
 import { OUTINGS, OUTING_TRAIL_SCENES, OUTING_ALTERNATES, GEAR, RELICS, FRAMES, MARKET_ITEMS, MARKET_REQUESTS, MARKET_RARITIES, visitorActFor } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
+import { PROJECTS, PROJECT_STOPS } from '../content/projects.js';
 import { addNote, clamp } from '../state.js';
 const checked = new WeakSet();
 export function lifeState(state) {
@@ -44,11 +45,11 @@ export function favoriteFor(pet) {
 }
 // A trail has no hidden dice rolls. Decisions trade nerve, points and the one
 // packed tool; a small look-ahead map lets the player plan instead of guess.
-export function outingTrail(routeId, edition=0) {
+export function outingTrail(routeId, edition=0, mission=false) {
   const route=OUTINGS.find(x=>x.id===routeId);
   if(!route)return null;
   const n=Number.isInteger(edition)&&edition>=0&&edition<8?edition:0;
-  return route.steps.map((step,i)=>({...((n>>i)&1?OUTING_ALTERNATES[routeId][i]:OUTING_TRAIL_SCENES[routeId][i]),points:2+(i+n%3)%3}));
+  return route.steps.map((step,i)=>({...((mission?PROJECT_STOPS[routeId][i]:((n>>i)&1?OUTING_ALTERNATES[routeId][i]:OUTING_TRAIL_SCENES[routeId][i]))),points:2+(i+n%3)%3}));
 }
 export const OUTING_DARES = [
   {id:'bold',name:'Do it the hard way',line:'Take at least two detours.',payoff:'Two detours, no fatalities. The undertaker has blocked your number.'},
@@ -66,11 +67,12 @@ function trailMove(step,gear,expertise,nerve,toolUsed,choice) {
 export function outingSnapshot(state) {
   const o=lifeState(state).outing;
   if(!o||o.version!==2)return o;
-  const steps=outingTrail(o.route,o.edition);
+  const steps=outingTrail(o.route,o.edition,o.mission);
   if(!steps||!GEAR.some(g=>g.id===o.gear))return null;
   const expertise=Array.isArray(o.expertise)?o.expertise:[],choices=[],log=[];
   let nerve=2,score=0,toolUsed=false;
   for(const choice of (Array.isArray(o.choices)?o.choices:[]).slice(0,3)){
+    if(o.mission&&choice===2&&steps[choices.length].good!==o.gear)break;
     const move=trailMove(steps[choices.length],o.gear,expertise,nerve,toolUsed,choice);
     if(!move)break;
     choices.push(choice);log.push(move.text);nerve=move.nerve;toolUsed=move.toolUsed;score+=move.points;
@@ -79,11 +81,13 @@ export function outingSnapshot(state) {
   const dare=OUTING_DARES.find(d=>d.id===o.dare),dareMet=!!dare&&trailDareMet(dare.id,choices,nerve,toolUsed),dareBonus=choices.length===3&&dareMet?2:0;
   const baseScore=score;score+=dareBonus;
   Object.assign(o,{choices,log,nerve,score,toolUsed,step:choices.length});
-  const search=(i,n,used,path=[])=>i===3?(dare&&trailDareMet(dare.id,path,n,used)?2:0):Math.max(...[0,1,2].map(c=>{const m=trailMove(steps[i],o.gear,expertise,n,used,c);return m?m.points+search(i+1,m.nerve,m.toolUsed,[...path,c]):-Infinity;}));
+  const search=(i,n,used,path=[])=>i===3?(dare&&trailDareMet(dare.id,path,n,used)?2:0):Math.max(...[0,1,2].map(c=>{if(o.mission&&c===2&&steps[i].good!==o.gear)return -Infinity;const m=trailMove(steps[i],o.gear,expertise,n,used,c);return m?m.points+search(i+1,m.nerve,m.toolUsed,[...path,c]):-Infinity;}));
   const step=steps[o.step];
-  return {...o,steps,baseScore,dareMet,dareBonus,best:search(0,2,false),options:step?[0,1,2].map(choice=>{
+  const recovered=o.mission?choices.flatMap((c,i)=>c===1||c===2&&steps[i].good===o.gear?[i]:[]):[];
+  const stored=lifeState(state).projectParts[o.route]||[],parts=[...new Set([...stored,...recovered])];
+  return {...o,steps,baseScore,dareMet,dareBonus,recovered,parts,project:o.mission?PROJECTS.find(p=>p.id===o.route):null,best:search(0,2,false),options:step?[0,1,2].map(choice=>{
     const move=trailMove(step,o.gear,expertise,nerve,toolUsed,choice),cost=expertise.includes(step.stat)?1:2;
-    return {choice,available:!!move,label:choice===0?'Take the quiet way around':choice===1?step.options[1]:step.good===o.gear?step.options[0]:'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
+    return {choice,available:!!move&&(!o.mission||choice!==2||step.good===o.gear),label:choice===0?(o.mission?'Leave this part & recover':'Take the quiet way around'):choice===1?step.options[1]:step.good===o.gear?step.options[0]:o.mission?'Save the tool for another stop':'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
   }):[]};
 }
 export function outingPreview(state, routeId, gearId, cast) {
@@ -101,6 +105,7 @@ export function startOuting(state, routeId, gearId, cast, options={}) {
   const edition=Number.isInteger(options.edition)&&options.edition>=0&&options.edition<8?options.edition:l.outings%8;
   const expertise=['cute','menace','damp','mystique'].filter(stat=>crew.some(p=>(p.stats?.[stat]||0)>=7));
   l.outing={version:2,edition,expertise,route:routeId,gear:gearId,cast:ids,step:0,score:0,log:[],choices:[],nerve:2,toolUsed:false};
+  if(options.mission===true)l.outing.mission=true;
   if(OUTING_DARES.some(d=>d.id===options.dare))l.outing.dare=options.dare;
   return true;
 }
@@ -134,7 +139,20 @@ export function chooseOuting(state, choice, now=Date.now()) {
   const text=crew.map(p=>p.name).join(' and ')+' returned with '+relic.name.toLowerCase()+'. '+relic.line+' '+line;
   recordScene(state,'outing',route.name,text,crew.map(p=>p.id),now,{key:'outing',branch:route.id,object:relic.id});addNote(state,text,'beyond the shelf','scheme');
   o.result={relic:relic.id,fresh};
+  if(o.mission){
+    const after=outingSnapshot(state),builtBefore=l.projects.includes(o.route);
+    l.projectParts[o.route]=after.parts;
+    if(after.parts.length>=2&&!builtBefore){l.projects.push(o.route);awardDiscovery(state,'built:'+o.route,6,now);}
+    o.result.project=o.route;o.result.built=!builtBefore&&l.projects.includes(o.route);o.result.found=after.recovered;
+  }
   return {complete:true,text,fresh,relic,supported};
+}
+export function useProject(state,id,now=Date.now()) {
+  const l=lifeState(state),project=PROJECTS.find(p=>p.id===id);
+  if(!project||!l.projects.includes(id)||!state.pets.length)return null;
+  const fresh=dailyActivity(state,'project:'+id,now);
+  if(fresh)state.pets.forEach(p=>{p.needs[project.need]=clamp(p.needs[project.need]+6,0,100);});
+  return {fresh,text:project.reaction,benefit:project.benefit};
 }
 export function finishOuting(state) {
   const l=lifeState(state);if(!l.outing||l.outing.step!==3)return false;l.outing=null;return true;

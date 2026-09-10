@@ -31,7 +31,8 @@ test('presenting evidence requires inspected physical proof and the actual false
  courtAction(s,{type:'question',suspect});
  assert.equal(courtAction(s,{type:'present',suspect,statement,evidence:statement}),null,'Unread evidence cannot be used');
  collect(s);
- assert.equal(finishCourt(s,suspect,now),null,'Physical clues alone do not replace cross-examination');
+ // Optional testimony remains available, but the crime clues are now sufficient to accuse.
+ courtAction(s,{type:'focus',suspect});assert.equal(currentCourt(s).canFile,true);
  const wrong=(statement+1)%3;
  assert.equal(courtAction(s,{type:'present',suspect,statement,evidence:wrong}).kind,'overruled');
  assert.equal(courtAction(s,{type:'present',suspect,statement:wrong,evidence:wrong}).kind,'overruled','True statements cannot be exposed');

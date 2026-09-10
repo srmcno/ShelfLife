@@ -20,6 +20,15 @@ const QUIPS = {
   best: ['A new record. The pride was already there.', 'The old best has been quietly disowned.', 'It scratched the score into the wood. With a tooth.', 'It would like this noted in the museum.']
 };
 
+// Immediate touch feedback with native-click and assistive-input fallback.
+export function wireChaseAction(button,action,active) {
+ let firedOnPress=false;
+ button.addEventListener('pointerdown',e=>{if(!active()||e.button!==0)return;e.preventDefault();firedOnPress=true;action();});
+ button.addEventListener('pointerup',()=>{setTimeout(()=>{firedOnPress=false;},0);});
+ button.addEventListener('pointercancel',()=>{firedOnPress=false;});
+ button.addEventListener('click',e=>{if(active()&&(e.detail===0||!firedOnPress))action();firedOnPress=false;});
+}
+
 export function createChaseUI(root, onFinish, reportStatus) {
   const announcement = document.createElement('p'); announcement.className = 'sr-only'; announcement.setAttribute('role', 'status'); root.append(announcement);
   const onStatus = text => { announcement.textContent = text; reportStatus(text); };
@@ -36,7 +45,8 @@ export function createChaseUI(root, onFinish, reportStatus) {
   const dash = document.createElement('button');
   dash.type = 'button'; dash.id = 'chaseDash'; dash.className = 'btn chase-dash'; dash.textContent = 'Dash →';
   dash.title = 'Burst in your steering direction and smash dust. Recharges in 2.4 seconds; catches recharge it sooner. Keyboard: X.';
-  hop.parentElement.append(...directions, hop, dash);
+  // Restore the original left / hop / right thumb layout. Dash is secondary.
+  hop.parentElement.append(directions[0], hop, directions[1]);
   const controls = [...directions, hop, dash];
   field.setAttribute('aria-label', 'Crumb Chase. Drag to steer or use arrow keys. Space hops. X dashes in your steering direction and smashes dust bunnies. P pauses.');
   const world = root.querySelector('#chaseWorld'), clockFill = root.querySelector('#chaseClockFill');
@@ -83,6 +93,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
   const readout = document.createElement('div'); readout.className = 'chase-readout';
   combo.before(readout); readout.append(combo, objective, starTarget);
   const mobileProgress = document.createElement('p'); mobileProgress.className = 'chase-mobile-progress'; readout.append(mobileProgress);
+  readout.append(dash);
   const overlayScroll = document.createElement('div'); overlayScroll.className = 'chase-overlay-scroll';
   const overlayFooter = document.createElement('div'); overlayFooter.className = 'chase-overlay-footer';
   overlay.prepend(overlayScroll); overlayScroll.append(title, stars, description, quip, upgrades);
@@ -125,7 +136,8 @@ export function createChaseUI(root, onFinish, reportStatus) {
     if (mobileLayout.matches) {
       const box = arena.getBoundingClientRect();
       if (box.width > 0 && box.height > 0) {
-        const width = Math.floor(Math.min(box.width, box.height * CHASE_WIDTH / CHASE_HEIGHT));
+        const landscape = window.matchMedia('(min-width: 560px) and (max-height: 540px)').matches;
+        const width = Math.floor(landscape ? Math.min(box.width, box.height * CHASE_WIDTH / CHASE_HEIGHT) : box.width);
         field.style.width = width + 'px'; field.style.height = (width * CHASE_HEIGHT / CHASE_WIDTH) + 'px';
       }
     } else { field.style.removeProperty('width'); field.style.removeProperty('height'); }
@@ -406,7 +418,8 @@ export function createChaseUI(root, onFinish, reportStatus) {
     e.preventDefault(); measure(); pointerId = e.pointerId; field.setPointerCapture(e.pointerId); moveTo(e);
   });
   field.addEventListener('pointermove', e => { if (running && e.pointerId === pointerId) moveTo(e); });
-  field.addEventListener('pointerup', e => { if (e.pointerId === pointerId) pointerId = null; });
+  field.addEventListener('pointerup', e => { if (e.pointerId === pointerId) { pointerId = null; targetX = null; } });
+  field.addEventListener('lostpointercapture', e => { if (e.pointerId === pointerId) { pointerId = null; targetX = null; } });
   field.addEventListener('pointercancel', () => { pointerId = null; targetX = null; });
   directions.forEach(button => {
     const dir = button.dataset.chaseDirection;
@@ -416,10 +429,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
   });
   // Touch actions fire on press. Waiting for click adds the entire thumb-hold
   // duration to a jump, and prevented running/steering/jumping together on phones.
-  for (const [button, action] of [[hop, jump], [dash, burst]]) {
-    button.addEventListener('pointerdown', e => { if (!running || e.button !== 0) return; e.preventDefault(); action(); });
-    button.addEventListener('click', e => { if (e.detail === 0) action(); });
-  }
+  wireChaseAction(hop,jump,()=>running);wireChaseAction(dash,burst,()=>running);
   go.addEventListener('click', () => { if (paused) run(); else start(); });
   pauseButton.addEventListener('click', pause);
   document.addEventListener('keydown', e => {
@@ -459,7 +469,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
       go.textContent = format === 'run' ? 'Begin the midnight run' : 'Let’s chase'; go.hidden = false; upgrades.hidden = true; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; disabled(true);
       hop.textContent = game.wings ? 'Flap ↑' : 'Hop ↑';
       const trait = game.wings ? 'Wings: tap Flap again in midair.' : game.horns ? 'Horns block your first dust ambush.' : game.halo ? 'Your halo pulls nearby crumbs closer.' : game.tail ? 'Tail: a bigger stomp bounce.' : 'Keyboard: arrows + Space.';
-      mobileGuide.textContent = 'Drag the arena or hold ← → to steer. Hop over dust; Dash smashes it. ' + (game.wings || game.horns || game.halo || game.tail ? trait : 'Catches recharge Dash sooner.');
+      mobileGuide.textContent = 'Hold ← or → to move. Tap the middle Hop button to jump. You can hold a direction and jump together. Dragging the arena also works. Dash is an optional extra above the arena. ' + (game.wings || game.horns || game.halo || game.tail ? trait : '');
       const modeRecord = pet.chaseRecords?.[chaseRecordKey(game)];
       const record = modeRecord ? ' ' + (format === 'run' ? 'Midnight Run' : gentle ? 'Gentle' : 'Standard') + ' best: ' + modeRecord.score + '.' : ' Separate records for every ground, length and pace.';
       description.textContent += game.venue==='pantry'?' More falling biscuits, each worth 50 base points.':game.venue==='moon'?' The moon lends you longer, higher jumps.':'';

@@ -1,4 +1,4 @@
-import { lifeState, favoriteFor, outingPreview, outingSnapshot, outingTrail, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
+import { lifeState, useProject, favoriteFor, outingPreview, outingSnapshot, outingTrail, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
 import { OUTINGS, GEAR, RELICS, FRAMES } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
 import { startCourt, currentCourt, courtAction, finishCourt } from '../engine/court.js';
@@ -7,7 +7,7 @@ import { playStomp } from '../audio/sound.js';
 import { curioSVG } from '../art/curios.js';
 import { mountHouseholdScene } from '../art/household-scene.js';
 import { marketMarkup, marketSelectedOffer } from './market.js';
-import { trailTheatre, mountTrailCrew, trailDareSelect, trailDareStatus, wrapTrailLayout } from './expeditions.js';
+import { trailTheatre, mountTrailCrew, trailDareSelect, trailDareStatus, wrapTrailLayout, projectBoard, missionPlan, missionStatus, missionResult } from './expeditions.js';
 import { checkAchievements } from '../engine/achievements.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 import { save } from '../state.js';
@@ -21,7 +21,7 @@ export function renderLife(state) {
  const first=state.pets[0];
  document.body.classList.toggle('settling-in',!!first&&!l.introDone);
  if(!first)return;
- const key=JSON.stringify([l.introDone,l.xp,l.day,l.daily,l.frame,l.displayed,l.scenes[0]?.id,l.outing?.step,l.market?.moves.length,l.market?.claimed,l.marketRuns,l.marketBest,state.pets.map(p=>[p.id,p.name,p.cared]),l.recap]);
+ const key=JSON.stringify([l.introDone,l.xp,l.projects,l.projectParts,l.day,l.daily,l.frame,l.displayed,l.scenes[0]?.id,l.outing?.step,l.market?.moves.length,l.market?.claimed,l.marketRuns,l.marketBest,state.pets.map(p=>[p.id,p.name,p.cared]),l.recap]);
  if(hub.dataset.key===key)return;hub.dataset.key=key;
  const next=FRAMES.find(f=>f.at>l.xp), scene=l.scenes[0];
  if(!l.introDone){
@@ -30,6 +30,7 @@ export function renderLife(state) {
   return;
  }
  hub.innerHTML='<div class="life-heading"><div><span class="eyebrow">Your small world</span><h2>Something worth coming back for.</h2></div><span class="discovery-count">'+l.xp+' discoveries</span></div><div class="life-links">'+button('Play with a resident','play')+button(l.outing?'Continue expedition':'Go beyond the shelf','outing')+button('Shelf Court','court')+button(l.market&&!l.market.claimed?'Continue night market':'Visit the night market','market')+'</div><div class="display-cabinet frame-'+l.frame+'" aria-label="Your displayed curiosities">'+(l.displayed.length?l.displayed.map(id=>{const d=curioDetails(id);return d?'<button class="display-curio" data-life="curio" data-id="'+id+'" aria-label="Inspect '+esc(d.name)+'">'+art(id)+'<span>'+esc(d.name)+'</span></button>':'';}).join(''):'<p>Your first curiosity belongs here.<br><small>Welcome a visitor or bring something home from an expedition.</small></p>')+'</div><div class="display-footer"><span>'+esc(next?next.name+' at '+next.at+' discoveries · '+(next.at-l.xp)+' to go':'Every display finish unlocked. The velvet is impressed.')+'</span>'+button('Arrange display','display')+'</div>'+(scene?'<article class="scene-preview"><div class="scene-mini" id="sceneMini"></div><div><span class="eyebrow">'+(l.recap.length?'While you were out':'Latest household scene')+'</span><h3>'+esc(scene.title)+'</h3><p>'+esc(scene.text)+'</p>'+button(l.recap.length?'Read the recap':'Watch the scene','scene')+'</div></article>':'<div class="scene-empty">The cast is assembled. Their first scene is only a terrible decision away.</div>')+'<p class="life-footnote">Discoveries come from new games, keepsakes and visitor chapters, plus your first care, play, outing, market and visitor activity each day. No streak to lose.</p>';
+ hub.querySelector('.display-cabinet').insertAdjacentHTML('beforebegin',projectBoard(l));
  if(scene)mountHouseholdScene(hub.querySelector('#sceneMini'),state,scene,{mini:true});
 }
 export function visitorActivityHTML(state) {
@@ -73,23 +74,23 @@ export function initLife(state,refresh) {
    if(!state.pets.some(p=>p.id===leadId))leadId=state.pets[0]?.id||'';
    if(companionId===leadId||!state.pets.some(p=>p.id===companionId))companionId='';
    const crew=state.pets.filter(p=>[leadId,companionId].includes(p.id)),trail=outingTrail(selectedRoute,l.outings%8);
-   content.innerHTML='<div class="trail-intro"><span class="eyebrow">Three stops. One tool. No timer.</span><h3>Go somewhere you have been told not to.</h3><p>Choose your crew, pack a tool, and plan around three encounters. Take detours for points, restore nerve on quiet paths, or spend your equipment once. Everyone comes home. The bag may move a little.</p></div><div class="outing-routes">'+OUTINGS.map(r=>'<button class="route-card '+r.tone+'" data-life="route" data-id="'+r.id+'" aria-pressed="'+(selectedRoute===r.id)+'">'+curioSVG(r.id==='drawer'?'sock':r.id==='fridge'?'pea':'key')+'<b>'+r.name+'</b><small>'+r.intro+'</small></button>').join('')+'</div><div class="crew-picker"><label>Lead resident<select id="outingLead">'+state.pets.map(p=>'<option value="'+p.id+'" '+(p.id===leadId?'selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label><label>Companion<select id="outingCompanion"><option value="">Solo expedition</option>'+state.pets.filter(p=>p.id!==leadId).map(p=>'<option value="'+p.id+'" '+(p.id===companionId?'selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label><label>Equipment · one use this trip<select id="outingGear">'+GEAR.map(g=>'<option value="'+g.id+'" '+(selectedGear===g.id?'selected':'')+'>'+esc(g.name)+'</option>').join('')+'</select></label></div><p id="gearHint" class="hint">'+esc(GEAR.find(g=>g.id===selectedGear).hint)+' Matching equipment earns 3 points; improvised equipment earns 1.</p>'+trailDareSelect(selectedDare)+'<div class="trail-rules"><span><b>2 nerve</b> at the start; hold up to 3</span><span><b>3 points</b> unlock the second curiosity</span><span><b>6 points</b> unlock the third</span></div><div class="life-links">'+button('Pack and head out','set-out')+'</div><details class="trail-map"><summary>Scout the three stops before packing</summary><p class="hint">Quiet paths restore 2 nerve for no points. A crew stat of 7 or more cuts that stop’s detour cost from 2 nerve to 1.</p>'+trail.map((step,i)=>'<article><span class="eyebrow">Stop '+(i+1)+'</span><b>'+esc(step.title)+'</b><span>Detour: '+step.points+' points / '+(crew.some(p=>(p.stats?.[step.stat]||0)>=7)?1:2)+' nerve · '+step.stat+'</span><small>Equipment match: '+esc(GEAR.find(g=>g.id===step.good).name)+'</small></article>').join('')+'</details>';
+   content.innerHTML=missionPlan(state,selectedRoute,selectedGear,leadId,companionId,selectedDare);
    wrapTrailLayout(content,'planning');return;
   }
   const r=OUTINGS.find(r=>r.id===o.route);if(!r){l.outing=null;outing();return;}
   const modern=o.version===2,crew=state.pets.filter(p=>o.cast.includes(p.id));
   if(o.step===3){
    const tier=modern?(o.score>=6?2:o.score>=3?1:0):(o.score>=3?2:o.score>=1?1:0),relic=RELICS.find(x=>x.id===o.route+':'+tier);
-   content.innerHTML=trailTheatre(o.route,2,{done:true})+'<div class="expedition-prize">'+curioSVG(relic.shape)+'<span class="eyebrow">Everyone returned with the parts they left with.</span><h3>'+esc(relic.name)+'</h3><p>'+esc(relic.line)+'</p>'+(modern?'<div class="trail-final-score"><b>'+o.score+'</b><span>trail points'+(o.dareBonus?' · includes +2 wager':'')+'<br>'+o.best+' possible with this crew and plan</span></div><p>'+(o.score===o.best?'A perfect trail. The undertaker returned your deposit through clenched teeth.':o.score>=6?'An excellent haul. Whatever is scratching inside the bag can wait until morning.':'You all came back. The person who packed the tiny body bags is trying not to look disappointed.')+'</p>':'<p>'+o.score+' of 3 situations supported by your equipment or crew.</p>')+'</div>'+trailDareStatus(o)+'<div class="life-links trail-final-actions">'+(modern?button('Try this trail again','outing-retry')+button('Plan another expedition','outing-next'):'')+button('Display your curiosity','finish-outing')+'</div><details class="trail-map"><summary>Your expedition report</summary><ol class="outing-log">'+o.log.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol><p class="hint">Everyone gains up to 8 attention. Curiosities unlock at 0, 3 and 6 points. Each new curiosity earns four discoveries. Replays keep these stops, crew skills and wager.</p></details>';
+   content.innerHTML=missionResult(o)+trailTheatre(o.route,2,{done:true,mission:o.mission})+'<div class="expedition-prize">'+curioSVG(relic.shape)+'<span class="eyebrow">Everyone returned with the parts they left with.</span><h3>'+esc(relic.name)+'</h3><p>'+esc(relic.line)+'</p>'+(modern?'<div class="trail-final-score"><b>'+o.score+'</b><span>trail points'+(o.dareBonus?' · includes +2 wager':'')+'<br>'+o.best+' possible with this crew and plan</span></div><p>'+(o.score===o.best?'A perfect trail. The undertaker returned your deposit through clenched teeth.':o.score>=6?'An excellent haul. Whatever is scratching inside the bag can wait until morning.':'You all came back. The person who packed the tiny body bags is trying not to look disappointed.')+'</p>':'<p>'+o.score+' of 3 situations supported by your equipment or crew.</p>')+'</div>'+trailDareStatus(o)+'<div class="life-links trail-final-actions">'+(modern?button('Try this trail again','outing-retry')+button('Plan another expedition','outing-next'):'')+(o.mission?button(o.parts.length>=2?'Use it at home':'Return to the workshop','project-home'):button('Display your curiosity','finish-outing'))+'</div><details class="trail-map"><summary>Your expedition report</summary><ol class="outing-log">'+o.log.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol><p class="hint">Everyone gains up to 8 attention. Curiosities unlock at 0, 3 and 6 points. Each new curiosity earns four discoveries. Replays keep these stops, crew skills and wager.</p></details>';
    wrapTrailLayout(content,'result',o);mountTrailCrew(content,crew);return;
   }
   const step=modern?o.steps[o.step]:r.steps[o.step];
   if(interlude){
-   content.innerHTML='<span class="eyebrow">Field report · '+o.step+' of 3</span>'+trailTheatre(o.route,o.step,{travel:true})+'<p class="scene-script">'+esc(o.log.at(-1))+'</p>'+(modern?'<p class="trail-report-resources">'+o.score+' points · '+o.nerve+' nerve · '+(o.toolUsed?'equipment used':'equipment ready')+'</p>':'')+'<div class="trail-report-actions">'+button('Next stop: '+esc(step.title),'continue-outing')+'</div>'+trailDareStatus(o);wrapTrailLayout(content,'report',o);mountTrailCrew(content,crew);return;
+   content.innerHTML='<span class="eyebrow">Field report · '+o.step+' of 3</span>'+missionStatus(o)+trailTheatre(o.route,Math.max(0,o.step-1),{travel:true,mission:o.mission})+'<p class="scene-script">'+esc(o.log.at(-1))+'</p>'+(modern?'<p class="trail-report-resources">'+o.score+' points · '+o.nerve+' nerve · '+(o.toolUsed?'equipment used':'equipment ready')+'</p>':'')+'<div class="trail-report-actions">'+button('Next stop: '+esc(step.title),'continue-outing')+'</div>'+trailDareStatus(o);wrapTrailLayout(content,'report',o);mountTrailCrew(content,crew);return;
   }
   const p=modern?null:outingPreview(state,o.route,o.gear,o.cast)?.[o.step];
   const choices=modern?o.options.map(option=>button(esc(option.label)+'<small>'+esc(option.hint)+'</small>','outing-choice','data-choice="'+option.choice+'" '+(option.available?'':'disabled'))).join(''):step.options.map((t,i)=>button(esc(t)+'<small>'+esc(i===0?(p?.gear?'Your equipment supports this.':'Best with '+GEAR.find(g=>g.id===step.good).name+'. Improvisation still gets you home.'):(p?.skill?'Your crew has the '+step.stat+' for this.':step.stat+' 7+ helps. Your crew will improvise.'))+'</small>','outing-choice','data-choice="'+i+'"')).join('');
-  content.innerHTML='<span class="eyebrow">'+esc(r.name)+' · Stop '+(o.step+1)+' of 3</span>'+(modern?'<ol class="trail-progress" aria-label="Expedition progress">'+o.steps.map((x,i)=>'<li class="'+(i<o.step?'visited':i===o.step?'current':'')+'" '+(i===o.step?'aria-current="step"':'')+'><span>'+(i+1)+'</span><small>'+esc(x.title)+'</small></li>').join('')+'</ol>':'')+trailTheatre(o.route,o.step)+'<h3 class="trail-choice-heading">'+esc(step.title)+'</h3><p class="scene-script">'+esc(step.text)+'</p>'+(modern?'<div class="trail-supplies"><div><b>'+o.score+'</b><span>trail points</span></div><div><b>'+o.nerve+' / 3</b><span>nerve</span></div><div><b>'+(o.toolUsed?'Used':'Ready')+'</b><span>'+esc(GEAR.find(g=>g.id===o.gear)?.name)+'</span></div></div>':'')+'<div class="expedition-choices '+(modern?'trail-choices':'')+'">'+choices+'</div>'+trailDareStatus(o)+'<details class="trail-map"><summary>Look ahead and check your crew</summary><p class="hint">'+esc(crew.map(p=>p.name).join(' & '))+' · '+esc(GEAR.find(g=>g.id===o.gear)?.name)+'</p>'+(modern?o.steps.slice(o.step+1).map(x=>'<article><b>'+esc(x.title)+'</b><span>Detour: '+x.points+' points / '+(o.expertise.includes(x.stat)?1:2)+' nerve · '+x.stat+'</span><small>Equipment match: '+esc(GEAR.find(g=>g.id===x.good).name)+'</small></article>').join('')+(o.step===2?'<p>This is the last stop. Nerve only earns extra points if your selected wager requires it.</p>':''):'')+'<p class="hint">Everyone comes home. Trip nerve never changes your residents’ needs. Close whenever you like; progress is saved.</p></details>';
+  content.innerHTML='<span class="eyebrow">'+esc(r.name)+' · Stop '+(o.step+1)+' of 3</span>'+(modern?'<ol class="trail-progress" aria-label="Expedition progress">'+o.steps.map((x,i)=>'<li class="'+(i<o.step?'visited':i===o.step?'current':'')+'" '+(i===o.step?'aria-current="step"':'')+'><span>'+(i+1)+'</span><small>'+esc(x.title)+'</small></li>').join('')+'</ol>':'')+missionStatus(o)+trailTheatre(o.route,o.step,{mission:o.mission})+'<h3 class="trail-choice-heading">'+esc(step.title)+'</h3><p class="scene-script">'+esc(step.text)+'</p>'+(modern?'<div class="trail-supplies"><div><b>'+o.score+'</b><span>trail points</span></div><div><b>'+o.nerve+' / 3</b><span>nerve</span></div><div><b>'+(o.toolUsed?'Used':'Ready')+'</b><span>'+esc(GEAR.find(g=>g.id===o.gear)?.name)+'</span></div></div>':'')+'<div class="expedition-choices '+(modern?'trail-choices':'')+'">'+choices+'</div>'+trailDareStatus(o)+'<details class="trail-map"><summary>Look ahead and check your crew</summary><p class="hint">'+esc(crew.map(p=>p.name).join(' & '))+' · '+esc(GEAR.find(g=>g.id===o.gear)?.name)+'</p>'+(modern?o.steps.slice(o.step+1).map(x=>'<article><b>'+esc(x.title)+'</b><span>Detour: '+x.points+' points / '+(o.expertise.includes(x.stat)?1:2)+' nerve · '+x.stat+'</span><small>Equipment match: '+esc(GEAR.find(g=>g.id===x.good).name)+'</small></article>').join('')+(o.step===2?'<p>This is the last stop. Nerve only earns extra points if your selected wager requires it.</p>':''):'')+'<p class="hint">Everyone comes home. Trip nerve never changes your residents’ needs. Close whenever you like; progress is saved.</p></details>';
   wrapTrailLayout(content,'playing',o);mountTrailCrew(content,crew);
  }
 
@@ -113,9 +114,10 @@ export function initLife(state,refresh) {
   courtLevel=court.level;open('Shelf Court');save();courtPaint('#courtCaseTitle,#courtVerdictTitle');courtAnnounce(courtHearing(court).line);
  }
  function courtPaint(focusSelector,resetPanel=false){
-  const panelScroll=resetPanel?0:content.querySelector('.court-action-panel')?.scrollTop||0;
+  const panelScroll=resetPanel?0:content.querySelector('.court-action-panel')?.scrollTop||0,workspaceScroll=resetPanel?0:content.querySelector('.court-workspace')?.scrollTop||0;
   content.innerHTML=court.claimed&&court.result?courtFinishedMarkup(court,court.result,lifeState(state).courtWins):courtMarkup(court);
   mountCourtArt(content,court,state);const panel=content.querySelector('.court-action-panel');if(panel)panel.scrollTop=panelScroll;
+  const workspace=content.querySelector('.court-workspace');if(workspace)workspace.scrollTop=workspaceScroll;
   veil.scrollTop=0;const sheet=content.closest('.sheet');if(sheet)sheet.scrollTop=0;
   if(focusSelector)(content.querySelector(focusSelector)||content.querySelector('#courtPanelTitle,#courtVerdictTitle'))?.focus({preventScroll:true});
  }
@@ -153,8 +155,15 @@ export function initLife(state,refresh) {
   if(action==='display-toggle'){displayCurio(state,b.dataset.id);refresh();display();return;}
   if(action==='frame'){selectFrame(state,b.dataset.id);refresh();display();return;}
   if(action==='outing'){interlude=false;outing();return;}
+  if(action==='project-mission'){selectedRoute=b.dataset.id;interlude=false;outing();focusOutingProgress();return;}
+  if(action==='project-home'){finishOuting(state);close();save();refresh();document.querySelector('.household-workshop')?.scrollIntoView({block:'center',behavior:'auto'});return;}
+  if(action==='use-project'){
+   const result=useProject(state,b.dataset.id);if(!result)return;save();refresh();
+   const card=document.querySelector('.project-'+b.dataset.id);if(card){card.classList.remove('project-in-use');void card.offsetWidth;card.classList.add('project-in-use');}
+   const line=card?.querySelector('.project-reaction');if(line)line.textContent=result.text+(result.fresh?' Daily care delivered.':' Today’s care already delivered. Play again whenever you like.');playStomp();return;
+  }
   if(action==='route'){selectedRoute=b.dataset.id;repaintOutingSetup('',selectedRoute);return;}
-  if(action==='set-out'){const cast=[document.getElementById('outingLead').value,document.getElementById('outingCompanion').value];if(startOuting(state,selectedRoute,selectedGear,cast,{dare:selectedDare})){save();interlude=false;outing();refresh();focusOutingProgress();}return;}
+  if(action==='set-out'){const cast=[document.getElementById('outingLead').value,document.getElementById('outingCompanion').value];if(startOuting(state,selectedRoute,selectedGear,cast,{dare:selectedDare,mission:true})){save();interlude=false;outing();refresh();focusOutingProgress();}return;}
   if(action==='outing-choice'){const result=chooseOuting(state,Number(b.dataset.choice));if(result){interlude=!result.complete;refresh();outing();focusOutingProgress();}return;}
   if(action==='continue-outing'){interlude=false;outing();focusOutingProgress();return;}
   if(action==='outing-retry'||action==='outing-next'){
@@ -162,7 +171,7 @@ export function initLife(state,refresh) {
    selectedRoute=previous.route;selectedGear=previous.gear;selectedDare=previous.dare||'';[leadId,companionId='']=previous.cast;
    finishOuting(state);
    if(action==='outing-retry'){
-    if(startOuting(state,selectedRoute,selectedGear,previous.cast,{edition:previous.edition,dare:previous.dare}))lifeState(state).outing.expertise=previous.expertise.slice();
+    if(startOuting(state,selectedRoute,selectedGear,previous.cast,{edition:previous.edition,dare:previous.dare,mission:previous.mission===true}))lifeState(state).outing.expertise=previous.expertise.slice();
    }
    interlude=false;save();refresh();outing();focusOutingProgress();return;
   }
@@ -174,6 +183,20 @@ export function initLife(state,refresh) {
   if(action==='market-buy'||action==='market-pass'||action==='market-secret'){const before=marketSnapshot(state);if(chooseMarket(state,action==='market-buy'?b.dataset.id:null,action==='market-buy'?marketTrade||null:null,{secret:action==='market-secret'})){marketAction={kind:action.slice(7),step:before.step,item:before.stalls[before.step].find(item=>item.id===b.dataset.id)};marketTrade='';marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
   if(action==='court'){courtStart();return;}
   if(action==='court-new'){courtStart(courtLevel,true);return;}
+  if(action==='court-clue'){
+   if(!court||court.claimed)return;const clue=Number(b.dataset.clue),rule=court.rules[clue];if(!rule)return;
+   courtAction(state,{type:'focus',statement:clue,evidence:rule.first.axis});
+   if(!court.inspected.includes(rule.first.axis))courtMove({type:'inspect',evidence:rule.first.axis},'#courtPanelTitle');
+   else{court=currentCourt(state);save();courtPaint('#courtPanelTitle');}return;
+  }
+  if(action==='court-call'){
+   if(!court||court.claimed)return;const suspect=Number(b.dataset.choice),v=courtView(court);if(!court.suspects[suspect])return;
+   courtAction(state,{type:'focus',suspect});court=currentCourt(state);
+   courtResponse(court,{kind:'testimony',speaker:court.suspects[suspect].name,text:court.suspects[suspect].defence});save();courtPaint('#courtPanelTitle');courtAnnounce(courtHearing(court).line);return;
+  }
+  if(action==='court-compare'){
+   if(!court||court.claimed)return;const v=courtView(court);courtMove({type:'compare',suspect:v.witness,evidence:Math.min(v.statement,court.rules.length-1)},'#courtPanelTitle');return;
+  }
   if(action==='court-level'){const level=Number(b.dataset.level);if(Number.isInteger(level)&&level>=0&&level<=2)courtStart(level,true);return;}
   if(action==='court-chapter'){
    if(!court||court.claimed)return;const chapter=b.dataset.chapter,view=courtView(court);

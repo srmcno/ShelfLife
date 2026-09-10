@@ -1,7 +1,7 @@
 // Compact, versioned save data. No DOM, clock changes, or external services.
 export function blankLife() {
   return { v:1, introDone:false, introStarted:false, xp:0, day:'', daily:[], awards:[], scenes:[], serial:0,
-    relics:[], displayed:[], frame:'wood', visitorEpisodes:{}, outing:null, outings:0,
+    relics:[], displayed:[], frame:'wood', visitorEpisodes:{}, outing:null, outings:0, projects:[], projectParts:{},
     court:null, courtWins:0, courtPlays:0, courtBest:0, lastSeen:0, recap:[], blueprints:[],
     market:null, marketSerial:0, marketRuns:0, marketBest:0 };
 }
@@ -13,6 +13,8 @@ export function normalizeLife(raw, established=false) {
   s.v=1; s.introStarted=s.introStarted===true;
   for (const k of ['xp','serial','outings','courtWins','courtPlays','courtBest','lastSeen','marketSerial','marketRuns','marketBest']) s[k]=number(s[k],k==='lastSeen'?1e14:1e9);
   s.day=typeof s.day==='string'?s.day.slice(0,10):'';
+  s.projects=[...new Set((Array.isArray(s.projects)?s.projects:[]).filter(id=>['drawer','fridge','cupboard'].includes(id)))];
+  s.projectParts=Object.fromEntries(['drawer','fridge','cupboard'].map(id=>[id,[...new Set((Array.isArray(s.projectParts?.[id])?s.projectParts[id]:[]).filter(i=>Number.isInteger(i)&&i>=0&&i<3))]]));
   for (const k of ['daily','awards','relics','displayed']) s[k]=[...new Set((Array.isArray(s[k])?s[k]:[]).filter(x=>typeof x==='string'&&/^[a-z0-9:_-]{1,80}$/i.test(x)))].slice(0,k==='displayed'?3:200);
   s.scenes=(Array.isArray(s.scenes)?s.scenes:[]).filter(x=>obj(x)&&typeof x.title==='string'&&typeof x.text==='string')
     .slice(0,18).map(x=>({id:number(x.id),at:number(x.at,1e14),title:x.title.slice(0,100),text:x.text.slice(0,1200),kind:typeof x.kind==='string'?x.kind.slice(0,40):'story',cast:(Array.isArray(x.cast)?x.cast:[]).filter(id=>typeof id==='string').slice(0,2),...(obj(x.stage)?{stage:Object.fromEntries(['key','branch','object','guest'].filter(k=>typeof x.stage[k]==='string'&&/^[a-z0-9:_-]{1,60}$/i.test(x.stage[k])).map(k=>[k,x.stage[k]]))}:{})}));
@@ -26,8 +28,12 @@ export function normalizeLife(raw, established=false) {
       const choices=[];for(const choice of s.outing.choices){if(![0,1,2].includes(choice))break;choices.push(choice);}
       Object.assign(s.outing,{version:2,edition:number(o.edition,7),expertise:[...new Set((Array.isArray(o.expertise)?o.expertise:[]).filter(x=>['cute','menace','damp','mystique'].includes(x)))],choices,step:choices.length,nerve:number(o.nerve,3),toolUsed:o.toolUsed===true});
       if(['bold','thrifty','steady'].includes(o.dare))s.outing.dare=o.dare;
+      if(o.mission===true)s.outing.mission=true;
     }else s.outing.choices=s.outing.choices.filter(x=>x===0||x===1);
-    if(obj(o.result)&&typeof o.result.relic==='string')s.outing.result={relic:o.result.relic.slice(0,30),fresh:o.result.fresh===true};
+    if(obj(o.result)&&typeof o.result.relic==='string'){
+      s.outing.result={relic:o.result.relic.slice(0,30),fresh:o.result.fresh===true};
+      if(['drawer','fridge','cupboard'].includes(o.result.project))Object.assign(s.outing.result,{project:o.result.project,built:o.result.built===true,found:(Array.isArray(o.result.found)?o.result.found:[]).filter(i=>[0,1,2].includes(i)).slice(0,3)});
+    }
   }
   // Only the seed and choices are saved. Prices, bag contents and the score are
   // replayed by the market engine, so stale or edited counters cannot mint prizes.
@@ -49,9 +55,9 @@ export function normalizeLife(raw, established=false) {
     else {
       const moves=[];
       for(const move of c.moves.slice(0,96)){
-        if(!obj(move)||!['inspect','question','press','present','appeal','hint','file'].includes(move.type))break;
+        if(!obj(move)||!['inspect','question','press','present','compare','appeal','hint','file'].includes(move.type))break;
         const clean={type:move.type};let valid=true;
-        for(const key of (move.type==='inspect'?['evidence']:move.type==='question'||move.type==='appeal'||move.type==='file'?['suspect']:move.type==='press'?['suspect','statement']:move.type==='present'?['suspect','statement','evidence']:[])){
+        for(const key of (move.type==='inspect'?['evidence']:move.type==='compare'?['suspect','evidence']:move.type==='question'||move.type==='appeal'||move.type==='file'?['suspect']:move.type==='press'?['suspect','statement']:move.type==='present'?['suspect','statement','evidence']:[])){
           if(!Number.isInteger(move[key])||move[key]<0||move[key]>(key==='suspect'?3:2)){valid=false;break;}clean[key]=move[key];
         }
         if(!valid)break;moves.push(clean);

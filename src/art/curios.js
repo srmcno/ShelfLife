@@ -1,6 +1,14 @@
 // Small vector illustrations, shared by the display cabinet, museum and stage.
 // User strings never become SVG markup.
 const ink={
+ spool:'<path d="M22 20h36v40H22Z" fill="#bb8193"/><ellipse cx="40" cy="20" rx="24" ry="8" fill="#b28b5a"/><ellipse cx="40" cy="60" rx="24" ry="8" fill="#b28b5a"/><path d="M23 30h34M23 39h34M23 49h34" stroke="#e7b4bc"/>',
+ ribbon:'<path d="M18 13h44L47 39l15 28H18l15-28Z" fill="#bd859b"/><path d="M21 18h35M22 61h33" stroke="#f1c4ca"/>',
+ cord:'<path d="M22 15q40 0 30 18T22 44t33 18" stroke="#dfcba1" stroke-width="7"/><path d="m50 58 9 8m-10-3 8 8" stroke="#dfcba1"/>',
+ jar:'<path d="M26 19h28v10q10 6 10 18v18H16V47q0-12 10-18Z" fill="#76adb7"/><path d="M23 14h34v9H23Z" fill="#b9c8b9"/><path d="M25 39v18" stroke="#e3f5eb" stroke-width="4"/><path d="M18 59h44"/>',
+ thimble:'<path d="M21 65 27 23q13-18 26 0l6 42Z" fill="#c49472"/><path d="M23 56h34M34 23v2m11-2v2m-15 8v2m11-2v2m10-2v2M28 43v2m11-2v2m13-2v2" stroke="#784d44" stroke-width="3"/>',
+ latch:'<path d="M15 25h13v35H15Zm39 0h13v35H54Z" fill="#c99e60"/><path d="M21 39h39v12H21Z" fill="#e1be80"/><path d="M41 29v24" stroke="#8b6744" stroke-width="7"/>',
+ spout:'<path d="M19 61h23V43q0-12 24-21L55 12Q24 23 24 40Z" fill="#b1c5c7"/><path d="m52 13 13 11M23 50h19"/>',
+ plug:'<ellipse cx="40" cy="56" rx="24" ry="10" fill="#686f72"/><path d="M27 48h26v10H27Z" fill="#93999b"/><path d="M40 46v-7l-8-5 16-5-16-5 16-5-8-5" stroke="#d6c497" stroke-width="3"/>',
  moon:'<path d="M31 13h18v9H31z" fill="#ccb686"/><path d="M32 22v7c-15 11-17 33-6 40h28c11-7 9-29-6-40v-7" fill="#263f57"/><path d="M46 36c-16-1-21 20-7 26 8 2 13-2 15-7-12 2-17-10-8-19Z" fill="#f8dc8b"/><circle cx="29" cy="43" r="2" fill="#fff"/>',
  crown:'<path d="m14 32 13 10 13-22 13 22 13-10-7 32H21Z" fill="#d9b15d"/><path d="M22 55h36M29 61h22"/><circle cx="40" cy="48" r="4" fill="#ba799f"/>',
  bell:'<path d="M37 18h6v10h-6z" fill="#d8c18a"/><path d="M23 53c4-5 1-25 17-25s13 20 17 25l6 7H17Z" fill="#d3af65"/><path d="M32 65q8 9 16 0M31 36q-3 5-3 10"/>',
