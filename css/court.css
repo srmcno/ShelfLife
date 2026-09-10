@@ -256,3 +256,6 @@ body[data-effects="light"] .court-playable *{animation:none!important;transition
 .court-deduction .court-hotspot{background:#ead8ad;border:2px solid #a77d4c;box-shadow:0 3px 8px #0008;color:#2d2330;opacity:1}
 .court-deduction .court-hotspot>span{background:#44323a;color:#fff0c9}
 .court-deduction .court-hotspot.is-bagged{background:#bfcba9}
+/* A ruling lands, then leaves the actors visible. Its text remains below. */
+.court-deduction .court-stamp{opacity:0;animation:court-ruling-arrive 1.4s ease-out both}
+@keyframes court-ruling-arrive{0%{opacity:0;transform:translate(-50%,-50%) rotate(-14deg) scale(1.3)}12%,65%{opacity:1;transform:translate(-50%,-50%) rotate(-9deg) scale(1)}100%{opacity:0;transform:translate(-50%,-55%) rotate(-9deg) scale(.95)}}
