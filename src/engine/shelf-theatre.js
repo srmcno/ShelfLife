@@ -104,8 +104,14 @@ export function sceneAvailability(state, options = {}, now = Date.now()) {
   const choices = availableShelfScenes(state, now, options).filter(scene => !options.kind || scene.kind === options.kind);
   if (choices.length) return '';
   if (options.petId && !awakeResidents(state, now).some(pet => pet.id === options.petId)) return 'That resident is asleep or away from the shelf.';
-  if (options.kind === 'lamp' || (state.props || []).find(prop => prop.id === options.propId)?.kind === 'lamp') return 'Nearby residents already have the light as they like it. Try the switch or place a neighbour with different tastes nearby.';
-  const family = SHELF_SCENE_BY_KIND[options.kind];
+  const targetProp = (state.props || []).find(prop => prop.id === options.propId);
+  const family = SHELF_SCENE_BY_KIND[options.kind] || SHELF_SCENES.find(scene => scene.propKind === targetProp?.kind);
+  if (family?.propKind) {
+    const props = (state.props || []).filter(prop => prop.kind === family.propKind && (!options.propId || prop.id === options.propId) && state.slots.includes(prop.id));
+    const nearby = awakeResidents(state, now).filter(pet => (!options.petId || pet.id === options.petId) && props.some(prop => cross(state.slots.indexOf(pet.id), state.slots.indexOf(prop.id))));
+    if (nearby.length && family.kind === 'bath') return 'The nearby residents dislike baths and are still clean enough to refuse. Try a resident who enjoys water, or come back when cleanliness falls below 55.';
+    if (nearby.length && family.kind === 'lamp') return 'Nearby residents already have the light as they like it. Try the switch or place a neighbour with different tastes nearby.';
+  }
   return family?.requirements || 'Place awake residents within two spaces of furniture or one another, on the same row. Their quirks decide which performances suit them.';
 }
 
