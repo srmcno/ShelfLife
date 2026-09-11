@@ -208,3 +208,14 @@ test('a preselected visible cast is exact and ordered, with no substitute actors
   const solo = shelf([pet('Solo',['damp'])],[{id:'t',kind:'tub'}]);
   assert.deepEqual(perform(solo,'bath',NOW,{actorIds:['Solo']}).actorIds,['Solo']);
 });
+
+test('unavailable bath and lamp explanations distinguish preference from missing scenery', () => {
+  const state = shelf([pet('Clover', ['feral'], { clean: 65 })], [{ id: 't', kind: 'tub' }]);
+  assert.match(sceneAvailability(state, { kind: 'bath' }, NOW), /dislike baths.*below 55/);
+  assert.match(sceneAvailability(state, { propId: 't' }, NOW), /dislike baths/);
+  state.pets[0].needs.clean = 54;
+  assert.equal(sceneAvailability(state, { kind: 'bath' }, NOW), '');
+  state.slots[1] = null;
+  assert.doesNotMatch(sceneAvailability(state, { kind: 'bath' }, NOW), /dislike baths/);
+  assert.doesNotMatch(sceneAvailability(state, { kind: 'lamp' }, NOW), /already have/);
+});

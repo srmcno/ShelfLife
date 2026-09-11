@@ -54,7 +54,7 @@ export function initTheatreControls({ getState, refresh }) {
     const ready=candidates.some(s=>!selected||s.kind===selected), busy=director.isPlaying();
     play.disabled=busy||!ready;stop.hidden=!busy;
     repertoire.querySelectorAll('[data-scene-kind]').forEach(button=>{button.disabled=busy;});
-    play.textContent=lastEvent?'Another scene':'Start some nonsense';
+    play.textContent=lastEvent?'Play another':'Play a scene';
     availability.textContent=busy?'The cast is occupied.':!ready?sceneAvailability(state,{...(selected?{kind:selected}:{}),manual:true},Date.now()):reduced.matches?'Reduced motion: request a scene to read a still performance.':'Place residents within two spaces of furniture, on the same shelf.';
     const seen=new Set(state.theatre?.seen||[]), total=SHELF_SCENES.reduce((n,s)=>n+s.variants.length,0);
     document.getElementById('theatreCount').textContent=seen.size+' / '+total+' endings seen';

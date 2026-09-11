@@ -4,6 +4,7 @@ import { newAlibi, answerAlibi, advanceAlibi, rewardAlibi, currentRound, ALIBI_R
 import { renderPetSprite } from '../art/sprite.js';
 import { createPuppet } from '../art/animator.js';
 import { createChaseUI } from './chase.js';
+import { acceptsGameShortcut, chaseSettingsLocked } from './game-controls.js';
 import { playFuss } from '../audio/sound.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 import { checkAchievements } from '../engine/achievements.js';
@@ -11,8 +12,7 @@ import { checkAchievements } from '../engine/achievements.js';
 // Statement numbers always mean statements, at every viewport size. Records
 // have their own letter keys so selecting evidence cannot reset an accusation.
 export function alibiShortcut(event, game) {
-  if (!game || game.complete || currentRound(game)?.answered !== null || event.repeat || event.altKey || event.ctrlKey || event.metaKey ||
-      event.target?.closest?.('input,select,textarea,[contenteditable=true]')) return null;
+  if (!game || game.complete || currentRound(game)?.answered !== null || event.repeat || !acceptsGameShortcut(event)) return null;
   const key = String(event.key).toLowerCase();
   if (/^[1-3]$/.test(key)) return { type: 'statement', index: Number(key) - 1 };
   if (game.mode === 'prove' && /^[a-c]$/.test(key)) return { type: 'evidence', index: key.charCodeAt(0) - 97 };
@@ -84,7 +84,10 @@ export function initPlay(state, refresh) {
     document.getElementById('playReward').textContent = 'Each game has its own 5-minute reward rest. Every completed game counts in your history.';
     return result;
   }
-  const chase = createChaseUI(chaseRoot, reward, text => { status.textContent = text; });
+  const chase = createChaseUI(chaseRoot, reward, text => { status.textContent = text; }, phase => {
+    gentle.disabled = chaseSettingsLocked(phase);
+    gentle.title = gentle.disabled ? 'Pace stays fixed during a chase. Finish or close it to change the setup.' : '';
+  });
   const TITLES = { chase: 'Crumb Chase', memory: 'Secret handshake', alibi: 'The Alibi' };
   const EYEBROWS = { chase: 'On the loose with ', memory: 'A secret with ', alibi: 'Taking a statement from ' };
   const BRIEFS = {
@@ -145,7 +148,7 @@ export function initPlay(state, refresh) {
     else { host.appendChild(renderPetSprite(pet)); host.firstElementChild.classList.add('sl-mood-content'); puppet = createPuppet(host.firstElementChild); progress(); }
   }
   modeButtons.forEach(b => b.addEventListener('click', () => { if (mode !== b.dataset.playMode) setMode(b.dataset.playMode); }));
-  gentle.addEventListener('change', () => { if (pet && mode === 'chase') setMode('chase'); });
+  gentle.addEventListener('change', () => { if (pet && mode === 'chase' && !gentle.disabled) setMode('chase'); });
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   function lock(locked) { accepting = !locked; pads.forEach(p => p.setAttribute('aria-disabled', String(locked))); }
   // Both the handshake and the alibi are three rounds, so they share the step
@@ -317,11 +320,18 @@ export function initPlay(state, refresh) {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) cancelStageMotion();
-    if (mode !== 'memory' || !document.hidden || !game || game.complete || !veil.classList.contains('open')) return;
-    generation++; lock(true); game.cursor = 0; paintTrail(); pads.forEach(p => p.classList.remove('lit'));
-    status.textContent = start.hidden ? 'Paused. Replay the pattern when you are ready.' : 'Your completed rounds are safe. Start the next pattern when you are ready.';
-    cue.textContent = 'Take your time'; replay.disabled = false; slowerReplay.hidden = replay.hidden || slow.checked;
+    if (document.hidden) pauseHandshake();
   });
+  function pauseHandshake() {
+    if (mode !== 'memory' || !game || game.complete || !start.hidden || !veil.classList.contains('open')) return;
+    cancelStageMotion();
+    generation++; lock(true); game.cursor = 0; paintTrail(); pads.forEach(p => p.classList.remove('lit'));
+    status.textContent = 'Paused. Replay the pattern when you are ready. Your completed rounds are safe.';
+    document.getElementById('playAnnouncement').textContent = status.textContent;
+    stage('paused', 'The rehearsal is waiting');
+    cue.textContent = 'Take your time'; replay.disabled = false; slowerReplay.hidden = replay.hidden || slow.checked;
+  }
+  window.addEventListener('blur', pauseHandshake);
   window.addEventListener('shelflife:play', e => {
     pet = state.pets.find(p => p.id === e.detail?.petId);
     if (!pet) return;
@@ -368,8 +378,7 @@ export function initPlay(state, refresh) {
       }
       return;
     }
-    if (mode !== 'memory' || !accepting || !veil.classList.contains('open') || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
-    if (e.target?.closest?.('input,select,textarea,[contenteditable=true]')) return;
+    if (mode !== 'memory' || !accepting || !veil.classList.contains('open') || e.repeat || !acceptsGameShortcut(e)) return;
     if (/^[1-4]$/.test(e.key)) { e.preventDefault(); pads[Number(e.key) - 1].click(); }
   });
   pads.forEach((pad, i) => pad.addEventListener('click', () => {

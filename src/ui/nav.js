@@ -180,10 +180,12 @@ if (tray) {
 
 // Somewhere else in the app wants a pane and a card in it on screen: the needs
 // strip, for one. On a phone that is a tab switch; on a desktop a scroll.
+let destinationGeneration = 0;
 window.addEventListener('shelflife:goto', e => {
   // An explicit destination (such as a newly built workshop project) wins
   // over the catalogue fallback when the game closes in this same turn.
   resetGameReturn();
+  const generation = ++destinationGeneration;
   const d = e.detail || {};
   if (d.tab) setTab(d.tab, { keepScroll: true });
   const target = d.target ? document.querySelector(d.target) : null;
@@ -191,13 +193,17 @@ window.addEventListener('shelflife:goto', e => {
     // Dialog cleanup first releases the shelf's inert boundary and restores
     // its opener. Move focus to the requested destination after that cleanup.
     requestAnimationFrame(() => {
-      if (!target.isConnected || document.querySelectorAll('.veil.open').length) return;
+      if (generation !== destinationGeneration || !target.isConnected || document.querySelector('.veil.open,#moreTray.open')) return;
       target.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-      if (typeof target.focus === 'function') { target.tabIndex = -1; target.focus({ preventScroll: true }); }
+      if (typeof target.focus === 'function') {
+        // Existing buttons/links retain their place in keyboard navigation.
+        if (target.tabIndex < 0 && !target.hasAttribute('tabindex')) target.tabIndex = -1;
+        target.focus({ preventScroll: true });
+      }
     });
   }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && trayOpen) setTray(false); });
+// Dialogs.js sends Escape through More's own Close button, just like sheets.
 
 // ---------------------------------------------------------------------------
 // Sheets you can pull shut. On a phone every .veil is a bottom sheet with a
