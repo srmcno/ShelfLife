@@ -72,7 +72,10 @@ export function normalizeLife(raw, established=false) {
       const ui=obj(c.ui)?c.ui:{};
       s.court={version:c.version,seed:c.seed,caseIndex:c.caseIndex,level:c.level,cast,petId:c.petId,moves,claimed:c.claimed===true&&moves.at(-1)?.type==='file',ui:{chapter:['investigation','hearing','verdict'].includes(ui.chapter)?ui.chapter:'investigation',witness:Number.isInteger(ui.witness)&&ui.witness>=0&&ui.witness<4?ui.witness:null,statement:Number.isInteger(ui.statement)&&ui.statement>=0&&ui.statement<3?ui.statement:null,exhibit:Number.isInteger(ui.exhibit)&&ui.exhibit>=0&&ui.exhibit<3?ui.exhibit:null}};
       // Display-only reward totals are never paid by reconstruction.
-      if(s.court.claimed&&obj(c.reward))s.court.reward={bond:number(c.reward.bond,1),fuss:number(c.reward.fuss,16)};
+      if(s.court.claimed&&obj(c.reward)){
+        s.court.reward={bond:number(c.reward.bond,1),fuss:number(c.reward.fuss,16)};
+        if(['ready','rest','asleep'].includes(c.reward.reason))s.court.reward.reason=c.reward.reason;
+      }
     }
   }
   s.frame=['wood','brass','moon','velvet'].includes(s.frame)?s.frame:'wood';

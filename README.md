@@ -13,6 +13,22 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
+## Gameplay and device polish
+
+- **Crumb Chase:** an illustrated guide distinguishes goal crumbs from bonus objects. Gold gets an advance warning and remains until the buzzer. Pausing shows your progress; P also resumes. Keyboard and touch holds work independently, and delayed touch clicks cannot spend a second flap. Landscape controls leave a taller arena. Midnight Run upgrade breaks wait for you to choose an upgrade and begin the next act.
+- **Secret handshake and Alibi:** each ritual has an example and a clear goal. Gesture names match keys 1–4. Completed rounds wait for you; mistakes offer the same pattern again, including a slower replay. Alibi uses 1–3 for statements and A–C for records consistently on every screen. Reward previews explain what finding lies and proving the whole case actually earn.
+- **Night Market:** purchases explain which errands they help, identify ready delivery pairs, and check actual future stalls for missing partners. A full bag or empty purse points to a delivery or return. Passing warns when fewer deliveries will remain possible, and the final stall identifies undelivered shopping.
+- **Shelf Court:** explain inspected clues freely, revisit why a suspect was cleared, and see score penalties. Early hearing and verdict screens offer the missing inspection. Results distinguish earned care from practice, full needs and resting residents, including after reload.
+- **Progress and navigation:** games return to the Playroom on desktop as well as phones; an expedition's “Use it at home” goes directly to the household workshop. Care, game briefings and scheme choices respect resource and trust caps. Scheme deadlines apply immediately when a late choice is clicked. A messy case ending no longer prevents earning its cooperative trust on a later attempt; old reward claims are preserved.
+
+The game workspaces adapt to both width and height, including short desktop windows. Existing saves and backups remain compatible; the offline shell includes this release.
+
+## Create a character, then get to know them
+
+Choose two quirks and an optional third, preview their final stats and daytime care needs, and write a short backstory or keep the generated introduction. Shuffling personality is separate from changing the creature's body, colours, proportions or drawing. Appearance rerolls, undo and switching art tabs preserve the personality preview; the saved resident receives those exact traits, stats and introduction. Editing an existing resident's appearance preserves their personality and history.
+
+Resident cards explain their company preferences, favourite furniture, dislikes, anatomy and personal routines. Tidy residents can preen when dirty; sociable residents can comfort a compatible, awake neighbour who needs attention. Sleep, feuds, remembered friction and a two-hour rest keep these routines consistent with the rest of shelf life. Expanded card sections stay open while needs refresh. Appearance changes also update movement anatomy instead of leaving old limbs attached to the behaviour model.
+
 ## Residents choosing their own slots
 
 Residents keep their remembered preference until they actually move. A second movement check previously erased that intention, cancelling moves that depended on accumulated patience or a wish to return to a spot the player moved them from. Residents waiting for another resident's turn now retain their plans too.

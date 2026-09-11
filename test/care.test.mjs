@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { careFor, doRounds, CARE_GAIN } from '../src/engine/care.js';
+import { careFor, previewCare, doRounds, CARE_GAIN } from '../src/engine/care.js';
 import { blankState, defaultNeeds } from '../src/state.js';
 
 function localHour(h) { return new Date(2024, 0, 1, h, 0, 0).getTime(); }
@@ -58,4 +58,25 @@ test('doRounds returns null with no pets, otherwise bumps every need and adds a 
   assert.equal(pet.needs.food, 63);
   assert.ok(typeof result.message === 'string' && result.message.length > 0);
   assert.equal(s.notes.length, 1);
+});
+
+test('care at full trust still helps needs without announcing an impossible trust gain', () => {
+  const s = blankState();
+  const pet = makePet({ needs: { food: 40, fuss: 40, clean: 40 }, bond: 25, cared: 2 });
+  s.pets.push(pet); s.slots[0] = pet.id; s.lastTick = localHour(12);
+  assert.equal(previewCare(pet, 'food', localHour(12)).reason, 'Trust is full');
+  const result = careFor(s, pet, 'food', localHour(12));
+  assert.equal(result.bondGained, false);
+  assert.equal(pet.bond, 25);
+  assert.equal(pet.cared, 3);
+  assert.equal(result.gain, CARE_GAIN.food);
+});
+
+test('care previews never promise trust for a top-up at or above the useful-care boundary', () => {
+  for (const level of [72, 75, 78, 79, 100]) {
+    const pet = makePet({ needs: { food: level, fuss: 40, clean: 40 } });
+    const preview = previewCare(pet, 'food', localHour(12));
+    assert.equal(preview.useful, false);
+    assert.equal(preview.reason, 'Already comfortable');
+  }
 });

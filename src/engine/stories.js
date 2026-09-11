@@ -32,6 +32,19 @@ export function storyState(state) {
   const s = state.stories;
   for (const k of ['archive', 'collection', 'postcards', 'residents']) if (!Array.isArray(s[k])) s[k] = [];
   s.archive = s.archive.filter(x => safeRecord(x) && typeof x.text === 'string').slice(0, 100);
+  // Finishing a file and earning its cooperative trust are separate milestones.
+  // Recover older payouts from the archive; when all history has rolled away,
+  // retain the old claim so upgrading cannot pay the same file twice.
+  if (!Array.isArray(s.caseTrust)) {
+    s.caseTrust = CASES.filter(c => {
+      if (!state.life?.awards?.includes('case:' + c.id)) return false;
+      const history = s.archive.filter(m => m.kind === 'case' && m.title === c.title);
+      // A full archive may have dropped the original payout while retaining
+      // later replays. Absence of its receipt then proves nothing.
+      return !history.length || s.archive.length === 100 || history.some(m => m.text.includes('Witnesses gain 2 trust.'));
+    }).map(c => c.id);
+  }
+  s.caseTrust = [...new Set(s.caseTrust.filter(id => CASES.some(c => c.id === id)))];
   s.collection = [...new Map(s.collection.filter(x => safeRecord(x) && VISITORS.some(v => v.id === x.id)).map(x => [x.id, x])).values()];
   s.visitBag = [...new Set((Array.isArray(s.visitBag) ? s.visitBag : []).filter(id => VISITORS.some(v => v.id === id)))];
   if (!safeRecord(s.visitStats)) s.visitStats = {};
@@ -58,7 +71,10 @@ export function storyState(state) {
   if (s.case) {
     s.case.cast = s.case.cast.filter(x => safeRecord(x) && typeof x.id === 'string' && typeof x.name === 'string').slice(0, 2);
     s.case.choices = Array.isArray(s.case.choices) ? s.case.choices.filter(x => ['listen', 'blame'].includes(x)).slice(0, 6) : [];
-    for (const key of ['careStart', 'careClue', 'playStart', 'playClue', 'week']) s.case[key] = cleanTime(s.case[key]);
+    for (const key of ['careStart', 'careClue', 'playStart', 'week']) s.case[key] = cleanTime(s.case[key]);
+    // Older files predate a separate confidence baseline. Zero would let a win
+    // from before the file opened satisfy the later confidence task on reload.
+    s.case.playClue = Number.isFinite(s.case.playClue) && s.case.playClue >= 0 ? s.case.playClue : s.case.playStart;
   }
   for (const key of Object.keys(s.requestAt)) s.requestAt[key] = cleanTime(s.requestAt[key]);
   for (const [id, r] of Object.entries(s.requests)) {
@@ -156,7 +172,9 @@ export function advanceCase(state, choice = 'listen', now = Date.now()) {
     const comfortable = state.pets.some(p => Math.min(...Object.values(p.needs)) >= 50);
     const cooperative = gentle && comfortable;
     c.outcome = cooperative ? definition.good : definition.messy; c.closedAt = now;
-    const rewarded = awardDiscovery(state, 'case:'+c.kind, 4, now);
+    awardDiscovery(state, 'case:'+c.kind, 4, now);
+    const rewarded = cooperative && !s.caseTrust.includes(c.kind);
+    if (rewarded) s.caseTrust.push(c.kind);
     state.pets.filter(p => c.cast.some(x => x.id === p.id)).forEach(p => {
       if (cooperative && rewarded) p.bond = clamp(p.bond + 2, 0, 25);
       else if (!cooperative) p.needs.clean = clamp(p.needs.clean + 12, 0, 100);

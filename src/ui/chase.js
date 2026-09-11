@@ -1,4 +1,4 @@
-import { CHASE_VENUES, chaseRecordKey, chaseStarTarget, chaseCoaching, newChase, updateChase, jumpChase, dashChase, recordChase, chaseStars, streakMultiplier, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND, RUN_WAVES, RUN_UPGRADES, RUN_WAVE_SECONDS, chaseDuration, chaseWaveTime, chaseWaveContract, advanceChaseWave } from '../engine/chase.js';
+import { CHASE_VENUES, chaseRecordKey, chaseStarTarget, chaseCoaching, newChase, updateChase, jumpChase, dashChase, recordChase, chaseStars, streakMultiplier, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND, RUN_WAVES, RUN_UPGRADES, RUN_WAVE_SECONDS, chaseDuration, chaseWaveTime, chaseWaveContract, selectChaseUpgrade, advanceChaseWave } from '../engine/chase.js';
 import { moodOf } from '../engine/tick.js';
 import { rewardSummary } from './reward-summary.js';
 import { renderPetSprite } from '../art/sprite.js';
@@ -25,9 +25,22 @@ const QUIPS = {
 export function wireChaseAction(button,action,active) {
  let firedOnPress=false;
  button.addEventListener('pointerdown',e=>{if(!active()||e.button!==0)return;e.preventDefault();firedOnPress=true;action();});
- button.addEventListener('pointerup',()=>{setTimeout(()=>{firedOnPress=false;},0);});
+ // Touch browsers can dispatch the compatibility click after a delay. Keeping
+ // this flag until that click avoids consuming a second flap from one press.
  button.addEventListener('pointercancel',()=>{firedOnPress=false;});
  button.addEventListener('click',e=>{if(active()&&(e.detail===0||!firedOnPress))action();firedOnPress=false;});
+}
+
+// A keyboard key and a finger may hold the same direction. Releasing either
+// must only remove its own input; it must not cancel the other held control.
+export function createChaseInput() {
+  const sources = new Map();
+  return {
+    hold(source, direction) { if (direction === 'left' || direction === 'right') sources.set(source, direction); },
+    release(source) { sources.delete(source); },
+    clear() { sources.clear(); },
+    get axis() { const directions = new Set(sources.values()); return Number(directions.has('right')) - Number(directions.has('left')); }
+  };
 }
 
 export function createChaseUI(root, onFinish, reportStatus) {
@@ -49,7 +62,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
   // Restore the original left / hop / right thumb layout. Dash is secondary.
   hop.parentElement.append(directions[0], hop, directions[1]);
   const controls = [...directions, hop, dash];
-  field.setAttribute('aria-label', 'Crumb Chase. Drag to steer or use arrow keys. Space hops. X dashes in your steering direction and smashes dust bunnies. P pauses.');
+  field.setAttribute('aria-label', 'Crumb Chase. Drag to steer or use arrow keys. Space hops. X dashes in your steering direction and smashes dust bunnies. P pauses or resumes.');
   const world = root.querySelector('#chaseWorld'), clockFill = root.querySelector('#chaseClockFill');
   const scene = document.createElement('div'); scene.className = 'chase-depth'; scene.setAttribute('aria-hidden', 'true');
   scene.innerHTML = '<i class="chase-orb"></i><i class="chase-bottles"></i><i class="chase-rib"></i><i class="chase-scene-rail"></i>';
@@ -85,7 +98,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
   objective.after(starTarget);
   // Desktop keeps its familiar inline layout. A phone gets one bounded arena,
   // and setup/results use the whole workspace instead of a tiny field inset.
-  const mobileLayout = window.matchMedia('(max-width: 720px), (max-height: 500px) and (pointer: coarse)');
+  const mobileLayout = window.matchMedia('(max-width: 720px), (max-height: 500px)');
   const arena = document.createElement('div'); arena.className = 'chase-arena';
   field.before(arena); arena.append(field);
   const hudStrip = document.createElement('div'); hudStrip.className = 'chase-hud-strip';
@@ -98,6 +111,26 @@ export function createChaseUI(root, onFinish, reportStatus) {
   const overlayScroll = document.createElement('div'); overlayScroll.className = 'chase-overlay-scroll';
   const overlayFooter = document.createElement('div'); overlayFooter.className = 'chase-overlay-footer';
   overlay.prepend(overlayScroll); overlayScroll.append(title, stars, description, quip, upgrades);
+  const coaching = document.createElement('p'); coaching.className = 'chase-coaching'; coaching.hidden = true;
+  description.after(coaching);
+  const guide = document.createElement('details'); guide.className = 'chase-guide';
+  const guideSummary = document.createElement('summary'); guideSummary.textContent = 'What to catch & how to play';
+  const guideItems = document.createElement('div'); guideItems.className = 'chase-guide-items';
+  for (const [art, label, explanation] of [
+    [CRUMB, 'Crumbs count toward your goal', 'Ordinary: 10 points. Gold: 30. Pick them up in the air or from the floor.'],
+    [BISCUIT, 'Biscuits are bonus points', 'Catch before they land for 50 points. They do not add to your crumb count.'],
+    [BUNNY, 'Dust breaks your streak', 'Hop over it, land on it, or Dash through it. A bump costs up to 5 points.'],
+    [SUGAR, 'Sugar makes you faster', 'Touch the cube for a short burst of speed and a crumb magnet.'],
+    [MOTH, 'Moths steal floor crumbs', 'Catch one for 20 points. A carrying moth also returns one crumb to your goal.']
+  ]) {
+    const row = document.createElement('div'), icon = document.createElement('span'), text = document.createElement('span');
+    const name = document.createElement('b'), detail = document.createElement('span');
+    icon.innerHTML = art; icon.setAttribute('aria-hidden', 'true'); name.textContent = label; detail.textContent = explanation;
+    text.append(name, detail); row.append(icon, text); guideItems.append(row);
+  }
+  const guideControls = document.createElement('p');
+  guideControls.textContent = 'Hold ← or → to move, or drag the arena. Hop: Space or ↑. Dash: X. Pause or resume: P. Catch streaks multiply points: ×2 at 4, ×3 at 8. Missed crumbs trim the streak by 2; dust and theft break it.';
+  guide.append(guideSummary, guideItems, guideControls); overlayScroll.append(guide);
   overlay.append(overlayFooter); overlayFooter.append(go);
   const configure = document.createElement('button'); configure.type = 'button'; configure.className = 'btn btn-ghost'; configure.textContent = 'Change setup'; configure.hidden = true;
   overlayFooter.append(configure);
@@ -110,7 +143,10 @@ export function createChaseUI(root, onFinish, reportStatus) {
   }
   const gentleOption = document.getElementById('gentleOption');
   if (gentleOption) { const marker = document.createComment('gentle original position'); gentleOption.before(marker); markers.set(gentleOption, marker); }
-  const screen = value => { root.dataset.chaseScreen = value; configure.hidden = value !== 'result'; mobileSetup.hidden = value !== 'setup'; };
+  const screen = value => {
+    root.dataset.chaseScreen = value; configure.hidden = value !== 'result'; mobileSetup.hidden = value !== 'setup';
+    guide.hidden = !['setup', 'paused'].includes(value); coaching.hidden = value !== 'result';
+  };
   function fitLayout() {
     if (mobileLayout.matches) {
       mobileSetup.append(formatPicker, settings);
@@ -131,14 +167,13 @@ export function createChaseUI(root, onFinish, reportStatus) {
     if (repeatCourse.checked && game?.finished) { courseSeed = game.seed; courseObjective = game.objective?.id; }
     else if (!repeatCourse.checked) { courseSeed = null; courseObjective = null; }
   });
-  const nodes = new Map(), held = new Set();
+  const nodes = new Map(), held = createChaseInput();
   let fieldBox = null, hudKey = '', popAnimation = null, runNumber = 0;
   function measure() {
     if (mobileLayout.matches) {
       const box = arena.getBoundingClientRect();
       if (box.width > 0 && box.height > 0) {
-        const landscape = window.matchMedia('(min-width: 560px) and (max-height: 540px)').matches;
-        const width = Math.floor(landscape ? Math.min(box.width, box.height * CHASE_WIDTH / CHASE_HEIGHT) : box.width);
+        const width = Math.floor(Math.min(box.width, box.height * CHASE_WIDTH / CHASE_HEIGHT));
         field.style.width = width + 'px'; field.style.height = (width * CHASE_HEIGHT / CHASE_WIDTH) + 'px';
       }
     } else { field.style.removeProperty('width'); field.style.removeProperty('height'); }
@@ -225,7 +260,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
     const quest = game.objective, questProgress = quest ? Math.min(quest.target, game[quest.stat]) : 0;
     const recharge = Math.ceil(p.dashCooldown * 10) / 10;
     const contract = chaseWaveContract(game);
-    const key = [game.caught, game.score, seconds, game.combo, running, paused, record?.score, quest?.done, questProgress, recharge, p.direction, game.finaleCaught, game.finaleStarted, game.wave, contract?.progress].join('|');
+    const key = [game.caught, game.score, seconds, game.combo, running, paused, record?.score, quest?.done, questProgress, recharge, p.direction, game.finaleCaught, game.finaleWarned, game.finaleStarted, game.wave, contract?.progress].join('|');
     if (key !== hudKey) {
       hudKey = key;
       setText(count, game.caught + ' / ' + game.goal); count.classList.toggle('met', game.caught >= game.goal);
@@ -252,6 +287,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
         ? '★★★ Next: ' + [target.crumbs ? target.crumbs + ' more crumbs' : '', target.points ? target.points + ' more points' : '', target.contracts ? target.contracts + ' contracts' : ''].filter(Boolean).join(' + ')
         : '★★★ Three-star target reached';
       if (game.finaleStarted) starTarget.textContent += game.finaleComplete ? ' · Gold sweep ✓ +60' : ' · Gold sweep ' + game.finaleCaught + '/5';
+      else if (game.finaleWarned) starTarget.textContent += ' · Gold soon: get near either edge';
     }
     const present = new Set();
     for (const item of game.items) { present.add(item.id); paintItem(item); }
@@ -290,6 +326,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
     paint();
     title.textContent = game.complete ? (newBest ? 'A new personal best!' : rating === 3 ? 'Three stars. Insufferable.' : 'Crumb bandit.') : 'One more chase?';
     description.textContent = summary(reward);
+    coaching.textContent = chaseCoaching(game);
     showStars(rating); quip.textContent = quipFor(rating, newBest); quip.hidden = false;
     overlay.classList.toggle('best', newBest);
     if (game.complete) { puppet.gesture('win'); playFuss(); playStar({ step: rating, delay: .3 }); }
@@ -333,6 +370,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
     else if (event.type === 'broomWarning') { message('Broom on the ' + event.side + '! Hop, Dash or cross.', 'bad'); onStatus('Broom approaching the ' + event.side + ' half. Hop over it, Dash through it, or move to the other side.'); }
     else if (event.type === 'powerup') onPowerUp(event);
     else if (event.type === 'objective') { spark('float', p.x, p.z + 60, 'Quest +40'); playStar({step:1}); onStatus('Side quest complete! Forty extra points. The paperwork has been eaten in celebration.'); }
+    else if (event.type === 'finaleWarning') { message('Gold soon! Get near either edge.', 'good'); onStatus('The gold sweep is about to appear. Move near either edge, then hop toward the middle. It stays until time runs out.'); }
     else if (event.type === 'finale') { playPowerUp(); message('Last call! Sweep all 5 gold for +60', 'good'); onStatus('Last call! Five golden crumbs form an arc. Hop and dash to sweep all five for 60 bonus points. These extras never break your streak.'); }
     else if (event.type === 'finaleComplete') { playStar({step:3}); spark('float', p.x, p.z + 60, 'Gold sweep +60'); message('Gold sweep! +60. Bread has fallen.', 'good'); onStatus('Gold sweep complete! Sixty bonus points.'); }
   }
@@ -341,18 +379,20 @@ export function createChaseUI(root, onFinish, reportStatus) {
     screen('upgrade');
     const result = game.waveResults.at(-1), next = RUN_WAVES[game.wave + 1];
     title.textContent = result.bonus ? 'Contract fulfilled. Nobody survived breakfast.' : 'The bread has retained counsel.';
-    description.textContent = result.progress + '/' + result.target + ' ' + result.goal + (result.bonus ? ' · +' + result.bonus + ' contract points. ' : '. No contract bonus. ') + 'Next: ' + next.intro;
+    description.textContent = result.progress + '/' + result.target + ' ' + result.goal + (result.bonus ? ' · +' + result.bonus + ' contract points. ' : '. No contract bonus. ') + 'Next: collect ' + (gentle ? next.gentleTarget : next.target) + ' ' + next.goal + ' for +' + next.bonus + ' points. ' + next.intro;
     quip.textContent = game.wave === 0 ? 'Choose something from the lost property drawer. The owners are no longer using their legs.' : 'The moon accepts no liability for what you bring back down.';
     quip.hidden = false; stars.hidden = true; go.hidden = true; upgrades.hidden = false;
     upgrades.replaceChildren(...Object.entries(RUN_UPGRADES).filter(([id]) => !game.upgrades.includes(id)).map(([id, data]) => {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'chase-upgrade btn';
+      button.setAttribute('aria-pressed', 'false');
       const name = document.createElement('b'), description = document.createElement('span');
       name.textContent = data.name; description.textContent = data.description; button.append(name, description);
       button.addEventListener('click', () => {
-        if (!advanceChaseWave(game, id)) return;
-        upgrades.hidden = true; go.hidden = false; quip.hidden = true;
-        nodes.clear(); items.replaceChildren(); fx.replaceChildren(); hudKey = ''; paint(); run();
-        message('ACT ' + (game.wave + 1) + ' · ' + RUN_WAVES[game.wave].name, 'good');
+        if (!selectChaseUpgrade(game, id)) return;
+        for (const option of upgrades.children) option.setAttribute('aria-pressed', String(option === button));
+        quip.textContent = 'Selected: ' + data.name + '. You can change your choice before continuing.';
+        go.textContent = 'Begin act ' + (game.wave + 2); go.hidden = false;
+        onStatus(data.name + ' selected. The clock is still stopped. Choose Begin act ' + (game.wave + 2) + ' when you are ready.');
       });
       return button;
     }));
@@ -362,7 +402,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
   }
   function frame(now) {
     if (!running) return;
-    const axis = Number(held.has('right')) - Number(held.has('left'));
+    const axis = held.axis;
     const events = updateChase(game, { axis, targetX: axis ? null : targetX }, (now - lastTime) / 1000);
     lastTime = now;
     for (const event of events) {
@@ -399,14 +439,16 @@ export function createChaseUI(root, onFinish, reportStatus) {
     if (!running) return;
     stopFrame(); paused = true; disabled(true); paint();
     screen('paused');
-    title.textContent = 'The crumbs can wait.'; description.textContent = 'Paused. Your score and remaining time are safe.';
+    title.textContent = 'The crumbs can wait.';
+    const remaining = Math.ceil((game.format === 'run' ? RUN_WAVE_SECONDS : chaseDuration(game)) - chaseWaveTime(game));
+    description.textContent = 'Paused at ' + game.caught + '/' + game.goal + ' crumbs and ' + game.score + ' points. ' + remaining + ' seconds remain' + (game.format === 'run' ? ' in act ' + (game.wave + 1) : '') + '. Resume when you are ready.';
     go.textContent = 'Resume chase'; go.hidden = false; upgrades.hidden = true; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; go.focus({ preventScroll: true });
     onStatus('Paused. Resume whenever you are ready.');
   }
   function jump() { if (running && jumpChase(game, { buffer: true })) { puppet.gesture('jump'); if (navigator.vibrate) navigator.vibrate(8); } }
   function burst() {
     if (!running) return;
-    const axis = Number(held.has('right')) - Number(held.has('left'));
+    const axis = held.axis;
     const direction = axis || (Number.isFinite(targetX) && Math.abs(targetX - game.player.x) > 4 ? Math.sign(targetX - game.player.x) : game.player.direction);
     if (dashChase(game, direction)) { playStomp(); spark('puff', game.player.x, game.player.z); if (navigator.vibrate) navigator.vibrate(10); paint(); }
   }
@@ -415,46 +457,58 @@ export function createChaseUI(root, onFinish, reportStatus) {
     targetX = Math.max(26, Math.min(294, (e.clientX - box.left) / box.width * CHASE_WIDTH));
   }
   field.addEventListener('pointerdown', e => {
-    if (!running || e.button !== 0 || e.target.closest('button')) return;
+    if (!running || e.button !== 0 || pointerId !== null || e.target.closest('button')) return;
     e.preventDefault(); measure(); pointerId = e.pointerId; field.setPointerCapture(e.pointerId); moveTo(e);
   });
   field.addEventListener('pointermove', e => { if (running && e.pointerId === pointerId) moveTo(e); });
   field.addEventListener('pointerup', e => { if (e.pointerId === pointerId) { pointerId = null; targetX = null; } });
   field.addEventListener('lostpointercapture', e => { if (e.pointerId === pointerId) { pointerId = null; targetX = null; } });
-  field.addEventListener('pointercancel', () => { pointerId = null; targetX = null; });
+  field.addEventListener('pointercancel', e => { if (e.pointerId === pointerId) { pointerId = null; targetX = null; } });
   directions.forEach(button => {
     const dir = button.dataset.chaseDirection;
-    button.addEventListener('pointerdown', e => { if (!running) return; e.preventDefault(); held.add(dir); targetX = null; button.setPointerCapture(e.pointerId); });
-    for (const name of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(name, () => held.delete(dir));
+    button.addEventListener('pointerdown', e => { if (!running || e.button !== 0) return; e.preventDefault(); held.hold('pointer:' + e.pointerId, dir); targetX = null; button.setPointerCapture(e.pointerId); });
+    for (const name of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(name, e => held.release('pointer:' + e.pointerId));
     button.addEventListener('click', e => { if (running && e.detail === 0) targetX = game.player.x + (dir === 'left' ? -55 : 55); });
   });
   // Touch actions fire on press. Waiting for click adds the entire thumb-hold
   // duration to a jump, and prevented running/steering/jumping together on phones.
   wireChaseAction(hop,jump,()=>running);wireChaseAction(dash,burst,()=>running);
-  go.addEventListener('click', () => { if (paused) run(); else start(); });
+  go.addEventListener('click', () => {
+    if (running) return;
+    if (game?.awaitingChoice) {
+      if (!advanceChaseWave(game)) return;
+      upgrades.hidden = true; quip.hidden = true;
+      nodes.clear(); items.replaceChildren(); fx.replaceChildren(); hudKey = ''; paint(); run();
+      message('ACT ' + (game.wave + 1) + ' · ' + RUN_WAVES[game.wave].name, 'good');
+    } else if (paused) run();
+    else start();
+  });
   pauseButton.addEventListener('click', pause);
   document.addEventListener('keydown', e => {
     const typing = e.target?.nodeType === 1 && ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName);
     // Space and Enter on a focused button stay a click, so Hop, ← and → keep working from the keyboard.
     const onButton = e.target?.nodeType === 1 && !!e.target.closest('button') && [' ', 'Enter'].includes(e.key);
-    if (!running || root.hidden || typing || onButton || e.altKey || e.ctrlKey || e.metaKey || e.repeat && [' ','ArrowUp','w','W','x','X'].includes(e.key)) return;
-    if (['ArrowLeft','a','A'].includes(e.key)) { held.add('left'); targetX = null; e.preventDefault(); }
-    if (['ArrowRight','d','D'].includes(e.key)) { held.add('right'); targetX = null; e.preventDefault(); }
+    if (root.hidden || typing || onButton || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key.toLowerCase() === 'p' && !e.repeat && (running || paused)) { e.preventDefault(); if (paused) run(); else pause(); return; }
+    if (!running) return;
+    if (e.repeat && [' ','ArrowUp','w','W','x','X'].includes(e.key)) { e.preventDefault(); return; }
+    const source = 'key:' + (e.code || e.key.toLowerCase());
+    if (['ArrowLeft','a','A'].includes(e.key)) { held.hold(source, 'left'); targetX = null; e.preventDefault(); }
+    if (['ArrowRight','d','D'].includes(e.key)) { held.hold(source, 'right'); targetX = null; e.preventDefault(); }
     if ([' ','ArrowUp','w','W'].includes(e.key)) { jump(); e.preventDefault(); }
     if (['x','X'].includes(e.key)) { burst(); e.preventDefault(); }
-    if (e.key === 'p' || e.key === 'P') { pause(); e.preventDefault(); }
   });
   document.addEventListener('keyup', e => {
-    if (['ArrowLeft','a','A'].includes(e.key)) held.delete('left');
-    if (['ArrowRight','d','D'].includes(e.key)) held.delete('right');
+    held.release('key:' + (e.code || e.key.toLowerCase()));
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
   window.addEventListener('blur', pause);
   const controller = {
     prepare(resident, useGentle) {
-      if (pet?.id !== resident.id || gentle !== useGentle || game?.venue !== venuePicker.value) { courseSeed = null; courseObjective = null; }
+      if (pet?.id !== resident.id || gentle !== useGentle || game?.format === 'quick' && game.venue !== venuePicker.value) { courseSeed = null; courseObjective = null; }
       stopFrame(); puppet?.release(); paused = false; goalCelebrated = false; pet = resident; gentle = useGentle;
       screen('setup');
+      root.dataset.finished = 'false'; guide.open = false;
       const nextObjective = challengePicker.value === 'rotate' ? ['combo', 'air', 'biscuit'][runNumber % 3] : challengePicker.value;
       game = newChase(pet, { gentle, venue:venuePicker.value, format, mood: moodOf(pet), objective: repeatCourse.checked && courseObjective ? courseObjective : nextObjective });
       venuePicker.disabled=false;field.dataset.venue=game.venue;
@@ -466,11 +520,11 @@ export function createChaseUI(root, onFinish, reportStatus) {
       actor.replaceChildren(renderPetSprite(pet)); actor.firstElementChild.classList.add('sl-mood-content');
       puppet = createPuppet(actor.firstElementChild);
       title.textContent = format === 'run' ? 'Midnight Run' : CHASE_VENUES[game.venue].name;
-      description.textContent = format === 'run' ? 'Three acts. Two upgrades. One increasingly incriminating trail of crumbs. Catch ' + game.goal + ' across the floorboards, pantry and moonlit sill. Each act lasts 18 seconds, with a stopped clock between acts.' : 'Steer ' + pet.name + '. Catch ' + game.goal + ' crumbs in 22 seconds. Hop over dust bunnies or Dash straight through them.';
+      description.textContent = format === 'run' ? 'Catch ' + game.goal + ' crumbs across three 18-second acts to win. The clock stops between acts while you choose upgrades. Contracts add bonus points; missing one still lets you finish the run. First: ' + (gentle ? RUN_WAVES[0].gentleTarget : RUN_WAVES[0].target) + ' crumbs for +50 points.' : 'Steer ' + pet.name + '. Catch ' + game.goal + ' crumbs in 22 seconds to win. Crumbs count toward the goal; biscuits and moths earn bonus points. Hop over dust bunnies or Dash straight through them.';
       go.textContent = format === 'run' ? 'Begin the midnight run' : 'Let’s chase'; go.hidden = false; upgrades.hidden = true; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; disabled(true);
       hop.textContent = game.wings ? 'Flap ↑' : 'Hop ↑';
       const trait = game.wings ? 'Wings: tap Flap again in midair.' : game.horns ? 'Horns block your first dust ambush.' : game.halo ? 'Your halo pulls nearby crumbs closer.' : game.tail ? 'Tail: a bigger stomp bounce.' : 'Keyboard: arrows + Space.';
-      mobileGuide.textContent = 'Hold ← or → to move. Tap the middle Hop button to jump. You can hold a direction and jump together. Dragging the arena also works. Dash is an optional extra above the arena. ' + (game.wings || game.horns || game.halo || game.tail ? trait : '');
+      mobileGuide.textContent = 'Hold ← or → to move. Tap ' + (game.wings ? 'Flap' : 'Hop') + ' to jump. You can hold a direction and jump together. Dragging the arena also works. Dash is an optional burst in your steering direction. ' + (game.wings || game.horns || game.halo || game.tail ? trait : '');
       const modeRecord = pet.chaseRecords?.[chaseRecordKey(game)];
       const record = modeRecord ? ' ' + (format === 'run' ? 'Midnight Run' : gentle ? 'Gentle' : 'Standard') + ' best: ' + modeRecord.score + '.' : ' Separate records for every ground, length and pace.';
       description.textContent += game.venue==='pantry'?' More falling biscuits, each worth 50 base points.':game.venue==='moon'?' The moon lends you longer, higher jumps.':'';

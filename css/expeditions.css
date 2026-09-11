@@ -13,7 +13,7 @@
 @media(prefers-reduced-motion:reduce){.trail-theatre *{animation:none!important;transition:none!important}.trail-dust{display:none}}
 
 .adventure-workspace{min-width:0;width:100%}.adventure-scroll{min-width:0}.adventure-actions{margin-top:18px}.trail-option-mobile{display:none}.trail-dock-status{display:none}.trail-wager-settings{margin:15px 0;border:1px solid var(--hair-lit);border-radius:10px;padding:0 12px}.trail-wager-settings>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:12px;color:var(--mint)}.trail-wager-settings .trail-dare-picker{margin-top:4px}.trail-action-dock .trail-final-actions{margin:0}.trail-action-dock .life-links{margin:0}
-@media(max-width:720px), (max-height:500px) and (pointer:coarse){
+@media(max-width:720px), (max-height:500px){
  #lifeVeil.life-game-mode .adventure-workspace{display:grid;grid-template-rows:minmax(0,1fr) auto;flex:1;min-height:0;overflow:hidden}
  #lifeVeil.life-game-mode .adventure-scroll{min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:12px max(12px,var(--sar)) 16px max(12px,var(--sal));scroll-padding-block:12px;touch-action:pan-y}
  #lifeVeil.life-game-mode .adventure-actions{min-width:0;margin:0;padding:10px max(12px,var(--sar)) calc(10px + var(--sab)) max(12px,var(--sal));border-top:1px solid var(--hair-lit);background:var(--night-3);box-shadow:0 -8px 25px #0002;z-index:3}
@@ -70,7 +70,7 @@
  #lifeVeil .trail-workspace.phase-playing .scene-script{font-size:18px;line-height:1.4}
  #lifeVeil .trail-workspace.phase-playing .trail-choice-heading{font-size:20px!important}
 }
-@media(min-width:721px) and (max-height:500px) and (pointer:coarse){
+@media(min-width:721px) and (max-height:500px){
  #lifeVeil.life-game-mode .adventure-workspace{grid-template-columns:minmax(0,1fr) minmax(235px,32%);grid-template-rows:minmax(0,1fr)}
  #lifeVeil.life-game-mode .adventure-actions{border-top:0;border-left:1px solid var(--hair-lit);align-content:center;display:grid;gap:7px;padding-top:10px}
  #lifeVeil .trail-workspace .trail-theatre{height:76px}
@@ -124,7 +124,7 @@ body[data-effects=light] .project-moving{animation:none!important}
 .project-card .project-card-copy>p{color:#564546}
 @media(min-width:721px) and (min-height:541px){
  #lifeVeil.outing-mode.open{align-items:center;overflow:hidden;padding:20px}
- #lifeVeil.outing-mode>.sheet{width:min(1060px,96vw);max-height:calc(100dvh - 40px);display:flex;flex-direction:column;overflow:hidden}
+ #lifeVeil.outing-mode>.sheet{width:min(1060px,100%);max-height:calc(100dvh - 40px);display:flex;flex-direction:column;overflow:hidden}
  #lifeVeil.outing-mode .sheet-head{flex:none;margin-bottom:16px}
  #lifeVeil.outing-mode #lifeContent{display:flex;flex-direction:column;min-height:0;overflow:hidden}
  #lifeVeil.outing-mode .trail-workspace{display:flex;flex-direction:column;min-height:0;overflow:hidden}
@@ -145,6 +145,10 @@ body[data-effects=light] .project-moving{animation:none!important}
 .project-in-use.project-drawer .project-occupant{animation:project-lift 2.5s ease-in-out both}
 .project-in-use.project-fridge .project-occupant,.project-in-use.project-cupboard .project-occupant{animation:project-operate 2.5s ease-in-out both}
 #lifeVeil .trail-workspace:has(.mission-result) .expedition-prize{display:none}
+.mission-haul{border-top:1px solid #abc9ae55;padding-top:14px;text-align:left;font-size:13px;line-height:1.5}
+.mission-haul>span{display:block}.mission-haul b{font-size:20px;margin-left:6px;color:#e5d39a}
+.mission-haul p{margin:12px 0 0}.mission-haul strong{font-weight:600;color:#f4e7cf}
+.mission-haul small{display:block;font-size:12px;color:#b8cfc4;margin-top:3px}
 @media(max-width:720px){.project-card{display:grid}.project-occupant{transform:scale(.72);transform-origin:center bottom}.project-drawer .project-occupant{left:43%;bottom:37%}.project-fridge .project-occupant{left:0;bottom:35%}.project-cupboard .project-occupant{left:22%;bottom:40%}}
 @media(prefers-reduced-motion:reduce){.project-occupant{animation:none!important}}
 body[data-effects=light] .project-occupant{animation:none!important}

@@ -1,7 +1,7 @@
 import { recordScene } from './life.js';
 import { recordSharedPlot } from './stories.js';
 import { SCHEMES } from '../content/schemes.js';
-import { addNote, clamp, grantBonusTrust } from '../state.js';
+import { addNote, clamp, grantBonusTrust, bonusTrustLeft } from '../state.js';
 import { tick, isAsleep } from './tick.js';
 
 export const SCHEME_WAIT = 5 * 60000;
@@ -23,14 +23,24 @@ export function currentScheme(state) {
   const definition = SCHEMES.find(p => p.id === active.kind);
   return pet && definition ? { ...active, pet, definition } : null;
 }
+export function previewSchemeChoice(pet, choice, now = Date.now()) {
+  const nominal = choice ? choice.changes : { food: -6, clean: -6, fuss: 8 };
+  const changes = Object.fromEntries(Object.entries(nominal).map(([need, delta]) =>
+    [need, clamp(pet.needs[need] + delta, 0, 100) - pet.needs[need]]));
+  const bond = choice ? Math.max(0, Math.min(choice.bond, bonusTrustLeft(pet, now), 25 - (pet.bond || 0))) : 0;
+  return { changes, bond };
+}
 export function resolveScheme(state, option, now = Date.now()) {
   const plan = currentScheme(state);
   if (!plan || ![0, 1, 'alone'].includes(option)) return null;
   const s = schemeState(state);
   tick(state, now);
+  // The visible countdown is a real deadline, including the gap before the
+  // next background update and a suspended tab's first interaction.
+  if (now >= plan.at + SCHEME_DEADLINE) option = 'alone';
   const choice = option === 'alone' ? null : plan.definition.choices[option];
-  const changes = choice ? choice.changes : { food: -6, clean: -6, fuss: 8 };
-  for (const [need, delta] of Object.entries(changes)) plan.pet.needs[need] = clamp(plan.pet.needs[need] + delta, 0, 100);
+  const preview = previewSchemeChoice(plan.pet, choice, now);
+  for (const [need, delta] of Object.entries(preview.changes)) plan.pet.needs[need] += delta;
   if (choice) recordSharedPlot(state, plan.petId);
   const granted = choice ? grantBonusTrust(plan.pet, choice.bond, now) : 0;
   const text = (choice ? choice.outcome : plan.definition.autonomous).replaceAll('{p}', plan.pet.name);

@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { blankState, normalizeState } from '../src/state.js';
+import { blankState, normalizeState, grantBonusTrust } from '../src/state.js';
 import { SCHEMES } from '../src/content/schemes.js';
-import { advanceSchemes, currentScheme, resolveScheme, SCHEME_WAIT, SCHEME_DEADLINE } from '../src/engine/schemes.js';
+import { advanceSchemes, currentScheme, resolveScheme, previewSchemeChoice, SCHEME_WAIT, SCHEME_DEADLINE } from '../src/engine/schemes.js';
 import { resolveMotion } from '../src/art/anatomy.js';
 import { capabilitiesOf } from '../src/engine/behavior.js';
 import { BASE_STAMPS, STAMP_SVG } from '../src/art/stamps.js';
@@ -45,6 +45,48 @@ test('unsupervised plots resolve once on return without cascading through missed
   assert.equal(currentScheme(s), null);
   assert.equal(advanceSchemes(s, now + 48 * 3600000 + 1), false);
   for (const need of Object.values(s.pets[0].needs)) assert.ok(need >= 0 && need <= 100);
+});
+test('a stale choice after the countdown uses the unsupervised outcome without trust or shared-plot credit', () => {
+  const s = shelf(); advanceSchemes(s, now);
+  const plan = currentScheme(s);
+  const result = resolveScheme(s, 0, now + SCHEME_DEADLINE);
+  assert.equal(result.choice, 'alone');
+  assert.equal(result.text, plan.definition.autonomous.replaceAll('{p}', plan.pet.name));
+  assert.equal(result.bond, 0);
+  assert.equal(plan.pet.bond, 0);
+  assert.equal(s.schemes.completed, 1);
+  assert.equal(currentScheme(s), null);
+  assert.deepEqual(s.stories?.relationships || {}, {});
+});
+test('scheme previews show actual need changes and remaining daily and lifetime trust', () => {
+  const pet = shelf().pets[0];
+  pet.needs = { food: 2, clean: 0, fuss: 97 };
+  const choice = { changes: { food: -8, clean: 15, fuss: 20 }, bond: 2 };
+  assert.deepEqual(previewSchemeChoice(pet, choice, now), { changes: { food: -2, clean: 15, fuss: 3 }, bond: 2 });
+  assert.deepEqual(previewSchemeChoice(pet, null, now), { changes: { food: -2, clean: 0, fuss: 3 }, bond: 0 });
+  grantBonusTrust(pet, 2, now);
+  assert.equal(previewSchemeChoice(pet, choice, now).bond, 1);
+  grantBonusTrust(pet, 1, now);
+  assert.equal(previewSchemeChoice(pet, choice, now).bond, 0);
+  pet.bond = 24;
+  assert.equal(previewSchemeChoice(pet, choice, now + 86400000).bond, 1);
+  pet.bond = 25;
+  assert.equal(previewSchemeChoice(pet, choice, now + 86400000).bond, 0);
+  assert.deepEqual(pet.needs, { food: 2, clean: 0, fuss: 97 }, 'previewing never spends or grants needs');
+});
+test('scheme execution matches its preview at capped needs and after the bonus trust is spent', () => {
+  for (const option of [0, 1, 'alone']) {
+    const s = shelf(); advanceSchemes(s, now);
+    const plan = currentScheme(s), pet = plan.pet;
+    pet.needs = { food: 1, fuss: 99, clean: 2 };
+    grantBonusTrust(pet, 3, now);
+    const before = { ...pet.needs }, bond = pet.bond;
+    const preview = previewSchemeChoice(pet, option === 'alone' ? null : plan.definition.choices[option], now);
+    const result = resolveScheme(s, option, now);
+    for (const [need, delta] of Object.entries(preview.changes)) assert.equal(pet.needs[need], before[need] + delta);
+    assert.equal(result.bond, preview.bond);
+    assert.equal(pet.bond, bond + preview.bond);
+  }
 });
 test('plans rotate without repetition and respect the cooldown', () => {
   const s = shelf(), kinds = [];

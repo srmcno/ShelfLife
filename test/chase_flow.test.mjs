@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   newChase, updateChase, jumpChase, dashChase,
-  DASH_COOLDOWN, FINALE_AT, FINALE_BONUS
+  DASH_COOLDOWN, FINALE_AT, FINALE_BONUS, FINALE_WARNING_SECONDS, CHASE_CEILING
 } from '../src/engine/chase.js';
 
 const pet = () => ({ id: 'flow', traits: [], art: { body: '', stamps: [] }, bond: 1 });
@@ -116,10 +116,51 @@ test('a deliberate hop and dash can sweep all five gold and earns its bonus once
 test('ignoring the optional final sweep neither resets a streak nor grants idle catches', () => {
   const game = scene(); game.time = FINALE_AT - .01; game.combo = 8;
   const events = [];
-  for (let n = 0; n < 22; n++) events.push(...updateChase(game, {}, .25));
+  while (!game.finished) events.push(...updateChase(game, {}, .25));
   assert.equal(game.caught, 0);
   assert.equal(game.combo, 8);
   assert.equal(game.finaleComplete, false);
   assert.equal(events.some(e => e.type === 'miss'), false);
   assert.equal(game.items.some(item => item.finale), false);
+});
+
+test('the final sweep gives advance notice and remains catchable until the buzzer', () => {
+  const game = scene(); game.time = FINALE_AT - FINALE_WARNING_SECONDS - .01;
+  assert.equal(updateChase(game, {}, 1 / 60).filter(e => e.type === 'finaleWarning').length, 1);
+  const events = [];
+  while (game.time < 21.2) events.push(...updateChase(game, {}, .1));
+  assert.equal(events.some(e => e.type === 'finaleWarning'), false, 'the warning only fires once');
+  assert.equal(game.items.filter(item => item.finale).length, 5, 'the targets no longer vanish before the clock expires');
+  game.player.x = 52;
+  assert.ok(updateChase(game, {}, 1 / 60).some(e => e.type === 'catch' && e.finale));
+  assert.equal(game.finaleCaught, 1, 'turning back late can rescue a missed final crumb');
+  while (!game.finished) updateChase(game, {}, .1);
+  assert.equal(game.items.some(item => item.finale), false);
+});
+
+test('a biscuit reaching the floor crumbles rather than counting as a whole catch', () => {
+  const game = scene();
+  game.items = [{ id: 1, kind: 'biscuit', x: 160, z: 10.1, vy: -42, age: 0 }];
+  const events = updateChase(game, {}, 1 / 60);
+  assert.equal(events.filter(e => e.type === 'crumble').length, 1);
+  assert.equal(events.some(e => e.type === 'catch'), false);
+  assert.equal(game.biscuits, 0); assert.equal(game.score, 0);
+});
+
+test('winged moon jumps with upgrades keep the whole resident in view and still land', () => {
+  for (const venue of ['shelf', 'pantry', 'moon']) for (const upgraded of [false, true]) {
+    const resident = pet(); resident.art.stamps = [{ kind: 'wing' }];
+    const game = newChase(resident, { venue, seed: 3 });
+    for (const key of ['nextCrumb', 'nextBunny', 'nextMoth', 'nextBiscuit', 'nextSugar']) game[key] = 100;
+    if (upgraded) game.upgrades.push('spring');
+    jumpChase(game);
+    let peak = 0, flapped = false;
+    for (let frame = 0; frame < 240; frame++) {
+      if (!flapped && game.player.z > 30 && game.player.vy < 140) flapped = jumpChase(game);
+      updateChase(game, { axis: 1 }, 1 / 60); peak = Math.max(peak, game.player.z);
+      assert.ok(game.player.z <= CHASE_CEILING, venue + ' keeps the whole sprite on screen');
+    }
+    assert.equal(flapped, true); assert.ok(peak > 70, 'wings still have useful reach');
+    assert.equal(game.player.z, 0); assert.equal(game.player.x, 294, 'the ceiling never stops horizontal steering');
+  }
 });

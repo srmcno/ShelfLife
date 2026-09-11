@@ -13,7 +13,8 @@ export const ACTIVITIES = [
 export function activityPassport(state) {
   const life = state.life || {}, stories = state.stories || {}, pets = state.pets || [];
   const count = key => Math.max(Number(stories[key]) || 0, pets.reduce((sum, pet) => sum + (Number(pet[key]) || 0), 0));
-  const chaseTried = pets.some(p => Object.keys(p.chaseRecords || {}).length > 0 || p.chaseBest > 0);
+  const chaseTried = pets.some(p => Object.keys(p.chaseRecords || {}).length > 0 ||
+    Number.isFinite(p.chaseBest?.score) || p.chaseBest > 0);
   const counts = { chase:Math.max(count('chases'), chaseTried ? 1 : 0), memory:count('handshakes'), alibi:count('alibis'),
     outing:life.outings || 0, court:life.courtPlays || life.courtWins || 0, market:life.marketRuns || 0 };
   const stamps = ACTIVITIES.map(a => ({ id:a.id, title:a.title, count:counts[a.id], earned:counts[a.id] > 0 ||
@@ -29,8 +30,13 @@ export function activityRecord(activity, state, pet) {
   const count = (value, label) => value + ' ' + label + (value === 1 ? '' : 's');
   if (activity.id === 'chase') {
     const records = Object.entries(pet.chaseRecords || {}).filter(([key]) => !key.startsWith('run:')).map(([,record]) => record);
+    const runs = Object.entries(pet.chaseRecords || {}).filter(([key]) => key.startsWith('run:')).map(([,record]) => record);
     const stars = records.reduce((n, r) => n + (r.stars || 0), 0);
-    return records.length ? stars + '/18 venue stars · ' + count(pet.chases || 0, 'successful run') : 'Three venues · two difficulty modes';
+    const midnight = runs.length ? 'Midnight best: ' + Math.max(...runs.map(r => r.score || 0)) : '';
+    if (records.length) return stars + '/18 venue stars · ' + (midnight ? midnight + ' · ' : '') + count(pet.chases || 0, 'successful run');
+    if (midnight) return midnight + ' · ' + count(pet.chases || 0, 'successful run');
+    if (Number.isFinite(pet.chaseBest?.score)) return 'Quick Chase best: ' + pet.chaseBest.score + ' · ' + count(pet.chases || 0, 'successful run');
+    return 'Three venues · two difficulty modes';
   }
   if (activity.id === 'memory') {
     const best = pet.handshakeBest?.standard;

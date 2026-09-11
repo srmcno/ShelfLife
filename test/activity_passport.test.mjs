@@ -55,3 +55,18 @@ test('Midnight Run stars cannot inflate the eighteen Quick Chase venue stars', (
   const p={chaseRecords:{standard:{stars:2},'run:standard':{stars:3},'run:gentle':{stars:3}}};
   assert.match(activityRecord({id:'chase'},{life:{}},p),/^2\/18 venue stars/);
 });
+
+test('finishing only Midnight Run shows its score instead of an unplayed invitation', () => {
+  const pet = {chases:1,chaseRecords:{'run:standard':{score:420,stars:2},'run:gentle':{score:650,stars:3}}};
+  const state = {pets:[pet],life:{}};
+  assert.match(activityRecord({id:'chase'},state,pet),/^Midnight best: 650 · 1 successful run$/);
+  assert.equal(activityPassport(state).stamps.find(s => s.id === 'chase').earned,true);
+});
+
+test('legacy completed Chase results remain visible even with zero points and no wins', () => {
+  const pet = {chaseBest:{score:0,stars:1}};
+  const state = {pets:[pet],life:{}};
+  assert.match(activityRecord({id:'chase'},state,pet),/^Quick Chase best: 0/);
+  assert.equal(activityPassport(state).stamps.find(s => s.id === 'chase').earned,true);
+  assert.equal(activityPassport(state).next,'memory');
+});

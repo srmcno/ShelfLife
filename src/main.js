@@ -6,10 +6,11 @@ import { lifeState, welcomeBack } from './engine/life.js';
 import { artPersonality } from './engine/personality.js';
 import { initStories } from './ui/stories.js';
 import {
-  state, save, addNote, pick, clamp, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store, RECOVERY_KEY, loadFailed, backupDue
+  state, save, addNote, pick, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store, RECOVERY_KEY, loadFailed, backupDue
 } from './state.js';
-import { TRAITS, TRAIT_BY_ID } from './content/traits.js';
-import { ORIGINS, HABITS, CLOSERS, FALLBACK_NAMES } from './content/copy.js';
+import { TRAIT_BY_ID } from './content/traits.js';
+import { FALLBACK_NAMES } from './content/copy.js';
+import { resolvePersonality } from './engine/creation.js';
 import { tick, isNight } from './engine/tick.js';
 import { checkShelf, petLine, checkWait } from './engine/loop.js';
 import { runBehavior, catchUpBehavior } from './engine/behavior.js';
@@ -22,7 +23,7 @@ import { initSchemeUI } from './ui/schemes.js';
 import { initDialogs } from './ui/dialogs.js';
 import { initPostcard } from './ui/postcard.js';
 import { initStudio } from './art/studio.js';
-import { initAnimator, reactShelf, previewMotion } from './art/animator.js';
+import { initAnimator, reactShelf, reactTo, previewMotion } from './art/animator.js';
 import { applyDecor, initDecorUI } from './ui/decorUI.js';
 import { initDrag } from './ui/drag.js';
 import { renderAll, renderStatus, renderShelf, renderNotes, escapeHtml } from './ui/render.js';
@@ -30,35 +31,6 @@ import { toast } from './ui/toast.js';
 import { openCard, closeCard, getOpenPetId } from './ui/card.js';
 import { initSoundNoteHook, isMuted, toggleMuted } from './audio/sound.js';
 import { initNarrator, initNarratorUI, isNarratorOn, toggleNarrator, stopSpeech } from './audio/narrator.js';
-
-// ---------- pet generation (ported from the original prototype's rollTraits/rollStats/makeBio) ----------
-
-function rollTraits() {
-  const pool = TRAITS.slice();
-  const count = Math.random() < 0.45 ? 3 : 2;
-  const out = [];
-  for (let i = 0; i < count; i++) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0].id);
-  return out;
-}
-
-function rollStats(traitIds) {
-  const s = {
-    cute: 3 + Math.floor(Math.random() * 5),
-    menace: 2 + Math.floor(Math.random() * 5),
-    damp: 1 + Math.floor(Math.random() * 4),
-    mystique: 2 + Math.floor(Math.random() * 5)
-  };
-  traitIds.forEach(id => {
-    const m = TRAIT_BY_ID[id].stats || {};
-    for (const k in m) s[k] = (s[k] || 0) + m[k];
-  });
-  for (const k in s) s[k] = clamp(s[k], 1, 10);
-  return s;
-}
-
-function makeBio(traitIds) {
-  return pick(ORIGINS) + ' ' + pick(HABITS) + ' ' + TRAIT_BY_ID[traitIds[0]].blurb + ' ' + pick(CLOSERS);
-}
 
 // ---------- studio (pet creation) ----------
 
@@ -69,10 +41,12 @@ const studio = initStudio({
   // Grow tab, `{ body, stamps }` from the Draw tab. normalizePetArt reconciles
   // them into the one stored shape (see the art-model note in state.js), so
   // everything downstream of here is identical for both kinds of pet.
-  onSave: (art, name, editingId) => {
+  onSave: (art, name, editingId, personalityDraft) => {
     if(editingId){
       const existing=state.pets.find(p=>p.id===editingId);if(!existing)return;
       existing.art=normalizePetArt(art);
+      // The newly approved artwork owns its anatomy, including drawn stamps.
+      delete existing.anatomy;
       // Renaming has its own history-aware flow in the resident card.
       document.getElementById('lifeHub').dataset.key='';
       addNote(state,existing.name+' has updated its appearance. Same unresolved issues, improved packaging.','the dressing room','note');
@@ -81,14 +55,13 @@ const studio = initStudio({
     const slot = state.slots.indexOf(null);
     if (slot === -1) { toast('The shelf is full. Rehome someone first.'); return; }
     const finalName = (name || '').trim() || pick(FALLBACK_NAMES);
-    const traits = rollTraits();
+    const personality = resolvePersonality(personalityDraft);
+    const traits = personality.traits;
     const pet = {
       id: 'p' + (state.seq++) + '_' + Date.now().toString(36),
       name: finalName,
       art: normalizePetArt(art),
-      traits,
-      stats: rollStats(traits),
-      bio: makeBio(traits),
+      ...personality,
       born: Date.now(),
       needs: { food: 58, fuss: 54, clean: 66 },
       bond: 0, cared: 0, grudges: 0, grudgeStage: 0
@@ -406,6 +379,10 @@ const helpVeil = document.getElementById('helpVeil');
 document.getElementById('quickHelp').addEventListener('click', () => helpVeil.classList.add('open'));
 document.getElementById('helpBtn').addEventListener('click', () => helpVeil.classList.add('open'));
 document.getElementById('helpClose').addEventListener('click', () => helpVeil.classList.remove('open'));
+document.getElementById('helpPlayroom').addEventListener('click', () => {
+  helpVeil.classList.remove('open');
+  document.getElementById('playroomBtn').click();
+});
 helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.classList.remove('open'); });
 
 (function boot() {
@@ -434,10 +411,15 @@ setInterval(() => {
   if (document.hidden || document.getElementById('playVeil').classList.contains('open') || document.getElementById('studioVeil').classList.contains('open')) return;
   if (tick(state)) {
     advanceSchemes(state);
-    runBehavior(state);                 // self-rate-limited to PASS_INTERVAL_MS
+    const behavior = runBehavior(state); // self-rate-limited to PASS_INTERVAL_MS
     renderAll(state);
     const openId = getOpenPetId();
     if (openId && !document.getElementById('renameField') && !document.querySelector('#rehomeBtn[data-armed="1"]')) openCard(state, openId, true);
+    const routine = behavior?.mischief;
+    if (routine && ['preen', 'company'].includes(routine.act)) {
+      reactTo(routine.target, routine.need);
+      if (routine.pet !== routine.target) reactTo(routine.pet, 'fuss', 120);
+    }
   }
 }, 30000);
 

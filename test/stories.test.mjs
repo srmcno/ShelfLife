@@ -84,6 +84,7 @@ test('accepted prop, neighbour and room requests require the actual arrangement'
  }
 });
 import { careFor } from '../src/engine/care.js';
+import { CASES } from '../src/content/stories.js';
 test('only useful individual care advances the persistent case evidence counter',()=>{
  const s=fixture();advanceStories(s,now);careFor(s,s.pets[0],'food',now);assert.equal(s.stories.careActions,1);
  careFor(s,s.pets[0],'food',now);assert.equal(s.stories.careActions,1);
@@ -93,4 +94,64 @@ test('corrupt relationship, memorial and request fields cannot strand an importe
  const s=fixture(2);s.stories={relationships:{'p0|p1':'bad'},residents:[{name:'Old one',names:7}],requests:{p0:{kind:'food',at:now,status:'accepted',baseline:'nope'}}};
  advanceStories(s,now);assert.deepEqual(s.stories.residents[0].names,[]);assert.equal(s.stories.requests.p0.baseline,0);
  assert.ok(relationship(s,...s.pets).label);
+});
+
+test('a messy first case keeps the cooperative trust available on replay, exactly once',()=>{
+ const s=fixture();advanceStories(s,now);
+ const c=s.stories.case, kind=c.kind;
+ c.beat=5;c.choices=Array(5).fill('blame');advanceCase(s,'blame',now);
+ assert.equal(s.pets[0].bond,1);const discoveryXP=s.life.xp;
+ const replay=normalizeState(s);
+ replay.stories.case={...c,beat:5,choices:Array(5).fill('listen')};
+ assert.equal(advanceCase(replay,'listen',now),true);
+ assert.equal(replay.pets[0].bond,3);
+ assert.deepEqual(replay.stories.caseTrust,[kind]);
+ assert.equal(replay.life.xp,discoveryXP,'replaying a file does not pay discovery XP twice');
+ const loaded=normalizeState(replay);
+ loaded.stories.case={...loaded.stories.case,beat:5,choices:Array(5).fill('listen')};
+ advanceCase(loaded,'listen',now);
+ assert.equal(loaded.pets[0].bond,3,'the cooperative payout survives reload');
+});
+
+test('old case history distinguishes a missed cooperative payout from one already earned',()=>{
+ for (const alreadyPaid of [false,true]) {
+  const s=fixture();advanceStories(s,now);
+  const c=s.stories.case, definition=CASES.find(d=>d.id===c.kind);
+  s.life.awards.push('case:'+c.kind);
+  delete s.stories.caseTrust;
+  s.stories.archive=[{kind:'case',title:definition.title,at:now,text:alreadyPaid?definition.good+' Witnesses gain 2 trust.':definition.messy+' The clean-up gives witnesses +12 cleanliness.'}];
+  const loaded=normalizeState(s);
+  loaded.stories.case={...c,beat:5,choices:Array(5).fill('listen')};
+  advanceCase(loaded,'listen',now);
+  assert.equal(loaded.pets[0].bond,alreadyPaid?1:3);
+ }
+ const historical=fixture();advanceStories(historical,now);
+ historical.life.awards.push('case:'+historical.stories.case.kind);
+ delete historical.stories.caseTrust;
+ assert.deepEqual(storyState(historical).caseTrust,[historical.stories.case.kind],'retain an old claim whose history has rolled away');
+});
+
+test('legacy confidence gates cannot be completed by a victory from before the file opened',()=>{
+ const s=fixture();advanceStories(s,now);
+ Object.assign(s.stories.case,{beat:4,playStart:3,careClue:0});
+ delete s.stories.case.playClue;s.stories.handshakes=3;
+ const loaded=normalizeState(s);
+ assert.equal(caseGate(loaded).ready,false);
+ loaded.stories.handshakes++;
+ assert.equal(caseGate(loaded).ready,true);
+});
+
+test('an old payout cannot repeat when its receipt rolled off a full archive but a replay remains',()=>{
+ const s=fixture();advanceStories(s,now);
+ const c=s.stories.case;
+ c.beat=5;c.choices=Array(5).fill('listen');advanceCase(s,'listen',now);
+ const earnedBond=s.pets[0].bond;
+ c.beat=5;c.choices=Array(5).fill('listen');advanceCase(s,'listen',now);
+ assert.match(s.stories.archive[0].text,/already earned/);
+ s.stories.archive=s.stories.archive.slice(0,1).concat(Array.from({length:99},()=>({kind:'request',title:'Other memory',text:'Another promise kept.',at:now})));
+ delete s.stories.caseTrust;
+ const loaded=normalizeState(s);
+ loaded.stories.case.beat=5;loaded.stories.case.choices=Array(5).fill('listen');advanceCase(loaded,'listen',now);
+ assert.equal(loaded.pets[0].bond,earnedBond);
+ assert.deepEqual(loaded.stories.caseTrust,[c.kind]);
 });

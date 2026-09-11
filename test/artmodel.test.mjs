@@ -16,6 +16,15 @@ import { generateCreature, BODIES, BASELINE, BODY_IDS } from '../src/art/creatur
 
 const RASTER = 'data:image/png;base64,iVBORw0KGgo=';
 
+test('current artwork overrides a stale legacy anatomy block for animation', () => {
+  const legacy = {hasLegs:true,legCount:2,hasWings:false};
+  const current = {hasLegs:false,legCount:0,hasWings:true,wingCount:2};
+  const motion = resolveMotion({anatomy:legacy,art:{creature:{anatomy:current}}});
+  assert.equal(motion.legs,0);
+  assert.equal(motion.canFlap,true);
+  assert.equal(resolveMotion({anatomy:legacy}).legs,2,'legacy anatomy remains a fallback');
+});
+
 function rasterPet(over = {}) {
   return {
     id: 'p1', name: 'Old Blob', art: { body: RASTER, stamps: [{ kind: 'wing', x: 10, y: 10, size: 20 }] },
