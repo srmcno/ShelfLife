@@ -21,6 +21,9 @@ test('desktop narration selects enhanced speech, cancels late audio, and falls b
     ? { ok: true, json: async () => ({ available: true, name: 'Daniel (Enhanced)' }) }
     : new Promise(resolve => { pendingResponse = resolve; });
   const narrator = await import('../src/audio/narrator.js');
+  const { state } = await import('../src/state.js');
+  const narratorWasOn = state.settings.narratorOn;
+  state.settings.narratorOn = true;
   try {
     narrator.initNarrator();
     await nextTurn();
@@ -46,6 +49,7 @@ test('desktop narration selects enhanced speech, cancels late audio, and falls b
     assert.equal(browserLines[0].voice, browserVoice);
   } finally {
     narrator.stopSpeech();
+    state.settings.narratorOn = narratorWasOn;
     Object.assign(globalThis, old);
   }
 });

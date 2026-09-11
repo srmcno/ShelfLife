@@ -7,6 +7,7 @@ import { totalBond } from '../engine/unlocks.js';
 import { save, addNote, defaultDecor } from '../state.js';
 import { toast } from './toast.js';
 import { renderAll, escapeHtml } from './render.js';
+import { SHELF_SCENES } from '../content/shelf-theatre.js';
 
 // Ported verbatim from ~/Documents/shelf-life.html's optButton (~line 1339).
 // Not part of the module's export contract — only buildDecor needs it.
@@ -35,11 +36,16 @@ export function applyDecor(state) {
   document.body.classList.add('wall-' + (WALLS[d.wall] ? d.wall : 'none'));
 }
 
-// Not exported — only the prop-tray click handler built inside buildDecor
-// calls it, matching the original's internal-only placeProp.
-function placeProp(state, kind) {
-  const slot = state.slots.indexOf(null);
-  if (slot === -1) { toast('No room on the shelf. Move something first.'); return; }
+// Shared by the furniture tray and repertoire quick placement.
+export function placeProp(state, kind, { nearResident = false } = {}) {
+  if (!Object.hasOwn(PROPS, kind) || totalBond(state) < PROPS[kind].at) return null;
+  let slot = state.slots.indexOf(null);
+  if (slot === -1) { toast('No room on the shelf. Put some furniture away to make a space.'); return; }
+  if (nearResident) {
+    const occupied = state.pets.map(p => state.slots.indexOf(p.id)).filter(i => i >= 0);
+    const score = i => occupied.reduce((n,j) => n + (Math.floor(i/6)===Math.floor(j/6) && Math.abs(i-j)<=2 ? 3-Math.abs(i-j) : 0),0);
+    state.slots.forEach((id,i)=>{if(!id&&score(i)>score(slot))slot=i;});
+  }
   const pr = { id: 'd' + (state.seq++) + '_' + Date.now().toString(36), kind: kind };
   state.props.push(pr);
   state.slots[slot] = pr.id;
@@ -47,7 +53,8 @@ function placeProp(state, kind) {
   save();
   buildDecor(state);
   renderAll(state);
-  toast(PROPS[kind].name + ' placed. Drag it where you want it.');
+  toast(PROPS[kind].name + ' placed. Tap it to invite a resident over.');
+  return pr;
 }
 
 export function buildDecor(state) {
@@ -77,16 +84,18 @@ export function buildDecor(state) {
   const tray = document.getElementById('propTray');
   tray.innerHTML = '';
   const bond = totalBond(state);
-  Object.keys(PROPS).forEach(kind => {
+  Object.keys(PROPS).sort((a,b)=>Number(bond<PROPS[a].at)-Number(bond<PROPS[b].at)||PROPS[a].at-PROPS[b].at).forEach(kind => {
     const def = PROPS[kind];
     const locked = bond < def.at;
     const card = document.createElement('button');
     card.className = 'prop-card' + (locked ? ' locked' : '');
+    card.dataset.propKind = kind;
     const owned = state.props.filter(x => x.kind === kind).length;
+    const scene = SHELF_SCENES.find(s=>s.propKind===kind);
     card.innerHTML = PROP_ART[kind] + '<b>' + escapeHtml(def.name) + '</b><small>' +
-      (locked ? 'Needs trust ' + def.at : escapeHtml(def.desc) + (owned ? '<br>On the shelf: ' + owned : '')) + '</small>';
+      (locked ? 'Needs trust ' + def.at : escapeHtml(def.desc) + (scene ? '<br>Play: '+escapeHtml(scene.title) : '') + (owned ? '<br>On the shelf: ' + owned : '')) + '</small>';
     if (locked) card.disabled = true;
-    else card.addEventListener('click', () => placeProp(state, kind));
+    else card.addEventListener('click', () => placeProp(state, kind, { nearResident: true }));
     tray.appendChild(card);
   });
 }

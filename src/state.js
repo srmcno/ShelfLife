@@ -1,5 +1,6 @@
 import { blankLife, normalizeLife } from './life-state.js';
 import { PROPS } from './content/props.js';
+import { normalizeTheatre } from './theatre-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -156,7 +157,7 @@ export function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 export function defaultNeeds() { return { food: 78, fuss: 78, clean: 82 }; }
 export function defaultDecor() { return { room: 'aubergine', wall: 'none', wood: 'rosewood', accent: 'bubblegum' }; }
 export function defaultStreak() { return { count: 0, lastCheckin: 0 }; }
-export function defaultSettings() { return { muted: false, narratorOn: true, narratorVoiceURI: null, effects: 'auto' }; }
+export function defaultSettings() { return { muted: false, narratorOn: false, narratorVoiceURI: null, effects: 'auto' }; }
 export function defaultCareLog() { return { food: 0, fuss: 0, clean: 0 }; }
 // meeting: how many times the shelf has convened over you. carried: how many times
 // Item 4 has been carried forward. struck: petId -> when that pet closed the matter.
@@ -315,6 +316,7 @@ export function normalizeState(raw) {
 
   if (!['auto', 'light', 'full'].includes(s.settings.effects)) s.settings.effects = 'auto';
   delete s.settings.matureMode; // Retired setting from older backups.
+  if (typeof s.settings.theatreOn !== 'boolean') s.settings.theatreOn = true;
   for (const key of ['muted', 'narratorOn']) {
     if (typeof s.settings[key] !== 'boolean') s.settings[key] = defaultSettings()[key];
   }
@@ -381,6 +383,7 @@ export function normalizeState(raw) {
     p.displacedFrom = Number.isFinite(p.displacedFrom) ? clamp(Math.floor(p.displacedFrom), 0, SLOT_COUNT - 1) : null;
     p.displacedAt = finite(p.displacedAt, 0, 0, now);
   });
+  s.theatre = normalizeTheatre(s.theatre, s, now);
   return s;
 }
 

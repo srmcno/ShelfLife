@@ -259,7 +259,7 @@ export function splitForSpeech(line, max = CHUNK_CHARS) {
 export function speak(text, opts) {
   const o = opts || {};
   if (!synth) return false;
-  if (state.settings.muted && !o.force) return false;
+  if ((!isNarratorOn() || state.settings.muted) && !o.force) return false;
   // A background tab does not narrate. The note is on the board when they return.
   if (typeof document !== 'undefined' && document.hidden && !o.force) return false;
   const line = prepareForSpeech(text);
@@ -425,7 +425,15 @@ export function narratorDebug() {
 export function isNarratorOn() { return !!state.settings.narratorOn; }
 export function setNarratorOn(v) {
   state.settings.narratorOn = !!v;
-  if (!state.settings.narratorOn) stopSpeech();
+  if (!state.settings.narratorOn) {
+    stopSpeech();
+    if (typeof document !== 'undefined') {
+      for (const id of ['voiceHint', 'voiceUpgrade']) {
+        const hint = document.getElementById(id);
+        if (hint) hint.hidden = true;
+      }
+    }
+  }
   save();
 }
 export function toggleNarrator() { setNarratorOn(!isNarratorOn()); return isNarratorOn(); }
@@ -441,6 +449,7 @@ export function setNarratorVoice(voiceURI) {
 // enhanced one is a two-minute job and the single biggest improvement available,
 // so say so once instead of quietly sounding like a train announcement.
 export function voiceQualityHint() {
+  if (!isNarratorOn()) return null;
   const v = pickBestVoice();
   const mac = typeof navigator !== 'undefined' &&
     /mac/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent);
