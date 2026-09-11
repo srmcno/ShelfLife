@@ -17,6 +17,8 @@ import { toast } from './toast.js';
 import { buildDecor } from './decorUI.js';
 import { playFeed, playFuss, playClean } from '../audio/sound.js';
 import { petById, propById, pick, addNote, save, clamp } from '../state.js';
+import { SHELF_SCENES } from '../content/shelf-theatre.js';
+import { lampIsOn, toggleLamp, sceneAvailability } from '../engine/shelf-theatre.js';
 
 const cardVeil = document.getElementById('cardVeil');
 const cardSheet = document.getElementById('cardSheet');
@@ -163,6 +165,7 @@ export function openCard(state, id, keepScroll) {
   });
   html += '</ul>';
   html += personalityDetails(pet);
+  html += '<button class="btn" id="residentScene">Make a scene together</button>';
   html += '<div class="card-actions"><button class="btn btn-danger btn-sm" id="rehomeBtn">Rehome</button>' +
     '<button class="btn btn-sm" id="renameBtn">Rename</button><button class="btn btn-sm" id="appearanceBtn">Edit appearance</button></div>';
 
@@ -186,6 +189,7 @@ export function openCard(state, id, keepScroll) {
   else if (focused?.id) document.getElementById(focused.id)?.focus({ preventScroll: true });
 
   document.getElementById('petMotion').disabled = asleep;
+  document.getElementById('residentScene').addEventListener('click',()=>{closeCard();window.dispatchEvent(new CustomEvent('shelflife:scene',{detail:{petId:pet.id}}));});
   document.getElementById('petMotion').addEventListener('click', () => previewMotion(document.getElementById('cardPortraitHost')));
   wirePosition(state, pet.id, () => openCard(state, pet.id, true));
   if (pendingPosition != null) document.getElementById('residentPosition').value = pendingPosition;
@@ -298,18 +302,23 @@ export function openPropCard(state, id) {
   openPetId = null;
   const AURA_WORD = { food: 'hunger', fuss: 'boredom', clean: 'grime' };
   const auras = Object.entries(def.aura || {}).map(([k, v]) => AURA_WORD[k] + (v < 1 ? ' slows' : ' speeds up') + ' for neighbours');
+  const scene = SHELF_SCENES.find(s=>s.propKind===pr.kind);
+  const lit = pr.kind==='lamp' && lampIsOn(state,pr.id);
   cardSheet.innerHTML =
     '<div class="sheet-head"><div><h2>' + escapeHtml(def.name) + '</h2>' +
     '<div class="card-meta">' + escapeHtml(def.desc) + '</div></div>' +
     '<button class="btn btn-ghost btn-sm" id="cardClose">Close</button></div>' +
-    '<div class="card-hero"><div class="card-portrait">' + (PROP_ART[pr.kind] || '') + '</div><div>' +
+    '<div class="card-hero"><div class="card-portrait" data-prop="'+pr.kind+'" data-lit="'+lit+'">' + (PROP_ART[pr.kind] || '') + '</div><div>' +
     '<p class="bio">' + escapeHtml(pick(def.ambient)) + '</p>' +
-    (auras.length ? '<p class="hint">' + escapeHtml(auras.join('; ')) + '.</p>' : '<p class="hint">No practical effect. They like it anyway.</p>') +
+    (pr.kind==='lamp'&&!lit?'<p class="hint">Switched off. No light, no calming glow, and nothing for the nocturnal residents to complain about.</p>':auras.length ? '<p class="hint">' + escapeHtml(auras.join('; ')) + '.</p>' : '<p class="hint">No practical effect. They like it anyway.</p>') +
     '</div></div>' +
+    (scene?'<div class="prop-scene-actions"><strong>'+escapeHtml(scene.title)+'</strong><p>'+escapeHtml(scene.requirements)+'</p><button class="btn btn-primary" id="propScene">Invite a resident over</button>'+(pr.kind==='lamp'?'<button class="btn" id="lampSwitch" aria-pressed="'+lit+'">Switch '+(lit?'off':'on')+'</button>':'')+'<p>'+escapeHtml(sceneAvailability(state,{propId:pr.id,manual:true},Date.now()))+'</p></div>':'')+
     positionControl(state, pr.id) + '<div class="card-actions"><button class="btn btn-danger btn-sm" id="removeProp">Put it away</button></div>';
   cardVeil.classList.add('open');
   document.body.style.overflow = 'hidden';
   document.getElementById('cardClose').addEventListener('click', closeCard);
+  document.getElementById('propScene')?.addEventListener('click',()=>{closeCard();window.dispatchEvent(new CustomEvent('shelflife:scene',{detail:{propId:pr.id}}));});
+  document.getElementById('lampSwitch')?.addEventListener('click',()=>{toggleLamp(state,pr.id);renderAll(state);openPropCard(state,pr.id);document.getElementById('lampSwitch')?.focus({preventScroll:true});});
   wirePosition(state, pr.id, () => openPropCard(state, pr.id));
   document.getElementById('removeProp').addEventListener('click', () => {
     state.props = state.props.filter(x => x.id !== pr.id);

@@ -23,6 +23,8 @@
 <link rel="stylesheet" href="css/market.css">
 <link rel="stylesheet" href="css/scenes.css">
 <link rel="stylesheet" href="css/character.css">
+<link rel="stylesheet" href="css/shelf-theatre.css">
+<link rel="stylesheet" href="css/theatre-controls.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
@@ -63,6 +65,13 @@
         <div class="cabinet" id="cabinet" tabindex="-1" aria-label="Your creature shelf"></div>
       </div>
     </div>
+    <section id="shelfTheatre" class="shelf-theatre-controls" aria-labelledby="theatreHeading" hidden>
+      <div class="theatre-heading"><h2 id="theatreHeading">Small domestic disasters</h2><span id="theatreCount"></span></div>
+      <div class="theatre-caption" id="theatreCaption" role="status" aria-live="polite" aria-atomic="true">Give them furniture. They will supply the incident.</div>
+      <div class="theatre-buttons"><label class="sr-only" for="theatreKind">Choose a scene</label><select id="theatreKind"><option value="">Surprise me</option></select><button class="btn btn-primary" id="theatrePlay">Start some nonsense</button><button class="btn" id="theatreStop" hidden>End scene</button><button class="btn btn-ghost" id="theatreDecor">Add furniture</button></div>
+      <div class="theatre-preferences"><label><input type="checkbox" id="theatreAuto"> Let them improvise</label><span id="theatreAvailability"></span></div>
+      <details class="theatre-repertoire"><summary>The repertoire <span>Change the cast. Change the furniture. See what happens.</span></summary><p class="hint">Scenes have different endings. Try a new neighbour or a different mood. Care benefits rest for 20 minutes; encores are for the drama.</p><div id="theatreRepertoire"></div></details>
+    </section>
     <div id="needsYou" class="needs-you" aria-label="What needs you"></div>
     <div class="actions" id="actions">
       <button class="btn btn-check" id="checkBtn">
@@ -310,7 +319,7 @@
     <div class="decor-section"><h3>Wall</h3><div class="opt-row" id="wallOpts"></div></div>
     <div class="decor-section"><h3>Shelf</h3><div class="opt-row" id="woodOpts"></div></div>
     <div class="decor-section"><h3>Trim</h3><div class="opt-row" id="accentOpts"></div></div>
-    <div class="decor-section"><h3>Things for the shelf</h3><p class="hint decor-hint">Furniture changes how quickly its neighbours get hungry, bored or filthy. Tap to place, then drag it into position.</p><div class="prop-tray" id="propTray"></div></div>
+    <div class="decor-section"><h3>Things for the shelf</h3><p class="hint decor-hint">Tap to place furniture near a resident. On the shelf, tap it again to invite them over: tubs are for getting into, lamps are for arguing over. Drag to rearrange, or use the position control on its card.</p><div class="prop-tray" id="propTray"></div></div>
   </div>
 </div>
 

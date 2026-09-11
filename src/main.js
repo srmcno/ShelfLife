@@ -2,6 +2,7 @@ import { initLife } from './ui/life.js';
 import { createBackup } from './backup.js';
 import { initBackupTransfer } from './ui/backup.js';
 import { initPlayroom } from './ui/playroom.js';
+import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
 import { artPersonality } from './engine/personality.js';
 import { initStories } from './ui/stories.js';
@@ -354,6 +355,7 @@ function syncNight() { document.body.classList.toggle('night', isNight()); }
 syncNight();
 setInterval(syncNight, 60000);
 initAnimator({ getPet: id => state.pets.find(p => p.id === id) || null });
+const shelfTheatre = initTheatreControls({ getState: () => state, refresh: () => renderAll(state) });
 initNarrator();
 initNarratorUI();
 initSoundNoteHook();
@@ -408,7 +410,7 @@ helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.cl
 })();
 
 setInterval(() => {
-  if (document.hidden || document.getElementById('playVeil').classList.contains('open') || document.getElementById('studioVeil').classList.contains('open')) return;
+  if (document.hidden || shelfTheatre.isPlaying() || document.getElementById('playVeil').classList.contains('open') || document.getElementById('studioVeil').classList.contains('open')) return;
   if (tick(state)) {
     advanceSchemes(state);
     const behavior = runBehavior(state); // self-rate-limited to PASS_INTERVAL_MS

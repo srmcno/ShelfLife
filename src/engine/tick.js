@@ -53,10 +53,11 @@ export function decayRate(pet, need, state) {
     if (need === 'fuss' && neighborPets(state, i).some(p => artPersonality(p).halo)) r *= .9;
     const nbrs = neighborProps(state, i);
     nbrs.forEach(pr => {
+      if (pr.kind === 'lamp' && state.theatre?.lamps?.[pr.id] === false) return;
       const a = (PROPS[pr.kind] && PROPS[pr.kind].aura) || {};
       if (a[need]) r *= a[need];
     });
-    if (hasTrait(pet, 'nocturnal') && nbrs.some(pr => pr.kind === 'lamp') && need === 'fuss') r *= 1.5;
+    if (hasTrait(pet, 'nocturnal') && nbrs.some(pr => pr.kind === 'lamp' && state.theatre?.lamps?.[pr.id] !== false) && need === 'fuss') r *= 1.5;
   }
   // Particulars, finally doing something: a damp resident attracts grime.
   const damp = pet.stats && typeof pet.stats.damp === 'number' ? pet.stats.damp : null;

@@ -13,6 +13,16 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
+## Small domestic disasters
+
+The shelf is now a stage. Awake neighbours approach their furniture and one another for eight kinds of small domestic comedy, with 36 endings to discover. Residents climb into the tub and splash witnesses, dispute a working lamp switch, perform dubious duets, tug over yarn, compete with the mirror, share real bowl servings, misuse the telephone, and argue or make up as their moods change. Their own bodies and limbs perform the scene, then return to their places.
+
+Open **The repertoire** below the shelf to see requirements, add available furniture beside a resident, and request a performance. Resident and furniture cards also offer scene invitations. Keep the cast on the same row and within two spaces. **Let them improvise** enables occasional scenes with a cast visible on screen; turn it off for manual performances. Stop, move something, or open a card to interrupt. Reduced motion uses still performances and captions.
+
+Lamp switches persist across reloads; an unlit lamp loses its aura and does not disturb nocturnal residents. Bowl scenes use actual servings, including empty-bowl complaints. Care bonuses rest for twenty minutes per resident across all scenes, and performances do not farm trust or XP. Endings, lamp settings and bounded scene history travel with existing backups.
+
+The narrator defaults to **off**. Existing explicit opt-ins are preserved, and voice previews remain available without enabling automatic narration.
+
 ## Gameplay and device polish
 
 - **Crumb Chase:** an illustrated guide distinguishes goal crumbs from bonus objects. Gold gets an advance warning and remains until the buzzer. Pausing shows your progress; P also resumes. Keyboard and touch holds work independently, and delayed touch clicks cannot spend a second flap. Landscape controls leave a taller arena. Midnight Run upgrade breaks wait for you to choose an upgrade and begin the next act.

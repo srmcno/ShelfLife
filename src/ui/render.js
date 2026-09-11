@@ -18,6 +18,7 @@ import { PROPS, PROP_ART } from '../content/props.js';
 import { currentScheme, SCHEME_DEADLINE } from '../engine/schemes.js';
 import { storyState, caseGate, currentCase, VISIT_LENGTH } from '../engine/stories.js';
 import { VISITORS } from '../content/stories.js';
+import { renderTheatreControls } from './shelf-theatre.js';
 
 const cabinet = document.getElementById('cabinet');
 const notesEl = document.getElementById('notes');
@@ -51,6 +52,7 @@ export function renderAll(state) {
     renderNeeds(state);
     renderStories(state);
     renderLife(state);
+    renderTheatreControls(state);
     save();
   });
 }
@@ -222,6 +224,11 @@ export function renderShelf(state) {
       } else if (prop) {
         if (!piece || piece.dataset.prop !== prop.kind) piece = propEl(prop, i);
         piece.dataset.slot = i;
+        if (prop.kind === 'lamp') {
+          const lit=state.theatre?.lamps?.[prop.id]!==false;
+          piece.dataset.lit=String(lit);
+          piece.setAttribute('aria-label',PROPS.lamp.name+' · '+(lit?'on':'off')+' · open controls');
+        }
       } else piece = null;
       if (slot.firstElementChild !== piece) slot.replaceChildren(...(piece ? [piece] : []));
     }

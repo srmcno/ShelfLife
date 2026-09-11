@@ -196,6 +196,7 @@ function afterMotion(fn, ms) {
 function cancelQueuedMotion(id) { clearTimeout(id); queuedMotion.delete(id); }
 function visibleSprite(el) {
   return el.isConnected && !el.closest('[hidden],.veil:not(.open)') &&
+    !el.closest('[data-sl-theatre="1"]') &&
     !el.classList.contains('sl-offscreen') &&
     !(el.closest('#cabinet') && document.querySelector('.veil.open'));
 }
@@ -597,7 +598,7 @@ function neighboursOf(el) {
     const s = row.querySelector('.slot[data-slot="' + j + '"]');
     if (!s) return;
     const pet = s.querySelector('.pet .sprite.sl2[data-pet]');
-    if (pet) { out.push({ kind: 'pet', el: pet, slot: s, dir }); return; }
+    if (pet) { if (!pet.dataset.slReserved) out.push({ kind: 'pet', el: pet, slot: s, dir }); return; }
     const prop = s.querySelector('.prop[data-prop]');
     if (prop) out.push({ kind: 'prop', el: prop, slot: s, dir });
   });
@@ -789,7 +790,7 @@ function pass() {
     if (shelfResting && el.closest('#cabinet')) continue;
     // Prepare newly created portraits once. Routine shelf updates reuse them.
     if (!el.dataset.slPrep) prepSprite(el);
-    if (el.dataset.slControlled === '1') continue;
+    if (el.dataset.slControlled === '1' || el.closest('[data-sl-theatre="1"]')) continue;
     const mood = moodOfEl(el);
     const c = clockFor(id, now);
     c.seen = now;
@@ -908,6 +909,38 @@ export function initAnimator(opts) {
 
 // The same anatomy and gait used on the shelf, available in the studio/card.
 // Translation, limb cycles, torso weight and facing remain separate layers.
+// A shelf scene owns the room briefly. Cancel current clips as well as blocking
+// future/delayed idle reactions; merely hiding an actor left old duets running.
+// The theatre owns its clones separately through createPuppet.
+export function reserveShelfAnimation(root) {
+  if (!root) return () => {};
+  root.dataset.slTheatre = '1';
+  const sprites = [...root.querySelectorAll('.sprite.sl2')];
+  root.querySelectorAll('.pet').forEach(el => cancelMove(el));
+  sprites.forEach(el => {
+    cancelMove(el);
+    el.dataset.slReserved = '1';
+    const timers = heldClasses.get(el);
+    timers?.forEach((id, cls) => { clearTimeout(id); el.classList.remove(cls); });
+    timers?.clear(); heldNodes.delete(el);
+    resetFace(el);
+    const act = el.querySelector('.sprite-act');
+    if (act) { act.style.animation = ''; act.onanimationend = null; activeClipKeys.delete(act); }
+  });
+  root.querySelectorAll('.sl-bubble,.sl-zzz,.care-motes').forEach(el => el.remove());
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    delete root.dataset.slTheatre;
+    sprites.forEach(el => {
+      delete el.dataset.slReserved;
+      const c = clocks.get(el.dataset.pet);
+      if (c) { c.act = Date.now() + rand(1600, 3200); c.busy = 0; }
+    });
+  };
+}
+
 export function createPuppet(el) {
   prepSprite(el);
   el.dataset.slControlled = '1'; el.classList.add('sl-controlled');

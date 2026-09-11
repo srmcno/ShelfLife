@@ -782,6 +782,7 @@ function occupantsAt(state, index, slots) {
 
 // A low need pulls a pet toward whatever fixes it, whatever its taste.
 function needPull(state, pet, prop, now) {
+  if (prop.kind === 'lamp' && state.theatre?.lamps?.[prop.id] === false) return 0;
   const use = PROP_USE[prop.kind];
   if (!use || use.gain <= 0 || !pet.needs) return 0;
   if (isSpent(state, prop.id, now)) return 0;
@@ -870,7 +871,7 @@ export function slotScore(state, pet, index, now = Date.now(), slots = state.slo
     }
     const prop = propById(state, id);
     if (!prop) return;
-    let w = affinityFor(pet, prop.kind) * PROP_WEIGHT;
+    let w = (prop.kind === 'lamp' && state.theatre?.lamps?.[prop.id] === false ? 0 : affinityFor(pet, prop.kind)) * PROP_WEIGHT;
     if (request?.status === 'accepted' && request.kind === 'prop' && request.target === prop.kind) w += 4;
     const holder = claimantOf(state, prop.id, now);
     if (w > 0 && holder && holder.id !== pet.id) w *= 0.35;   // hogged: much less appealing
@@ -1114,6 +1115,7 @@ export function reachableProps(state, pet, now = Date.now(), caps = capabilities
 
 // One pet, one prop, one visible consequence.
 export function useProp(state, pet, prop, now = Date.now(), opts = {}) {
+  if (prop.kind === 'lamp' && state.theatre?.lamps?.[prop.id] === false) return { outcome: 'off', gain: 0 };
   const use = PROP_USE[prop.kind] || DEFAULT_USE;
   const holder = claimantOf(state, prop.id, now);
   touchProp(state, pet, prop.id, now);
@@ -1168,6 +1170,7 @@ export function claimAndHoard(state, pet, prop, now = Date.now()) {
 // Two pets beside the same unclaimed prop, both wanting it. The winner keeps
 // it; the loser takes a grudge and the pair's feud arc deepens.
 export function contestProp(state, prop, now = Date.now()) {
+  if (prop.kind === 'lamp' && state.theatre?.lamps?.[prop.id] === false) return null;
   const qi = state.slots.indexOf(prop.id);
   if (qi < 0) return null;
   if (claimantOf(state, prop.id, now)) return null;
@@ -1304,7 +1307,7 @@ export function aversionPhase(state, now = Date.now()) {
   awakePets(state, now).forEach(pet => {
     const i = state.slots.indexOf(pet.id);
     occupantsAt(state, i, state.slots).props.forEach(prop => {
-      if (affinityFor(pet, prop.kind) <= -2) stuck.push({ pet, prop });
+      if (!(prop.kind === 'lamp' && state.theatre?.lamps?.[prop.id] === false) && affinityFor(pet, prop.kind) <= -2) stuck.push({ pet, prop });
     });
   });
   if (!stuck.length) return null;
@@ -1400,6 +1403,7 @@ export function runBehavior(state, now = Date.now(), opts = {}) {
     if (uses >= maxUses || movedIds.has(pet.id)) return;
     const caps = capabilitiesOf(pet);
     const options = reachableProps(state, pet, now, caps)
+      .filter(r => !(r.prop.kind === 'lamp' && state.theatre?.lamps?.[r.prop.id] === false))
       .filter(r => !usedRecently(state, pet, r.prop.id, now))
       .map(r => ({ ...r, w: affinityFor(pet, r.prop.kind), pull: needPull(state, pet, r.prop, now) }))
       .filter(r => r.w >= 1 || r.pull > 0.6)

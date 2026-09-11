@@ -16,7 +16,7 @@ test('blankState has the v4 shape', () => {
   assert.deepEqual(s.achievements, []);
   assert.deepEqual(s.feudArcs, {});
   assert.equal(s.streak.count, 0);
-  assert.equal(s.settings.narratorOn, true);
+  assert.equal(s.settings.narratorOn, false);
   assert.equal(s.settings.matureMode, undefined);
 });
 

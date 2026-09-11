@@ -1,0 +1,26 @@
+.shelf-theatre-controls{margin:18px 0 24px;padding:18px 0;border-top:1px solid var(--hair-lit);border-bottom:1px solid var(--hair-lit);min-width:0}
+.theatre-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:9px}
+.theatre-heading h2{font:400 clamp(21px,3vw,27px)/1.2 var(--display);margin:0}
+#theatreCount{font-size:12px;color:var(--ink-2);white-space:nowrap}
+.theatre-caption{min-height:62px;padding:10px 14px;border-left:2px solid var(--mint);font:500 18px/1.4 var(--hand);color:var(--ink);overflow-wrap:anywhere;background:linear-gradient(90deg,color-mix(in srgb,var(--mint) 5%,transparent),transparent)}
+.theatre-buttons{display:flex;gap:8px;flex-wrap:wrap;margin:13px 0;align-items:stretch}
+.theatre-buttons .btn{min-height:44px;white-space:normal}
+.theatre-buttons select{min-height:44px;min-width:0;max-width:100%;padding:8px 30px 8px 10px;font:400 16px var(--body);color:var(--ink);background:var(--field);border:1px solid var(--edge);border-radius:7px;flex:1 1 150px}
+.theatre-buttons select:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
+.theatre-preferences{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.theatre-preferences label{display:flex;align-items:center;gap:9px;min-height:44px;cursor:pointer;flex-shrink:0;color:var(--ink)}
+.theatre-preferences input{width:19px;height:19px;accent-color:var(--mint)}
+#theatreAvailability{flex:1 1 220px;line-height:1.5}
+.theatre-repertoire{margin-top:7px}
+.theatre-repertoire>summary{min-height:44px;padding:11px 0;cursor:pointer;color:var(--mint);font-size:14px;line-height:1.5}
+.theatre-repertoire>summary span{color:var(--ink-2);font-size:12px;margin-left:6px}
+#theatreRepertoire{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}
+.theatre-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;border-top:1px solid var(--hair);padding:14px 0;min-width:0}
+.theatre-entry h3{font:400 19px/1.2 var(--display);margin:0 0 6px}
+.theatre-entry p{font-size:12px;line-height:1.5;margin:0;color:var(--ink-2)}
+.theatre-entry .btn{min-height:44px;max-width:120px;white-space:normal}
+.theatre-entry .theatre-tally{color:var(--mint);margin-top:5px}
+.prop-scene-actions{padding:14px 0;margin:12px 0;border-top:1px solid var(--hair-lit);border-bottom:1px solid var(--hair-lit)}
+.prop-scene-actions p{font-size:13px;line-height:1.5;color:var(--ink-2);margin:8px 0}
+.prop-scene-actions .btn{min-height:44px;margin:4px 8px 4px 0;white-space:normal}
+@media(max-width:560px){#theatreRepertoire{grid-template-columns:minmax(0,1fr)}.shelf-theatre-controls{padding:14px 10px;margin:12px 0 20px}.theatre-heading{align-items:flex-start;flex-direction:column;gap:5px}.theatre-buttons select{flex-basis:100%}.theatre-buttons .btn{flex:1 1 130px}.theatre-repertoire>summary span{display:block;margin-left:0}.theatre-caption{font-size:18px;min-height:78px}.theatre-preferences{gap:0 12px}}
