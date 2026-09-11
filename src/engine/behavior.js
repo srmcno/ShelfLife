@@ -931,9 +931,10 @@ export function decideMove(state, pet, now = Date.now()) {
     return null;
   }
   const patience = pet.wants && pet.wants.slot === best.to ? (pet.wants.tries || 0) : 0;
-  pet.wants = null;
   const returning = pet.displacedFrom === best.to && now - (pet.displacedAt || 0) < WANT_FORGET_MS;
-  if (returning) { pet.displacedFrom = null; pet.displacedAt = 0; }
+  // runBehavior ranks candidates, then checks them against the updated shelf.
+  // Keep the motive through both checks, and through any pass whose move budget
+  // is spent on somebody else. Only actually moving can fulfil an intention.
   return {
     pet, from, to: best.to, means: best.means,
     gain: best.score - stay,
@@ -1025,6 +1026,8 @@ export function performMove(state, move, now = Date.now()) {
   const pet = move.pet;
   const before = occupantsAt(state, move.from, state.slots);
   applyMove(state, move.from, move.to, now);
+  pet.wants = null;
+  if (move.returning) { pet.displacedFrom = null; pet.displacedAt = 0; }
   const after = occupantsAt(state, move.to, state.slots);
   // Undoing the player's arrangement, or acting on a plan it has been sitting on,
   // outrank whatever it happens to be standing next to now. Both are about the

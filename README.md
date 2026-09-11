@@ -13,6 +13,12 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
+## Residents choosing their own slots
+
+Residents keep their remembered preference until they actually move. A second movement check previously erased that intention, cancelling moves that depended on accumulated patience or a wish to return to a spot the player moved them from. Residents waiting for another resident's turn now retain their plans too.
+
+The existing four-minute behaviour checks, anatomy, sleep rules and movement cooldowns still apply. Residents settle when they find a spot they like; manual placement gives them their usual grace period before they can decide to walk back. Saved shelves need no reset.
+
 ## Market errands and stronger Court deductions
 
 New Night Market trips are household errands. Start with ten buttons, visit six stalls and carry up to three objects. Each of three errands asks for a pair of distinct objects. Deliver a matching pair through the porter: both objects leave the bag, two spaces open, and the household pays four buttons so shopping can continue. A delivered object cannot fulfil another errand. Deliveries are available between stalls and after the final purchase, before choosing to return home.

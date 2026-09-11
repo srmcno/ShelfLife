@@ -6,13 +6,13 @@ import {
   affinityFor, socialPull, inertiaOf, moveCooldownFor, petsFeud, propName,
   anatomyOf, capabilitiesOf, reachableSlots, reachableProps,
   behaviorState, claimProp, claimantOf, isSpent, usedRecently, pruneBehavior,
-  slotScore, decideMove, applyMove, performMove,
+  slotScore, decideMove, applyMove, performMove, notePlayerMove,
   useProp, claimAndHoard, contestProp, stealPhase, mischiefPhase,
   runBehavior, catchUpBehavior
 } from '../src/engine/behavior.js';
 import { TRAITS } from '../src/content/traits.js';
 import { PROPS } from '../src/content/props.js';
-import { blankState, defaultNeeds } from '../src/state.js';
+import { blankState, defaultNeeds, normalizeState } from '../src/state.js';
 
 const NOW = new Date(2024, 0, 10, 12, 0, 0).getTime();   // midday: nobody is asleep
 const NIGHT = new Date(2024, 0, 10, 23, 0, 0).getTime();
@@ -598,6 +598,66 @@ test('runBehavior on an empty shelf does nothing and says nothing', () => {
   const out = runBehavior(s, NOW, { force: true });
   assert.deepEqual(out.moves, []);
   assert.equal(s.notes.length, 0);
+});
+
+test('ordinary and limbless residents eventually act on a modest preference across saved passes', t => {
+  t.mock.method(Math, 'random', () => 0.99); // isolate movement from optional mischief
+  for (const [traits, kind, anatomy] of [
+    [['theatrical'], 'musicbox', undefined],
+    [['theatrical'], 'mirror', { isLimbless: true, hasLegs: false }]
+  ]) {
+    let s = shelf([makePet('a', traits, { anatomy }), null, makeProp('q1', kind)]);
+    let moved = null;
+    for (let pass = 0; pass < 8; pass++) {
+      const out = runBehavior(s, NOW + pass * PASS_INTERVAL_MS, { maxUses: 0 });
+      if (out.moves.length) { moved = out.moves[0]; break; }
+      assert.equal(s.slots[0], 'a', 'the resident waits until its preference is strong enough');
+      assert.equal(s.pets[0].wants.tries, pass + 1, 'resolve grows once per pass');
+      s = normalizeState(JSON.parse(JSON.stringify(s)));
+    }
+    assert.ok(moved, kind + ': remembered preferences must lead to an actual move');
+    assert.equal(s.slots[1], 'a');
+    assert.equal(moved.reason, 'patience');
+    assert.ok(moved.gain < MOVE_THRESHOLD, 'this move needs the accumulated resolve');
+    assert.equal(s.pets[0].wants, null, 'the intention is fulfilled only after moving');
+    const settled = runBehavior(s, NOW + 12 * PASS_INTERVAL_MS, { maxUses: 0 });
+    assert.equal(settled.moves.length, 0, 'a happy resident stays in its preferred spot');
+  }
+});
+
+test('a resident carried away returns after its cooldown and remembers why it moved', t => {
+  t.mock.method(Math, 'random', () => 0.99);
+  const pet = makePet('a', ['theatrical']);
+  const s = shelf([makeProp('q1', 'musicbox'), pet]);
+  applyMove(s, 1, 3, NOW);
+  assert.equal(notePlayerMove(s, pet.id, 1, 3, NOW).objected, true);
+  assert.equal(runBehavior(s, NOW, { maxUses: 0 }).moves.length, 0);
+  assert.equal(s.slots[3], pet.id, 'manual placement gets the normal grace period');
+  const out = runBehavior(s, NOW + MOVE_COOLDOWN_MS, { maxUses: 0 });
+  assert.equal(out.moves.length, 1);
+  assert.equal(s.slots[1], pet.id);
+  assert.equal(out.moves[0].reason, 'returning');
+  assert.equal(pet.displacedFrom, null);
+  assert.equal(pet.displacedAt, 0);
+  assert.equal(pet.wants, null);
+});
+
+test('a resident deferred by the move budget keeps its intention for the next pass', t => {
+  t.mock.method(Math, 'random', () => 0.99);
+  const waiting = makePet('waiting', ['theatrical'], {
+    wants: { slot: 7, since: NOW, at: NOW, tries: 4 }
+  });
+  const s = shelf([makePet('urgent', ['cult']), null, makeProp('q1', 'candle'),
+    null, null, null, waiting, null, makeProp('q2', 'musicbox')]);
+  const intention = { ...waiting.wants };
+  const first = runBehavior(s, NOW, { maxMoves: 1, maxUses: 0 });
+  assert.equal(first.moves[0].pet.id, 'urgent');
+  assert.equal(s.slots[6], 'waiting');
+  assert.deepEqual(waiting.wants, intention, 'ranking a move does not fulfil it');
+  const next = runBehavior(s, NOW + PASS_INTERVAL_MS, { maxMoves: 1, maxUses: 0 });
+  assert.equal(next.moves[0].pet.id, 'waiting');
+  assert.equal(s.slots[7], 'waiting');
+  assert.equal(next.moves[0].reason, 'patience');
 });
 
 test('the shelf settles: repeated passes stop producing movement once everyone is happy', () => {
