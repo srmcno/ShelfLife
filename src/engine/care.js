@@ -22,7 +22,7 @@ export function previewCare(pet, need, now = Date.now()) {
   const cute = pet.stats && typeof pet.stats.cute === 'number' ? pet.stats.cute : 5;
   const charm = need === 'fuss' ? 1 + (cute - 5) * 0.03 : 1;
   return { gain: Math.min(100 - before, Math.round(CARE_GAIN[need] * factor * charm)), useful: before < 72,
-    reason: asleep ? 'Sleepy · half effect' : before > 78 ? 'Already comfortable' : 'Builds trust' };
+    reason: asleep ? 'Sleepy · half effect' : before >= 72 ? 'Already comfortable' : pet.bond >= 25 ? 'Trust is full' : 'Builds trust' };
 }
 
 export function careFor(state, pet, need, now = Date.now()) {
@@ -50,8 +50,9 @@ export function careFor(state, pet, need, now = Date.now()) {
     pet.cared++;
     if (state.stories) state.stories.careActions = (Number(state.stories.careActions) || 0) + 1;
     if (pet.cared % 3 === 0) {
+      const previousBond = pet.bond;
       pet.bond = clamp(pet.bond + 1, 0, 25);
-      bondGained = true;
+      bondGained = pet.bond > previousBond;
     }
   }
   return { message: pet.name + ': ' + line, bondGained, gain: pet.needs[need] - before };

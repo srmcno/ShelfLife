@@ -259,3 +259,13 @@ body[data-effects="light"] .court-playable *{animation:none!important;transition
 /* A ruling lands, then leaves the actors visible. Its text remains below. */
 .court-deduction .court-stamp{opacity:0;animation:court-ruling-arrive 1.4s ease-out both}
 @keyframes court-ruling-arrive{0%{opacity:0;transform:translate(-50%,-50%) rotate(-14deg) scale(1.3)}12%,65%{opacity:1;transform:translate(-50%,-50%) rotate(-9deg) scale(1)}100%{opacity:0;transform:translate(-50%,-55%) rotate(-9deg) scale(.95)}}
+
+/* Optional reasoning stays next to the clue it explains. */
+.court-case-progress{margin:6px 0 0;color:var(--ink-2);font:12px/1.4 var(--body);letter-spacing:0}
+.court-rule-help{margin:12px 0;border-top:1px solid var(--hair-lit);font:13px/1.55 var(--body)}
+.court-rule-help>summary{display:flex;align-items:center;min-height:44px;padding:8px 0;cursor:pointer;color:var(--mint);font-weight:700}
+.court-rule-help>p{font:13px/1.55 var(--body);margin:0 0 12px}
+.court-verdict-ledger .court-rule-help,.court-proof-sheet .court-rule-help{border-color:#84705c66}
+.court-verdict-ledger .court-rule-help>summary,.court-proof-sheet .court-rule-help>summary{color:#50383e}
+.court-verdict-ledger .court-rule-help>p,.court-proof-sheet .court-rule-help>p{font:13px/1.55 var(--body);color:#392c30}
+@media(max-height:500px){.court-case-progress{font-size:10px;margin-top:3px}}

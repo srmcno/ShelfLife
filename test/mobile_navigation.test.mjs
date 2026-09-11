@@ -6,7 +6,7 @@ import { runInNewContext } from 'node:vm';
 // Exercise real navigation handlers and owner cleanup without asserting layout.
 // These are behavioural checks, not a substitute for a physical phone preview.
 function navigation({widePhone=false}={}) {
-  const events = new Map(), observers = [], elements = new Map();
+  const events = new Map(), windowEvents = new Map(), observers = [], frames = [], elements = new Map();
   const make = (id, dataset = {}) => {
     const listeners = new Map(), attributes = new Map(), classes = new Set();
     const element = { id, dataset, style: {}, textContent: 'Close',
@@ -20,6 +20,7 @@ function navigation({widePhone=false}={}) {
   const tabs = ['shelf', 'notes', 'plots'].map(name => make('tab-' + name, { tab: name }));
   const logo = make('logo'), playroom = make('playroomVeil'), play = make('playVeil'), life = make('lifeVeil');
   const playClose = make('playClose'), lifeClose = make('lifeClose'), playroomButton = make('playroomBtn');
+  const workshop = { isConnected: true, focused: false, scrolled: false, focus() { this.focused = true; }, scrollIntoView() { this.scrolled = true; } };
   play.querySelector = () => playClose; life.querySelector = () => lifeClose;
   let cleaned = 0, returned = 0;
   playClose.click = () => { cleaned++; play.classList.remove('open'); };
@@ -28,22 +29,25 @@ function navigation({widePhone=false}={}) {
   const document = {
     body: { dataset: {}, style: {} },
     getElementById: id => elements.get(id) || null,
+    querySelector: selector => selector === '.household-workshop' ? workshop : null,
     querySelectorAll: selector => selector === '.tabbar .tab[data-tab]' ? tabs : selector === '.wordmark' ? [logo] : selector === '#playVeil, #lifeVeil' ? [play, life] : selector === '.veil.open' ? [playroom, play, life].filter(veil => veil.classList.contains('open')) : [],
     addEventListener(name, listener) { const list = events.get(name) || []; list.push(listener); events.set(name, list); }
   };
-  const window = { scrollY: 0, matchMedia: query => ({ matches: !widePhone || query.includes('pointer:coarse'), addEventListener() {} }), addEventListener() {}, scrollTo({ top }) { this.scrollY = top; } };
+  const window = { scrollY: 0, matchMedia: query => ({ matches: !widePhone || query.includes('pointer:coarse'), addEventListener() {} }), addEventListener(name, listener) { windowEvents.set(name, listener); }, scrollTo({ top }) { this.scrollY = top; } };
   const source = readFileSync(new URL('../src/ui/nav.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/m, '').replace(/export function /g, 'function ');
-  const context = { document, window, localStorage: { getItem: () => null, setItem() {} }, state: {}, onNote() {}, MutationObserver: class { constructor(callback) { this.callback = callback; } observe() { observers.push(this.callback); } } };
+  const context = { document, window, requestAnimationFrame: callback => frames.push(callback), localStorage: { getItem: () => null, setItem() {} }, state: {}, onNote() {}, MutationObserver: class { constructor(callback) { this.callback = callback; } observe() { observers.push(this.callback); } } };
   runInNewContext(source + '\nglobalThis.api={setTab,currentTab};', context);
-  return { ...context.api, window, logo, play, playroom, playClose,
+  return { ...context.api, window, logo, play, life, playroom, playClose, lifeClose, workshop,
+    flushFrames() { frames.splice(0).forEach(callback => callback()); },
+    navigate(detail) { windowEvents.get('shelflife:goto')({detail}); },
     get cleaned() { return cleaned; }, get returned() { return returned; },
     flush() { observers.forEach(callback => callback()); },
-    chooseGame() {
+    chooseGame(kind = 'chase') {
       playroom.classList.add('open');
-      const activity = { dataset: { activity: 'chase' }, closest: selector => selector === '#playroomVeil.open' ? playroom : null };
+      const activity = { dataset: { activity: kind }, closest: selector => selector === '#playroomVeil.open' ? playroom : null };
       const target = { closest: selector => selector === '[data-activity]' ? activity : null };
       for (const listener of events.get('click') || []) listener({ target });
-      playroom.classList.remove('open'); play.classList.add('open'); this.flush();
+      playroom.classList.remove('open'); (kind === 'outing' ? life : play).classList.add('open'); this.flush();
     }
   };
 }
@@ -84,4 +88,26 @@ test('a game opened directly from a resident closes normally without an invented
   const nav = navigation(); nav.play.classList.add('open'); nav.flush();
   assert.equal(nav.playClose.textContent, 'Close'); nav.playClose.click(); nav.flush();
   assert.equal(nav.cleaned, 1); assert.equal(nav.returned, 0);
+});
+
+test('returning home from an expedition reveals the workshop instead of reopening the catalogue', () => {
+  const nav = navigation(); nav.setTab('plots'); nav.chooseGame('outing');
+  nav.lifeClose.click();
+  nav.navigate({tab:'shelf', target:'.household-workshop'});
+  assert.equal(nav.workshop.focused, false, 'wait for dialog inert and opener cleanup');
+  nav.flush();
+  nav.flushFrames();
+  assert.equal(nav.currentTab(), 'shelf');
+  assert.equal(nav.cleaned, 1); assert.equal(nav.returned, 0);
+  assert.equal(nav.playroom.classList.contains('open'), false);
+  assert.equal(nav.lifeClose.textContent, 'Close');
+  assert.equal(nav.workshop.focused, true);
+  assert.equal(nav.workshop.scrolled, true);
+});
+
+test('a pending destination cannot steal focus from a newly opened dialog', () => {
+  const nav = navigation();
+  nav.navigate({tab:'shelf', target:'.household-workshop'});
+  nav.play.classList.add('open'); nav.flush(); nav.flushFrames();
+  assert.equal(nav.workshop.focused, false);
 });

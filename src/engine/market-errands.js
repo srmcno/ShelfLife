@@ -33,6 +33,30 @@ export function deliveryOptions(snapshot, request) {
   if(snapshot.delivered.includes(request.id))return [];
   return snapshot.bag.flatMap((a,i)=>snapshot.bag.slice(i+1).filter(b=>pairFits([a,b],request)).map(b=>[a,b]));
 }
+// Live advice describes the player's own basket, never the planted solution.
+// An object with two labels still occupies just one side of an errand pair.
+export function errandProgress(snapshot, request) {
+  const delivered=snapshot.delivered.includes(request.id);
+  const pairs=deliveryOptions(snapshot,request);
+  const partners=delivered?[]:snapshot.bag.flatMap(item=>
+    [...new Set(request.tags.flatMap((tag,i)=>item.tags.includes(tag)?[request.tags[1-i]]:[]))]
+      .map(tag=>({item,tag})));
+  return {delivered,pairs,partners};
+}
+export function errandPurchasePreview(snapshot, item, trade=null) {
+  const after={...snapshot,bag:snapshot.bag.slice(),delivered:snapshot.delivered.slice(),receipts:snapshot.receipts.slice()};
+  if(!item||!applyErrandMove(after,{pick:item.id,trade}))return null;
+  return {
+    buttons:after.buttons,
+    ready:after.requests.flatMap(request=>deliveryOptions(after,request)
+      .filter(pair=>pair.some(p=>p.id===item.id)).map(pair=>({request,pair}))),
+    helps:after.requests.filter(request=>!after.delivered.includes(request.id)&&request.tags.some(tag=>item.tags.includes(tag)))
+  };
+}
+export function maxRemainingErrands(snapshot, passed=false) {
+  const purchases=Math.max(0,6-snapshot.step-(passed?1:0));
+  return Math.min(snapshot.requests.length,snapshot.delivered.length+Math.floor((snapshot.bag.length+purchases)/2));
+}
 export function errandScore(snapshot) {
   const fulfilled=snapshot.requests.map(r=>snapshot.delivered.includes(r.id));
   const requestPoints=fulfilled.filter(Boolean).length*ERRAND_POINTS;

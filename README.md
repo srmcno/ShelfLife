@@ -13,6 +13,16 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
+## Gameplay and device polish
+
+- **Crumb Chase:** an illustrated guide distinguishes goal crumbs from bonus objects. Gold gets an advance warning and remains until the buzzer. Pausing shows your progress; P also resumes. Keyboard and touch holds work independently, and delayed touch clicks cannot spend a second flap. The arena fits short windows and winged residents stay inside it.
+- **Secret handshake:** each ritual has an example and a clear goal. The pads keep the same gesture names as the instructions and show keys 1–4. Completed rounds wait for you to start the next demonstration; a mistake offers a replay of that round. Tapping the selected game tab preserves the game.
+- **Night Market:** purchases explain which errands they help and name a ready delivery pair. The bag explains the missing partner, and passing warns when fewer deliveries will remain possible. The final stall clearly identifies undelivered shopping.
+- **Shelf Court:** explain any inspected clue as often as needed, revisit the exact reason a suspect was cleared, and see the current score and penalties. Entering the verdict skips a cleared suspect when another remains.
+- **Progress and navigation:** games return to the Playroom on desktop as well as phones; an expedition's “Use it at home” goes directly to the household workshop. Care, game briefings and scheme choices respect resource and trust caps. Scheme deadlines apply immediately when a late choice is clicked. A messy case ending no longer prevents earning its cooperative trust on a later attempt; old reward claims are preserved.
+
+The game workspaces adapt to both width and height, including short desktop windows. Existing saves and backups remain compatible; the offline shell includes this release.
+
 ## Residents choosing their own slots
 
 Residents keep their remembered preference until they actually move. A second movement check previously erased that intention, cancelling moves that depended on accumulated patience or a wish to return to a spot the player moved them from. Residents waiting for another resident's turn now retain their plans too.

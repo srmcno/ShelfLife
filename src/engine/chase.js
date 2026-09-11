@@ -5,11 +5,15 @@ export const chaseRecordKey = game => (game.format === 'run' ? 'run:' : game.ven
 export const CHASE_WIDTH = 320;
 export const CHASE_HEIGHT = 230;
 export const CHASE_GROUND = 20;
+// The resident occupies 76 board pixels. Wings plus low gravity and an upgrade
+// must not send its face out of the arena while the controls remain active.
+export const CHASE_CEILING = CHASE_HEIGHT - CHASE_GROUND - 76;
 export const CHASE_SECONDS = 22;
 export const RUSH_SECONDS = 4;
 export const DASH_SECONDS = .18;
 export const DASH_COOLDOWN = 2.4;
 export const FINALE_AT = 16.5;
+export const FINALE_WARNING_SECONDS = 1.5;
 export const FINALE_BONUS = 60;
 export const RUN_WAVE_SECONDS = 18;
 export const RUN_WAVES = [
@@ -118,7 +122,7 @@ export function newChase(pet, { gentle = false, rng = Math.random, seed = null, 
     wave: 0, waveBaseline: { caught: 0, biscuits: 0, finaleCaught: 0 }, waveResults: [], upgrades: [], awaitingChoice: false, nextBroom: 4.5, broomsMade: 0,
     rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { id: objective, ...CHASE_OBJECTIVES[objective], done: false } : null,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
-    dashes: 0, dashSmashes: 0, finaleStarted: false, finaleCaught: 0, finaleComplete: false,
+    dashes: 0, dashSmashes: 0, finaleWarned: false, finaleStarted: false, finaleCaught: 0, finaleComplete: false,
     goal: format === 'run' ? (gentle ? 18 : 22) : gentle ? 6 : 8, complete: false, finished: false, claimed: false, gentle, stars: 0,
     wings: art.motion.canFlap, horns: art.horns, halo: art.halo, tail: art.motion.tails > 0,
     mood, speedScale: temper.speed, grip: temper.grip,
@@ -200,7 +204,7 @@ function spawnFinale(game, events) {
   // at the far end. A stationary resident cannot vacuum up the centre for free.
   for (const [x, z] of [[52, 42], [106, 70], [160, 94], [214, 70], [268, 42]]) {
     game.items.push({ id: ++game.serial, kind: 'crumb', gold: true, finale: true,
-      x, z, vy: 0, age: 0, floorTime: 0 });
+      x, z, vy: 0, age: 0, floorTime: 0, expiresAt: chaseDuration(game) });
   }
   events.push({ type: 'finale', count: 5, bonus: FINALE_BONUS });
 }
@@ -240,7 +244,8 @@ function stepPlayer(game, input, dt, events) {
   if (p.moving) p.direction = dx < 0 ? -1 : 1;
   if (p.z > 0 || p.vy > 0) {
     p.vy -= (game.wings ? 550 : 900) * CHASE_VENUES[game.venue || 'shelf'].gravity * dt;
-    p.z = Math.max(0, p.z + p.vy * dt);
+    p.z = clamp(p.z + p.vy * dt, 0, CHASE_CEILING);
+    if (p.z === CHASE_CEILING && p.vy > 0) p.vy = 0;
     if (!p.z) {
       p.vy = 0;
       if (previousZ > 0) events.push({ type: 'land', x: p.x });
@@ -283,7 +288,9 @@ function stepCrumb(game, item, dt, events) {
   const distance = Math.hypot(item.x - p.x, item.z - (p.z + CHEST));
   if ((game.halo || game.rush > 0) && distance < 70) item.x += (p.x - item.x) * Math.min(1, dt * 3);
   if (touching(game, item)) { game.caught++; award(game, item, item.gold ? CHASE_POINTS.gold : CHASE_POINTS.crumb, events); }
-  else if (item.finale && item.age > 4.5) item.remove = true;
+  // Leave the advertised final sweep available until the buzzer, including the
+  // longer moon act. A missed first pass still leaves time to turn back.
+  else if (item.finale && game.time >= item.expiresAt) item.remove = true;
   else if (!item.finale && item.floorTime > (game.gentle ? 2.3 : 1.4) + (game.upgrades?.includes('salvage') ? 1.2 : 0)) {
     item.remove = true;
     // Losing one target trims two catches, instead of erasing the whole run.
@@ -358,8 +365,8 @@ function stepMoth(game, item, dt, events) {
 
 function stepBiscuit(game, item, dt, events) {
   item.z = Math.max(FLOOR, item.z + item.vy * dt);
-  if (touching(game, item, reachOf(game) + 6)) { game.biscuits++; award(game, item, CHASE_POINTS.biscuit, events); }
-  else if (item.z === FLOOR) { item.remove = true; events.push({ type: 'crumble', x: item.x, id: item.id }); }
+  if (item.z === FLOOR) { item.remove = true; events.push({ type: 'crumble', x: item.x, id: item.id }); }
+  else if (touching(game, item, reachOf(game) + 6)) { game.biscuits++; award(game, item, CHASE_POINTS.biscuit, events); }
 }
 
 function stepSugar(game, item, dt, events) {
@@ -396,6 +403,10 @@ function step(game, input, dt, events) {
   game.time = Math.min(end, game.time + dt);
   const previousZ = stepPlayer(game, input, dt, events);
   spawnAll(game, events);
+  const finaleAt = game.format === 'run' ? 2 * RUN_WAVE_SECONDS + 11.5 : FINALE_AT;
+  if (!game.finaleWarned && game.time >= finaleAt - FINALE_WARNING_SECONDS) {
+    game.finaleWarned = true; events.push({ type: 'finaleWarning', seconds: FINALE_WARNING_SECONDS });
+  }
   if (!game.finaleStarted && (game.format === 'run' ? game.wave === 2 && chaseWaveTime(game) >= 11.5 : game.time >= FINALE_AT)) spawnFinale(game, events);
   for (const item of game.items) {
     if (item.remove) continue;

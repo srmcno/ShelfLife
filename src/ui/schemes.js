@@ -1,4 +1,4 @@
-import { currentScheme, schemeState, resolveScheme, SCHEME_WAIT, SCHEME_DEADLINE } from '../engine/schemes.js';
+import { currentScheme, schemeState, resolveScheme, previewSchemeChoice, SCHEME_WAIT, SCHEME_DEADLINE } from '../engine/schemes.js';
 import { save } from '../state.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 import { checkAchievements } from '../engine/achievements.js';
@@ -23,11 +23,15 @@ export function renderScheme(state) {
       '<div class="scheme-tally">' + history.completed + (history.completed === 1 ? ' incident survived' : ' incidents survived') + '</div>';
     return;
   }
-  const effects = choice => Object.entries(choice.changes).map(([k, n]) => labels[k] + ' ' + (n > 0 ? '+' : '−') + Math.abs(n)).concat('Trust +' + choice.bond).join(' · ');
+  const effects = choice => {
+    const preview = previewSchemeChoice(plan.pet, choice);
+    return Object.entries(preview.changes).map(([k, delta]) => { const n = Math.round(delta * 10) / 10; return labels[k] + ' ' + (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n); })
+      .concat(preview.bond ? 'Trust +' + preview.bond : 'No bonus trust').join(' · ');
+  };
   host.innerHTML = '<div class="scheme-heading"><span class="eyebrow">Small conspiracies</span><span class="live-dot">In progress</span></div><div class="scheme-portrait" aria-hidden="true"></div><h2>' + esc(plan.definition.title) + '</h2>' +
     '<p>' + esc(plan.definition.intro.replaceAll('{p}', plan.pet.name)) + '</p><div class="scheme-choices">' +
     plan.definition.choices.map((choice, i) => '<button class="scheme-choice" data-scheme-choice="' + i + '"><span>' + esc(choice.label) + '</span><small>' + effects(choice) + '</small></button>').join('') +
-    '</div><button class="scheme-alone" data-scheme-choice="alone">Leave them to it<small>Food −6 · Cleanliness −6 · Attention +8 · no trust</small></button><p class="scheme-clock">They will act without you in about ' + clock(plan.at + SCHEME_DEADLINE - Date.now()) + '.</p>';
+    '</div><button class="scheme-alone" data-scheme-choice="alone">Leave them to it<small>' + effects(null) + '</small></button><p class="scheme-clock">They will act without you in about ' + clock(plan.at + SCHEME_DEADLINE - Date.now()) + '.</p>';
   // The culprit, in a small frame, so the card reads as a wanted poster.
   const frame = host.querySelector('.scheme-portrait');
   if (frame) { const sprite = renderPetSprite(plan.pet); sprite.classList.add('sl-mood-fine', 'sl-plotting'); frame.appendChild(sprite); }
@@ -44,7 +48,7 @@ export function initSchemeUI(state, refresh) {
     checkUnlocks(state);
     checkAchievements(state);
     refresh();
-    reactTo(result.petId, choice === 'alone' ? 'rounds' : 'fuss');
+    reactTo(result.petId, result.choice === 'alone' ? 'rounds' : 'fuss');
     toast(result.text);
     document.getElementById('schemeCard').focus({ preventScroll: true });
   });

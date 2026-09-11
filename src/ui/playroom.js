@@ -17,7 +17,7 @@ const cardCopy = {
   alibi: { title:'The Alibi', time:'No timer', hook:'Catch a lie. Prove it.' },
   outing: { title:'Expeditions', time:'3 stops', hook:'Recover parts. Build a home.' },
   court: { title:'Shelf Court', time:'No timer', hook:'Read. Compare. Accuse.' },
-  market: { title:'Night Market', time:'6 stalls', hook:'Buy oddities. Sell secrets.' }
+  market: { title:'Night Market', time:'6 stalls', hook:'Shop, pair, deliver. Repeat.' }
 };
 
 function continueLabel(id, life = {}) {

@@ -1,7 +1,6 @@
-import { GESTURES, newHandshake, tapHandshake, rewardHandshake, playWait, gesturesFor, handshakeRounds, HANDSHAKE_RITUALS, handshakePattern, handshakeDemonstration, handshakeRecordKey, restartHandshake } from '../engine/play.js';
-import { rewardSummary } from './reward-summary.js';
+import { GESTURES, newHandshake, tapHandshake, rewardHandshake, gesturesFor, handshakeRounds, HANDSHAKE_RITUALS, handshakePattern, handshakeDemonstration, handshakeRecordKey, restartHandshake } from '../engine/play.js';
+import { rewardSummary, rewardPreview } from './reward-summary.js';
 import { newAlibi, answerAlibi, advanceAlibi, rewardAlibi, currentRound, ALIBI_ROUNDS, alibiReaction, alibiRank } from '../engine/alibi.js';
-import { isAsleep } from '../engine/tick.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { createPuppet } from '../art/animator.js';
 import { createChaseUI } from './chase.js';
@@ -27,7 +26,7 @@ export function initPlay(state, refresh) {
   const playControls = veil.querySelector('.play-controls');
   const workspace = veil.querySelector('.parlour-workspace'), footer = veil.querySelector('.parlour-footer');
   const memorySetup = document.getElementById('memorySetup'), memoryOptions = memorySetup.querySelector('details');
-  const mobileLayout = window.matchMedia('(max-width: 720px), (max-height: 500px) and (pointer: coarse)');
+  const mobileLayout = window.matchMedia('(max-width: 720px), (max-height: 500px)');
   let game = null, pet = null, puppet = null, accepting = false, generation = 0, mode = 'chase';
   let alibi = null, accusation = null, exhibit = null;
   const theatre = veil.querySelector('.play-theatre');
@@ -37,6 +36,8 @@ export function initPlay(state, refresh) {
   const ritualSelect = document.createElement('select'); ritualSelect.id = 'handshakeRitual'; ritualSelect.setAttribute('aria-label', 'Handshake ritual');
   for (const [value, ritual] of Object.entries(HANDSHAKE_RITUALS)) { const option = document.createElement('option'); option.value = value; option.textContent = ritual.name + (value === 'echo' ? ' · copy' : value === 'mirror' ? ' · backwards' : ' · alternate beats'); ritualSelect.append(option); }
   ritualLabel.append(ritualSelect); document.getElementById('memoryRitualSlot').append(ritualLabel);
+  const ritualGuide = document.createElement('div'); ritualGuide.className = 'ritual-guide';
+  memorySetup.after(ritualGuide);
   const alibiLabel = document.createElement('label'); alibiLabel.className = 'parlour-select'; alibiLabel.textContent = 'Investigation';
   const alibiMode = document.createElement('select'); alibiMode.id = 'alibiDifficulty'; alibiMode.setAttribute('aria-label', 'Alibi investigation');
   alibiMode.innerHTML = '<option value="prove">Prove it · lie + evidence</option><option value="quick">Spot the lie · casual</option>'; alibiLabel.append(alibiMode); alibiRoot.prepend(alibiLabel);
@@ -105,18 +106,30 @@ export function initPlay(state, refresh) {
     document.getElementById('playName').textContent = (EYEBROWS[mode] || EYEBROWS.memory) + pet.name;
     cue.textContent = mode === 'alibi' ? 'It has had time to prepare.' : 'They have been rehearsing.';
     status.textContent = BRIEFS[mode] || BRIEFS.memory;
-    const resting = playWait(pet, Date.now(), mode) || isAsleep(pet);
-    document.getElementById('playReward').textContent = resting
-      ? 'Practice round · rewards return when rested and awake.'
-      : mode === 'alibi' ? (alibiMode.value === 'prove' ? 'Find and prove all three lies for up to +20 attention and +1 trust.' : 'Catch all three lies for up to +20 attention and +1 trust.')
-      : 'Win for up to +24 attention and +1 trust.';
+    ritualGuide.hidden = mode !== 'memory';
+    if (mode === 'memory') {
+      const ritual = HANDSHAKE_RITUALS[game.ritual];
+      const examples = { echo: 'Watch: Knock, Blink. Your turn: Knock, Blink.', mirror: 'Watch: Knock, Blink. Your turn: Blink, Knock.', duet: 'Their beat: Knock. Your beat: Blink. Your turn: Blink only.' };
+      ritualGuide.replaceChildren();
+      const rule = document.createElement('strong'); rule.textContent = ritual.rule;
+      const example = document.createElement('p'); example.textContent = examples[game.ritual];
+      const goal = document.createElement('p'); goal.textContent = 'Start with 2 moves. Add one each round, up to ' + (game.rounds + 1) + '. Finish all ' + game.rounds + ' rounds. No timer; mistakes only restart the current round.';
+      ritualGuide.append(rule, example, goal);
+      status.textContent = 'Watch the resident light up the pads. When it says “Your turn”, tap them or use keys 1–4.';
+    }
+    document.getElementById('playReward').textContent = rewardPreview(pet, mode);
     const names = gesturesFor(pet);
-    pads.forEach((pad, i) => { const label = pad.querySelector('span'); if (label) label.textContent = names[i]; pad.title=GESTURES[i]; pad.setAttribute('aria-label',names[i]+' · key '+(i+1)); });
+    pads.forEach((pad, i) => {
+      const label = pad.querySelector('span'); if (label) label.textContent = GESTURES[i];
+      let key = pad.querySelector('kbd'); if (!key) { key = document.createElement('kbd'); key.setAttribute('aria-hidden', 'true'); pad.append(key); } key.textContent = i + 1;
+      pad.title = names[i] === GESTURES[i] ? GESTURES[i] : 'This resident calls it “' + names[i] + '”';
+      pad.setAttribute('aria-label', GESTURES[i] + ', key ' + (i + 1));
+    });
     host.replaceChildren();
     if (mode === 'chase') chase.prepare(pet, gentle.checked);
     else { host.appendChild(renderPetSprite(pet)); host.firstElementChild.classList.add('sl-mood-content'); puppet = createPuppet(host.firstElementChild); progress(); }
   }
-  modeButtons.forEach(b => b.addEventListener('click', () => setMode(b.dataset.playMode)));
+  modeButtons.forEach(b => b.addEventListener('click', () => { if (mode !== b.dataset.playMode) setMode(b.dataset.playMode); }));
   gentle.addEventListener('change', () => { if (pet && mode === 'chase') setMode('chase'); });
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   function lock(locked) { accepting = !locked; pads.forEach(p => p.setAttribute('aria-disabled', String(locked))); }
@@ -252,12 +265,13 @@ export function initPlay(state, refresh) {
     const pace = slow.checked ? 1.6 : 1;
     lock(true); replay.disabled = true; progress(); paintTrail();
     const ritual = HANDSHAKE_RITUALS[game.ritual || 'echo'];
+    ritualGuide.hidden = true;
     const stageLines = ['The audience died for these seats. Literally.', 'A second row has appeared. Do not turn around.', 'The applause is coming from inside the walls.', 'Someone is keeping time with a femur.', 'Your understudy has been buried. No pressure.'];
     status.textContent = ritual.rule + ' ' + stageLines[Math.min(game.round, stageLines.length - 1)]; stage('watch', ritual.name + ' · watch the ritual');
     const sequence = handshakeDemonstration(game);
     cue.textContent = 'Watch…';
     const names = game.names || GESTURES;
-    document.getElementById('playAnnouncement').textContent = ritual.rule + ' Demonstration: ' + sequence.map((g, i) => (game.ritual === 'duet' ? (i % 2 ? 'your beat: ' : 'their beat: ') : '') + names[g]).join(', ');
+    document.getElementById('playAnnouncement').textContent = ritual.rule + ' Demonstration: ' + sequence.map((g, i) => (game.ritual === 'duet' ? (i % 2 ? 'your beat: ' : 'their beat: ') : '') + GESTURES[g]).join(', ');
     await wait(650);
     for (const [beat, gesture] of sequence.entries()) {
       if (token !== generation) return;
@@ -286,7 +300,8 @@ export function initPlay(state, refresh) {
     if (document.hidden) cancelStageMotion();
     if (mode !== 'memory' || !document.hidden || !game || game.complete || !veil.classList.contains('open')) return;
     generation++; lock(true); game.cursor = 0; paintTrail(); pads.forEach(p => p.classList.remove('lit'));
-    status.textContent = 'Paused. Replay the pattern when you are ready.'; cue.textContent = 'Take your time'; replay.disabled = false;
+    status.textContent = start.hidden ? 'Paused. Replay the pattern when you are ready.' : 'Your completed rounds are safe. Start the next pattern when you are ready.';
+    cue.textContent = 'Take your time'; replay.disabled = false;
   });
   window.addEventListener('shelflife:play', e => {
     pet = state.pets.find(p => p.id === e.detail?.petId);
@@ -326,18 +341,23 @@ export function initPlay(state, refresh) {
     if (!accepting || !game) return;
     const result = tapHandshake(game, i); paintTrail();
     animate(pad, [{transform:'scale(.94)'},{transform:'scale(1)'}], {duration:180});
-    cue.textContent = (game.names || GESTURES)[i];
+    cue.textContent = GESTURES[i];
     puppet.gesture(result === 'retry' ? 'bump' : GESTURES[i].toLowerCase());
     if (navigator.vibrate) navigator.vibrate(8);
     if (result === 'retry') {
-      lock(true); stage('retry', 'A rehearsal casualty'); cue.textContent = 'A rehearsal casualty.'; status.textContent = ['The trapdoor operator has been told to sit down. Watch this round again.', 'Your predecessor made that mistake. Different circumstances. Watch again.', 'The audience inhales. None of it has lungs. Watch again.'][(game.mistakes - 1) % 3];
-      const token = ++generation;
-      wait(1000).then(() => { if (token === generation && game && !game.complete && !document.hidden) demonstrate(); });
+      lock(true); generation++; stage('retry', 'Same round. Another rehearsal.'); cue.textContent = 'No harm done.';
+      status.textContent = 'That was ' + GESTURES[i] + '. Watch the pattern again when you are ready. Your completed rounds are safe.';
+      replay.disabled = false; replay.focus({ preventScroll: true });
       return;
     }
     if (result === 'correct') { status.textContent = game.cursor + ' of ' + handshakePattern(game).length + ' remembered. ' + (game.ritual === 'mirror' ? 'Keep working backwards.' : game.ritual === 'duet' ? 'Your beats only.' : 'Keep going.'); return; }
     lock(true); replay.disabled = true;
-    if (result === 'round') demonstrate();
+    if (result === 'round') {
+      stage('round', 'Round ' + game.round + ' remembered'); cue.textContent = 'They give a very small standing ovation.';
+      status.textContent = 'Round ' + game.round + ' complete. Next: ' + handshakePattern(game).length + ' moves. Start when you are ready.';
+      progress(); start.hidden = false; start.textContent = 'Watch round ' + (game.round + 1); replay.hidden = true;
+      start.focus({ preventScroll: true });
+    }
     if (result === 'complete') conclude();
   }));
 }

@@ -58,6 +58,22 @@ function contradiction(axes,facts,rule) {
  if(rule.type==='xor')return 'Their record matches '+(matches(facts,rule.first)?'both':'neither')+' of “'+a+'” and “'+b+'”. This exhibit allows exactly one.';
  return 'They '+a+', but their record says “'+axes[rule.second.axis].values[facts[rule.second.axis]]+'” instead of “'+b+'”. That breaks the if/then rule.';
 }
+export function courtClueHelp(game,index) {
+ if(!Number.isInteger(index)||!game?.rules?.[index])return '';
+ return ruleHelp(game.axes,game.rules[index]);
+}
+export function courtScore(game) {
+ return Math.max(1,100+game.level*25+((game.exposures?.length||0)+(game.eliminations?.length||0))*10-(game.mistakes||0)*5-(game.appeals||0)*15);
+}
+// Rebuild only deductions the player has actually made. Merely opening the
+// notebook must not solve an untested suspect or reveal an uninspected clue.
+export function courtClearingReason(game,suspect) {
+ if(!game?.suspects?.[suspect])return null;
+ const facts=game.suspects[suspect].facts;
+ const evidence=game.rules.findIndex((rule,i)=>!courtRuleFits(facts,rule)&&
+  (game.rejected?.includes(suspect)||game.comparisons?.includes(suspect+':'+i)));
+ return evidence<0?null:{evidence,text:contradiction(game.axes,facts,game.rules[evidence])};
+}
 function makeRules(level,rng,reworked=false) {
  const axes=shuffle([0,1,2],rng),values=axes.map(()=>shuffle([0,1,2],rng));
  const atom=(axis,value)=>({axis:axes[axis],value:values[axis][value]});
@@ -256,7 +272,7 @@ function investigationResult(game,reward) {
   return {name:suspect.name,culprit:i===game.answer,failed,text:i===game.answer?'Fits every crime clue.':'Ruled out by clue '+failed.join(' and ')+'.',explanation:failed.map(n=>contradiction(game.axes,suspect.facts,game.rules[n-1])).join(' ')};
  });
  const culprit=game.suspects[game.answer],text=culprit.name+' is the only suspect who fits all '+game.clues.length+' crime clues. '+game.trial.sentence;
- return {correct:true,retry:false,bond:reward.bond,fuss:reward.fuss,text,reasons,dialogue:[{speaker:'Judge Mortis',text:game.trial.conviction},{speaker:culprit.name,text:game.trial.plea},{speaker:'Judge Mortis',text:game.trial.sentence}],level:game.level,rank:game.rank,stats:{...game.stats},score:Math.max(1,100+game.level*25+(game.exposures.length+game.eliminations.length)*10-game.mistakes*5-game.appeals*15)};
+ return {correct:true,retry:false,bond:reward.bond,fuss:reward.fuss,text,reasons,dialogue:[{speaker:'Judge Mortis',text:game.trial.conviction},{speaker:culprit.name,text:game.trial.plea},{speaker:'Judge Mortis',text:game.trial.sentence}],level:game.level,rank:game.rank,stats:{...game.stats},score:courtScore(game)};
 }
 export function finishCourt(state,suspect,now=Date.now()) {
  const game=currentCourt(state),l=lifeState(state),saved=l.court;

@@ -9,7 +9,6 @@
 import { state, onNote } from '../state.js';
 
 const PHONE = window.matchMedia('(max-width:720px)');
-const GAME_PHONE = window.matchMedia('(max-width:720px), (max-height:500px) and (pointer:coarse)');
 const TAB_KEY = 'shelflife.tab';
 const TABS = ['shelf', 'notes', 'plots'];
 
@@ -127,7 +126,7 @@ function resetGameReturn() {
 }
 document.addEventListener('click', e => {
   const activity = e.target.closest('[data-activity]');
-  if (!GAME_PHONE.matches || !activity || activity.disabled || !activity.closest('#playroomVeil.open')) return;
+  if (!activity || activity.disabled || !activity.closest('#playroomVeil.open')) return;
   resetGameReturn();
   gameReturn = { id: ['chase', 'memory', 'alibi'].includes(activity.dataset.activity) ? 'playVeil' : 'lifeVeil', entered: false };
 }, true);
@@ -182,12 +181,20 @@ if (tray) {
 // Somewhere else in the app wants a pane and a card in it on screen: the needs
 // strip, for one. On a phone that is a tab switch; on a desktop a scroll.
 window.addEventListener('shelflife:goto', e => {
+  // An explicit destination (such as a newly built workshop project) wins
+  // over the catalogue fallback when the game closes in this same turn.
+  resetGameReturn();
   const d = e.detail || {};
   if (d.tab) setTab(d.tab, { keepScroll: true });
   const target = d.target ? document.querySelector(d.target) : null;
   if (target) {
-    target.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-    if (typeof target.focus === 'function') { target.tabIndex = -1; target.focus({ preventScroll: true }); }
+    // Dialog cleanup first releases the shelf's inert boundary and restores
+    // its opener. Move focus to the requested destination after that cleanup.
+    requestAnimationFrame(() => {
+      if (!target.isConnected || document.querySelectorAll('.veil.open').length) return;
+      target.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      if (typeof target.focus === 'function') { target.tabIndex = -1; target.focus({ preventScroll: true }); }
+    });
   }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && trayOpen) setTray(false); });

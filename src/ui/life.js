@@ -159,7 +159,7 @@ export function initLife(state,refresh) {
   if(action==='frame'){selectFrame(state,b.dataset.id);refresh();display();return;}
   if(action==='outing'){interlude=false;outing();return;}
   if(action==='project-mission'){selectedRoute=b.dataset.id;interlude=false;outing();focusOutingProgress();return;}
-  if(action==='project-home'){finishOuting(state);close();save();refresh();document.querySelector('.household-workshop')?.scrollIntoView({block:'center',behavior:'auto'});return;}
+  if(action==='project-home'){finishOuting(state);close();save();refresh();window.dispatchEvent(new CustomEvent('shelflife:goto',{detail:{tab:'shelf',target:'.household-workshop'}}));return;}
   if(action==='use-project'){
    const result=useProject(state,b.dataset.id);if(!result)return;save();refresh();
    const card=document.querySelector('.project-'+b.dataset.id);if(card){card.classList.remove('project-in-use');void card.offsetWidth;card.classList.add('project-in-use');}
@@ -210,7 +210,12 @@ export function initLife(state,refresh) {
   if(action==='court-chapter'){
    if(!court||court.claimed)return;const chapter=b.dataset.chapter,view=courtView(court);
    if(!['investigation','hearing','verdict'].includes(chapter))return;
-   courtAction(state,{type:'focus',chapter,suspect:view.witness,statement:view.statement,evidence:view.exhibit});
+   let suspect=view.witness;
+   if(chapter==='verdict'&&[...(court.eliminations||[]),...(court.rejected||[])].includes(suspect)){
+    const remaining=court.suspects.findIndex((_,i)=>!(court.eliminations||[]).includes(i)&&!(court.rejected||[]).includes(i));
+    if(remaining>=0)suspect=remaining;
+   }
+   courtAction(state,{type:'focus',chapter,suspect,statement:view.statement,evidence:view.exhibit});
    if(chapter==='hearing')courtMove({type:'question',suspect:view.witness},'#courtPanelTitle',true);
    else{court=currentCourt(state);save();courtPaint('#courtPanelTitle',true);}return;
   }
