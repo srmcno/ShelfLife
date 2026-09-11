@@ -18,9 +18,11 @@ function navigation({widePhone=false}={}) {
     elements.set(id, element); return element;
   };
   const tabs = ['shelf', 'notes', 'plots'].map(name => make('tab-' + name, { tab: name }));
-  const logo = make('logo'), playroom = make('playroomVeil'), play = make('playVeil'), life = make('lifeVeil');
+  const logo = make('logo'), playroom = make('playroomVeil'), play = make('playVeil'), life = make('lifeVeil'), tray = make('moreTray');
   const playClose = make('playClose'), lifeClose = make('lifeClose'), playroomButton = make('playroomBtn');
-  const workshop = { isConnected: true, focused: false, scrolled: false, focus() { this.focused = true; }, scrollIntoView() { this.scrolled = true; } };
+  const destination = tabIndex => ({ isConnected: true, tabIndex, focused: false, scrolled: false,
+    hasAttribute: () => false, focus() { this.focused = true; }, scrollIntoView() { this.scrolled = true; } });
+  const workshop = destination(-1), noteFilters = destination(0);
   play.querySelector = () => playClose; life.querySelector = () => lifeClose;
   let cleaned = 0, returned = 0;
   playClose.click = () => { cleaned++; play.classList.remove('open'); };
@@ -29,7 +31,8 @@ function navigation({widePhone=false}={}) {
   const document = {
     body: { dataset: {}, style: {} },
     getElementById: id => elements.get(id) || null,
-    querySelector: selector => selector === '.household-workshop' ? workshop : null,
+    querySelector: selector => selector === '.household-workshop' ? workshop : selector === '#noteFilters' ? noteFilters :
+      selector === '.veil.open,#moreTray.open' ? [playroom, play, life, tray].find(veil => veil.classList.contains('open')) || null : null,
     querySelectorAll: selector => selector === '.tabbar .tab[data-tab]' ? tabs : selector === '.wordmark' ? [logo] : selector === '#playVeil, #lifeVeil' ? [play, life] : selector === '.veil.open' ? [playroom, play, life].filter(veil => veil.classList.contains('open')) : [],
     addEventListener(name, listener) { const list = events.get(name) || []; list.push(listener); events.set(name, list); }
   };
@@ -37,7 +40,7 @@ function navigation({widePhone=false}={}) {
   const source = readFileSync(new URL('../src/ui/nav.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/m, '').replace(/export function /g, 'function ');
   const context = { document, window, requestAnimationFrame: callback => frames.push(callback), localStorage: { getItem: () => null, setItem() {} }, state: {}, onNote() {}, MutationObserver: class { constructor(callback) { this.callback = callback; } observe() { observers.push(this.callback); } } };
   runInNewContext(source + '\nglobalThis.api={setTab,currentTab};', context);
-  return { ...context.api, window, logo, play, life, playroom, playClose, lifeClose, workshop,
+  return { ...context.api, window, logo, play, life, playroom, tray, playClose, lifeClose, workshop, noteFilters,
     flushFrames() { frames.splice(0).forEach(callback => callback()); },
     navigate(detail) { windowEvents.get('shelflife:goto')({detail}); },
     get cleaned() { return cleaned; }, get returned() { return returned; },
@@ -110,4 +113,23 @@ test('a pending destination cannot steal focus from a newly opened dialog', () =
   nav.navigate({tab:'shelf', target:'.household-workshop'});
   nav.play.classList.add('open'); nav.flush(); nav.flushFrames();
   assert.equal(nav.workshop.focused, false);
+});
+
+test('the latest navigation request wins and existing controls remain in the tab order', () => {
+  const nav = navigation();
+  nav.navigate({ tab: 'shelf', target: '.household-workshop' });
+  nav.navigate({ tab: 'notes', target: '#noteFilters' });
+  nav.flushFrames();
+  assert.equal(nav.currentTab(), 'notes');
+  assert.equal(nav.workshop.focused, false); assert.equal(nav.workshop.scrolled, false);
+  assert.equal(nav.noteFilters.focused, true); assert.equal(nav.noteFilters.scrolled, true);
+  assert.equal(nav.noteFilters.tabIndex, 0, 'navigation must not remove an existing control from keyboard order');
+});
+
+test('opening More prevents a pending destination from scrolling or focusing its inert background', () => {
+  const nav = navigation();
+  nav.navigate({ tab: 'shelf', target: '.household-workshop' });
+  nav.tray.classList.add('open');
+  nav.flushFrames();
+  assert.equal(nav.workshop.focused, false); assert.equal(nav.workshop.scrolled, false);
 });

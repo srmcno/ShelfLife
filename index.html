@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="css/character.css">
 <link rel="stylesheet" href="css/shelf-theatre.css">
 <link rel="stylesheet" href="css/theatre-controls.css">
+<link rel="stylesheet" href="css/controls.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
@@ -68,8 +69,8 @@
     <section id="shelfTheatre" class="shelf-theatre-controls" aria-labelledby="theatreHeading" hidden>
       <div class="theatre-heading"><h2 id="theatreHeading">Small domestic disasters</h2><span id="theatreCount"></span></div>
       <div class="theatre-caption" id="theatreCaption" role="status" aria-live="polite" aria-atomic="true">Give them furniture. They will supply the incident.</div>
-      <div class="theatre-buttons"><label class="sr-only" for="theatreKind">Choose a scene</label><select id="theatreKind"><option value="">Surprise me</option></select><button class="btn btn-primary" id="theatrePlay">Start some nonsense</button><button class="btn" id="theatreStop" hidden>End scene</button><button class="btn btn-ghost" id="theatreDecor">Add furniture</button></div>
-      <div class="theatre-preferences"><label><input type="checkbox" id="theatreAuto"> Let them improvise</label><span id="theatreAvailability"></span></div>
+      <div class="theatre-buttons"><label class="sr-only" for="theatreKind">Choose a scene</label><select id="theatreKind" aria-describedby="theatreAvailability"><option value="">Surprise me</option></select><button class="btn btn-primary" id="theatrePlay" aria-describedby="theatreAvailability">Play a scene</button><button class="btn" id="theatreStop" hidden>End scene</button><button class="btn btn-ghost" id="theatreDecor">Add furniture</button></div>
+      <div class="theatre-preferences"><label><input type="checkbox" id="theatreAuto"> Let them improvise</label><span class="theatre-auto-hint">On: residents choose nearby furniture and company while you watch.</span><span id="theatreAvailability"></span></div>
       <details class="theatre-repertoire"><summary>The repertoire <span>Change the cast. Change the furniture. See what happens.</span></summary><p class="hint">Scenes have different endings. Try a new neighbour or a different mood. Care benefits rest for 20 minutes; encores are for the drama.</p><div id="theatreRepertoire"></div></details>
     </section>
     <div id="needsYou" class="needs-you" aria-label="What needs you"></div>
@@ -177,23 +178,27 @@
     <h2>Everything else</h2>
     <button class="btn btn-ghost btn-sm" id="moreClose">Close</button>
   </div>
-  <div class="tray-grid">
+  <section class="tray-section" aria-labelledby="trayActivities"><h3 id="trayActivities">Play &amp; household</h3><div class="tray-grid">
     <button class="btn tray-item" data-proxy="playroomBtn"><span>Playroom</span><small>Every game, one doorway</small></button>
     <button class="btn tray-item" id="helpBtn"><span>How to play</span><small>A short field guide</small></button>
     <button class="btn tray-item" id="decorBtn"><span>Decorate</span><small>Room, shelf, furniture</small></button>
     <button class="btn tray-item" id="incidentsBtn"><span>Incidents</span><small>What has happened so far</small></button>
     <button class="btn tray-item" id="museumBtn"><span>Memory museum</span><small>Cases, visitors, names and postcards</small></button>
     <button class="btn tray-item" id="postcardBtn"><span>Postcard</span><small>Share a picture of the shelf</small></button>
+  </div></section>
+  <section class="tray-section" aria-labelledby="trayPreferences"><h3 id="trayPreferences">Sound &amp; motion</h3><div class="tray-grid">
     <label class="effects-setting" for="effectsMode"><span>Animation & performance</span><select id="effectsMode"><option value="auto">Automatic</option><option value="light">Light effects</option><option value="full">Full effects</option></select><small id="effectsHint"></small></label>
     <button class="btn tray-item" id="muteBtn" aria-pressed="false"><span>Sound</span><small>Small noises</small></button>
-    <button class="btn tray-item" id="narratorBtn" aria-pressed="true"><span>Narrator</span><small>Reads the notes aloud</small></button>
+    <button class="btn tray-item" id="narratorBtn" aria-pressed="false"><span>Narrator</span><small>Reads the notes aloud</small></button>
     <button class="btn tray-item" id="voiceBtn" title="Choose who reads the notes out loud."><span>Voice</span><small>Who does the reading</small></button>
+  </div></section>
+  <section class="tray-section" aria-labelledby="traySaves"><h3 id="traySaves">Your save</h3><p class="tray-explainer">Saved on this device. A backup keeps your household safe.</p><div class="tray-grid">
     <button class="btn tray-item" id="exportBtn"><span>Back up</span><small>Download this shelf</small></button>
     <button class="btn tray-item" id="transferBtn"><span>Move to another device</span><small>Email or share a backup</small></button>
     <button class="btn tray-item" id="importBtn"><span>Restore</span><small>Load a backup file</small></button>
     <button class="btn tray-item" id="recoveryBtn" hidden><span>Download recovery file</span><small>Your unreadable old save</small></button>
     <input type="file" id="importFile" accept=".json,.txt,application/json,text/plain" hidden>
-  </div>
+  </div></section>
 </div>
 
 <!-- ============================================================================

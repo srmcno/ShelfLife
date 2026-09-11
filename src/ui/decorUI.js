@@ -93,7 +93,7 @@ export function buildDecor(state) {
     const owned = state.props.filter(x => x.kind === kind).length;
     const scene = SHELF_SCENES.find(s=>s.propKind===kind);
     card.innerHTML = PROP_ART[kind] + '<b>' + escapeHtml(def.name) + '</b><small>' +
-      (locked ? 'Needs trust ' + def.at : escapeHtml(def.desc) + (scene ? '<br>Play: '+escapeHtml(scene.title) : '') + (owned ? '<br>On the shelf: ' + owned : '')) + '</small>';
+      (locked ? 'Needs trust ' + def.at : escapeHtml(def.desc) + (scene ? '<br>Scene: '+escapeHtml(scene.title) : '') + (owned ? '<br>On the shelf: ' + owned : '')) + '</small>' + (locked ? '' : '<span class="prop-add-label">+ Add to shelf</span>');
     if (locked) card.disabled = true;
     else card.addEventListener('click', () => placeProp(state, kind, { nearResident: true }));
     tray.appendChild(card);

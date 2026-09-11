@@ -157,7 +157,53 @@ export function initStudio({ onSave }) {
     <textarea id="petOrigin" rows="2" maxlength="${ORIGIN_LIMIT}" aria-describedby="petOriginHint petOriginCount" placeholder="Found behind the radiator. Claims to own the building."></textarea>
     <div class="personality-origin-help"><p class="hint" id="petOriginHint">Your short backstory becomes their introduction. Leave blank for a ready-made one.</p><span id="petOriginCount">0 / ${ORIGIN_LIMIT}</span></div>
     <details class="personality-introduction"><summary>Read their introduction</summary><p></p></details>`;
-  petName.closest('.tool-block').before(personalityEditor);
+  // Two small decisions instead of one long form: make the body, then meet
+  // the resident. Moving between steps never recreates the art or personality.
+  const nameBlock = petName.closest('.tool-block');
+  const identityPanel = document.createElement('section');
+  identityPanel.id = 'studioIdentity'; identityPanel.hidden = true;
+  identityPanel.setAttribute('aria-label', 'Name and personality');
+  const identityPortrait = document.createElement('div');
+  identityPortrait.className = 'studio-identity-portrait'; identityPortrait.setAttribute('aria-hidden', 'true');
+  nameBlock.before(identityPanel);
+  identityPanel.append(identityPortrait, nameBlock, personalityEditor);
+  const appearancePanel = document.createElement('section');
+  appearancePanel.id = 'studioAppearance';
+  appearancePanel.setAttribute('aria-label', 'Appearance');
+  const artTabs = tabGenerate.closest('.studio-tabs');
+  artTabs.before(appearancePanel); appearancePanel.append(artTabs, genPanel, drawPanel);
+  const steps = document.createElement('nav');
+  steps.className = 'studio-steps'; steps.setAttribute('aria-label', 'Create your resident');
+  steps.innerHTML = '<button class="studio-step" type="button" id="studioLooks" aria-controls="studioAppearance" aria-current="step"><span>1</span> Appearance</button><button class="studio-step" type="button" id="studioIdentityStep" aria-controls="studioIdentity"><span>2</span> Name &amp; personality</button>';
+  appearancePanel.before(steps);
+  const backToLooks = document.createElement('button');
+  backToLooks.type = 'button'; backToLooks.id = 'studioBack'; backToLooks.className = 'btn'; backToLooks.textContent = 'Back'; backToLooks.hidden = true;
+  savePet.before(backToLooks);
+  let creationStep = 'appearance';
+  function showDrawingWorkspace() {
+    if (mode !== 'draw' || innerWidth <= 720 || innerHeight > 600) return;
+    requestAnimationFrame(() => { if (studioVeil.classList.contains('open') && !appearancePanel.hidden) drawPanel.scrollIntoView({ block: 'start', behavior: 'instant' }); });
+  }
+  function setCreationStep(next, focus = false) {
+    creationStep = editingId ? 'appearance' : next;
+    const identity = creationStep === 'identity';
+    appearancePanel.hidden = identity; identityPanel.hidden = !identity;
+    steps.hidden = !!editingId; backToLooks.hidden = !identity;
+    const looksButton = steps.querySelector('#studioLooks'), identityButton = steps.querySelector('#studioIdentityStep');
+    looksButton.toggleAttribute('aria-current', !identity); identityButton.toggleAttribute('aria-current', identity);
+    (identity ? identityButton : looksButton).setAttribute('aria-current', 'step');
+    savePet.textContent = editingId ? 'Save appearance' : identity ? 'Move it in' : 'Next: personality';
+    if (identity) identityPortrait.replaceChildren(renderPetSprite({ id: 'identity-preview', art: mode === 'generate' ? { creature } : drawingArt() }));
+    else identityPortrait.replaceChildren();
+    const sheet = studioVeil.querySelector('.sheet');
+    sheet.scrollTop = 0; studioVeil.scrollTop = 0;
+    if (focus) (identity ? identityButton : looksButton).focus({ preventScroll: true });
+    if (!identity) showDrawingWorkspace();
+  }
+  steps.querySelector('#studioLooks').addEventListener('click', () => setCreationStep('appearance', true));
+  steps.querySelector('#studioIdentityStep').addEventListener('click', () => setCreationStep('identity', true));
+  backToLooks.addEventListener('click', () => setCreationStep('appearance', true));
+
   const originInput = personalityEditor.querySelector('#petOrigin');
   const quirkSelects = [];
   const needNames = { food: 'Food', fuss: 'Attention', clean: 'Cleanliness' };
@@ -365,7 +411,7 @@ export function initStudio({ onSave }) {
   document.getElementById('genUndo').addEventListener('click', undoCreature);
   redoButton.addEventListener('click', redoCreature);
   studioVeil.addEventListener('keydown', event => {
-    if (mode !== 'generate' || !isOpen() || (!event.ctrlKey && !event.metaKey) || event.altKey) return;
+    if (creationStep !== 'appearance' || mode !== 'generate' || !isOpen() || (!event.ctrlKey && !event.metaKey) || event.altKey) return;
     if (event.target.closest('input,textarea,select,[contenteditable=true]')) return;
     if (event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redoCreature(); else undoCreature(); }
     else if (event.key.toLowerCase() === 'y') { event.preventDefault(); redoCreature(); }
@@ -390,7 +436,10 @@ export function initStudio({ onSave }) {
   }
 
   tabGenerate.addEventListener('click', () => setMode('generate'));
-  tabDraw.addEventListener('click', () => setMode('draw'));
+  tabDraw.addEventListener('click', () => {
+    setMode('draw');
+    showDrawingWorkspace();
+  });
   [tabGenerate, tabDraw].forEach(tab => {
     tab.addEventListener('keydown', e => {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -604,6 +653,7 @@ export function initStudio({ onSave }) {
         img.src=existing.art.body;
       }else previewDrawing();
     }
+    setCreationStep('appearance');
     studioVeil.classList.add('open');
     document.body.style.overflow = 'hidden';
   }
@@ -619,6 +669,7 @@ export function initStudio({ onSave }) {
     // open() rolls a fresh one anyway.
     genMount.innerHTML = '';
     drawPreview.replaceChildren();
+    identityPortrait.replaceChildren();
   }
 
   function isOpen() {
@@ -628,6 +679,10 @@ export function initStudio({ onSave }) {
   studioClose.addEventListener('click', close);
   cancelPet.addEventListener('click', close);
   savePet.addEventListener('click', () => {
+    if (!editingId && creationStep === 'appearance') {
+      if (mode === 'draw' && isEmpty() && !stamps.length) { toast('Draw a body or place a stamp first. It needs something to inhabit.'); return; }
+      setCreationStep('identity', true); return;
+    }
     const name = (petName.value || '').trim();
     if (mode === 'generate') {
       if (!creature) return;
@@ -635,7 +690,7 @@ export function initStudio({ onSave }) {
       close();
       return;
     }
-    if (isEmpty() && !stamps.length) { toast('Draw a body or place a stamp first. It needs something to inhabit.'); return; }
+    if (isEmpty() && !stamps.length) { setCreationStep('appearance', true); toast('Draw a body or place a stamp first. It needs something to inhabit.'); return; }
     const art = drawingArt();
     onSave(art, name, editingId, editingId ? null : normalizePersonalityDraft(personalityDraft));
     close();

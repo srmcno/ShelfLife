@@ -13,6 +13,16 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
+## Interface and control polish
+
+Character creation now has two reversible steps: **Appearance**, then **Name & personality**. Next opens the identity review instead of immediately adding a resident. Going back, changing art tabs, and undoing appearance changes preserve the personality draft. Existing residents still use a single appearance-editing step. Creator actions and Close stay reachable on phones and short desktop windows; landscape drawing opens the canvas beside its tools.
+
+The More menu groups household activities, sound/motion and backups. Native dropdowns share readable text, clear arrows and keyboard focus. Phone furniture choices use wider cards with an explicit **Add to shelf** action. Scene availability explains bath refusal instead of incorrectly implying bad placement.
+
+Game settings stay stable during a run: Gentle pace locks alongside the other Chase settings. Paused Chase offers a deliberate restart, preserves the selected course and quest, and keeps its header and controls in view on short desktops. Keyboard shortcuts respect text editing and browser commands. Handshake demonstrations pause if the window loses focus.
+
+Escape closes only the active dialog through its own cleanup. Focus returns to a visible opener after More-to-dialog handoffs, phone rotation and resident rerenders. Late navigation requests cannot pull focus behind another dialog.
+
 ## Small domestic disasters
 
 The shelf is now a stage. Awake neighbours approach their furniture and one another for eight kinds of small domestic comedy, with 36 endings to discover. Residents climb into the tub and splash witnesses, dispute a working lamp switch, perform dubious duets, tug over yarn, compete with the mirror, share real bowl servings, misuse the telephone, and argue or make up as their moods change. Their own bodies and limbs perform the scene, then return to their places.
