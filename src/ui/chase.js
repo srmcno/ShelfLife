@@ -1,4 +1,4 @@
-import { CHASE_VENUES, chaseRecordKey, chaseStarTarget, chaseCoaching, newChase, updateChase, jumpChase, dashChase, recordChase, chaseStars, streakMultiplier, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND, RUN_WAVES, RUN_UPGRADES, RUN_WAVE_SECONDS, chaseDuration, chaseWaveTime, chaseWaveContract, advanceChaseWave } from '../engine/chase.js';
+import { CHASE_VENUES, chaseRecordKey, chaseStarTarget, chaseCoaching, newChase, updateChase, jumpChase, dashChase, recordChase, chaseStars, streakMultiplier, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND, RUN_WAVES, RUN_UPGRADES, RUN_WAVE_SECONDS, chaseDuration, chaseWaveTime, chaseWaveContract, selectChaseUpgrade, advanceChaseWave } from '../engine/chase.js';
 import { moodOf } from '../engine/tick.js';
 import { rewardSummary } from './reward-summary.js';
 import { renderPetSprite } from '../art/sprite.js';
@@ -384,13 +384,15 @@ export function createChaseUI(root, onFinish, reportStatus) {
     quip.hidden = false; stars.hidden = true; go.hidden = true; upgrades.hidden = false;
     upgrades.replaceChildren(...Object.entries(RUN_UPGRADES).filter(([id]) => !game.upgrades.includes(id)).map(([id, data]) => {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'chase-upgrade btn';
+      button.setAttribute('aria-pressed', 'false');
       const name = document.createElement('b'), description = document.createElement('span');
       name.textContent = data.name; description.textContent = data.description; button.append(name, description);
       button.addEventListener('click', () => {
-        if (!advanceChaseWave(game, id)) return;
-        upgrades.hidden = true; go.hidden = false; quip.hidden = true;
-        nodes.clear(); items.replaceChildren(); fx.replaceChildren(); hudKey = ''; paint(); run();
-        message('ACT ' + (game.wave + 1) + ' · ' + RUN_WAVES[game.wave].name, 'good');
+        if (!selectChaseUpgrade(game, id)) return;
+        for (const option of upgrades.children) option.setAttribute('aria-pressed', String(option === button));
+        quip.textContent = 'Selected: ' + data.name + '. You can change your choice before continuing.';
+        go.textContent = 'Begin act ' + (game.wave + 2); go.hidden = false;
+        onStatus(data.name + ' selected. The clock is still stopped. Choose Begin act ' + (game.wave + 2) + ' when you are ready.');
       });
       return button;
     }));
@@ -471,7 +473,16 @@ export function createChaseUI(root, onFinish, reportStatus) {
   // Touch actions fire on press. Waiting for click adds the entire thumb-hold
   // duration to a jump, and prevented running/steering/jumping together on phones.
   wireChaseAction(hop,jump,()=>running);wireChaseAction(dash,burst,()=>running);
-  go.addEventListener('click', () => { if (paused) run(); else start(); });
+  go.addEventListener('click', () => {
+    if (running) return;
+    if (game?.awaitingChoice) {
+      if (!advanceChaseWave(game)) return;
+      upgrades.hidden = true; quip.hidden = true;
+      nodes.clear(); items.replaceChildren(); fx.replaceChildren(); hudKey = ''; paint(); run();
+      message('ACT ' + (game.wave + 1) + ' · ' + RUN_WAVES[game.wave].name, 'good');
+    } else if (paused) run();
+    else start();
+  });
   pauseButton.addEventListener('click', pause);
   document.addEventListener('keydown', e => {
     const typing = e.target?.nodeType === 1 && ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName);
@@ -513,7 +524,7 @@ export function createChaseUI(root, onFinish, reportStatus) {
       go.textContent = format === 'run' ? 'Begin the midnight run' : 'Let’s chase'; go.hidden = false; upgrades.hidden = true; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; disabled(true);
       hop.textContent = game.wings ? 'Flap ↑' : 'Hop ↑';
       const trait = game.wings ? 'Wings: tap Flap again in midair.' : game.horns ? 'Horns block your first dust ambush.' : game.halo ? 'Your halo pulls nearby crumbs closer.' : game.tail ? 'Tail: a bigger stomp bounce.' : 'Keyboard: arrows + Space.';
-      mobileGuide.textContent = 'Hold ← or → to move. Tap the middle ' + (game.wings ? 'Flap' : 'Hop') + ' button to jump. You can hold a direction and jump together. Dragging the arena also works. Dash is an optional extra above the arena. ' + (game.wings || game.horns || game.halo || game.tail ? trait : '');
+      mobileGuide.textContent = 'Hold ← or → to move. Tap ' + (game.wings ? 'Flap' : 'Hop') + ' to jump. You can hold a direction and jump together. Dragging the arena also works. Dash is an optional burst in your steering direction. ' + (game.wings || game.horns || game.halo || game.tail ? trait : '');
       const modeRecord = pet.chaseRecords?.[chaseRecordKey(game)];
       const record = modeRecord ? ' ' + (format === 'run' ? 'Midnight Run' : gentle ? 'Gentle' : 'Standard') + ' best: ' + modeRecord.score + '.' : ' Separate records for every ground, length and pace.';
       description.textContent += game.venue==='pantry'?' More falling biscuits, each worth 50 base points.':game.venue==='moon'?' The moon lends you longer, higher jumps.':'';

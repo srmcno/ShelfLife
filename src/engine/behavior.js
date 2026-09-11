@@ -51,6 +51,7 @@ export const USE_COOLDOWN_MS = 45 * 60 * 1000;   // the same pet, the same prop,
 export const REFILL_MS = 40 * 60 * 1000;
 export const DEPLETE_AT = 2;            // uses before a bowl / ball of yarn is spent
 export const MISCHIEF_COOLDOWN_MS = 2 * 60 * 60 * 1000;
+export const ROUTINE_GAIN = { preen: 8, company: 8, host: 2 };
 export const CATCHUP_AFTER_MS = 90 * 60 * 1000;
 export const MAX_CATCHUP_PASSES = 3;
 
@@ -90,8 +91,8 @@ export function anatomyOf(pet) {
   const art = pet && pet.art;
   let raw = (art && (art.anatomy || (art.creature && art.creature.anatomy))) || (pet && pet.anatomy);
   if (!raw && art && Array.isArray(art.stamps)) {
-    const kinds = new Set(art.stamps.map(s => s.kind));
-    if (['arms', 'legs', 'wing', 'tentacles'].some(k => kinds.has(k))) raw = {
+    const kinds = new Set(art.stamps.map(s => s?.kind));
+    if (['arms', 'legs', 'wing', 'tentacles', 'tail'].some(k => kinds.has(k))) raw = {
       hasArms: kinds.has('arms'), armCount: kinds.has('arms') ? 2 : 0,
       hasLegs: kinds.has('legs') || kinds.has('tentacles'), legCount: kinds.has('tentacles') ? 6 : kinds.has('legs') ? 2 : 0,
       hasWings: kinds.has('wing'), hasTail: kinds.has('tail'), hasTentacles: kinds.has('tentacles')
@@ -241,6 +242,17 @@ export const SOCIAL_PULL = {
 export const ROOTEDNESS = {
   loadbearing: 4, landlord: 2, hoarder: 2, method: 1.5, ancient: 1, napoleon: 1,
   cryptid: -2, cult: -1.5, clingy: -1.5, feral: -1.5, socialite: -1.5, magpie: -1
+};
+
+// Small, useful habits sit alongside the existing anatomy-driven mischief.
+// They use its two-hour per-resident rest and add neither trust nor care credit.
+const ROUTINE_TRAITS = {
+  preen: ['clean', 'etiquette', 'porcelain'],
+  company: ['socialite', 'clingy', 'theatrical', 'hummer', 'physician', 'steward']
+};
+const ROUTINE_READOUT = {
+  preen: { id: 'preen', label: 'Keeps itself presentable', text: 'Preens below 55 cleanliness for +8 cleanliness, at most once every two hours.' },
+  company: { id: 'company', label: 'Raises a neighbour’s spirits', text: 'With at least 55 attention, offers company to a friendly awake neighbour below 50 attention: +8 for them and +2 for itself. Both then rest from personal antics for two hours.' }
 };
 
 // What using a prop actually does. Negative gain = the prop makes it worse,
@@ -531,6 +543,20 @@ const MISCHIEF_LINES = {
   ]
 };
 
+const PREEN_LINES = {
+  clean: 'Scraped a layer of shelf dust off itself. Has placed the dust in a smaller, less respectable pile.',
+  etiquette: 'Made itself presentable before judging the shelf. The loose dust has been seated separately.',
+  porcelain: 'Polished an inch of itself until the dust could see what it was missing. There are another three inches to go.'
+};
+const COMPANY_LINES = {
+  socialite: 'Kept {n} company at the edge of the plank. {n} looked steadier afterwards. It has called this a successful event.',
+  clingy: 'Sat close to {n} until the bad mood had no room left. Maintains this was a purely selfish arrangement.',
+  theatrical: 'Performed the death of a crumb for {n}. The crumb survived. {n} looked less miserable.',
+  hummer: 'Hummed a funeral march for {n}’s bad mood. The mood declined to die but agreed to improve.',
+  physician: 'Listened to {n}’s complaints from four inches away. Prescribed sitting together. Unlicensed; temporarily effective.',
+  steward: 'Held a shelf meeting about {n}’s bad mood. {n} looked steadier afterwards. The minutes were eaten.'
+};
+
 const CATCHUP_LINES = [
   'The shelf is not arranged the way you left it. Everything is an inch off.',
   'Two things have swapped slots. The dust under both has been swept.',
@@ -609,6 +635,26 @@ export function affinityFor(pet, kind) {
 // Positive: wants neighbors. Negative: wants the empty end of the shelf.
 export function socialPull(pet) {
   return clamp(traitSum(pet, SOCIAL_PULL), -3, 3);
+}
+
+// A pure description of the same rules used by the simulation. Creation and
+// resident cards can explain a personality without advancing or editing a save.
+export function behaviorProfile(pet) {
+  const pull = socialPull(pet);
+  const furniture = Object.keys(PROPS).map(kind => ({ kind, name: propName(kind), affinity: affinityFor(pet, kind) }));
+  const trait = id => Array.isArray(pet?.traits) && pet.traits.includes(id) && knownTrait(id);
+  return {
+    social: {
+      pull,
+      label: pull > 0 ? 'Seeks company' : pull < 0 ? 'Values personal space' : 'Flexible about company',
+      text: pull > 0 ? 'Prefers neighbours it gets along with; feuds and remembered incidents can still send it elsewhere.'
+        : pull < 0 ? 'Prefers a little empty space. Trusted companions and favourite furniture can outweigh that preference.'
+          : 'Company alone does not pull it around. Its needs, furniture preferences and actual relationships decide.'
+    },
+    favorites: furniture.filter(p => p.affinity > 0).sort((a, b) => b.affinity - a.affinity || a.name.localeCompare(b.name)).slice(0, 3),
+    dislikes: furniture.filter(p => p.affinity < 0).sort((a, b) => a.affinity - b.affinity || a.name.localeCompare(b.name)).slice(0, 3),
+    routines: Object.entries(ROUTINE_TRAITS).filter(([, traits]) => traits.some(trait)).map(([id]) => ({ ...ROUTINE_READOUT[id] }))
+  };
 }
 
 // How much better somewhere else has to be before this pet will get up.
@@ -1166,6 +1212,55 @@ function awakePets(state, now) {
   return state.pets.filter(p => state.slots.indexOf(p.id) >= 0 && !safeAsleep(p, now));
 }
 
+function activityReady(pet, now) {
+  const at = pet.lastMischiefAt;
+  return !Number.isFinite(at) || at <= 0 || now - at >= MISCHIEF_COOLDOWN_MS;
+}
+
+// Helpful routines depend on actual needs and neighbours. At most one routine
+// happens in a mischief pass, with the same rest during offline catch-up.
+export function routinePhase(state, now = Date.now()) {
+  const awake = awakePets(state, now), options = [];
+  for (const pet of awake) {
+    if (!activityReady(pet, now) || !pet.needs) continue;
+    const traits = Array.isArray(pet.traits) ? pet.traits : [];
+    const preenTrait = ROUTINE_TRAITS.preen.find(id => traits.includes(id));
+    if (preenTrait && Number.isFinite(pet.needs.clean) && pet.needs.clean < 55) {
+      options.push({ act: 'preen', pet, target: pet, trait: preenTrait, need: 'clean', urgency: 55 - pet.needs.clean });
+    }
+    const companyTrait = ROUTINE_TRAITS.company.find(id => traits.includes(id));
+    if (!companyTrait || !Number.isFinite(pet.needs.fuss) || pet.needs.fuss < 55) continue;
+    const i = state.slots.indexOf(pet.id);
+    for (const slot of neighborSlots(i, state.slots.length)) {
+      const other = awake.find(p => p.id === state.slots[slot]);
+      if (!other || !activityReady(other, now) || !Number.isFinite(other.needs?.fuss) || other.needs.fuss >= 50 || socialPull(other) < -1) continue;
+      const truce = state.feudArcs?.[feudPairKey(pet.id, other.id)]?.truce;
+      if (petsFeud(pet, other) && !truce || frictionBetween(state, pet.id, other.id, now) >= 1) continue;
+      options.push({ act: 'company', pet, target: other, trait: companyTrait, need: 'fuss', urgency: 50 - other.needs.fuss });
+    }
+  }
+  // The greatest real need goes first. Equal needs rotate through the existing
+  // cooldown rather than letting array order drain every benefit into one pet.
+  options.sort((a, b) => b.urgency - a.urgency);
+  const action = options[0];
+  if (!action) return null;
+  const { act, pet, target, trait, need } = action;
+  const before = target.needs[need];
+  target.needs[need] = clamp(before + ROUTINE_GAIN[act], 0, 100);
+  const gain = target.needs[need] - before;
+  let hostGain = 0;
+  if (act === 'company') {
+    const own = pet.needs.fuss;
+    pet.needs.fuss = clamp(own + ROUTINE_GAIN.host, 0, 100); hostGain = pet.needs.fuss - own;
+  }
+  pet.lastMischiefAt = now; target.lastMischiefAt = now;
+  const line = act === 'preen' ? PREEN_LINES[trait] : COMPANY_LINES[trait];
+  const effect = act === 'preen' ? '+' + gain + ' cleanliness.' : target.name + ' +' + gain + ' attention' + (hostGain ? '; ' + pet.name + ' +' + hostGain + ' attention' : '') + '.';
+  const text = fill(line, { p: pet, n: target }) + ' ' + effect;
+  if (!state.notes.some(note => note.text === text && note.from === pet.name)) addNote(state, text, pet.name, 'note');
+  return { act, pet: pet.id, target: target.id, prop: null, need, gain, hostGain };
+}
+
 // The thief flag, with a motive: it robs whichever neighbor has the most left.
 // Arms let it rob somebody a slot further away, over the top of a witness.
 export function stealPhase(state, now = Date.now()) {
@@ -1224,8 +1319,11 @@ export function aversionPhase(state, now = Date.now()) {
    things over, limbless things roll into the furniture, and anything else is
    simply closer than you left it. One per pass. */
 export function mischiefPhase(state, now = Date.now()) {
+  const routine = routinePhase(state, now);
+  if (routine) return routine;
   const options = [];
   awakePets(state, now).forEach(pet => {
+    if (!activityReady(pet, now)) return;
     const caps = capabilitiesOf(pet);
     const i = state.slots.indexOf(pet.id);
     const props = occupantsAt(state, i, state.slots).props;
@@ -1235,9 +1333,9 @@ export function mischiefPhase(state, now = Date.now()) {
     options.push({ act: 'lurk', pet });
   });
   if (!options.length) return null;
-  // Spread it around: prefer somebody who has not just done something.
-  const fresh = options.filter(o => now - (o.pet.lastMischiefAt || 0) > MISCHIEF_COOLDOWN_MS);
-  const choice = pick(fresh.length ? fresh : options);
+  // Rest is real even on a solo shelf. Falling back to recent residents used
+  // to bypass the advertised cooldown and repeat the same antics every pass.
+  const choice = pick(options);
   const { act, pet, prop } = choice;
   if (act === 'hang' && pet.needs && typeof pet.needs.fuss === 'number') {
     pet.needs.fuss = clamp(pet.needs.fuss + 5, 0, 100);

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { newChase, updateChase, advanceChaseWave, jumpChase, dashChase, recordChase, chaseStars, chaseStarTarget, chaseDuration } from '../src/engine/chase.js';
+import { newChase, updateChase, selectChaseUpgrade, advanceChaseWave, jumpChase, dashChase, recordChase, chaseStars, chaseStarTarget, chaseDuration } from '../src/engine/chase.js';
 import { rewardHandshake } from '../src/engine/play.js';
 import { blankState, normalizeState } from '../src/state.js';
 
@@ -68,6 +68,29 @@ test('midnight upgrades alter distinct player tactics instead of granting free c
   assert.equal(salvage.items.length, 1); assert.equal(lost.items.length, 0);
   updateChase(salvage, { targetX: 70 }, .25); updateChase(salvage, { targetX: 70 }, .25);
   assert.equal(salvage.caught, 1); assert.equal(salvage.score, 18, 'salvage bonus requires returning to the floor crumb');
+});
+
+test('choosing an upgrade stops at a changeable selection until the player begins the next act', () => {
+  const game = newChase(pet(), { format: 'run', seed: 2 });
+  assert.equal(selectChaseUpgrade(game, 'boots'), false, 'upgrades are only available between acts');
+  while (!game.awaitingChoice) updateChase(game, {}, .25);
+  assert.equal(advanceChaseWave(game), false, 'a selection is required before beginning the next act');
+  assert.equal(selectChaseUpgrade(game, 'boots'), true);
+  assert.equal(game.pendingUpgrade, 'boots'); assert.deepEqual(game.upgrades, []);
+  const selected = JSON.stringify(game);
+  for (let n = 0; n < 60; n++) updateChase(game, { axis: 1 }, 1);
+  assert.equal(JSON.stringify(game), selected, 'reading the selected upgrade spends no time or points');
+  assert.equal(selectChaseUpgrade(game, 'spring'), true, 'the player may revise the selection');
+  assert.equal(selectChaseUpgrade(game, 'unknown'), false); assert.equal(game.pendingUpgrade, 'spring');
+  assert.equal(advanceChaseWave(game), true);
+  assert.equal(game.wave, 1); assert.equal(game.time, 18); assert.equal(game.venue, 'pantry');
+  assert.deepEqual(game.upgrades, ['spring']); assert.equal(game.pendingUpgrade, null);
+  assert.equal(advanceChaseWave(game), false, 'a second activation cannot skip an act');
+  while (!game.awaitingChoice) updateChase(game, {}, .25);
+  assert.equal(selectChaseUpgrade(game, 'spring'), false, 'an owned upgrade cannot be selected again');
+  assert.equal(game.pendingUpgrade, null); assert.equal(advanceChaseWave(game), false);
+  assert.equal(selectChaseUpgrade(game, 'boots'), true); assert.equal(advanceChaseWave(game), true);
+  assert.equal(game.wave, 2); assert.deepEqual(game.upgrades, ['spring', 'boots']);
 });
 
 test('broom warnings allow three counterplays and an ignored sweep hits only once', () => {

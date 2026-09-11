@@ -145,6 +145,10 @@ body[data-effects=light] .project-moving{animation:none!important}
 .project-in-use.project-drawer .project-occupant{animation:project-lift 2.5s ease-in-out both}
 .project-in-use.project-fridge .project-occupant,.project-in-use.project-cupboard .project-occupant{animation:project-operate 2.5s ease-in-out both}
 #lifeVeil .trail-workspace:has(.mission-result) .expedition-prize{display:none}
+.mission-haul{border-top:1px solid #abc9ae55;padding-top:14px;text-align:left;font-size:13px;line-height:1.5}
+.mission-haul>span{display:block}.mission-haul b{font-size:20px;margin-left:6px;color:#e5d39a}
+.mission-haul p{margin:12px 0 0}.mission-haul strong{font-weight:600;color:#f4e7cf}
+.mission-haul small{display:block;font-size:12px;color:#b8cfc4;margin-top:3px}
 @media(max-width:720px){.project-card{display:grid}.project-occupant{transform:scale(.72);transform-origin:center bottom}.project-drawer .project-occupant{left:43%;bottom:37%}.project-fridge .project-occupant{left:0;bottom:35%}.project-cupboard .project-occupant{left:22%;bottom:40%}}
 @media(prefers-reduced-motion:reduce){.project-occupant{animation:none!important}}
 body[data-effects=light] .project-occupant{animation:none!important}

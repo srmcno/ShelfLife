@@ -272,7 +272,7 @@ function investigationResult(game,reward) {
   return {name:suspect.name,culprit:i===game.answer,failed,text:i===game.answer?'Fits every crime clue.':'Ruled out by clue '+failed.join(' and ')+'.',explanation:failed.map(n=>contradiction(game.axes,suspect.facts,game.rules[n-1])).join(' ')};
  });
  const culprit=game.suspects[game.answer],text=culprit.name+' is the only suspect who fits all '+game.clues.length+' crime clues. '+game.trial.sentence;
- return {correct:true,retry:false,bond:reward.bond,fuss:reward.fuss,text,reasons,dialogue:[{speaker:'Judge Mortis',text:game.trial.conviction},{speaker:culprit.name,text:game.trial.plea},{speaker:'Judge Mortis',text:game.trial.sentence}],level:game.level,rank:game.rank,stats:{...game.stats},score:courtScore(game)};
+ return {correct:true,retry:false,bond:reward.bond,fuss:reward.fuss,rewardReason:reward.reason,text,reasons,dialogue:[{speaker:'Judge Mortis',text:game.trial.conviction},{speaker:culprit.name,text:game.trial.plea},{speaker:'Judge Mortis',text:game.trial.sentence}],level:game.level,rank:game.rank,stats:{...game.stats},score:courtScore(game)};
 }
 export function finishCourt(state,suspect,now=Date.now()) {
  const game=currentCourt(state),l=lifeState(state),saved=l.court;
@@ -286,7 +286,7 @@ export function finishCourt(state,suspect,now=Date.now()) {
  // Use the established reward boundary once, after a legal completed hearing.
  // Reconstruction only restores display state and never calls this function.
  const result=accuseCourt(state,game,suspect,now);if(!result)return null;
- saved.moves.push({type:'file',suspect});saved.claimed=true;saved.reward={bond:result.bond,fuss:result.fuss};
+ saved.moves.push({type:'file',suspect});saved.claimed=true;saved.reward={bond:result.bond,fuss:result.fuss,reason:result.rewardReason};
  const finished=currentCourt(state);l.courtBest=Math.max(l.courtBest,finished.result.score);return finished.result;
 }
 // An assistance button explains one rule at a time, without identifying the
@@ -302,7 +302,8 @@ export function accuseCourt(state,game,choice,now=Date.now()) {
  const l=lifeState(state),correct=choice===game.answer,p=state.pets.find(p=>p.id===game.petId);
  l.courtPlays++;if(correct)l.courtWins++;
  tick(state,now);let bond=0,fuss=0;
- if(correct&&!playWait(p,now,'court')&&!isAsleep(p,new Date(now))){bond=grantBonusTrust(p,1,now);fuss=Math.min(16,100-p.needs.fuss);p.needs.fuss=clamp(p.needs.fuss+fuss,0,100);p.playedAt||={};p.playedAt.court=now;p.lastPlayed=now;}
+ const rewardReason=correct?(isAsleep(p,new Date(now))?'asleep':playWait(p,now,'court')?'rest':'ready'):undefined;
+ if(correct&&rewardReason==='ready'){bond=grantBonusTrust(p,1,now);fuss=Math.min(16,100-p.needs.fuss);p.needs.fuss=clamp(p.needs.fuss+fuss,0,100);p.playedAt||={};p.playedAt.court=now;p.lastPlayed=now;}
  if(correct)recordGameLife(state,p,'court',now);
  const culprit=game.suspects[game.answer];
  const reasons=game.suspects.map((suspect,i)=>{
@@ -315,5 +316,5 @@ export function accuseCourt(state,game,choice,now=Date.now()) {
  const dialogue=[{speaker:'Judge',text:correct?game.trial.conviction:game.trial.acquittal},
   {speaker:'Prosecutor',text:culprit.name+' is the only suspect who survives all '+game.clues.length+' exhibits.'},
   {speaker:culprit.name,text:game.trial.plea},{speaker:'Judge',text:game.trial.sentence}];
- return {correct,bond,fuss:Math.round(fuss),text,reasons,dialogue,level:game.level};
+ return {correct,bond,fuss:Math.round(fuss),rewardReason,text,reasons,dialogue,level:game.level};
 }

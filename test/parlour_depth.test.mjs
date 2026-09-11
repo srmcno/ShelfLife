@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { blankState, normalizeState } from '../src/state.js';
-import { newHandshake, tapHandshake, handshakePattern, handshakeDemonstration, handshakeRecordKey, restartHandshake, rewardHandshake } from '../src/engine/play.js';
+import { newHandshake, tapHandshake, handshakePattern, handshakeDemonstration, handshakeRecordKey, restartHandshake, replayHandshake, rewardHandshake } from '../src/engine/play.js';
 import { newAlibi, currentRound, answerAlibi, advanceAlibi, rewardAlibi, alibiRank, alibiReaction, statementsFor } from '../src/engine/alibi.js';
 const now = new Date(2026,8,10,12).getTime();
 function shelf() { const state = blankState(); state.lastTick = now; state.pets = [{ id:'p', name:'Mrs Clot', born:now - 100000, traits:[], needs:{food:50,fuss:40,clean:50}, bond:0, careLog:{ food:2, fuss:1, clean:4 } }]; state.slots[0] = 'p'; return state; }
@@ -34,6 +34,30 @@ test('Exact ritual replay resets progress without mutating the completed challen
  const game=newHandshake(shelf().pets[0],rng(),{ritual:'duet',encore:true}); finish(game); game.claimed=true;
  const replay=restartHandshake(game); assert.equal(replay.round,0); assert.equal(replay.complete,false); assert.equal(replay.claimed,false);
  assert.deepEqual(replay.sequence,game.sequence); replay.sequence[0]=(replay.sequence[0]+1)%4; assert.notDeepEqual(replay.sequence,game.sequence); assert.equal(game.complete,true);
+});
+test('replaying a pattern preserves completed rounds, mistakes and the exact challenge',()=>{
+ for(const ritual of ['echo','mirror','duet']) {
+  const game=newHandshake(shelf().pets[0],rng(),{ritual});
+  for(const gesture of handshakePattern(game))tapHandshake(game,gesture);
+  const pattern=handshakePattern(game), sequence=game.sequence.slice();
+  tapHandshake(game,(pattern[0]+1)%4);
+  tapHandshake(game,pattern[0]);
+  assert.equal(game.cursor,1);assert.equal(game.round,1);assert.equal(game.mistakes,1);
+  assert.equal(replayHandshake(game),true);
+  assert.equal(game.cursor,0);assert.equal(game.round,1);assert.equal(game.mistakes,1);assert.equal(game.replays,1);
+  assert.deepEqual(handshakePattern(game),pattern);assert.deepEqual(game.sequence,sequence);
+  finish(game);const completed=structuredClone(game);
+  assert.equal(replayHandshake(game),false);assert.deepEqual(game,completed);
+ }
+ assert.equal(replayHandshake(null),false);
+});
+
+test('handshake rewards report the actual small top-up instead of rounding it away',()=>{
+ const state=shelf(), pet=state.pets[0];pet.needs.fuss=99.75;
+ const game=newHandshake(pet,rng());finish(game);
+ const result=rewardHandshake(state,game,now);
+ assert.equal(result.fuss,.25);assert.equal(pet.needs.fuss,100);
+ assert.equal(rewardHandshake(state,game,now),null);
 });
 test('Evidence investigation requires a deliberate valid proof and guards double accusations',()=>{
  const state=shelf(), game=newAlibi(state,state.pets[0],rng(),{mode:'prove'}), round=currentRound(game);

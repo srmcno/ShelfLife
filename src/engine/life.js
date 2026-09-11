@@ -89,7 +89,7 @@ export function outingSnapshot(state) {
   const stored=lifeState(state).projectParts[o.route]||[],parts=[...new Set([...stored,...recovered])];
   return {...o,steps,baseScore,dareMet,dareBonus,recovered,parts,project:o.mission?PROJECTS.find(p=>p.id===o.route):null,best:search(0,2,false),options:step?[0,1,2].map(choice=>{
     const move=trailMove(step,o.gear,expertise,nerve,toolUsed,choice),cost=expertise.includes(step.stat)?1:2;
-    const part=PROJECTS.find(p=>p.id===o.route)?.parts[o.step],pickup=stored.includes(o.step)?'Already stored · record attempt':'Recover: '+part;
+    const part=PROJECTS.find(p=>p.id===o.route)?.parts[o.step],pickup=stored.includes(o.step)?'Already stored · earn trail points':'Recover: '+part;
     const missionHint=choice===0?'Leave the part · restore 2 nerve':choice===1?pickup+' · spend '+cost+' nerve':toolUsed?'Equipment already used':step.good===o.gear?pickup+' · use tool · no nerve cost':'Your packed tool fits another stop';
     return {choice,available:!!move&&(!o.mission||choice!==2||step.good===o.gear),label:choice===0?(o.mission?'Leave this part & recover':'Take the quiet way around'):choice===1?step.options[1]:step.good===o.gear?step.options[0]:o.mission?'Save the tool for another stop':'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:o.mission?missionHint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
   }):[]};

@@ -20,6 +20,16 @@ test('blankState has the v4 shape', () => {
   assert.equal(s.settings.matureMode, undefined);
 });
 
+test('restoring a resident preserves valid routine cooldowns and repairs malformed timestamps', () => {
+  const now = Date.now();
+  for (const [value, expected] of [[now - 30000, now - 30000], [-1, 0], ['bad', 0], [undefined, 0]]) {
+    const loaded = normalizeState({pets:[{id:'routine',name:'Pip',lastMischiefAt:value}]});
+    assert.equal(loaded.pets[0].lastMischiefAt, expected);
+  }
+  const restored = normalizeState({pets:[{id:'routine',name:'Pip',lastMischiefAt:now+86400000}]});
+  assert.ok(restored.pets[0].lastMischiefAt <= Date.now());
+});
+
 test('migratePet upgrades a v3 flattened-image pet', () => {
   const old = { id: 'p1', name: 'Gnash', img: 'data:image/png;base64,AAA', traits: ['spiteful'], needs: defaultNeeds(), bond: 3, cared: 2, grudges: 1 };
   const migrated = migratePet(old);

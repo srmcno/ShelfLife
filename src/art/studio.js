@@ -26,6 +26,8 @@ import { drawingBounds, measureStampInk } from './drawing.js';
 import { reactTo } from './animator.js';
 import { toast } from '../ui/toast.js';
 import { remixCreature } from './studio-model.js';
+import { TRAITS, TRAIT_BY_ID } from '../content/traits.js';
+import { createPersonalityDraft, normalizePersonalityDraft, resolvePersonality, creationCareRates, ORIGIN_LIMIT, CREATION_STATS } from '../engine/creation.js';
 
 // Ported verbatim from ~/Documents/shelf-life.html (lines ~475-480). Studio-only concern:
 // which brush colors are available at the shelf's current total bond.
@@ -137,6 +139,81 @@ export function initStudio({ onSave }) {
 
   let mode = 'generate';
   let editingId=null, openGeneration=0;
+  let personalityDraft = null;
+  const personalityEditor = document.createElement('section');
+  personalityEditor.className = 'personality-editor';
+  personalityEditor.setAttribute('aria-labelledby', 'personalityTitle');
+  personalityEditor.innerHTML = `
+    <div class="personality-heading"><h3 id="personalityTitle">Someone in there</h3><button type="button" class="btn btn-ghost btn-sm" id="shufflePersonality">Shuffle personality</button></div>
+    <p class="hint" id="personalityHelp">Choose two quirks, or add a third. These shape care, friendships and shelf habits. Changing the appearance keeps them.</p>
+    <div class="personality-quirks"></div>
+    <div class="personality-preview" role="status" aria-live="polite" aria-atomic="true">
+      <h4>Particulars · final stats</h4><dl class="personality-stats"></dl>
+      <p class="hint personality-stat-help">Cute improves fussing. Menace wins arguments over furniture. Damp attracts grime. Mystique attracts case files.</p>
+      <h4>Care at a glance</h4><p class="personality-rates"></p>
+    </div>
+    <p class="hint">Care shows points lost per daytime hour, including Damp. Furniture and neighbours can help; needs fall more slowly at night.</p>
+    <label class="tool-label" for="petOrigin">Where did they come from? <span>(optional)</span></label>
+    <textarea id="petOrigin" rows="2" maxlength="${ORIGIN_LIMIT}" aria-describedby="petOriginHint petOriginCount" placeholder="Found behind the radiator. Claims to own the building."></textarea>
+    <div class="personality-origin-help"><p class="hint" id="petOriginHint">Your short backstory becomes their introduction. Leave blank for a ready-made one.</p><span id="petOriginCount">0 / ${ORIGIN_LIMIT}</span></div>
+    <details class="personality-introduction"><summary>Read their introduction</summary><p></p></details>`;
+  petName.closest('.tool-block').before(personalityEditor);
+  const originInput = personalityEditor.querySelector('#petOrigin');
+  const quirkSelects = [];
+  const needNames = { food: 'Food', fuss: 'Attention', clean: 'Cleanliness' };
+  const sortedTraits = TRAITS.slice().sort((a, b) => a.name.localeCompare(b.name));
+  for (let index = 0; index < 3; index++) {
+    const field = document.createElement('div');
+    field.className = 'personality-quirk';
+    field.innerHTML = `<label class="tool-label" for="petQuirk${index}">${['First quirk', 'Second quirk', 'Third quirk (optional)'][index]}</label><select id="petQuirk${index}" aria-describedby="petQuirkInfo${index} personalityHelp"></select><p id="petQuirkInfo${index}" class="personality-quirk-info"></p>`;
+    const select = field.querySelector('select');
+    if (index === 2) select.add(new Option('Just two, thanks', ''));
+    for (const trait of sortedTraits) select.add(new Option(trait.name, trait.id));
+    select.addEventListener('change', () => {
+      personalityDraft = normalizePersonalityDraft({ ...personalityDraft, traits: quirkSelects.map(input => input.value) });
+      syncPersonality();
+    });
+    quirkSelects.push(select);
+    personalityEditor.querySelector('.personality-quirks').append(field);
+  }
+  function syncPersonality() {
+    const resolved = resolvePersonality(personalityDraft);
+    quirkSelects.forEach((select, index) => {
+      const id = personalityDraft.traits[index] || '';
+      select.value = id;
+      for (const option of select.options) option.disabled = !!option.value && option.value !== id && personalityDraft.traits.includes(option.value);
+      const trait = TRAIT_BY_ID[id];
+      const info = personalityEditor.querySelector('#petQuirkInfo' + index);
+      if (!trait) { info.textContent = 'Two quirks make a complete personality.'; return; }
+      const effects = Object.entries(trait.care || {}).map(([need, multiplier]) =>
+        `${needNames[need]} falls ${Math.round(Math.abs(multiplier - 1) * 100)}% ${multiplier < 1 ? 'slower' : 'faster'}`);
+      if (trait.nocturnal) effects.push('Sleeps 7am–8pm: care has half effect and games are practice');
+      info.textContent = trait.blurb + ' ' + (effects.length ? effects.join(' · ') + '.' : 'No direct change to need loss.');
+    });
+    const stats = personalityEditor.querySelector('.personality-stats');
+    stats.replaceChildren(...CREATION_STATS.map(key => {
+      const item = document.createElement('div');
+      const label = document.createElement('dt'); label.textContent = key[0].toUpperCase() + key.slice(1);
+      const value = document.createElement('dd'); value.textContent = resolved.stats[key] + ' / 10';
+      item.append(label, value); return item;
+    }));
+    const rates = creationCareRates(personalityDraft);
+    personalityEditor.querySelector('.personality-rates').textContent = Object.entries(rates)
+      .map(([need, rate]) => `${needNames[need]} −${rate.toFixed(1)} / hour`).join(' · ');
+    syncOrigin();
+  }
+  function syncOrigin() {
+    personalityEditor.querySelector('#petOriginCount').textContent = originInput.value.length + ' / ' + ORIGIN_LIMIT;
+    personalityEditor.querySelector('.personality-introduction p').textContent = resolvePersonality(personalityDraft).bio;
+  }
+  originInput.addEventListener('input', () => {
+    personalityDraft = { ...personalityDraft, origin: originInput.value };
+    syncOrigin();
+  });
+  personalityEditor.querySelector('#shufflePersonality').addEventListener('click', () => {
+    personalityDraft = { ...createPersonalityDraft(), origin: originInput.value };
+    syncPersonality();
+  });
   let creature = null;
   let selectedPart = 'body';
   const undo = [];
@@ -499,6 +576,11 @@ export function initStudio({ onSave }) {
     stampEls = [];
     stampLayer.innerHTML = '';
     petName.value = existing?.name||''; petName.disabled=!!existing;
+    personalityEditor.hidden = !!existing;
+    personalityDraft = existing ? null : createPersonalityDraft();
+    originInput.value = '';
+    personalityEditor.querySelector('.personality-introduction').open = false;
+    if (!existing) syncPersonality();
     brush.stamp = null;
     drawing = false; lastPt = null;
     rebuildPalette(unlockedBond);
@@ -549,13 +631,13 @@ export function initStudio({ onSave }) {
     const name = (petName.value || '').trim();
     if (mode === 'generate') {
       if (!creature) return;
-      onSave({ creature }, name, editingId);
+      onSave({ creature }, name, editingId, editingId ? null : normalizePersonalityDraft(personalityDraft));
       close();
       return;
     }
     if (isEmpty() && !stamps.length) { toast('Draw a body or place a stamp first. It needs something to inhabit.'); return; }
     const art = drawingArt();
-    onSave(art, name, editingId);
+    onSave(art, name, editingId, editingId ? null : normalizePersonalityDraft(personalityDraft));
     close();
   });
 

@@ -76,6 +76,12 @@ export function handshakePattern(game) {
 export function restartHandshake(game) {
   return { ...game, sequence: game.sequence.slice(), names: game.names.slice(), round: 0, cursor: 0, mistakes: 0, replays: 0, complete: false, claimed: false };
 }
+export function replayHandshake(game) {
+  if (!game || game.complete) return false;
+  game.cursor = 0;
+  game.replays = (game.replays || 0) + 1;
+  return true;
+}
 export function newHandshake(pet, rng = Math.random, { encore = false, ritual = 'echo' } = {}) {
   const rounds = encore ? 5 : handshakeRounds(pet);
   return {
@@ -124,5 +130,5 @@ export function rewardHandshake(state, game, now = Date.now()) {
   pet.lastPlayed = now;
   pet.playedAt ||= {}; pet.playedAt[kind] = now;
   addNote(state, pet.name + (game.kind === 'chase' ? ' chased down ' + game.caught + ' crumbs and dodged ' + game.dodged + (game.dodged === 1 ? ' dust bunny.' : ' dust bunnies.') + ' It insists this was serious work.' : ' has taught you the secret handshake. It works without hands. This is now your problem.'), pet.name, 'note');
-  return { practice: false, fuss: Math.round(fuss), bond };
+  return { practice: false, fuss, bond };
 }

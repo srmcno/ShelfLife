@@ -50,7 +50,12 @@ export function errandPurchasePreview(snapshot, item, trade=null) {
     buttons:after.buttons,
     ready:after.requests.flatMap(request=>deliveryOptions(after,request)
       .filter(pair=>pair.some(p=>p.id===item.id)).map(pair=>({request,pair}))),
-    helps:after.requests.filter(request=>!after.delivered.includes(request.id)&&request.tags.some(tag=>item.tags.includes(tag)))
+    helps:after.requests.filter(request=>!after.delivered.includes(request.id)&&request.tags.some(tag=>item.tags.includes(tag))),
+    // The other offer at this stall is not a future partner: buying advances
+    // the route. Show only real later stock, without promising affordability.
+    futurePairs:after.requests.filter(request=>!after.delivered.includes(request.id)).flatMap(request=>
+      after.stalls.slice(after.step).flatMap((stock,offset)=>stock.filter(partner=>pairFits([item,partner],request))
+        .map(partner=>({request,partner,step:after.step+offset}))))
   };
 }
 export function maxRemainingErrands(snapshot, passed=false) {

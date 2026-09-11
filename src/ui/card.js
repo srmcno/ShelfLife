@@ -6,7 +6,8 @@ import { careFor, previewCare } from '../engine/care.js';
 import { playWait } from '../engine/play.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 import { checkAchievements, grudgeStageFor, GRUDGE_STAGE_AT } from '../engine/achievements.js';
-import { notePlayerMove } from '../engine/behavior.js';
+import { notePlayerMove, behaviorProfile } from '../engine/behavior.js';
+import { artPersonality } from '../engine/personality.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { PROPS, PROP_ART } from '../content/props.js';
 import { renderPetSprite, moodMotionClasses } from '../art/sprite.js';
@@ -73,6 +74,17 @@ function statRow(label, key, val) {
     '<span class="bar"><span style="width:' + (val * 10) + '%"></span></span><span class="num">' + val + '</span></div>';
 }
 
+function personalityDetails(pet) {
+  const profile = behaviorProfile(pet), body = artPersonality(pet);
+  const names = items => items.map(item => escapeHtml(item.name)).join(', ');
+  return '<details class="resident-personality" id="residentPersonality"><summary id="residentPersonalitySummary">Personality &amp; shelf habits</summary>' +
+    '<p><strong>' + escapeHtml(profile.social.label) + '.</strong> ' + escapeHtml(profile.social.text) + '</p>' +
+    (profile.favorites.length ? '<p><strong>Drawn to:</strong> ' + names(profile.favorites) + '.</p>' : '') +
+    (profile.dislikes.length ? '<p><strong>Avoids:</strong> ' + names(profile.dislikes) + '.</p>' : '') +
+    (profile.routines.length ? '<ul>' + profile.routines.map(routine => '<li><strong>' + escapeHtml(routine.label) + '.</strong> ' + escapeHtml(routine.text) + '</li>').join('') + '</ul>' : '') +
+    '<p><strong>Made this way</strong></p><ul>' + body.features.map(feature => '<li>' + escapeHtml(feature.text) + '</li>').join('') + '</ul></details>';
+}
+
 // The last few things the board has said about this creature, in its own hand.
 function onFile(state, pet) {
   const all = (state.notes || []).filter(n => noteAbout(n, pet.name));
@@ -104,10 +116,12 @@ function grievanceReasons(pet) {
 export function openCard(state, id, keepScroll) {
   const pet = petById(state, id);
   if (!pet) return;
+  const preserve = keepScroll && openPetId === id && cardVeil.classList.contains('open');
+  const detailStates = new Map(preserve ? Array.from(cardSheet.querySelectorAll('details[id]'), detail => [detail.id, detail.open]) : []);
   openPetId = id;
-  const focused = keepScroll && cardSheet.contains(document.activeElement) ? { id: document.activeElement.id, care: document.activeElement.dataset.care } : null;
-  const pendingPosition = keepScroll ? document.getElementById('residentPosition')?.value : null;
-  const y = keepScroll ? (cardSheet.scrollTop || cardVeil.scrollTop) : 0;
+  const focused = preserve && cardSheet.contains(document.activeElement) ? { id: document.activeElement.id, care: document.activeElement.dataset.care } : null;
+  const pendingPosition = preserve ? document.getElementById('residentPosition')?.value : null;
+  const y = preserve ? (cardSheet.scrollTop || cardVeil.scrollTop) : 0;
   const mood = moodOf(pet);
   const asleep = isAsleep(pet);
   const dateStr = new Date(pet.born).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -132,7 +146,7 @@ export function openCard(state, id, keepScroll) {
   }).join('') + '</div>';
   html += '<p class="care-explainer">' + (pet.bond >= 25 ? 'Trust is full. The attachment is permanent.' : (3 - (pet.cared % 3)) + ' useful care actions until +1 trust. Care below 72 counts.') + (asleep ? ' Asleep: care has half effect.' : '') + '</p>';
   html += '<button class="play-invite" id="playPet"><span><b>Play together</b><small>' + (playWait(pet) || asleep ? 'Steer, hop and chase · practice available' : 'Chase, handshake or alibi · play + trust') + '</small></span><span aria-hidden="true">↗</span></button>';
-  html += '<details class="care-record"><summary>Care record · it kept the receipts</summary><p>Fed ' + (pet.careLog?.food || 0) + ' · Fussed ' + (pet.careLog?.fuss || 0) + ' · Cleaned ' + (pet.careLog?.clean || 0) + '</p><p>Completed games: ' + (pet.handshakes || 0) + ' handshakes · ' + (pet.chases || 0) + ' chases · ' + (pet.alibis || 0) + ' alibis (' + (pet.alibiWins || 0) + ' clean wins).</p></details>';
+  html += '<details class="care-record" id="careRecord"><summary id="careRecordSummary">Care record · it kept the receipts</summary><p>Fed ' + (pet.careLog?.food || 0) + ' · Fussed ' + (pet.careLog?.fuss || 0) + ' · Cleaned ' + (pet.careLog?.clean || 0) + '</p><p>Completed games: ' + (pet.handshakes || 0) + ' handshakes · ' + (pet.chases || 0) + ' chases · ' + (pet.alibis || 0) + ' alibis (' + (pet.alibiWins || 0) + ' clean wins).</p></details>';
   html += positionControl(state, pet.id);
   html += residentLifeHTML(pet) + residentStory(state, pet);
   html += '<p class="bio">' + escapeHtml(pet.bio) + '</p>';
@@ -148,11 +162,16 @@ export function openCard(state, id, keepScroll) {
     html += '<li><strong>' + escapeHtml(t.name) + '</strong><em>' + escapeHtml(t.blurb) + '</em></li>';
   });
   html += '</ul>';
-
+  html += personalityDetails(pet);
   html += '<div class="card-actions"><button class="btn btn-danger btn-sm" id="rehomeBtn">Rehome</button>' +
     '<button class="btn btn-sm" id="renameBtn">Rename</button><button class="btn btn-sm" id="appearanceBtn">Edit appearance</button></div>';
 
   cardSheet.innerHTML = html;
+  // Restore disclosures before scroll and focus, so a quiet refresh keeps the
+  // passage the player is reading in place.
+  cardSheet.querySelectorAll('details[id]').forEach(detail => {
+    if (detailStates.has(detail.id)) detail.open = detailStates.get(detail.id);
+  });
   // The portrait is a live animated sprite (a real DOM element), appended into
   // the empty host the string left behind.
   const portrait = renderPetSprite(pet);

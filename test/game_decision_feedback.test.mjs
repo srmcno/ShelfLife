@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { blankState, normalizeState } from '../src/state.js';
+import { normalizeLife } from '../src/life-state.js';
 import { initialErrands, errandProgress, errandPurchasePreview, maxRemainingErrands, applyErrandMove } from '../src/engine/market-errands.js';
 import { startCourt, currentCourt, courtAction, courtEvidence, courtClueHelp, courtClearingReason, courtScore, finishCourt } from '../src/engine/court.js';
-import { courtMarkup } from '../src/ui/court.js';
+import { courtMarkup, courtRewardSummary } from '../src/ui/court.js';
 import { marketMarkup } from '../src/ui/market.js';
 
 function shelf(){
@@ -91,4 +92,70 @@ test('Court only remembers demonstrated clearings and the visible score agrees w
   assert.ok(courtClearingReason(currentCourt(state),innocents[1]));assert.equal(courtScore(currentCourt(state)),base-10);
   const visible=courtScore(currentCourt(state)),result=finishCourt(state,initial.answer);
   assert.equal(result.score,visible);
+});
+
+test('market purchase advice never promises the other object at the same stall as a future partner',()=>{
+  const {market,offered}=basket();market.bag=[];
+  const other={...offered,id:'other-offer'},later={...offered,id:'later-offer'};
+  market.stalls[1]=[offered,other];market.stalls[2]=[later];
+  const preview=errandPurchasePreview(market,offered);
+  assert.ok(!preview.futurePairs.some(p=>p.partner.id===other.id));
+  assert.equal(preview.futurePairs.find(p=>p.partner.id===later.id).step,2);
+  market.step=5;market.stalls[5]=[offered,other];
+  const last=errandPurchasePreview(market,offered);
+  assert.ok(last.helps.length);assert.deepEqual(last.ready,[]);assert.deepEqual(last.futurePairs,[]);
+  assert.match(marketMarkup(shelf(),market),/No matching partner remains/);
+});
+
+test('Market points a full or unaffordable basket to a useful action, including a stranded bag',()=>{
+  const market=initialErrands(5);market.bag=market.stalls.flat();
+  const request=market.requests.find(r=>errandProgress(market,r).pairs.length),pair=errandProgress(market,request).pairs[0];
+  market.bag=[...pair,market.stalls.flat().find(i=>!pair.includes(i))];
+  let markup=marketMarkup(shelf(),market);
+  assert.match(markup,/data-life="market-panel" data-panel="requests">Deliver to free two spaces/);
+  market.bag=pair;market.buttons=0;markup=marketMarkup(shelf(),market);
+  assert.match(markup,/data-life="market-panel" data-panel="requests">Deliver for 4 buttons/);
+  market.bag=[0,1,2].map(i=>({id:'bright-'+i,name:'Shiny object',tags:['bright']}));
+  market.requests.forEach(r=>r.tags=['snack','snack']);
+  markup=marketMarkup(shelf(),market);
+  assert.match(markup,/Choose an object to return/);
+  market.traded=true;markup=marketMarkup(shelf(),market);
+  assert.match(markup,/No pair matches and your return is used/);
+  assert.equal((markup.match(/data-life="market-pass"/g)||[]).length,1,'one clear way to continue a stranded trip');
+  assert.ok(!markup.includes('data-life="market-buy" disabled'));
+});
+
+test('Court early chapter navigation offers inspection instead of only disabled decisions',()=>{
+  const state=shelf();startCourt(state,{reworked:true,level:1},()=>.3);
+  for(const chapter of ['hearing','verdict']){
+    courtAction(state,{type:'focus',chapter,suspect:0});
+    const markup=courtMarkup(currentCourt(state)),footer=markup.slice(markup.indexOf('<footer'));
+    assert.match(footer,/data-life="court-clue" data-clue="0">Inspect clue 1/);
+    if(chapter==='hearing')assert.match(markup,/aria-label="Inspect clue 1:/);
+  }
+});
+
+test('Court practice results preserve their actual reward reason through restore without paying twice',()=>{
+  const now=new Date(2026,8,10,12).getTime();
+  for(const reason of ['rest','asleep','ready']){
+    let state=shelf();state.lastTick=now;
+    if(reason==='rest')state.pets[0].playedAt={court:now-1000};
+    if(reason==='asleep')state.pets[0].traits=['nocturnal'];
+    const game=startCourt(state,{reworked:true,level:1},()=>.4);
+    for(let evidence=0;evidence<3;evidence++)courtAction(state,{type:'inspect',evidence});
+    const result=finishCourt(state,game.answer,now);
+    assert.equal(result.rewardReason,reason);
+    assert.equal(result.fuss,reason==='ready'?16:0);assert.equal(result.bond,reason==='ready'?1:0);
+    const needs={...state.pets[0].needs},xp=state.life.xp;
+    state=normalizeState(JSON.parse(JSON.stringify(state)));
+    const restored=currentCourt(state).result;
+    assert.equal(restored.rewardReason,reason);assert.equal(courtRewardSummary(restored),courtRewardSummary(result));
+    assert.equal(finishCourt(state,game.answer,now),null);assert.deepEqual(state.pets[0].needs,needs);assert.equal(state.life.xp,xp);
+    if(reason!=='ready')assert.match(courtRewardSummary(restored),/Practice verdict recorded/);
+    const legacy=structuredClone(state.life);delete legacy.court.reward.reason;
+    assert.equal(normalizeLife(legacy).court.reward.reason,undefined,'old results remain readable without inventing a reason');
+    legacy.court.reward.reason='invented';assert.equal(normalizeLife(legacy).court.reward.reason,undefined);
+  }
+  assert.match(courtRewardSummary({bond:0,fuss:0}),/No care reward was added/);
+  assert.match(courtRewardSummary({bond:0,fuss:0,rewardReason:'ready'}),/Attention is full/);
 });

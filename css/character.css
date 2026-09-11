@@ -1,0 +1,44 @@
+/* Personality shares the studio's quiet workbench, independent of the art tabs. */
+.personality-editor{min-width:0;margin:28px 0 24px;padding-top:22px;border-top:1px solid var(--hair-lit)}
+.personality-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.personality-heading h3{margin:0;font-family:var(--display);font-size:23px;font-weight:400;color:var(--ink)}
+.personality-heading .btn{min-height:44px}
+.personality-editor>.hint{margin:10px 0 16px}
+.personality-quirks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:18px 0}
+.personality-quirk{min-width:0}
+.personality-quirk .tool-label{display:block;margin:0 0 7px;font-size:12px;letter-spacing:.04em}
+.personality-editor select,.personality-editor textarea{display:block;box-sizing:border-box;width:100%;min-width:0;min-height:44px;border:1px solid var(--edge);border-radius:7px;background:var(--field);color:var(--ink);font:400 16px/1.4 var(--body);padding:10px}
+.personality-editor select:focus-visible,.personality-editor textarea:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
+.personality-quirk-info{margin:9px 0 0;font-size:13px;line-height:1.55;color:var(--ink-2);overflow-wrap:anywhere}
+.personality-preview{padding:16px 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.personality-preview h4{margin:0 0 9px;color:var(--ink-2);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.personality-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 18px}
+.personality-stats dt{font-size:13px;color:var(--ink-2)}
+.personality-stats dd{margin:2px 0 0;font-size:19px;font-variant-numeric:tabular-nums;color:var(--mint)}
+.personality-stat-help{margin:-6px 0 18px}
+.personality-rates{margin:0;color:var(--ink);font-size:14px;line-height:1.6;font-variant-numeric:tabular-nums}
+.personality-editor textarea{resize:vertical;min-height:76px;max-height:220px}
+.personality-editor>.tool-label{display:block;margin-bottom:8px}
+.personality-editor>.tool-label span{font-weight:400;color:var(--ink-2)}
+.personality-origin-help{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-top:7px}
+.personality-origin-help .hint{margin:0}
+#petOriginCount{flex-shrink:0;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.personality-introduction{margin-top:8px}
+.personality-introduction summary,.resident-personality summary{min-height:44px;padding:11px 0;cursor:pointer;color:var(--mint);font-size:14px;line-height:22px}
+.personality-introduction summary:focus-visible,.resident-personality summary:focus-visible{outline:2px solid var(--mint);outline-offset:3px;border-radius:3px}
+.personality-introduction p{margin:2px 0 8px;color:var(--ink-2);font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.resident-personality{margin:16px 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);color:var(--ink)}
+.resident-personality p{margin:3px 0 10px;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.resident-personality ul{margin:8px 0 14px;padding-left:20px}
+.resident-personality li{margin:6px 0;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.resident-personality strong{color:var(--ink)}
+@media(max-width:560px){
+  .personality-quirks{grid-template-columns:minmax(0,1fr);gap:18px}
+  .personality-quirk-info{margin-top:7px}
+  .personality-heading{align-items:flex-start}
+  .personality-heading h3{font-size:22px}
+  .personality-origin-help{gap:8px}
+}
+@media(max-width:360px){
+  .personality-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+}

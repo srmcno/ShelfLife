@@ -36,9 +36,14 @@ export function chaseWaveContract(game) {
 }
 // Intermission is a stopped clock, and choosing an upgrade is an atomic action.
 // Closing the dialog never awards a partial run or spends anything from the shelf.
-export function advanceChaseWave(game, upgrade) {
+export function selectChaseUpgrade(game, upgrade) {
   if (!game || game.format !== 'run' || !game.awaitingChoice || game.finished || !RUN_UPGRADES[upgrade] || game.upgrades.includes(upgrade)) return false;
-  game.upgrades.push(upgrade); game.wave++; game.awaitingChoice = false;
+  game.pendingUpgrade = upgrade;
+  return true;
+}
+export function advanceChaseWave(game, upgrade = game?.pendingUpgrade) {
+  if (!game || game.format !== 'run' || !game.awaitingChoice || game.finished || !RUN_UPGRADES[upgrade] || game.upgrades.includes(upgrade)) return false;
+  game.upgrades.push(upgrade); game.wave++; game.awaitingChoice = false; game.pendingUpgrade = null;
   game.venue = RUN_WAVES[game.wave].venue;
   game.waveBaseline = { caught: game.caught, biscuits: game.biscuits, finaleCaught: game.finaleCaught };
   game.items = []; game.crumbsMade = 0; game.nextCrumb = .15; game.nextBunny = 3.2;
@@ -119,7 +124,7 @@ export function newChase(pet, { gentle = false, rng = Math.random, seed = null, 
   const temper = temperOf(mood);
   return {
     kind: 'chase', seed, format: format === 'run' ? 'run' : 'quick', venue: format === 'run' ? 'shelf' : CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
-    wave: 0, waveBaseline: { caught: 0, biscuits: 0, finaleCaught: 0 }, waveResults: [], upgrades: [], awaitingChoice: false, nextBroom: 4.5, broomsMade: 0,
+    wave: 0, waveBaseline: { caught: 0, biscuits: 0, finaleCaught: 0 }, waveResults: [], upgrades: [], pendingUpgrade: null, awaitingChoice: false, nextBroom: 4.5, broomsMade: 0,
     rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { id: objective, ...CHASE_OBJECTIVES[objective], done: false } : null,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
     dashes: 0, dashSmashes: 0, finaleWarned: false, finaleStarted: false, finaleCaught: 0, finaleComplete: false,
