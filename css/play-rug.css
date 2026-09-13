@@ -8,10 +8,11 @@
 .rug-head .btn { min-height: 44px; }
 .rug-company { display: flex; gap: 12px; align-items: center; padding: 0 25px 16px; }
 .rug-company > label { font-size: 12px; color: #cbb9ab; }
-/* A definite flex size keeps WebKit's native option width from extending the
-   row's scrollable area when a resident has a long unbroken name. */
-.rug-company select { width: 0; flex: 1 1 0; max-width: min(250px, 52%); min-width: 0; min-height: 40px; border-radius: 8px; font: 600 16px var(--body); color: #f4e6d6; background: #382d39; border: 1px solid #766265; padding: 6px 32px 6px 12px; text-overflow: ellipsis; }
-.rug-needs { margin-left: auto; display: flex; flex-shrink: 0; gap: 12px; }
+/* WebKit otherwise includes the selected label's full shadow-text width in
+   the row's scrollable area, despite ellipsis. Clip only the closed control;
+   the native option picker still exposes every resident's complete name. */
+.rug-company select { max-width: min(250px, 52%); min-width: 0; min-height: 40px; border-radius: 8px; font: 600 16px var(--body); color: #f4e6d6; background: #382d39; border: 1px solid #766265; padding: 6px 32px 6px 12px; text-overflow: ellipsis; overflow: hidden; }
+.rug-needs { margin-left: auto; display: flex; gap: 12px; }
 .rug-needs > span { display: flex; align-items: center; gap: 5px; }
 .rug-needs svg { width: 17px; height: 20px; color: #e2b793; }
 .rug-needs meter { width: 52px; height: 7px; appearance: none; -webkit-appearance: none; border: 0; border-radius: 4px; overflow: hidden; background: #514450; }

@@ -1,5 +1,5 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v35';
+const CACHE_VERSION = 'shelflife-v36';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./src/play-rug-state.js",
@@ -135,6 +135,9 @@ const SHELL = [
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];
+// Every installed asset must also be eligible for offline delivery. Keeping
+// this tied to the manifest prevents new illustration folders being missed.
+const SHELL_URLS = new Set(SHELL.map(path => new URL(path, self.registration.scope).href));
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_VERSION).then(cache => cache.addAll(SHELL.map(path => new Request(new URL(path, self.registration.scope), { cache: 'reload' })))).then(() => self.skipWaiting()));
@@ -152,7 +155,7 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET' || url.origin !== self.location.origin ||
       !url.href.startsWith(self.registration.scope)) return;
   const isCode = /\.(js|css|html|webmanifest)$/i.test(url.pathname) || request.mode === 'navigate' || url.pathname.endsWith('/');
-  if (!isCode && !url.pathname.includes('/icons/') && !url.pathname.includes('/assets/fonts/')) return;
+  if (!isCode && !SHELL_URLS.has(url.origin + url.pathname)) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_VERSION);
     const cached = await cache.match(request, { ignoreSearch: true });

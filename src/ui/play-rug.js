@@ -186,8 +186,16 @@ export function initPlayRug(state, refresh) {
     stage.setAttribute('aria-label','Interactive play rug. '+el('rugInstructions').textContent+' The toy buttons work with a keyboard too.');
   }
   const position=e=>{const r=stage.getBoundingClientRect();return{x:clamp((e.clientX-r.left)/r.width*1000,25,975),y:clamp((e.clientY-r.top)/r.height*600,35,480)};};
+  function popButton(button) {
+    if(!button||!available())return;
+    const bubble=game.bubbles.find(b=>String(b.id)===button.dataset.bubble);
+    if(bubble){feedback(popBubble(game,bubble.id));input();paint();}
+  }
   stage.addEventListener('pointerdown',e=>{
-    if(!available()||e.button!==0||e.isPrimary===false||e.target.closest('button'))return;
+    if(!available()||e.button!==0||e.isPrimary===false)return;
+    const bubble=e.target.closest('[data-bubble]');
+    if(bubble){e.preventDefault();popButton(bubble);return;}
+    if(e.target.closest('button'))return;
     const p=position(e);gesture={id:e.pointerId,start:p,last:p,at:performance.now()};
     try{stage.setPointerCapture(e.pointerId);}catch{/* pointer already released */}
   });
@@ -209,8 +217,10 @@ export function initPlayRug(state, refresh) {
   });
   stage.addEventListener('pointercancel',clearGesture);stage.addEventListener('lostpointercapture',()=>{gesture=null;el('rugAim').setAttribute('hidden','');});
   stage.addEventListener('click',e=>{
-    const button=e.target.closest('[data-bubble]');if(!button||!available())return;
-    const bubble=game.bubbles.find(b=>String(b.id)===button.dataset.bubble);if(bubble){feedback(popBubble(game,bubble.id));input();paint();}
+    // Touch emits a compatibility click after pointerup. A new bubble can
+    // appear under that same finger; only a fresh pointerdown may pop it.
+    // Detail-zero activation retains assistive-technology/keyboard support.
+    if(e.detail===0)popButton(e.target.closest('[data-bubble]'));
   });
   el('rugAction').addEventListener('click',()=>toy==='ball'?presetThrow():blow());
   el('rugPop').addEventListener('click',()=>{if(!available()||!game.bubbles.length)return;feedback(popBubble(game,game.bubbles[0].id));input();paint();});

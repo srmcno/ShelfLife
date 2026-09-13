@@ -41,8 +41,8 @@ as they happen, without requiring an end-session button.
   Use existing local browser/Playwright tooling; no CLI execution or provider claim.
 - [x] Create and optimize original playroom illustration.
 - [x] Integrate cabinet destinations and toy play.
-- [ ] Complete domain, browser, accessibility and release checks.
-- [ ] Publish and verify the exact Pages revision; audit clean repository state.
+- Release gate: complete domain, browser, accessibility and release checks.
+- Delivery gate: verify the exact Pages revision and clean repository state.
 
 Review corrections include explicit animation ownership for the rug puppet,
 focus restoration after pausing, truthful feedback when browser storage is full,
@@ -58,6 +58,20 @@ host browser stalls. The overflow has an intrinsic-sizing fix, with the original
 assertion retained. Direct drag, cancellation and bubble tapping passed after the
 aim-guide correction. The release runner must pass the entire final matrix;
 local startup and browser-protocol timeouts do not count as passing checks.
+
+The clean release runner exposed two real integration bugs beyond the native
+WebKit selector: the service worker installed the illustration but its fetch
+filter did not serve that folder offline, and a touch compatibility click could
+pop a bubble created by the same gesture. The worker now derives eligible static
+assets from its shell manifest; direct pops begin on a fresh pointerdown, with
+detail-zero activation retained for assistive technology. Regression checks keep
+all five newly blown bubbles and request every installed shell asset offline.
+
+After those corrections, all 777 Node tests passed. Focused desktop and mobile
+Chromium checks passed real drag/cancellation, direct bubble taps and offline
+artwork with saved progress. The original 320px WebKit drawing/long-name case
+also passed in the full application. A separate native-selector check measured
+318px content inside its 318px sheet and verified keyboard resident selection.
 
 ## Original illustration
 

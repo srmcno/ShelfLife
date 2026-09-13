@@ -139,6 +139,22 @@ test('activation deletes only Shelf Life caches', async () => {
   assert.ok(stores.has('another-app'));
   assert.ok(!stores.has('shelflife-old'));
 });
+test('every installed shell asset is actually served offline, including room artwork', async () => {
+  const { events, stores } = worker();
+  await new Promise(resolve => events.install({ waitUntil: p => p.then(resolve) }));
+  const entries = stores.get(sw.match(/const CACHE_VERSION = '([^']+)'/)[1]);
+  for (const url of entries.keys()) {
+    let response;
+    events.fetch({ request: { url: url + '?revision=check', method: 'GET', mode: 'cors' }, respondWith: p => { response = p; }, waitUntil() {} });
+    assert.ok(response, 'Worker ignored installed asset: ' + url);
+    assert.equal((await response).status, 200, url);
+  }
+  for (const url of ['https://another.example/game/src/main.js', 'https://test.example/another-app/src/main.js', 'https://test.example/game/private-photo.webp']) {
+    let intercepted = false;
+    events.fetch({ request: { url, method: 'GET', mode: 'cors' }, respondWith() { intercepted = true; }, waitUntil() {} });
+    assert.equal(intercepted, false, 'Unrelated resource intercepted: ' + url);
+  }
+});
 test('offline requests serve cached modules and navigation, or an explicit failure', async () => {
   const { events } = worker();
   await new Promise(resolve => events.install({ waitUntil: p => p.then(resolve) }));

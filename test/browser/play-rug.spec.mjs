@@ -125,6 +125,7 @@ test('drag cancellation, a fresh throw and direct bubble taps use the real stage
   const stage=page.locator('#rugStage'),position={x:box.width*.25,y:box.height*.3};
   if(isMobile)await stage.tap({position});else await stage.click({position});
   await expect(page.locator('.rug-bubble')).toHaveCount(5);
+  expect(await tricks(page,'qa2'),'blowing bubbles must not also pop one under the same finger').toEqual([]);
   const bubble=await page.locator('.rug-bubble').first().boundingBox();
   if(isMobile)await page.touchscreen.tap(bubble.x+bubble.width/2,bubble.y+bubble.height/2);
   else await page.mouse.click(bubble.x+bubble.width/2,bubble.y+bubble.height/2);
