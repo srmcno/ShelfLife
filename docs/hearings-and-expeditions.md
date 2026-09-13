@@ -64,7 +64,9 @@ puppet gestures and whole scene timelines, making the phone version appear much
 less alive. Light now simplifies decoration while retaining finite action
 feedback. Reduced motion still disables travel/gesture animations; hidden tabs,
 closed scenes and interrupted scenes stop owned work. Controlled game portraits
-are reserved from the shelf's random idle director.
+are reserved from the shelf's random idle director. Opening a new sheet clears
+remarks from the previous screen so they cannot cover game controls; new messages
+inside the active sheet survive ordinary redraws.
 
 Run `npm test`, `python3 -m unittest discover -s test -p '*_test.py'`,
 `npm run build`, and `npm run test:browser`. Browser scenarios exercise complete

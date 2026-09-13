@@ -32,7 +32,7 @@ import { initAnimator, reactShelf, reactTo, previewMotion } from './art/animator
 import { applyDecor, initDecorUI } from './ui/decorUI.js';
 import { initDrag } from './ui/drag.js';
 import { renderAll, renderStatus, renderShelf, renderNotes, escapeHtml } from './ui/render.js';
-import { toast } from './ui/toast.js';
+import { toast, dismissToast } from './ui/toast.js';
 import { openCard, closeCard, getOpenPetId } from './ui/card.js';
 import { initSoundNoteHook, isMuted, toggleMuted } from './audio/sound.js';
 import { initNarrator, initNarratorUI, isNarratorOn, toggleNarrator, stopSpeech } from './audio/narrator.js';
@@ -40,7 +40,7 @@ import { initNarrator, initNarratorUI, isNarratorOn, toggleNarrator, stopSpeech 
 // ---------- studio (pet creation) ----------
 
 initPlayRug(state, () => renderAll(state));
-initDialogs();
+initDialogs({ onOpen: dismissToast });
 document.getElementById('genMotion').addEventListener('click', () => previewMotion(document.getElementById('genMount')));
 const studio = initStudio({
   // `art` arrives in one of the studio's two shapes — `{ creature }` from the

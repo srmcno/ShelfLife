@@ -1,5 +1,5 @@
 // One focus boundary for every sheet, including the responsive More drawer.
-export function initDialogs() {
+export function initDialogs({ onOpen } = {}) {
   const panels = [...document.querySelectorAll('.veil'), document.getElementById('moreTray')].filter(Boolean);
   let active = null, returnTo = null, returnPet = null, returnId = null, pendingTrigger = null;
   let triggerGeneration = 0;
@@ -46,6 +46,9 @@ export function initDialogs() {
     const next = panels.find(el => el.classList.contains('open') && el.id !== 'moreTray') ||
       panels.find(el => el.classList.contains('open')) || null;
     if (next === active) return;
+    // Shelf remarks belong to the previous screen. Fresh messages produced
+    // inside the active sheet remain visible through its ordinary redraws.
+    if (next) onOpen?.();
     release();
     document.body.classList.toggle('dialog-open', !!next);
     document.body.dataset.activeDialog = next?.id || '';

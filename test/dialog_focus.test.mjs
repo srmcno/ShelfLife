@@ -4,7 +4,7 @@ import { initDialogs } from '../src/ui/dialogs.js';
 
 // Exercise the shared focus/Escape controller with actual event order: targets
 // can consume Escape before the document, whose later game listeners must wait.
-function fixture(t) {
+function fixture(t, options) {
   const previous = { document: globalThis.document, MutationObserver: globalThis.MutationObserver, queueMicrotask: globalThis.queueMicrotask, setTimeout: globalThis.setTimeout };
   const observers = [], microtasks = [], timers = [], events = new Map();
   class Node {
@@ -84,7 +84,7 @@ function fixture(t) {
   globalThis.queueMicrotask = callback => microtasks.push(callback);
   globalThis.setTimeout = callback => timers.push(callback);
   t.after(() => Object.assign(globalThis, previous));
-  initDialogs();
+  initDialogs(options);
   let hiddenGameCloses = 0;
   doc.addEventListener('keydown', e => { if (e.key === 'Escape') hiddenGameCloses++; });
   return { doc, app, cabinet, makeElement, makeButton, opener, newPet, more, tabMore, activeTab, card, play, restore, tray,
@@ -196,4 +196,12 @@ test('Tab skips collapsed details content even when it retains rectangles, while
   details.open = false;
   secondSummary.focus();
   f.key(secondSummary, 'Tab'); assert.equal(f.doc.activeElement, f.play.close, 'later summaries do not bypass the closed boundary');
+});
+
+test('entering another screen retires its old notice, while redraws preserve a fresh in-dialog notice', t => {
+  let notice = 'Arrival remark';
+  const f = fixture(t, { onOpen: () => { notice = ''; } });
+  f.open(f.card); assert.equal(notice, '');
+  notice = 'A fresh care result'; f.flush(); assert.equal(notice, 'A fresh care result');
+  f.card.root.classList.remove('open'); f.play.root.classList.add('open'); f.flush(); assert.equal(notice, '');
 });

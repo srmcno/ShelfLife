@@ -1,5 +1,5 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v37';
+const CACHE_VERSION = 'shelflife-v38';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./src/play-rug-state.js",

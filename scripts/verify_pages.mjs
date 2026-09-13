@@ -35,6 +35,7 @@ try {
       await page.goto(url.href);await page.locator('[data-arrival="mabel"]').click();await page.locator('#quickAdopt').click();
       await expect(page.locator('#cabinet .pet')).toHaveCount(1);
       await page.locator('#tabPlay').click();await page.locator('[data-activity="court"]').click();
+      await expect(page.locator('#toast')).not.toHaveClass(/show/);await expect(page.locator('#toast')).toBeEmpty();
       await expect(page.locator('#courtCaseTitle')).toBeVisible();await page.locator('.court-clue-tabs [data-clue="0"]').click();
       await page.screenshot({path:'live-check-results/'+label+'-court.png'});
       assert.ok((await saved()).life.court.moves.length>0);await page.locator('#lifeClose').click();
@@ -46,6 +47,7 @@ try {
       await page.locator('#lifeClose').click();await expect(page.locator('#playroomVeil')).toBeVisible();await page.locator('#playroomClose').click();
       await page.locator('.tabbar .tab[data-tab="notes"]').click();await page.locator('[data-filter="papers"]').click();
       await page.locator('[data-file-report]').click();await expect(page.locator('.document-title')).toHaveText('The household register');
+      await expect(page.locator('#notes .note').first()).toHaveCSS('opacity','1');
       await page.screenshot({path:'live-check-results/'+label+'-paperwork.png',fullPage:true});
       await page.reload();await expect(page.locator('#cabinet .pet')).toHaveCount(1);
       assert.equal((await saved()).paperwork.entries.length,1);assert.equal((await saved()).life.outing.step,1);
