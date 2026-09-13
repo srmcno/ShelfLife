@@ -21,6 +21,22 @@ The cabinet also hosts small domestic scenes. Place appropriate furniture near r
 **Play a scene**, or let them improvise while you watch. Bowl servings, lamp switches, relationships,
 requests, case files and keepsakes persist. The residents remember how you treat them.
 
+## Little adventures
+
+Your residents now have plans. Share a personal care moment, finish a game together and
+choose how their story ends. Build a crumb observatory, audition a very small ghost or
+prepare an unbirthday: eight stories lead to sixteen illustrated keepsakes.
+
+Each story offers two ways to play. An imperfect game or completed practice still counts;
+the important part is doing it with the resident who invited you. Do the care and game in
+either order, then choose the ending. Progress waits through closing, reloads and days away.
+There are no deadlines or streaks to lose, and another story is always available.
+
+The keepsake album records the original maker. Replaying an ending makes a new household
+scene with the current resident; each different ending earns two discoveries once.
+Residents can recall the moments they actually shared. Collected memories survive renaming
+and rehoming, and their exact objects appear in the scene journal.
+
 ## The Playroom
 
 | Activity | What you do |
@@ -80,7 +96,8 @@ npm run build
 ```
 
 The browser suite uses isolated synthetic households and a separate local server. It checks
-creation, saved appearance, care, all six activity entrances, responsive layouts and runtime errors
+creation, saved appearance, care, all six activity entrances, completed adventure endings,
+interrupted play, replay identity, all sixteen keepsakes, responsive layouts and runtime errors
 in desktop Chromium and phone-sized Chromium/WebKit. Offline reload is tested in Chromium;
 Playwright does not support WebKit service-worker tooling. This is browser automation, not physical-device
 testing. `test/responsive-harness.html` provides additional local fixture exploration.

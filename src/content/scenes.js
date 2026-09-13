@@ -1,6 +1,7 @@
 import { SCHEMES } from './schemes.js';
 import { CASES, VISITORS } from './stories.js';
 import { RELICS } from './life.js';
+import { escapadeById } from './escapades.js';
 
 // These directions reconstruct what was recorded. They do not roll a second
 // outcome, invent an award, or replace the original written account.
@@ -296,8 +297,43 @@ function reading(scene, key = 'record') {
   ]);
 }
 
+// These are a presentation of the earned object and its written ending. The
+// director does not reconstruct unseen ghosts, dragons, or other residents.
+const KEEPSAKE_RECOLLECTIONS = {
+  'crumb-telescope': ['A telescope for The Great Maybe', 'The floor joins the constellation'],
+  'orbit-saucer': ['A place is set for the comet', 'A wire model keeps its orbit'],
+  'ghost-bed': ['A matchbox guest room', 'The pillow is one degree colder'],
+  'holiday-bell': ['A bell for when company is wanted', 'A tiny sunset in the clapper'],
+  'button-crown': ['A bottle cap becomes a crown', 'The thread is foreign minister'],
+  'button-passport': ['Four borders are opened', 'A country stitched to a cushion'],
+  'rain-bottle': ['A bottle with a cork roof', 'A curtain for the rain'],
+  'rain-boat': ['A boat folded from a receipt', 'The rain becomes its own sea'],
+  'ever-candle': ['One candle for the unknown years', 'More time to think'],
+  'unbirthday-rosette': ['The invitation simply says “here”', 'A ribbon for being here'],
+  'nobody-stamp': ['A small yes from every quiet corner', 'Nobody signs either letter'],
+  'reply-envelope': ['There is room beside me', 'A correspondence begins'],
+  'silver-baton': ['A needle baton is raised', 'The cupboard rings like a cathedral'],
+  'choir-ticket': ['The audience becomes the chorus', 'One ticket: “Admit all”'],
+  'dragon-key': ['Keeper of things too small to find again', 'It opens nothing. The dragon understands.'],
+  'dragon-parcel': ['A pin wrapped in velvet', 'Generosity takes practice']
+};
+
+function escapadeScene(scene) {
+  const episode = escapadeById(scene.stage?.branch);
+  const ending = episode?.endings.find(item => item.keepsake === scene.stage?.object);
+  if (!ending) return null;
+  const labels = KEEPSAKE_RECOLLECTIONS[ending.keepsake];
+  if (!labels) return null;
+  return complete('escapade', 'shelf', [prop('keepsake', 'keepsake:' + ending.keepsake, ending.title)], [
+    beat(labels[0], [actor(27, 0, 'look')], { keepsake: pos(61, 0, { scale: 1.5 }) }),
+    beat(labels[1], [actor(39, 0, 'offer')], { keepsake: pos(61, 24, { scale: 1.65 }) }),
+    beat(ending.title + ', kept with the story', [actor(31, 0, 'look')], { keepsake: pos(63, 0, { scale: 1.5 }) })
+  ]);
+}
+
 export function sceneDirection(scene = {}) {
   const declared = String(scene.stage?.key || '');
+  if (declared === 'escapade' || scene.kind === 'escapade') return escapadeScene(scene) || reading(scene, 'escapade');
   if (declared === 'welcome') {
     const branch=scene.stage?.branch, sleepy=scene.stage?.object==='sleepy';
     const setup=beat('One bowl. Two interested faces.',[actor(27,0,sleepy?'nap':'look'),actor(77,8,'look')],{bowl:pos(50),crumb:pos(50,25)});

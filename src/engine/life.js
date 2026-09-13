@@ -5,6 +5,7 @@ import { VISITORS } from '../content/stories.js';
 import { missionStops } from '../content/project-encounters.js';
 import { PROJECTS, PROJECT_STOPS } from '../content/projects.js';
 import { addNote, clamp } from '../state.js';
+import { recordEscapadeEvent } from '../escapade-state.js';
 const checked = new WeakSet();
 export function lifeState(state) {
   if (!state.life || !checked.has(state.life)) { state.life=normalizeLife(state.life,state.pets.length>0); checked.add(state.life); }
@@ -151,6 +152,7 @@ export function chooseOuting(state, choice, now=Date.now()) {
   const text=crew.map(p=>p.name).join(' and ')+' returned with '+relic.name.toLowerCase()+'. '+relic.line+' '+line;
   recordScene(state,'outing',route.name,text,crew.map(p=>p.id),now,{key:'outing',branch:route.id,object:relic.id});addNote(state,text,'beyond the shelf','scheme');
   o.result={relic:relic.id,fresh};
+  recordEscapadeEvent(state, { kind: 'play', petIds: crew.map(p => p.id), activity: 'outing' }, now);
   if(o.mission){
     const after=outingSnapshot(state),builtBefore=l.projects.includes(o.route);
     l.projectParts[o.route]=after.parts;
@@ -270,14 +272,15 @@ export function marketSnapshot(state){
  snapshot.score=scoreMarket(snapshot.bag,snapshot.buttons,snapshot.requests,snapshot.secret);
  return snapshot;
 }
-export function startMarket(state,{replay=false,expanded=false,errands=false}={}){
+export function startMarket(state,{replay=false,expanded=false,errands=false,petId=null}={}){
  const l=lifeState(state);if(!state.pets.length||l.market&&!l.market.claimed)return false;
  const previous=l.market?.seed,version=replay&&previous?(l.market.version||1):(errands?4:expanded?2:1);
  if(!replay||!previous)l.marketSerial++;
  // Stable market numbers let players retry an identical planning puzzle.
  const seed=replay&&previous?previous:(Math.imul(l.marketSerial,2654435761)>>>0)||1;
- const patrons=replay&&previous?l.market.patrons:state.pets.slice(0,3).map(p=>p.name);
- l.market={seed,moves:[],claimed:false,...(version>=2?{version}: {}),...(version>=3?{patrons}: {}),...(version>=4?{patronIds:replay&&previous?l.market.patronIds:state.pets.slice(0,3).map(p=>p.id)}:{})};return true;
+ const lead=state.pets.find(p=>p.id===petId),crew=(lead?[lead,...state.pets.filter(p=>p.id!==petId)]:state.pets).slice(0,3);
+ const patrons=replay&&previous?l.market.patrons:crew.map(p=>p.name);
+ l.market={seed,moves:[],claimed:false,...(version>=2?{version}: {}),...(version>=3?{patrons}: {}),...(version>=4?{patronIds:replay&&previous?l.market.patronIds:crew.map(p=>p.id)}:{})};return true;
 }
 export function chooseMarket(state,pick,trade=null,{secret=false}={}){
  const l=lifeState(state),snapshot=marketSnapshot(state),move={pick,trade,...(secret?{secret:true}: {})};
@@ -299,6 +302,7 @@ export function claimMarket(state,now=Date.now()){
  if(!snapshot?.complete||snapshot.claimed)return null;
  const score=snapshot.score,done=score.fulfilled.filter(Boolean).length,tier=snapshot.version>=3?(done===3?2:done===2?1:0):score.total===bestMarketScore(snapshot.seed,{version:snapshot.version})?2:score.total>=17?1:0,relic=RELICS.find(r=>r.id==='market:'+tier);
  l.market.claimed=true;l.marketRuns++;
+ if(snapshot.version>=4)recordEscapadeEvent(state,{kind:'play',petIds:(snapshot.patronIds||[]).filter(id=>state.pets.some(p=>p.id===id)),activity:'market'},now);
  if(snapshot.version===4)l.marketErrandBestV4=Math.max(l.marketErrandBestV4||0,score.total);else if(snapshot.version===3)l.marketErrandBest=Math.max(l.marketErrandBest||0,score.total);else l.marketBest=Math.max(l.marketBest,score.total);
  const fresh=!l.relics.includes(relic.id);
  if(fresh){l.relics.push(relic.id);l.xp+=4;if(l.displayed.length<3)l.displayed.push(relic.id);}

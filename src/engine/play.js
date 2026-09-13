@@ -3,6 +3,10 @@ import { recordGameLife, recordScene } from './life.js';
 // rate limited, and only awarded after all three sequences are completed.
 import { tick, isAsleep } from './tick.js';
 import { clamp, addNote, grantBonusTrust } from '../state.js';
+import { recordEscapadeEvent } from '../escapade-state.js';
+// Losing chases have no win receipt, but their real finished attempt still
+// belongs to the adventure. Remember callbacks without altering win counts.
+const reportedChases = new WeakSet();
 export const PLAY_COOLDOWN = 5 * 60000;
 export const GESTURES = ['Knock', 'Wiggle', 'Blink', 'Boop'];
 
@@ -134,8 +138,13 @@ export function tapHandshake(game, gesture) {
 }
 export function rewardHandshake(state, game, now = Date.now()) {
   const pet = state.pets.find(p => p.id === game.petId);
+  if (pet && game.kind === 'chase' && game.finished && !game.claimed && !reportedChases.has(game)) {
+    reportedChases.add(game);
+    recordEscapadeEvent(state, { kind: 'play', petIds: [pet.id], activity: 'chase' }, now);
+  }
   if (!pet || !game.complete || game.claimed) return null;
   game.claimed = true;
+  if (game.kind !== 'chase') recordEscapadeEvent(state, { kind: 'play', petIds: [pet.id], activity: 'memory' }, now);
   if (game.kind !== 'chase') {
     const ritual = Object.hasOwn(HANDSHAKE_RITUALS, game.ritual) ? game.ritual : 'echo';
     const previousMemory = handshakeMemory(pet, ritual);

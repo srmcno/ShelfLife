@@ -1,6 +1,7 @@
 import { sceneDirection } from '../content/scenes.js';
 import { VISITORS } from '../content/stories.js';
 import { curioSVG } from './curios.js';
+import { keepsakeSvg } from './keepsakes.js';
 import { renderPetSprite } from './sprite.js';
 import { generateCreature } from './creatures.js';
 import { createPuppet } from './animator.js';
@@ -35,6 +36,11 @@ const drawings = {
  bag:'<path d="m23 15 16 4 20-4-9 17c27 34 16 42-11 42S5 66 29 32Z" fill="#aa8a6b"/><path d="M29 32h22M33 38q-10 18-7 24m19-22q10 16 8 22"/><path d="M27 29h27" stroke="#d9c497" stroke-width="4"/>'
 };
 export function scenePropSVG(shape) {
+ if(typeof shape==='string'&&shape.startsWith('keepsake:')){
+  // An unknown keepsake must not pass through curioSVG's generic key fallback.
+  // Size the self-contained art to the director's existing responsive prop box.
+  return keepsakeSvg(shape.slice(9)).replace('<svg ','<svg width="100%" height="100%" ');
+ }
  return drawings[shape] ? '<svg class="curio-art" viewBox="0 0 80 80" fill="none" stroke="#302638" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+drawings[shape]+'</svg>' : curioSVG(shape,{literal:true});
 }
 const clamp=(n,lo,hi)=>Math.min(hi,Math.max(lo,n));

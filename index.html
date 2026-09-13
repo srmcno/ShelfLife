@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="css/controls.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/playroom.css">
+<link rel="stylesheet" href="css/escapades.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
@@ -94,6 +95,7 @@
       <article><span aria-hidden="true">✎</span><h2>A long memory</h2><p>Keep their notes, shared moments and improbable achievements.</p></article>
     </div>
     <section id="welcomePanel" class="welcome-panel" aria-labelledby="welcomeTitle" hidden></section>
+    <section id="escapadeHub" class="escapade-hub" aria-labelledby="escapadeHubTitle" hidden></section>
     <section id="shelfTheatre" class="shelf-theatre-controls" aria-labelledby="theatreHeading" hidden>
       <div class="theatre-heading"><h2 id="theatreHeading">Small domestic disasters</h2><span id="theatreCount"></span></div>
       <div class="theatre-caption" id="theatreCaption" role="status" aria-live="polite" aria-atomic="true">Give them furniture. They will supply the incident.</div>
@@ -216,6 +218,12 @@
      whichever one is .open; on phones they rise from the bottom edge and can
      be swiped shut (ui/nav.js).
      ============================================================================ -->
+<div class="veil" id="escapadeVeil">
+  <div class="sheet sheet-escapade">
+    <div class="sheet-head"><div><span class="eyebrow">Little adventures, long memories</span><h2 id="escapadeTitle">A little adventure</h2></div><button class="btn btn-ghost btn-sm" id="escapadeClose">Close</button></div>
+    <div id="escapadeContent"></div>
+  </div>
+</div>
 <div class="veil" id="playroomVeil">
   <div class="sheet sheet-playroom">
     <div class="sheet-head"><div><span class="eyebrow">Open at all unreasonable hours</span><h2>The playroom</h2></div><button class="btn btn-ghost btn-sm" id="playroomClose">Close</button></div>

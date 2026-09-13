@@ -1,0 +1,167 @@
+/* A folded household note becomes a storybook, then a cabinet of kept objects. */
+.escapade-hub { --paper:#ecddc8; --pen:#392937; margin:22px 0 24px; padding:22px 24px 0; color:var(--pen); background:linear-gradient(115deg,#f1e6d5,var(--paper) 65%,#d5c4b0); border:1px solid #c5a685; border-radius:3px 15px 5px 3px; box-shadow:0 10px 26px #07040c38, inset 0 0 0 5px #f6e9d929; position:relative; isolation:isolate; }
+.escapade-hub::before { content:''; position:absolute; width:52px; height:20px; top:-9px; left:32px; background:#ccb398a8; transform:rotate(-6deg); box-shadow:0 1px 1px #765b331a; }
+.escapade-eyebrow { display:block; font:600 12px/1.4 var(--body); letter-spacing:.045em; color:#9b744b; }
+.escapade-hub .escapade-eyebrow { color:#79604b; }
+.escapade-hub-main { display:grid; grid-template-columns:92px minmax(0,1fr); gap:20px; align-items:center; }
+.escapade-portrait { height:116px; display:grid; place-items:center; }
+.escapade-portrait .sprite { width:100px; --pet-h:105px; }
+.escapade-hub h2 { font:28px/1.12 var(--display); letter-spacing:-.02em; margin:6px 0 8px; }
+.escapade-hub-copy > p { margin:0; font:14px/1.55 var(--body); color:#624953; }
+.escapade-hub-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:17px 0; }
+.escapade-hub .btn { min-height:44px; border-color:#ac917a; color:var(--pen); box-shadow:none; }
+.escapade-hub .btn-primary { background:var(--pen); color:#f3e7d6; border-color:var(--pen); }
+.escapade-hub .btn-primary:hover { background:#594053; }
+.escapade-hub .btn-ghost:hover { background:#bda18b35; }
+.escapade-promise { border-top:1px solid #a986633d; font:17px/1.4 var(--hand); padding:12px 0 14px; margin:0; color:#735949; }
+.escapade-steps { list-style:none; padding:0; margin:17px 0 0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.escapade-steps li { display:flex; align-items:center; gap:10px; min-width:0; }
+.escapade-steps li > div { min-width:0; }
+.escapade-steps b { display:block; font:600 12px/1.4 var(--body); }
+.escapade-step-mark { display:grid; place-items:center; flex:none; width:25px; height:25px; border:1px solid #a48771; color:#846552; border-radius:50%; font:600 12px/1 var(--body); }
+.escapade-steps .done .escapade-step-mark { color:#ebf5de; background:#526b53; border-color:#526b53; }
+.escapade-steps .done b { color:#53634c; }
+.escapade-ready { border-color:#91a478; }
+.escapade-shelf-keepsake { display:flex; align-items:center; width:calc(100% + 48px); margin:0 -24px; gap:14px; padding:10px 24px; text-align:left; background:#ccb09433; border:0; border-top:1px solid #a986634d; color:var(--pen); cursor:pointer; border-radius:0 0 5px 3px; }
+.escapade-shelf-keepsake > span:nth-child(2) { min-width:0; flex:1; }
+.escapade-shelf-keepsake small { display:block; font:11px/1.4 var(--body); color:#79614e; }
+.escapade-shelf-keepsake b { display:block; font:18px/1.25 var(--display); margin:3px 0; }
+.escapade-shelf-keepsake > span:nth-child(2) > span { display:block; font:13px/1.4 var(--body); color:#72564f; }
+.escapade-shelf-keepsake:hover { background:#ccb09466; }
+.escapade-mini-art { width:76px; flex:none; }
+.escapade-mini-art svg { display:block; width:100%; height:auto; }
+
+#escapadeVeil { background:#08060bd1; backdrop-filter:blur(8px); }
+#escapadeVeil .sheet { width:min(760px,100%); max-width:760px; display:flex; flex-direction:column; overflow:hidden; background:#211926; }
+#escapadeVeil .sheet-head { flex:none; margin-bottom:16px; }
+#escapadeVeil .sheet-head h2 { font-size:31px; }
+#escapadeContent { overflow:auto; min-height:0; overscroll-behavior:contain; scrollbar-gutter:stable; padding:0 4px 6px; }
+#escapadeContent h3 { font:25px/1.2 var(--display); }
+.escapade-story-heading { display:grid; grid-template-columns:104px minmax(0,1fr); gap:20px; align-items:center; margin:0 0 15px; }
+.escapade-story-heading p { font:17px/1.55 var(--body); color:var(--ink-2); margin:7px 0; }
+.escapade-dialog-portrait { height:135px; display:grid; place-items:center; border-bottom:2px solid var(--hair-lit); background:radial-gradient(ellipse at 50% 78%,#dfb07916,transparent 70%); }
+.escapade-dialog-portrait .sprite { width:110px; --pet-h:118px; }
+.escapade-cast { display:flex; align-items:center; justify-content:space-between; gap:12px; font:12px/1.4 var(--body); color:var(--ink-2); padding:10px 12px; background:var(--glass); border:1px solid var(--hair); border-radius:7px; }
+.escapade-cast select { max-width:55%; min-width:0; min-height:44px; color:var(--ink); background:var(--night-2); border:1px solid var(--hair-lit); border-radius:5px; padding:8px; font:14px var(--body); }
+.escapade-preparation { display:flex; gap:12px; align-items:center; margin:18px 0 24px; }
+.escapade-preparation > span { flex:none; font:30px var(--display); color:var(--pink); }
+.escapade-preparation p { margin:0; font:13px/1.5 var(--body); color:var(--ink-3); }
+.escapade-preparation b { color:var(--ink-2); font-weight:400; }
+.escapade-question { margin:0 0 12px; }
+.escapade-choices { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.escapade-choice { position:relative; display:flex; flex-direction:column; gap:8px; min-width:0; padding:18px; text-align:left; font:14px/1.5 var(--body); color:var(--ink); background:linear-gradient(150deg,#302536,#1e1725); border:1px solid #78596d; border-radius:9px; cursor:pointer; transition:border-color .15s,background .15s; }
+.escapade-choice:hover { border-color:var(--key); background:#392c3c; }
+.escapade-choice > b { font:23px/1.22 var(--display); letter-spacing:-.015em; }
+.escapade-choice > span:not(.escapade-eyebrow):not(.escapade-choice-art) { color:var(--ink-2); font-size:13px; }
+.escapade-choice em { display:block; color:var(--key); font:600 12px/1.4 var(--body); margin-top:auto; padding-top:10px; }
+.escapade-choice-art { display:block; width:100%; height:110px; text-align:center; }
+.escapade-choice-art svg { width:150px; height:110px; max-width:100%; }
+.escapade-footer { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:10px; margin-top:22px; padding-top:16px; border-top:1px solid var(--hair); }
+.escapade-footer .btn { min-height:44px; }
+.escapade-footer p { width:100%; text-align:center; font:12px/1.5 var(--body); color:var(--ink-3); margin:0; }
+.escapade-rest-note { text-align:center; color:var(--ink-3); font:12px/1.6 var(--body); margin:18px 0 4px; }
+#escapadeContent .escapade-steps { grid-template-columns:1fr; gap:12px; margin:20px 0; }
+#escapadeContent .escapade-steps li { padding:14px; border:1px solid var(--hair-lit); border-radius:8px; background:var(--glass); }
+#escapadeContent .escapade-steps li > div { flex:1; }
+#escapadeContent .escapade-steps b { font-size:15px; }
+#escapadeContent .escapade-steps p { font:12px/1.5 var(--body); color:var(--ink-2); margin:3px 0 0; }
+#escapadeContent .escapade-steps .done b { color:var(--mint); }
+#escapadeContent .escapade-steps .btn { min-height:44px; font-size:12px; }
+.escapade-finale { padding-top:10px; }
+.escapade-finale h3 { margin:5px 0 8px; }
+.escapade-finale > p { color:var(--ink-2); font-size:13px; margin-bottom:16px; }
+.escapade-receipt { padding:22px 32px 24px; text-align:center; color:#493141; background:linear-gradient(130deg,#f4e8d4,#dfcfb5); border:1px solid #bba086; border-radius:2px; box-shadow:inset 0 0 0 6px #8467460c; }
+.escapade-receipt-art { max-width:250px; margin:0 auto 12px; }
+.escapade-receipt-art svg { display:block; width:100%; height:auto; animation:keepsake-arrival .6s ease-out both; }
+.escapade-receipt .escapade-eyebrow { color:#806149; }
+.escapade-receipt h3 { margin:10px 0; }
+.escapade-receipt p { font:15px/1.75 var(--body); margin:0; }
+.escapade-receipt blockquote { font:24px/1.4 var(--hand); color:#745054; border:0; margin:20px 0; padding:0; }
+.escapade-receipt-stamp { display:inline-block; transform:rotate(-3deg); border:1px solid #98755e; border-radius:3px; padding:6px 13px; color:#83604c; font:11px/1.5 var(--body); letter-spacing:.07em; }
+.escapade-album-intro { display:flex; justify-content:space-between; align-items:center; gap:16px; margin:0 0 16px; }
+.escapade-album-intro p { font:19px/1.4 var(--hand); color:var(--ink-2); margin:0; }
+.escapade-album-intro > span { white-space:nowrap; color:var(--key); font:12px var(--body); }
+.escapade-album-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px 18px; }
+#escapadeContent .escapade-album-chapter h3 { font:18px/1.4 var(--display); color:var(--ink-2); margin:0 0 9px; }
+.escapade-album-chapter > div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.escapade-album-item,.escapade-album-blank { min-width:0; min-height:165px; display:flex; flex-direction:column; align-items:center; gap:5px; padding:9px 6px 14px; border:1px solid var(--hair-lit); border-radius:5px; background:#15101b; color:var(--ink); text-align:center; }
+.escapade-album-item { cursor:pointer; }
+.escapade-album-item:hover { border-color:var(--key); background:#2b202d; }
+.escapade-album-item > span { width:100%; min-height:85px; display:grid; place-items:center; }
+.escapade-album-item svg { max-width:100%; width:130px; height:90px; }
+.escapade-album-item b,.escapade-album-blank b { font:15px/1.3 var(--display); }
+.escapade-album-item small,.escapade-album-blank small { font:11px/1.4 var(--body); color:var(--ink-3); }
+.escapade-album-blank { justify-content:center; border-style:dashed; background:transparent; color:var(--ink-3); }
+.escapade-album-blank > span { display:block; font:34px/1.5 var(--display); opacity:.45; }
+.escapade-care-note { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px; margin:4px 0 14px; border:1px solid #916c67; border-radius:7px; background:#a8795e12; }
+.escapade-care-note p { font:12px/1.5 var(--body); color:var(--ink-2); margin:0; }
+.escapade-care-note b { display:block; color:var(--key); }
+.escapade-care-note .btn { font-size:12px; flex:none; min-height:44px; }
+.care-row .escapade-care-action { border-color:var(--key); box-shadow:0 0 0 1px #eabb7333; }
+.sheet-head .escapade-return { align-self:center; max-width:145px; min-height:40px; font-size:11px; }
+.escapade-game-purpose { margin:0 0 12px; padding:11px 13px; border-left:2px solid var(--key); background:#bc955417; font:13px/1.4 var(--body); color:var(--ink-2); }
+.escapade-game-purpose b { color:var(--key); }
+.escapade-hub button:focus-visible,.escapade-choice:focus-visible,.escapade-album-item:focus-visible { outline:3px solid #a97145; outline-offset:3px; }
+@keyframes keepsake-arrival { from { opacity:0; transform:translateY(12px) rotate(-5deg) scale(.92); } to { opacity:1; transform:none; } }
+@media(max-width:720px) {
+  .escapade-hub { padding:19px 16px 0; margin:20px 0; }
+  .escapade-hub-main { grid-template-columns:70px minmax(0,1fr); gap:12px; align-items:start; }
+  .escapade-portrait { height:100px; }
+  .escapade-portrait .sprite { width:76px; --pet-h:90px; }
+  .escapade-hub h2 { font-size:25px; }
+  .escapade-hub-copy > p { font-size:13px; line-height:1.5; }
+  .escapade-hub .btn { padding:10px 12px; font-size:12px; }
+  .escapade-hub-actions { gap:7px; }
+  .escapade-steps { gap:8px; }
+  .escapade-steps b { font-size:11px; }
+  .escapade-step-mark { width:23px; height:23px; }
+  .escapade-promise { font-size:16px; }
+  .escapade-shelf-keepsake { width:calc(100% + 32px); margin:0 -16px; padding:10px 16px; gap:10px; }
+  .escapade-mini-art { width:59px; }
+  .escapade-shelf-keepsake b { font-size:16px; }
+  .escapade-shelf-keepsake > span:nth-child(2) > span { font-size:12px; }
+  #escapadeVeil .sheet-head { margin-bottom:12px; }
+  #escapadeVeil .sheet-head h2 { font-size:26px; }
+  #escapadeContent { padding:0 1px 8px; }
+  .escapade-story-heading { grid-template-columns:76px minmax(0,1fr); gap:13px; }
+  .escapade-dialog-portrait { height:110px; }
+  .escapade-dialog-portrait .sprite { width:80px; --pet-h:96px; }
+  .escapade-story-heading p { font-size:14px; line-height:1.5; }
+  .escapade-eyebrow { font-size:11px; }
+  .escapade-preparation { margin:15px 0 20px; }
+  #escapadeContent h3 { font-size:22px; }
+  .escapade-choices { gap:9px; }
+  .escapade-choice { padding:13px; }
+  .escapade-choice > b { font-size:21px; }
+  .escapade-choice > span:not(.escapade-eyebrow):not(.escapade-choice-art) { font-size:12px; }
+  #escapadeContent .escapade-steps li { display:grid; grid-template-columns:24px minmax(0,1fr); padding:12px; }
+  #escapadeContent .escapade-steps .btn { grid-column:2; justify-self:start; }
+  #escapadeContent .escapade-steps b { font-size:14px; }
+  .escapade-receipt { padding:16px 19px 22px; }
+  .escapade-receipt-art { max-width:210px; }
+  .escapade-receipt p { font-size:14px; }
+  .escapade-receipt blockquote { font-size:23px; }
+  .escapade-album-grid { grid-template-columns:1fr; gap:24px; }
+  .escapade-album-item,.escapade-album-blank { min-height:180px; }
+  .escapade-album-item svg { height:105px; }
+  .escapade-care-note { gap:9px; }
+  .escapade-care-note .btn { font-size:11px; padding:9px; }
+  .sheet-head .escapade-return { max-width:105px; font-size:10px; padding:5px 7px; }
+}
+@media(max-width:360px) {
+  .escapade-hub-main { grid-template-columns:56px minmax(0,1fr); }
+  .escapade-portrait .sprite { width:64px; --pet-h:78px; }
+  .escapade-choice { padding:11px; }
+  .escapade-choice > b { font-size:19px; }
+  .escapade-cast { align-items:start; }
+  .escapade-cast select { max-width:60%; }
+  .escapade-album-intro { gap:8px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .escapade-receipt-art svg { animation:none; }
+  .escapade-choice { transition:none; }
+}
+body[data-effects="light"] .escapade-receipt-art svg { animation:none; }
+
+.escapade-hub-copy, .escapade-shelf-keepsake, #escapadeContent,
+.escapade-care-note, .escapade-game-purpose, .shelf-brief > div { overflow-wrap:anywhere; }

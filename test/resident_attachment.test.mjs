@@ -157,3 +157,23 @@ test('reward preview explains caps, empty bowls and scenes with no care payout',
   candidate=availableShelfScenes(arguing,NOW).find(c=>c.kind==='pair');
   assert.match(shelfSceneRewardPreview(arguing,candidate,NOW),/No care or trust/);
 });
+
+test('adventure keepsakes and replays give only their actual resident a grounded callback', async () => {
+  const { startEscapade, finishEscapade } = await import('../src/engine/escapades.js');
+  const { recordEscapadeEvent } = await import('../src/escapade-state.js');
+  const a=pet('A'),b=pet('B'),s=shelf([a,b]);
+  function complete(actor,at){
+    assert.equal(startEscapade(s,{episodeId:'crumb-observatory',approachId:'orbit',petId:actor.id},at),true);
+    recordEscapadeEvent(s,{kind:'care',need:'food',petIds:[actor.id]},at+1);
+    recordEscapadeEvent(s,{kind:'play',activity:'chase',petIds:[actor.id]},at+2);
+    return finishEscapade(s,'discovery',at+3);
+  }
+  assert.equal(complete(a,NOW).fresh,true);
+  assert.match(residentMemories(s,a,NOW+5)[0].text,/A insists/);
+  assert.equal(residentMemories(s,b,NOW+5).some(m=>m.key.startsWith('escapade:')),false);
+  assert.equal(complete(b,NOW+10).fresh,false);
+  assert.equal(s.escapades.album[0].petId,a.id);
+  assert.match(residentMemories(s,b,NOW+15)[0].text,/B insists/);
+  a.name='Captain $&';
+  assert.match(residentMemories(s,a,NOW+15)[0].text,/Captain \$& insists/);
+});

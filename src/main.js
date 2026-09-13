@@ -1,5 +1,6 @@
 import { initLife } from './ui/life.js';
 import { initWelcome } from './ui/welcome.js';
+import { initEscapades } from './ui/escapades.js';
 import { createBackup } from './backup.js';
 import { initBackupTransfer } from './ui/backup.js';
 import { initPlayroom } from './ui/playroom.js';
@@ -355,6 +356,7 @@ initSchemeUI(state, () => renderAll(state));
 initPlay(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
 initWelcome(state, () => renderAll(state));
+initEscapades(state, () => renderAll(state));
 initPlayroom(state);
 initStories(state, () => renderAll(state), id => openCard(state, id, true));
 window.addEventListener('shelflife:care', e => openCard(state, e.detail?.petId));

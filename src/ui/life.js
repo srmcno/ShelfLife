@@ -142,7 +142,7 @@ export function initLife(state,refresh) {
   const {action,petId}=e.detail||{};
   if(action==='outing'){if(state.pets.some(p=>p.id===petId))leadId=petId;interlude=false;outing();}
   if(action==='court'){if(state.pets.some(p=>p.id===petId))courtHostId=petId;courtStart();}
-  if(action==='market'){marketTrade='';marketAction=null;marketSelection='';marketPanel='';market();focusMarketProgress();}
+  if(action==='market'){if(state.pets.some(p=>p.id===petId))leadId=petId;marketTrade='';marketAction=null;marketSelection='';marketPanel='';market();focusMarketProgress();}
  });
  document.addEventListener('change',e=>{if(e.target.id==='marketTrade'){marketTrade=e.target.value;market();content.querySelector('#marketTrade')?.focus();}if(['outingLead','outingCompanion','outingGear','outingDare'].includes(e.target.id)){const id=e.target.id;if(id==='outingLead')leadId=e.target.value;if(id==='outingCompanion')companionId=e.target.value;if(id==='outingGear')selectedGear=e.target.value;if(id==='outingDare')selectedDare=e.target.value;repaintOutingSetup(id);}});
  document.addEventListener('click',e=>{
@@ -182,7 +182,7 @@ export function initLife(state,refresh) {
   }
   if(action==='finish-outing'){finishOuting(state);refresh();display();return;}
   if(action==='market'){marketTrade='';marketAction=null;marketSelection='';marketPanel='';market();focusMarketProgress();return;}
-  if(action==='market-start'||action==='market-retry'){if(startMarket(state,{replay:action==='market-retry',errands:true})){marketTrade='';marketAction=null;marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
+  if(action==='market-start'||action==='market-retry'){if(startMarket(state,{replay:action==='market-retry',errands:true,petId:leadId})){marketTrade='';marketAction=null;marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
   if(action==='market-select'){const m=marketSnapshot(state);if(!m||m.complete||!m.stalls[m.step].some(item=>item.id===b.dataset.id))return;const scroll=content.querySelector('.adventure-scroll')?.scrollTop||0;marketSelection=b.dataset.id;market();const pane=content.querySelector('.adventure-scroll');if(pane)pane.scrollTop=scroll;content.querySelector('[data-life="market-select"][data-id="'+marketSelection+'"]')?.focus({preventScroll:true});return;}
   if(action==='market-panel'){const panel=b.dataset.panel||'';if(!['','requests','bag','route'].includes(panel))return;marketPanel=panel===marketPanel?'':panel;market();content.querySelector('.adventure-scroll')?.scrollTo({top:0});(content.querySelector('.market-context-panel')||content.querySelector('.market-heading h3'))?.focus({preventScroll:true});return;}
   if(action==='market-deliver'||action==='market-leave'){

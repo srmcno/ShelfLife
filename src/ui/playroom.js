@@ -1,5 +1,6 @@
 import { ACTIVITIES, activityRecord, activityPassport } from '../content/activities.js';
 import { renderPetSprite } from '../art/sprite.js';
+import { escapadeView } from '../engine/escapades.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 // Tiny scenes describe the actual games. Keeping this art inside the catalogue
@@ -102,6 +103,9 @@ export function initPlayroom(state) {
   if (hint) guide.append(hint);
   guide.append(guideBody);
   workspace.append(empty, cards, guide);
+  const purpose = document.createElement('div');
+  purpose.className = 'escapade-game-purpose'; purpose.hidden = true;
+  workspace.prepend(purpose);
   sheet.append(toolbar, workspace);
   let selected = '';
   let returnActivity = '';
@@ -117,6 +121,9 @@ export function initPlayroom(state) {
     empty.hidden = !!pet;
     portrait.replaceChildren();
     if (pet) portrait.appendChild(renderPetSprite(pet));
+    const adventure = escapadeView(state).active;
+    purpose.hidden = !adventure || adventure.petId !== pet?.id;
+    if (!purpose.hidden) purpose.innerHTML = '<b>' + esc(adventure.episode.title) + '</b> · ' + esc(adventure.playDone ? 'Our game is saved. The adventure is waiting on the shelf.' : adventure.approach.label + ' — finish a game together to advance our adventure.');
     passport.hidden = !pet;
     if (pet) {
       const progress = activityPassport(state);
@@ -125,7 +132,7 @@ export function initPlayroom(state) {
     }
     cards.innerHTML = ACTIVITIES.map(a => {
       const copy = cardCopy[a.id], resume = pet ? continueLabel(a.id, state.life) : '';
-      const record = resume || shortRecord(a, state, pet);
+      const record = adventure?.petId === pet?.id && adventure.approach.activity === a.id && !adventure.playDone ? 'For our little adventure' : resume || shortRecord(a, state, pet);
       return '<button type="button" class="activity-card activity-' + a.id + (resume ? ' activity-continue' : '') + '" data-activity="' + a.id + '" aria-label="' + esc((resume ? 'Continue ' : 'Play ') + copy.title + '. ' + activityTime(a.id, state.life) + '. ' + activityRecord(a, state, pet)) + '" ' + (!pet ? 'disabled' : '') + '>' +
         scene(a.id) + '<span class="activity-top"><span class="activity-kind">' + esc(a.kind) + '</span><span>' + esc(activityTime(a.id, state.life)) + '</span></span>' +
         '<strong>' + esc(copy.title) + '</strong><span class="activity-hook">' + esc(copy.hook) + '</span>' +

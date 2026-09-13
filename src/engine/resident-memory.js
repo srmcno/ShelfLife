@@ -1,5 +1,7 @@
 // Read the record before writing the callback. These selectors never create
 // history, infer a missed promise, or treat the household's win as this pet's.
+import { normalizeEscapades } from '../escapade-state.js';
+import { escapadeById } from '../content/escapades.js';
 const traits = (pet, list) => list.some(id => pet.traits?.includes(id));
 const count = n => Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 const pairKey = (a, b) => [a, b].sort().join('|');
@@ -22,6 +24,12 @@ function voice(pet, lines) { return lines[residentVoice(pet)] || lines.plain; }
 export function residentMemories(state, pet, now = Date.now()) {
   if (!pet || !state.pets?.some(p => p.id === pet.id)) return [];
   const out = [], add = (key, text, evidence) => out.push({ key, text, evidence });
+  const kept = normalizeEscapades(state.escapades, state, now).album.filter(r => r.petId === pet.id).at(-1);
+  const replay = (state.life?.scenes || []).find(scene => scene.kind === 'escapade' && scene.cast?.includes(pet.id) && scene.at <= now);
+  const episode = escapadeById(replay?.stage?.branch || kept?.episodeId);
+  const ending = episode?.endings.find(e => replay ? e.keepsake === replay.stage?.object : e.id === kept?.endingId);
+  if (ending) add('escapade:' + episode.id + ':' + ending.id, ending.callback.replaceAll('{name}', () => pet.name),
+    ending.title + ' was made during a completed adventure with this resident.');
   const old = Array.isArray(pet.names) ? pet.names.slice(0, -1).reverse().find(n => typeof n?.name === 'string' && n.name !== pet.name) : null;
   if (old) add('renamed', voice(pet, {
     attached: 'You called me ' + old.name + '. I still turn round for it. Do not make that sad.',

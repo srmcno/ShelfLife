@@ -1,4 +1,5 @@
 import { recordGameLife } from './life.js';
+import { recordEscapadeEvent } from '../escapade-state.js';
 /* ================= THE ALIBI =================
    The third game, and deliberately the third GENRE. Crumb Chase is reflexes and
    Secret Handshake is recall, so this one is deduction: the resident makes three
@@ -232,6 +233,7 @@ export function rewardAlibi(state, game, now = Date.now()) {
   const pet = state.pets.find(p => p.id === game.petId);
   if (!pet || !game.complete || game.claimed) return null;
   game.claimed = true;
+  recordEscapadeEvent(state, { kind: 'play', petIds: [pet.id], activity: 'alibi' }, now);
   tick(state, now);
   const clean = game.correct === game.rounds.length && game.rounds.length > 0 && (game.mode !== 'prove' || game.proved === game.rounds.length);
   pet.alibis = (pet.alibis || 0) + 1;

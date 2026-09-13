@@ -1,5 +1,7 @@
 import { renderLife } from './life.js';
 import { renderWelcome } from './welcome.js';
+import { renderEscapades } from './escapades.js';
+import { escapadeView } from '../engine/escapades.js';
 import { advanceStories, withStories } from '../engine/stories.js';
 import { renderStories } from './stories.js';
 import { save } from '../state.js';
@@ -55,6 +57,7 @@ export function renderAll(state) {
     renderStories(state);
     renderLife(state);
     renderWelcome(state);
+    renderEscapades(state);
     renderTheatreControls(state);
     save();
   });
@@ -420,6 +423,12 @@ function renderBrief(state) {
   briefState = state;
   const host = document.getElementById('shelfBrief');
   if (!host) return;
+  const adventure = escapadeView(state).active;
+  if (adventure) {
+    const text = adventure.ready ? 'The story is ready for its ending. You get to choose.' : 'Your place is saved. ' + adventure.completedSteps + ' of 2 moments shared.';
+    updateMarkup(host, '<span class="brief-icon" aria-hidden="true">✦</span><div><b>' + escapeHtml(adventure.pet.name + ' saved you a place.') + '</b><span>' + escapeHtml(text) + '</span></div><button id="escapadeBrief" class="btn btn-sm" data-escapade="open">' + (adventure.ready ? 'The ending' : 'Continue') + ' ↗</button>');
+    return;
+  }
   const recap=state.life?.recap?.map(id=>state.life.scenes.find(scene=>scene.id===id)).filter(Boolean)||[];
   if(recap.length){
     const latest=recap[0],cast=(latest.cast||[]).map(id=>petById(state,id)?.name).filter(Boolean);

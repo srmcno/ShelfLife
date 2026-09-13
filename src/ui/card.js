@@ -3,6 +3,7 @@ import { residentStory } from './stories.js';
 import { storyState, remember } from '../engine/stories.js';
 import { moodOf, isAsleep, MOOD_WORD } from '../engine/tick.js';
 import { careFor, previewCare } from '../engine/care.js';
+import { escapadeView } from '../engine/escapades.js';
 import { playWait } from '../engine/play.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 import { checkAchievements, grudgeStageFor, GRUDGE_STAGE_AT } from '../engine/achievements.js';
@@ -143,9 +144,13 @@ export function openCard(state, id, keepScroll) {
     '<span class="bond-bar"><span style="width:' + (pet.bond / 25 * 100) + '%"></span></span>' + grievanceReasons(pet) + '</div>' +
     '</div></div>';
   const careNames = { food: 'Feed it', fuss: 'Fuss over it', clean: 'Clean it up' };
+  const adventure = escapadeView(state).active;
+  const ourAdventure = adventure?.petId === pet.id ? adventure : null;
+  if (ourAdventure) html += '<div class="escapade-care-note"><p><b>' + escapeHtml(ourAdventure.episode.title) + '</b>' + escapeHtml(ourAdventure.ready ? 'Our story is ready for its ending.' : ourAdventure.careDone ? 'Our personal moment is saved. Next, a game together.' : ourAdventure.episode.care.label + ' — a personal moment for our adventure.') + '</p><button type="button" class="btn btn-ghost" data-escapade="open">' + (ourAdventure.ready ? 'Choose the ending' : 'Our adventure') + ' ↗</button></div>';
   html += '<div class="care-row">' + Object.keys(careNames).map(need => {
     const preview = previewCare(pet, need);
-    return '<button class="btn care-' + need + '" data-care="' + need + '"' + (preview.gain <= .01 ? ' disabled' : '') + '>' + careNames[need] + '<small>+' + Math.round(preview.gain) + ' · ' + (preview.useful ? 'trust care' : asleep ? 'sleepy' : 'top-up') + '</small></button>';
+    const storyMoment = ourAdventure && !ourAdventure.careDone && ourAdventure.episode.care.need === need;
+    return '<button class="btn care-' + need + (storyMoment ? ' escapade-care-action' : '') + '" data-care="' + need + '"' + (preview.gain <= .01 && !storyMoment ? ' disabled' : '') + '>' + careNames[need] + '<small>' + (storyMoment && preview.gain <= .01 ? 'A moment together' : '+' + Math.round(preview.gain) + ' · ' + (preview.useful ? 'trust care' : asleep ? 'sleepy' : 'top-up')) + '</small></button>';
   }).join('') + '</div>';
   html += '<p class="care-explainer">' + (pet.bond >= 25 ? 'Trust is full. The attachment is permanent.' : (3 - (pet.cared % 3)) + ' useful care actions until +1 trust. Care below 72 counts.') + (asleep ? ' Asleep: care has half effect.' : '') + '</p>';
   html += '<button class="play-invite" id="playPet"><span><b>Play together</b><small>' + (playWait(pet) || asleep ? 'Steer, hop and chase · practice available' : 'Chase, handshake or alibi · play + trust') + '</small></span><span aria-hidden="true">↗</span></button>';
@@ -189,7 +194,10 @@ export function openCard(state, id, keepScroll) {
   document.body.style.overflow = 'hidden';
   cardSheet.scrollTop = y;
   cardVeil.scrollTop = y;
-  if (focused?.care) cardSheet.querySelector('[data-care="' + focused.care + '"]')?.focus({ preventScroll: true });
+  if (focused?.care) {
+    const careButton = cardSheet.querySelector('[data-care="' + focused.care + '"]');
+    (careButton?.disabled ? cardSheet.querySelector('.escapade-care-note button') || document.getElementById('playPet') : careButton)?.focus({ preventScroll: true });
+  }
   else if (focused?.id) document.getElementById(focused.id)?.focus({ preventScroll: true });
 
   document.getElementById('petMotion').disabled = asleep;

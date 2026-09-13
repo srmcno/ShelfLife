@@ -1,6 +1,9 @@
 import { test as base, expect } from 'playwright/test';
 import { householdFixture } from '../household-fixtures.mjs';
 import { ARRIVALS, arrivalDraft } from '../../src/content/arrivals.js';
+import { ESCAPADES } from '../../src/content/escapades.js';
+import { startEscapade } from '../../src/engine/escapades.js';
+import { startMarket } from '../../src/engine/life.js';
 
 const SAVE_KEY = 'shelflife.v4';
 const test = base.extend({
@@ -55,6 +58,7 @@ async function noHorizontalOverflow(page) {
       name: el.closest('.veil').id, width: el.clientWidth, content: el.scrollWidth
     }))
   }));
+  expect(sizes.viewport, 'long content must not enlarge the mobile layout viewport').toBeLessThanOrEqual(page.viewportSize().width + 1);
   expect(sizes.document, 'document stays within the viewport').toBeLessThanOrEqual(sizes.viewport + 1);
   expect(sizes.body, 'body stays within the viewport').toBeLessThanOrEqual(sizes.viewport + 1);
   for (const dialog of sizes.dialogs) expect(dialog.content, dialog.name + ' does not clip horizontal content').toBeLessThanOrEqual(dialog.width + 1);
@@ -223,13 +227,15 @@ for (const activity of activities) {
   });
 }
 
-test('installed shell reloads offline with the saved household and usable care', async ({ page, context, browserName }) => {
+test('installed shell reloads offline with saved adventure progress and usable care', async ({ page, context, browserName }) => {
   // Playwright documents service-worker tooling for Chromium only. WebKit's
   // emulated offline navigation fails internally before the cached page loads.
   // Keep its UI/save coverage above; do not report this as an iOS offline check.
   // https://playwright.dev/docs/service-workers
   test.skip(browserName !== 'chromium', 'Service-worker offline emulation is supported by Playwright on Chromium only');
-  await openHousehold(page);
+  await openHousehold(page, 'established', snapshot => {
+    startEscapade(snapshot, { episodeId:'crumb-observatory', approachId:'orbit', petId:'qa0' });
+  });
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 20_000 }).toBe(true);
   await context.setOffline(true);
   try {
@@ -239,8 +245,162 @@ test('installed shell reloads offline with the saved household and usable care',
     await resident.click();
     await page.locator('#cardVeil [data-care="fuss"]').click();
     await expect.poll(async () => (await savedShelf(page)).pets[0].careLog.fuss).toBe(6);
+    expect((await savedShelf(page)).escapades.active.careAt).toBeNull();
+    await page.locator('#cardVeil [data-care="food"]').click();
+    await expect.poll(async () => (await savedShelf(page)).escapades.active.careAt).not.toBeNull();
+    await page.reload();
+    await page.locator('#escapadeOpen').click();
+    await expect(page.locator('#escapadeContent .escapade-steps .done')).toHaveCount(1);
     await noHorizontalOverflow(page);
   } finally {
     await context.setOffline(false);
   }
+});
+
+async function beginObservatory(page, approach = 'orbit', petId = 'qa0') {
+  await page.locator('#escapadeOpen').click();
+  await expect(page.locator('#escapadeTitle')).toHaveText('The Crumb Observatory');
+  await page.locator('#escapadeResident').selectOption(petId);
+  await page.locator('[data-escapade="start"][data-approach="' + approach + '"]').click();
+  await expect.poll(async () => (await savedShelf(page)).escapades.active?.petId).toBe(petId);
+}
+
+async function adventureSnack(page) {
+  await page.locator('#escapadeContent [data-escapade="care"]').click();
+  await expect(page.locator('#cardVeil')).toBeVisible();
+  await page.locator('#cardVeil [data-care="food"]').click();
+  await expect.poll(async () => (await savedShelf(page)).escapades.active.careAt).not.toBeNull();
+  await page.locator('#cardVeil [data-escapade="open"]').click();
+}
+
+test('a real Crumb Chase adventure earns a chosen keepsake that survives reload', async ({ page }) => {
+  test.setTimeout(65_000);
+  await openHousehold(page);
+  await beginObservatory(page);
+  await adventureSnack(page);
+  await page.reload();
+  await page.locator('#escapadeOpen').click();
+  await expect(page.locator('#escapadeContent .escapade-steps .done')).toHaveCount(1);
+  await page.locator('#escapadeContent [data-escapade="play"]').click();
+  await page.locator('#chaseGo').click();
+  await page.locator('#chaseHop').click();
+  await expect.poll(async () => (await savedShelf(page)).escapades.active.playAt, { timeout:35_000 }).not.toBeNull();
+  await page.locator('#playVeil .escapade-return').click();
+  await expect(page.locator('#escapadeContent [data-escapade="finish"]')).toHaveCount(2);
+  const before = (await savedShelf(page)).life.xp;
+  await page.locator('[data-escapade="finish"][data-ending="supper"]').click();
+  await expect(page.locator('.escapade-receipt')).toContainText('Kept with Agnes');
+  await expect(page.locator('#escapadeTitle')).toHaveText('A Saucer for a Comet');
+  const finished = await savedShelf(page);
+  expect(finished.life.xp).toBe(before + 2);
+  expect(finished.escapades.active).toBeNull();
+  expect(finished.escapades.album).toHaveLength(1);
+  expect(finished.escapades.album[0]).toMatchObject({ petId:'qa0', endingId:'supper', episodeId:'crumb-observatory' });
+  expect(finished.life.scenes[0].stage.object).toBe('orbit-saucer');
+  await noHorizontalOverflow(page);
+  await page.reload();
+  await page.locator('#escapadeAlbum').click();
+  await expect(page.locator('.escapade-album-item')).toHaveCount(1);
+  await page.locator('.escapade-album-item').click();
+  await expect(page.locator('.escapade-receipt')).toContainText('Kept with Agnes');
+  expect((await savedShelf(page)).life.xp).toBe(before + 2);
+  await page.locator('#escapadeClose').click();
+  await expect(page.locator('#escapadeAlbum')).toBeFocused();
+});
+
+test('full needs permit a story moment while cancelling play never completes it', async ({ page }) => {
+  await openHousehold(page, 'capped');
+  await beginObservatory(page);
+  await adventureSnack(page);
+  await page.locator('#escapadeContent [data-escapade="play"]').click();
+  await page.locator('#chaseGo').click();
+  await page.locator('#chaseHop').click();
+  await page.locator('#playClose').click();
+  await page.reload();
+  const active = (await savedShelf(page)).escapades.active;
+  expect(active.careAt).not.toBeNull();
+  expect(active.playAt).toBeNull();
+  await page.locator('#escapadeOpen').click();
+  await expect(page.locator('#escapadeContent .escapade-steps .done')).toHaveCount(1);
+  await expect(page.locator('[data-escapade="finish"]')).toHaveCount(0);
+  await expectDialogFocus(page, '#escapadeVeil');
+});
+
+test('a fourth resident leads their own market adventure and imperfect play counts', async ({ page }) => {
+  await openHousehold(page, 'conflicting');
+  await beginObservatory(page, 'equipment', 'qa3');
+  await page.locator('#escapadeContent [data-escapade="play"]').click();
+  await page.locator('[data-life="market-start"]').click();
+  expect((await savedShelf(page)).life.market.patronIds[0]).toBe('qa3');
+  for (let stall = 0; stall < 8; stall++) await page.locator('[data-life="market-pass"]').click();
+  expect((await savedShelf(page)).escapades.active.playAt).toBeNull();
+  await page.locator('[data-life="market-leave"]').click();
+  await expect.poll(async () => (await savedShelf(page)).escapades.active.playAt).not.toBeNull();
+  await page.locator('#lifeClose').click();
+  await page.locator('#escapadeOpen').click();
+  await adventureSnack(page);
+  await page.locator('[data-escapade="finish"][data-ending="discovery"]').click();
+  await expect(page.locator('.escapade-receipt')).toContainText('Kept with Bitey');
+  expect((await savedShelf(page)).escapades.album[0].petId).toBe('qa3');
+  await noHorizontalOverflow(page);
+});
+
+test('a saved trip with another crew explains how to continue without crediting the wrong resident', async ({ page }) => {
+  await openHousehold(page, 'conflicting', snapshot => {
+    startMarket(snapshot, { errands:true });
+  });
+  await beginObservatory(page, 'equipment', 'qa3');
+  await expect(page.locator('#escapadeContent')).toContainText('An earlier market trip is waiting.');
+  await page.locator('#escapadeContent [data-escapade="play"]').click();
+  for (let stall = 0; stall < 8; stall++) await page.locator('[data-life="market-pass"]').click();
+  await page.locator('[data-life="market-leave"]').click();
+  expect((await savedShelf(page)).escapades.active.playAt).toBeNull();
+  await page.locator('[data-life="market-start"]').click();
+  expect((await savedShelf(page)).life.market.patronIds[0]).toBe('qa3');
+  await noHorizontalOverflow(page);
+});
+
+test('replayed ending celebrates the current resident while the album preserves its first maker', async ({ page }) => {
+  await openHousehold(page, 'established', snapshot => {
+    const at = Date.now() - 60_000;
+    snapshot.escapades = { version:1, completions:1, album:[{ key:'crumb-observatory:discovery', episodeId:'crumb-observatory', endingId:'discovery', approachId:'orbit', petId:'qa0', petName:'Agnes', at }], active:{ episodeId:'crumb-observatory', approachId:'orbit', petId:'qa2', petName:'Pip', startedAt:at+1000, careAt:at+2000, playAt:at+3000 } };
+  });
+  const before = (await savedShelf(page)).life.xp;
+  await page.locator('#escapadeOpen').click();
+  await page.locator('[data-escapade="finish"][data-ending="discovery"]').click();
+  await expect(page.locator('.escapade-receipt')).toContainText('Kept with Pip');
+  await expect(page.locator('.escapade-receipt')).toContainText('A familiar keepsake');
+  const after = await savedShelf(page);
+  expect(after.life.xp).toBe(before);
+  expect(after.escapades.album).toHaveLength(1);
+  expect(after.escapades.album[0].petId).toBe('qa0');
+  expect(after.life.scenes[0].cast).toEqual(['qa2']);
+  await page.locator('#escapadeContent [data-escapade="album"]').click();
+  await page.locator('.escapade-album-item').click();
+  await expect(page.locator('.escapade-receipt')).toContainText('Kept with Agnes');
+});
+
+test('the complete keepsake album and long resident names fit a 320px screen', async ({ page }) => {
+  await page.setViewportSize({ width:320, height:740 });
+  await openHousehold(page, 'nearly-full', snapshot => {
+    const petName = 'W'.repeat(22), at = Date.now() - 60_000;
+    snapshot.pets[0].name = petName;
+    snapshot.escapades = { version:1, active:null, completions:16, album:ESCAPADES.flatMap((episode, i) => episode.endings.map((ending, j) => ({ key:episode.id+':'+ending.id, episodeId:episode.id, endingId:ending.id, approachId:episode.approaches[0].id, petId:'qa0', petName, at:at+i*100+j }))) };
+  });
+  await noHorizontalOverflow(page);
+  await page.locator('#escapadeAlbum').click();
+  await expect(page.locator('.escapade-album-item')).toHaveCount(16);
+  await noHorizontalOverflow(page);
+  for (let i = 0; i < 16; i++) {
+    await page.locator('.escapade-album-item').nth(i).click();
+    await expect(page.locator('.escapade-receipt-art svg')).toHaveCount(1);
+    await expect(page.locator('.escapade-receipt')).toContainText('W'.repeat(22));
+    await noHorizontalOverflow(page);
+    await page.locator('#escapadeContent [data-escapade="album"]').click();
+  }
+  await page.locator('#escapadeClose').click();
+  await beginObservatory(page);
+  await noHorizontalOverflow(page);
+  await page.locator('#escapadeClose').click();
+  await noHorizontalOverflow(page);
 });

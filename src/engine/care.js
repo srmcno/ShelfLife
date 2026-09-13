@@ -4,6 +4,7 @@ import { TRAIT_CARE } from '../content/care.js';
 import { tick, isAsleep } from './tick.js';
 import { ASLEEP_LINES, OVERFED, CARE_LINES, ROUNDS_NOTES, ROUNDS_NAMED, ROUNDS_TOASTS } from '../content/copy.js';
 import { clamp, pick, addNote, recordCare } from '../state.js';
+import { recordEscapadeEvent } from '../escapade-state.js';
 
 export const CARE_GAIN = { food: 34, fuss: 38, clean: 42 };
 
@@ -44,6 +45,7 @@ export function careFor(state, pet, need, now = Date.now()) {
   // The only choke point where the game learns who you went to, in what order,
   // and how long you kept fussing. Read back by the state-aware notes in loop.js.
   recordCare(state, pet, need, now);
+  recordEscapadeEvent(state, { kind: 'care', petIds: [pet.id], need }, now);
   if(gain>0 && dailyActivity(state,'care',now)) recordScene(state,'care','A small kindness',pet.name+': '+line,[pet.id],now);
   let bondGained = false;
   if (before < 72) {

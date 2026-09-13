@@ -3,6 +3,7 @@ import { addNote, clamp, grantBonusTrust } from '../state.js';
 import { playWait } from './play.js';
 import { tick, isAsleep } from './tick.js';
 import { lifeState, recordGameLife, recordScene } from './life.js';
+import { recordEscapadeEvent } from '../escapade-state.js';
 import { COURT_CASES, COURT_LEVELS, COURT_DEFENCES, COURT_TRANSCRIPTS, COURT_INVESTIGATIONS } from '../content/court.js';
 
 const draw = (rng, length) => Math.min(length - 1, Math.max(0, Math.floor((Number(rng()) || 0) * length)));
@@ -325,6 +326,7 @@ export function accuseCourt(state,game,choice,now=Date.now()) {
  game.choice=choice;game.claimed=true;
  const l=lifeState(state),correct=choice===game.answer,p=state.pets.find(p=>p.id===game.petId);
  l.courtPlays++;if(correct)l.courtWins++;
+ recordEscapadeEvent(state, { kind: 'play', petIds: [p.id], activity: 'court' }, now);
  tick(state,now);let bond=0,fuss=0;
  const rewardReason=correct?(isAsleep(p,new Date(now))?'asleep':playWait(p,now,'court')?'rest':'ready'):undefined;
  if(correct&&rewardReason==='ready'){bond=grantBonusTrust(p,1,now);fuss=Math.min(16,100-p.needs.fuss);p.needs.fuss=clamp(p.needs.fuss+fuss,0,100);p.playedAt||={};p.playedAt.court=now;p.lastPlayed=now;}
