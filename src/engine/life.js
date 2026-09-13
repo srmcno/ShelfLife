@@ -2,6 +2,7 @@ import { errandSnapshot, applyErrandMove, bestErrandScore } from './market-erran
 import { normalizeLife } from '../life-state.js';
 import { OUTINGS, OUTING_TRAIL_SCENES, OUTING_ALTERNATES, GEAR, RELICS, FRAMES, MARKET_ITEMS, MARKET_REQUESTS, MARKET_RARITIES, visitorActFor } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
+import { missionStops } from '../content/project-encounters.js';
 import { PROJECTS, PROJECT_STOPS } from '../content/projects.js';
 import { addNote, clamp } from '../state.js';
 const checked = new WeakSet();
@@ -46,11 +47,11 @@ export function favoriteFor(pet) {
 }
 // A trail has no hidden dice rolls. Decisions trade nerve, points and the one
 // packed tool; a small look-ahead map lets the player plan instead of guess.
-export function outingTrail(routeId, edition=0, mission=false) {
+export function outingTrail(routeId, edition=0, mission=false, missionRevision=1) {
   const route=OUTINGS.find(x=>x.id===routeId);
   if(!route)return null;
   const n=Number.isInteger(edition)&&edition>=0&&edition<8?edition:0;
-  return route.steps.map((step,i)=>({...((mission?PROJECT_STOPS[routeId][i]:((n>>i)&1?OUTING_ALTERNATES[routeId][i]:OUTING_TRAIL_SCENES[routeId][i]))),points:2+(i+n%3)%3}));
+  return route.steps.map((step,i)=>({...((mission?missionStops(routeId,n,missionRevision)[i]:((n>>i)&1?OUTING_ALTERNATES[routeId][i]:OUTING_TRAIL_SCENES[routeId][i]))),points:2+(i+n%3)%3}));
 }
 export const OUTING_DARES = [
   {id:'bold',name:'Do it the hard way',line:'Take at least two detours.',payoff:'Two detours, no fatalities. The undertaker has blocked your number.'},
@@ -68,7 +69,7 @@ function trailMove(step,gear,expertise,nerve,toolUsed,choice) {
 export function outingSnapshot(state) {
   const o=lifeState(state).outing;
   if(!o||o.version!==2)return o;
-  const steps=outingTrail(o.route,o.edition,o.mission);
+  const steps=outingTrail(o.route,o.edition,o.mission,o.missionRevision);
   if(!steps||!GEAR.some(g=>g.id===o.gear))return null;
   const expertise=Array.isArray(o.expertise)?o.expertise:[],choices=[],log=[];
   let nerve=2,score=0,toolUsed=false;
@@ -77,10 +78,11 @@ export function outingSnapshot(state) {
     const move=trailMove(steps[choices.length],o.gear,expertise,nerve,toolUsed,choice);
     if(!move)break;
     const returning=o.mission&&Number.isInteger(o.returnedAt)&&choices.length>=o.returnedAt;
+    if(returning&&o.missionRevision>=2){if(choice!==0)break;choices.push(choice);log.push('You left '+steps[choices.length-1].title+' unexplored and carried the recovered parts home.');continue;}
     choices.push(choice);log.push(returning?'You left '+steps[choices.length-1].title+' unexplored and carried the recovered parts home.':move.text);nerve=move.nerve;toolUsed=move.toolUsed;score+=move.points;
   }
   // Rebuild resource counters from legal moves, including after save restoration.
-  const dare=OUTING_DARES.find(d=>d.id===o.dare),dareMet=!!dare&&trailDareMet(dare.id,choices,nerve,toolUsed),dareBonus=choices.length===3&&dareMet?2:0;
+  const dare=OUTING_DARES.find(d=>d.id===o.dare),dareMet=!!dare&&trailDareMet(dare.id,o.missionRevision>=2&&o.returnedAt?choices.slice(0,o.returnedAt):choices,nerve,toolUsed),dareBonus=choices.length===3&&dareMet?2:0;
   const baseScore=score;score+=dareBonus;
   Object.assign(o,{choices,log,nerve,score,toolUsed,step:choices.length});
   const search=(i,n,used,path=[])=>i===3?(dare&&trailDareMet(dare.id,path,n,used)?2:0):Math.max(...[0,1,2].map(c=>{if(o.mission&&c===2&&steps[i].good!==o.gear)return -Infinity;const m=trailMove(steps[i],o.gear,expertise,n,used,c);return m?m.points+search(i+1,m.nerve,m.toolUsed,[...path,c]):-Infinity;}));
@@ -109,7 +111,7 @@ export function startOuting(state, routeId, gearId, cast, options={}) {
   const edition=Number.isInteger(options.edition)&&options.edition>=0&&options.edition<8?options.edition:l.outings%8;
   const expertise=['cute','menace','damp','mystique'].filter(stat=>crew.some(p=>(p.stats?.[stat]||0)>=7));
   l.outing={version:2,edition,expertise,route:routeId,gear:gearId,cast:ids,step:0,score:0,log:[],choices:[],nerve:2,toolUsed:false};
-  if(options.mission===true)l.outing.mission=true;
+  if(options.mission===true){l.outing.mission=true;if(options.missionRevision!==1)l.outing.missionRevision=2;}
   if(OUTING_DARES.some(d=>d.id===options.dare))l.outing.dare=options.dare;
   return true;
 }
@@ -148,6 +150,11 @@ export function chooseOuting(state, choice, now=Date.now()) {
     l.projectParts[o.route]=after.parts;
     if(after.parts.length>=2&&!builtBefore){l.projects.push(o.route);awardDiscovery(state,'built:'+o.route,6,now);}
     o.result.project=o.route;o.result.built=!builtBefore&&l.projects.includes(o.route);o.result.found=after.recovered;
+    if(o.missionRevision>=2&&!o.returnedAt){
+      const page=o.route+':'+o.edition; l.trailPages||=[];
+      o.result.page=page;o.result.pageFresh=!l.trailPages.includes(page);
+      if(o.result.pageFresh){l.trailPages.push(page);l.xp+=2;}
+    }
   }
   return {complete:true,text,fresh,relic,supported};
 }
@@ -163,7 +170,7 @@ export function finishOuting(state) {
 }
 export function returnFromMission(state,now=Date.now()) {
   const o=outingSnapshot(state);
-  if(!o?.mission||o.step<1||o.step>=3||o.parts.length<2)return false;
+  if(!o?.mission||o.step<1||o.step>=3||(o.missionRevision>=2?o.recovered.length<1:o.parts.length<2))return false;
   lifeState(state).outing.returnedAt=o.step;
   // Cash out over the quiet route. Unvisited stops are explicitly recorded as
   // unexplored, and completion still passes through the single reward boundary.
@@ -248,7 +255,7 @@ function applyMarketMove(snapshot,move){
 }
 export function marketSnapshot(state){
  const market=lifeState(state).market;if(!market)return null;
- if(market.version===3)return errandSnapshot(market);
+ if(market.version>=3)return errandSnapshot(market);
  const version=market.version===2?2:1,layout=marketLayout(market.seed,{version}),snapshot={...layout,seed:market.seed,version,step:0,buttons:MARKET_BUDGET,bag:[],traded:false,secret:false,complete:false,claimed:false};
  for(const move of market.moves){if(!applyMarketMove(snapshot,move))break;}
  // Damaged legacy/imported histories stop at the last legal decision.
@@ -259,39 +266,39 @@ export function marketSnapshot(state){
 }
 export function startMarket(state,{replay=false,expanded=false,errands=false}={}){
  const l=lifeState(state);if(!state.pets.length||l.market&&!l.market.claimed)return false;
- const previous=l.market?.seed,version=replay&&previous?(l.market.version||1):(errands?3:expanded?2:1);
+ const previous=l.market?.seed,version=replay&&previous?(l.market.version||1):(errands?4:expanded?2:1);
  if(!replay||!previous)l.marketSerial++;
  // Stable market numbers let players retry an identical planning puzzle.
  const seed=replay&&previous?previous:(Math.imul(l.marketSerial,2654435761)>>>0)||1;
  const patrons=replay&&previous?l.market.patrons:state.pets.slice(0,3).map(p=>p.name);
- l.market={seed,moves:[],claimed:false,...(version>=2?{version}: {}),...(version===3?{patrons}: {})};return true;
+ l.market={seed,moves:[],claimed:false,...(version>=2?{version}: {}),...(version>=3?{patrons}: {}),...(version>=4?{patronIds:replay&&previous?l.market.patronIds:state.pets.slice(0,3).map(p=>p.id)}:{})};return true;
 }
 export function chooseMarket(state,pick,trade=null,{secret=false}={}){
  const l=lifeState(state),snapshot=marketSnapshot(state),move={pick,trade,...(secret?{secret:true}: {})};
- if(!snapshot||snapshot.complete||snapshot.claimed||!(snapshot.version===3?applyErrandMove(snapshot,move):applyMarketMove(snapshot,move)))return false;
+ if(!snapshot||snapshot.complete||snapshot.claimed||!(snapshot.version>=3?applyErrandMove(snapshot,move):applyMarketMove(snapshot,move)))return false;
  l.market.moves.push(move);return true;
 }
 export function deliverMarket(state,request,items){
  const l=lifeState(state),snapshot=marketSnapshot(state),move={type:'deliver',request,items};
- if(snapshot?.version!==3||snapshot.claimed||!applyErrandMove(snapshot,move))return false;
+ if(!(snapshot?.version>=3)||snapshot.claimed||!applyErrandMove(snapshot,move))return false;
  l.market.moves.push({type:'deliver',request,items:items.slice()});return true;
 }
 export function leaveMarket(state){
  const l=lifeState(state),snapshot=marketSnapshot(state),move={type:'leave'};
- if(snapshot?.version!==3||snapshot.claimed||!applyErrandMove(snapshot,move))return false;
+ if(!(snapshot?.version>=3)||snapshot.claimed||!applyErrandMove(snapshot,move))return false;
  l.market.moves.push(move);return true;
 }
 export function claimMarket(state,now=Date.now()){
  const l=lifeState(state),snapshot=marketSnapshot(state);
  if(!snapshot?.complete||snapshot.claimed)return null;
- const score=snapshot.score,done=score.fulfilled.filter(Boolean).length,tier=snapshot.version===3?(done===3?2:done===2?1:0):score.total===bestMarketScore(snapshot.seed,{version:snapshot.version})?2:score.total>=17?1:0,relic=RELICS.find(r=>r.id==='market:'+tier);
+ const score=snapshot.score,done=score.fulfilled.filter(Boolean).length,tier=snapshot.version>=3?(done===3?2:done===2?1:0):score.total===bestMarketScore(snapshot.seed,{version:snapshot.version})?2:score.total>=17?1:0,relic=RELICS.find(r=>r.id==='market:'+tier);
  l.market.claimed=true;l.marketRuns++;
- if(snapshot.version===3)l.marketErrandBest=Math.max(l.marketErrandBest||0,score.total);else l.marketBest=Math.max(l.marketBest,score.total);
+ if(snapshot.version===4)l.marketErrandBestV4=Math.max(l.marketErrandBestV4||0,score.total);else if(snapshot.version===3)l.marketErrandBest=Math.max(l.marketErrandBest||0,score.total);else l.marketBest=Math.max(l.marketBest,score.total);
  const fresh=!l.relics.includes(relic.id);
  if(fresh){l.relics.push(relic.id);l.xp+=4;if(l.displayed.length<3)l.displayed.push(relic.id);}
  const first=awardDiscovery(state,'game:market',3,now);dailyActivity(state,'market',now);l.introDone=true;
- const cast=state.pets.slice(0,2).map(p=>p.id),names=state.pets.slice(0,2).map(p=>p.name).join(' and ')||'The household';
- const text=snapshot.version===3?names+' delivered '+done+' of 3 household errands and brought home '+snapshot.buttons+' buttons. '+(done===3?'Everyone got what they asked for. They are meeting to decide what they meant.':done?'The completed errands are pleased. The others have requested your manager.':'They brought the list back. The list was not one of the errands.')+' '+snapshot.receipts.map(r=>snapshot.requests.find(q=>q.id===r.request).delivered).join(' '):names+' returned from the night market with '+snapshot.bag.length+' questionable purchase'+(snapshot.bag.length===1?'':'s')+' and '+score.fulfilled.filter(Boolean).length+' of 3 requests filled. '+(tier===2?'The vendors applauded. One of them checked for missing buttons.':tier===1?'The household calls this careful budgeting. The receipt calls it three objects in a bag.':'The bag has been presented as an artistic statement. This is why nobody lets the bag speak.')+' '+relic.line;
+ const cast=(snapshot.version>=4?(snapshot.patronIds||[]):state.pets.slice(0,2).map(p=>p.id)).filter(id=>state.pets.some(p=>p.id===id)).slice(0,2),names=cast.map(id=>state.pets.find(p=>p.id===id).name).join(' and ')||'The household';
+ const text=snapshot.version>=3?names+' delivered '+done+' of 3 household errands and brought home '+snapshot.buttons+' buttons. '+(done===3?'Everyone got what they asked for. They are meeting to decide what they meant.':done?'The completed errands are pleased. The others have requested your manager.':'They brought the list back. The list was not one of the errands.')+(snapshot.score.premiumPoints?' Special deliveries earned '+snapshot.score.premiumPoints+' points.':''):names+' returned from the night market with '+snapshot.bag.length+' questionable purchase'+(snapshot.bag.length===1?'':'s')+' and '+score.fulfilled.filter(Boolean).length+' of 3 requests filled. '+(tier===2?'The vendors applauded. One of them checked for missing buttons.':tier===1?'The household calls this careful budgeting. The receipt calls it three objects in a bag.':'The bag has been presented as an artistic statement. This is why nobody lets the bag speak.')+' '+relic.line;
  recordScene(state,'market','The Unlicensed Night Market',text,cast,now,{key:'market',object:relic.id});addNote(state,text,'the night market','scheme');
  return {score,relic,fresh,first};
 }
@@ -301,7 +308,7 @@ export function claimMarket(state,now=Date.now()){
 // No solution or advice is revealed before the player's first attempt ends.
 const marketBestCache=new Map();
 export function bestMarketScore(seed,{version=1}={}){
- if(version===3)return bestErrandScore(seed);
+ if(version>=3)return bestErrandScore(seed,{version});
  const cacheKey=seed+':'+version;if(marketBestCache.has(cacheKey))return marketBestCache.get(cacheKey);
  const layout=marketLayout(seed,{version}),seen=new Map();let best=0;
  function visit(s){

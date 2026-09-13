@@ -1,4 +1,5 @@
 import { initLife } from './ui/life.js';
+import { initWelcome } from './ui/welcome.js';
 import { createBackup } from './backup.js';
 import { initBackupTransfer } from './ui/backup.js';
 import { initPlayroom } from './ui/playroom.js';
@@ -81,6 +82,7 @@ const studio = initStudio({
     checkAchievements(state);
     advanceSchemes(state);
     renderAll(state);
+    requestAnimationFrame(()=>{reactTo(pet.id,'notice');toast(finalName+': '+TRAIT_BY_ID[traits[0]].blurb);});
   }
 });
 
@@ -90,6 +92,12 @@ document.getElementById('newPetBtn').addEventListener('click', () => {
 });
 
 // ---------- toolbar ----------
+document.getElementById('shelfFocus')?.addEventListener('click',e=>{
+  state.life ||= {};state.life.focusShelf=state.life.focusShelf!==true;
+  document.body.classList.toggle('focus-shelf',state.life.focusShelf);
+  e.currentTarget.setAttribute('aria-pressed',String(state.life.focusShelf));
+  e.currentTarget.textContent=state.life.focusShelf?'Show all shelves':'Focus occupied shelves';save();
+});
 
 document.getElementById('roundsBtn').addEventListener('click', () => {
   const result = doRounds(state);
@@ -339,6 +347,7 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 initSchemeUI(state, () => renderAll(state));
 initPlay(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
+initWelcome(state, () => renderAll(state));
 initPlayroom(state);
 initStories(state, () => renderAll(state), id => openCard(state, id, true));
 window.addEventListener('shelflife:care', e => openCard(state, e.detail?.petId));

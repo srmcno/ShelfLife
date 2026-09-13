@@ -1,4 +1,5 @@
 import { renderLife } from './life.js';
+import { renderWelcome } from './welcome.js';
 import { advanceStories, withStories } from '../engine/stories.js';
 import { renderStories } from './stories.js';
 import { save } from '../state.js';
@@ -52,6 +53,7 @@ export function renderAll(state) {
     renderNeeds(state);
     renderStories(state);
     renderLife(state);
+    renderWelcome(state);
     renderTheatreControls(state);
     save();
   });
@@ -183,6 +185,9 @@ function propEl(pr, slotIndex) {
 
 let shelfLayout = '';
 export function renderShelf(state) {
+  document.body.classList.toggle('focus-shelf',state.pets.length>0&&state.life?.focusShelf===true);
+  const framing=document.getElementById('shelfFocus');
+  if(framing){framing.hidden=!state.pets.length;framing.setAttribute('aria-pressed',String(state.life?.focusShelf===true));framing.textContent=state.life?.focusShelf?'Show all shelves':'Focus occupied shelves';}
   if (isDragging()) return;
   const layout = JSON.stringify(state.slots);
   const moved = shelfLayout !== layout;
@@ -409,6 +414,14 @@ function renderBrief(state) {
   briefState = state;
   const host = document.getElementById('shelfBrief');
   if (!host) return;
+  const recap=state.life?.recap?.map(id=>state.life.scenes.find(scene=>scene.id===id)).filter(Boolean)||[];
+  if(recap.length){
+    const latest=recap[0],cast=(latest.cast||[]).map(id=>petById(state,id)?.name).filter(Boolean);
+    const next=state.life.outing?{action:'outing',label:'Continue expedition'}:state.life.market&&!state.life.market.claimed?{action:'market',label:'Finish the deliveries'}:{action:'scene-select',label:'See what happened'};
+    const text=latest.text.length>170?latest.text.slice(0,167).trimEnd()+'…':latest.text;
+    updateMarkup(host,'<span class="brief-icon" aria-hidden="true">✦</span><div><b>'+escapeHtml(cast.length?cast.join(' & ')+': '+latest.title:latest.title)+'</b><span>'+escapeHtml(text)+'</span></div><button class="btn btn-sm" data-life="'+next.action+'" data-id="'+latest.id+'">'+next.label+' ↗</button>');
+    return;
+  }
   const sorted = [...state.pets].sort((a, b) => a.needs[worstNeed(a)] - b.needs[worstNeed(b)]);
   const needy = sorted.find(p => p.needs[worstNeed(p)] < 60);
   const playful = state.pets.find(p => !isAsleep(p) && !playWait(p)) || state.pets[0];

@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/life.css">
+<link rel="stylesheet" href="css/household.css">
 <link rel="stylesheet" href="css/game-shell.css">
 <link rel="stylesheet" href="css/court.css">
 <link rel="stylesheet" href="css/expeditions.css">
@@ -60,12 +61,14 @@
   <section class="pane pane-shelf" id="paneShelf" aria-label="Your residents">
     <div class="shelf-heading"><div><span class="eyebrow">A small world, badly supervised</span><h1>Your shelf. Their rules.</h1></div><span class="room-live"><i></i> Alive & opinionated</span></div>
     <div id="shelfBrief" class="shelf-brief"></div>
+    <div class="shelf-framing"><button class="btn btn-ghost btn-sm" id="shelfFocus" type="button" aria-pressed="false" hidden>Focus occupied shelves</button></div>
     <div class="stage">
       <!-- .cabinet-wrap draws the carcass; #cabinet is the run of shelves inside it. -->
       <div class="cabinet-wrap" id="cabinetWrap">
         <div class="cabinet" id="cabinet" tabindex="-1" aria-label="Your creature shelf"></div>
       </div>
     </div>
+    <section id="welcomePanel" class="welcome-panel" aria-labelledby="welcomeTitle" hidden></section>
     <section id="shelfTheatre" class="shelf-theatre-controls" aria-labelledby="theatreHeading" hidden>
       <div class="theatre-heading"><h2 id="theatreHeading">Small domestic disasters</h2><span id="theatreCount"></span></div>
       <div class="theatre-caption" id="theatreCaption" role="status" aria-live="polite" aria-atomic="true">Give them furniture. They will supply the incident.</div>

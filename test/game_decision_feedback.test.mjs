@@ -50,7 +50,7 @@ test('purchase previews reveal the exact new pairs without spending buttons or h
 test('market warns when a pass makes a three-errand finish impossible and exposes unfinished final deliveries',()=>{
   const market=initialErrands(5);
   assert.equal(maxRemainingErrands(market),3);assert.equal(maxRemainingErrands(market,true),2);
-  assert.match(marketMarkup(shelf(),market),/Passing this stall leaves at most 2 of 3 errands possible/);
+  assert.match(marketMarkup(shelf(),market),/After passing, there are enough purchase opportunities for at most 2 of 3 errands/);
   applyErrandMove(market,{pick:null,trade:null});assert.equal(maxRemainingErrands(market),2);
   market.step=6;market.bag=market.stalls.flat();
   const ready=market.requests.find(r=>errandProgress(market,r).pairs.length);

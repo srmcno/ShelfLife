@@ -1,9 +1,9 @@
 // Compact, versioned save data. No DOM, clock changes, or external services.
 export function blankLife() {
   return { v:1, introDone:false, introStarted:false, xp:0, day:'', daily:[], awards:[], scenes:[], serial:0,
-    relics:[], displayed:[], frame:'wood', visitorEpisodes:{}, outing:null, outings:0, projects:[], projectParts:{},
+    relics:[], displayed:[], frame:'wood', visitorEpisodes:{}, outing:null, outings:0, projects:[], projectParts:{}, trailPages:[],
     court:null, courtWins:0, courtPlays:0, courtBest:0, lastSeen:0, recap:[], blueprints:[],
-    market:null, marketSerial:0, marketRuns:0, marketBest:0, marketErrandBest:0 };
+    market:null, marketSerial:0, marketRuns:0, marketBest:0, marketErrandBest:0, marketErrandBestV4:0 };
 }
 const obj = x => x && typeof x === 'object' && !Array.isArray(x);
 const number = (x, max=1e9) => Number.isFinite(x) ? Math.max(0,Math.min(max,Math.floor(x))) : 0;
@@ -11,8 +11,10 @@ export function normalizeLife(raw, established=false) {
   const s = Object.assign(blankLife(), obj(raw) ? raw : {});
   s.introDone = raw ? s.introDone === true : established;
   s.v=1; s.introStarted=s.introStarted===true;
-  for (const k of ['xp','serial','outings','courtWins','courtPlays','courtBest','lastSeen','marketSerial','marketRuns','marketBest','marketErrandBest']) s[k]=number(s[k],k==='lastSeen'?1e14:1e9);
+  s.welcome=obj(s.welcome)&&typeof s.welcome.petId==='string'?{petId:s.welcome.petId.slice(0,80),bowlId:typeof s.welcome.bowlId==='string'?s.welcome.bowlId.slice(0,80):'',at:number(s.welcome.at,1e14),choice:['share','keep'].includes(s.welcome.choice)?s.welcome.choice:'',text:typeof s.welcome.text==='string'?s.welcome.text.slice(0,800):'',asleep:s.welcome.asleep===true,dismissed:s.welcome.dismissed===true}:null;
+  for (const k of ['xp','serial','outings','courtWins','courtPlays','courtBest','lastSeen','marketSerial','marketRuns','marketBest','marketErrandBest','marketErrandBestV4']) s[k]=number(s[k],k==='lastSeen'?1e14:1e9);
   s.day=typeof s.day==='string'?s.day.slice(0,10):'';
+  s.trailPages=[...new Set((Array.isArray(s.trailPages)?s.trailPages:[]).filter(id=>typeof id==='string'&&/^(drawer|fridge|cupboard):[0-7]$/.test(id)))].slice(0,24);
   s.projects=[...new Set((Array.isArray(s.projects)?s.projects:[]).filter(id=>['drawer','fridge','cupboard'].includes(id)))];
   s.projectParts=Object.fromEntries(['drawer','fridge','cupboard'].map(id=>[id,[...new Set((Array.isArray(s.projectParts?.[id])?s.projectParts[id]:[]).filter(i=>Number.isInteger(i)&&i>=0&&i<3))]]));
   for (const k of ['daily','awards','relics','displayed']) s[k]=[...new Set((Array.isArray(s[k])?s[k]:[]).filter(x=>typeof x==='string'&&/^[a-z0-9:_-]{1,80}$/i.test(x)))].slice(0,k==='displayed'?3:200);
@@ -28,36 +30,37 @@ export function normalizeLife(raw, established=false) {
       const choices=[];for(const choice of s.outing.choices){if(![0,1,2].includes(choice))break;choices.push(choice);}
       Object.assign(s.outing,{version:2,edition:number(o.edition,7),expertise:[...new Set((Array.isArray(o.expertise)?o.expertise:[]).filter(x=>['cute','menace','damp','mystique'].includes(x)))],choices,step:choices.length,nerve:number(o.nerve,3),toolUsed:o.toolUsed===true});
       if(['bold','thrifty','steady'].includes(o.dare))s.outing.dare=o.dare;
-      if(o.mission===true)s.outing.mission=true;
+      if(o.mission===true){s.outing.mission=true;if(o.missionRevision===2)s.outing.missionRevision=2;}
       if(o.mission===true&&Number.isInteger(o.returnedAt)&&o.returnedAt>=1&&o.returnedAt<=2)s.outing.returnedAt=o.returnedAt;
     }else s.outing.choices=s.outing.choices.filter(x=>x===0||x===1);
     if(obj(o.result)&&typeof o.result.relic==='string'){
       s.outing.result={relic:o.result.relic.slice(0,30),fresh:o.result.fresh===true};
+      if(typeof o.result.page==='string'&&/^(drawer|fridge|cupboard):[0-7]$/.test(o.result.page))Object.assign(s.outing.result,{page:o.result.page,pageFresh:o.result.pageFresh===true});
       if(['drawer','fridge','cupboard'].includes(o.result.project))Object.assign(s.outing.result,{project:o.result.project,built:o.result.built===true,found:(Array.isArray(o.result.found)?o.result.found:[]).filter(i=>[0,1,2].includes(i)).slice(0,3)});
     }
   }
   // Only the seed and choices are saved. Prices, bag contents and the score are
   // replayed by the market engine, so stale or edited counters cannot mint prizes.
-  if (!obj(s.market)||!Number.isInteger(s.market.seed)||s.market.seed<1||s.market.seed>4294967295||!Array.isArray(s.market.moves)||s.market.moves.length>(s.market.version===3?10:6)) s.market=null;
+  if (!obj(s.market)||!Number.isInteger(s.market.seed)||s.market.seed<1||s.market.seed>4294967295||!Array.isArray(s.market.moves)||s.market.moves.length>(s.market.version===4?12:s.market.version===3?10:6)) s.market=null;
   else {
-    const moves=[],version=s.market.version===3?3:s.market.version===2?2:1;
+    const moves=[],version=s.market.version===4?4:s.market.version===3?3:s.market.version===2?2:1;
     for(const move of s.market.moves){
       if(!obj(move))break;
-      if(version===3&&move.type==='deliver'){
+      if(version>=3&&move.type==='deliver'){
         if(!/^errand-[0-2]$/.test(move.request)||!Array.isArray(move.items)||move.items.length!==2||move.items.some(id=>typeof id!=='string'||!/^[a-z-]{1,30}$/.test(id)))break;
         moves.push({type:'deliver',request:move.request,items:move.items.slice()});continue;
       }
-      if(version===3&&move.type==='leave'){moves.push({type:'leave'});continue;}
-      if(move.type!==undefined||version===3&&move.secret||!(move.pick===null||typeof move.pick==='string'&&/^[a-z-]{1,30}$/.test(move.pick))||!(move.trade===null||typeof move.trade==='string'&&/^[a-z-]{1,30}$/.test(move.trade)))break;
+      if(version>=3&&move.type==='leave'){moves.push({type:'leave'});continue;}
+      if(move.type!==undefined||version>=3&&move.secret||!(move.pick===null||typeof move.pick==='string'&&/^[a-z-]{1,30}$/.test(move.pick))||!(move.trade===null||typeof move.trade==='string'&&/^[a-z-]{1,30}$/.test(move.trade)))break;
       moves.push({pick:move.pick,trade:move.trade,...(version===2&&move.secret===true?{secret:true}:{})});
     }
-    s.market={seed:s.market.seed,moves,claimed:s.market.claimed===true&&(version===3?moves.at(-1)?.type==='leave':moves.length===6),...(version>=2?{version}:{}),...(version===3?{patrons:(Array.isArray(s.market.patrons)?s.market.patrons:[]).filter(n=>typeof n==='string').slice(0,3).map(n=>n.slice(0,40))}:{})};
+    s.market={seed:s.market.seed,moves,claimed:s.market.claimed===true&&(version>=3?moves.at(-1)?.type==='leave':moves.length===6),...(version>=2?{version}:{}),...(version>=3?{patrons:(Array.isArray(s.market.patrons)?s.market.patrons:[]).filter(n=>typeof n==='string').slice(0,3).map(n=>n.slice(0,40))}:{}),...(version>=4?{patronIds:(Array.isArray(s.market.patronIds)?s.market.patronIds:[]).filter(id=>typeof id==='string').slice(0,3).map(id=>id.slice(0,80))}:{})};
   }
   // Court stores identity snapshots and a bounded legal-action log. Testimony,
   // evidence, guilt and ranks are reconstructed by the seeded engine on load.
   if(!obj(s.court)||![2,3].includes(s.court.version)||!Number.isInteger(s.court.seed)||s.court.seed<1||s.court.seed>4294967295||!Number.isInteger(s.court.caseIndex)||s.court.caseIndex<0||s.court.caseIndex>=12||!Number.isInteger(s.court.level)||s.court.level<0||s.court.level>2||!Array.isArray(s.court.cast)||!Array.isArray(s.court.moves))s.court=null;
   else {
-    const c=s.court,cast=c.cast.filter(p=>obj(p)&&typeof p.id==='string'&&p.id.length>0&&p.id.length<=80&&typeof p.name==='string').slice(0,4).map(p=>({id:p.id,name:p.name.slice(0,40)}));
+    const c=s.court,cast=c.cast.filter(p=>obj(p)&&typeof p.id==='string'&&p.id.length>0&&p.id.length<=80&&typeof p.name==='string').slice(0,4).map(p=>({id:p.id,name:p.name.slice(0,40),...(typeof p.memory==='string'?{memory:p.memory.slice(0,360)}:{})}));
     if(!cast.length||new Set(cast.map(p=>p.id)).size!==cast.length||typeof c.petId!=='string'||!cast.some(p=>p.id===c.petId))s.court=null;
     else {
       const moves=[];

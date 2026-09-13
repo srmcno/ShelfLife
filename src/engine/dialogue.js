@@ -1,4 +1,5 @@
 import { contextualExchanges } from './observations.js';
+import { residentMemories, rememberedExchange } from './resident-memory.js';
 /* ================= DIALOGUE SELECTION =================
    Pure selection logic for src/content/dialogue.js. No DOM, no note writing, no
    mutation of state — every function takes `state` explicitly so it can be unit
@@ -264,6 +265,8 @@ function buildTrait(state, ctx, rng) {
 function buildGeneric(state, ctx, rng) {
   if (!ctx.pairs.length) return null;
   const [a, b] = choose(ctx.pairs, rng);
+  const remembered = rememberedExchange(state, a, b);
+  if (remembered && rnd(rng) < .55) return makeExchange('generic', remembered, a, b, ctx, { memory: remembered.memory });
   const contextual = contextualExchanges(state, a, ctx.now);
   const pool = contextual.length && rnd(rng) < .65 ? contextual : ctx.pools.generic;
   const entry = pickEntry(pool, ctx, [a, b], rng);
@@ -338,6 +341,12 @@ function buildDirect(state, ctx, rng) {
   const pet = choose(ctx.awake, rng);
   const neighbours = petsAdjacentTo(state, pet, ctx.now);
   const neighbour = neighbours.length ? choose(neighbours, rng) : null;
+
+  const memories = residentMemories(state, pet, ctx.now);
+  if (memories.length && rnd(rng) < .6) {
+    const memory = choose(memories, rng);
+    return makeDirect({ turns: [['p', memory.text]] }, pet, null, ctx, { memory: memory.key, evidence: memory.evidence });
+  }
 
   const traitPool = ctx.pools.traitDirect.filter(e =>
     pet.traits.includes(e.trait) && entryFits(e, ctx, [pet]) && !e.needs);

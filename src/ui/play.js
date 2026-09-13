@@ -6,6 +6,7 @@ import { createPuppet } from '../art/animator.js';
 import { createChaseUI } from './chase.js';
 import { acceptsGameShortcut, chaseSettingsLocked } from './game-controls.js';
 import { playFuss } from '../audio/sound.js';
+import { handshakeMemory, handshakeReaction } from '../engine/play.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 import { checkAchievements } from '../engine/achievements.js';
 
@@ -54,7 +55,7 @@ export function initPlay(state, refresh) {
   alibiMode.innerHTML = '<option value="prove">Prove it · lie + evidence</option><option value="quick">Spot the lie · casual</option>'; alibiLabel.append(alibiMode); alibiRoot.prepend(alibiLabel);
   const evidencePanel = document.createElement('div'); evidencePanel.className = 'alibi-evidence-panel'; evidencePanel.hidden = true;
   const evidenceTitle = document.createElement('h3'); evidenceTitle.textContent = 'Which record contradicts it?';
-  const evidenceHint = document.createElement('p'); evidenceHint.className = 'hint'; evidenceHint.textContent = 'Choose the fact that disproves your selected statement. Keys A–C select records; 1–3 change the statement.';
+  const evidenceHint = document.createElement('p'); evidenceHint.className = 'hint'; evidenceHint.textContent = 'Every record is true. Only one disproves the lie. A–C: records · 1–3: statements.';
   const evidenceList = document.createElement('div'); evidenceList.className = 'alibi-exhibits'; evidenceList.setAttribute('role', 'group'); evidenceList.setAttribute('aria-label', 'Shelf records. Choose contradictory evidence.');
   const selectedClaim = document.createElement('button'); selectedClaim.type = 'button'; selectedClaim.className = 'alibi-selected-claim';
   evidencePanel.append(selectedClaim, evidenceTitle, evidenceHint, evidenceList); alibiList.after(evidencePanel);
@@ -63,6 +64,9 @@ export function initPlay(state, refresh) {
   const again = document.createElement('button'); again.type = 'button'; again.className = 'btn'; again.textContent = 'Replay this ritual'; again.hidden = true; playControls.append(again);
   const slowerReplay = document.createElement('button'); slowerReplay.type = 'button'; slowerReplay.className = 'btn btn-ghost'; slowerReplay.textContent = 'Replay slowly'; slowerReplay.hidden = true;
   slowerReplay.title = 'Watch the same round at a slower pace. Completed rounds stay safe.'; playControls.append(slowerReplay);
+  const ritualRecord = document.createElement('details'); ritualRecord.className = 'handshake-result-details'; ritualRecord.hidden = true;
+  const ritualRecordTitle = document.createElement('summary'); ritualRecordTitle.textContent = 'Ritual record';
+  const ritualRecordText = document.createElement('p'); ritualRecord.append(ritualRecordTitle, ritualRecordText); trail.after(ritualRecord);
   const stageAnimations = new Set();
   function animate(el, frames, options) {
     if (document.hidden || document.body.dataset.effects === 'light' || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !el?.animate) return;
@@ -99,6 +103,7 @@ export function initPlay(state, refresh) {
 
   function setMode(next) {
     generation++; cancelStageMotion(); chase.stop(); puppet?.release(); puppet = null;
+    ritualRecord.hidden = true; ritualRecord.open = false;
     document.getElementById('playAnnouncement').textContent = '';
     mode = next; game = mode === 'memory' ? freshHandshake() : null; alibi = null; lock(true);
     modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.playMode === mode)));
@@ -118,7 +123,7 @@ export function initPlay(state, refresh) {
     notebook.hidden = true; notebook.open = false; facts.replaceChildren(); encore.disabled = false;
     alibiList.replaceChildren();
     alibiVerdict.textContent = ''; alibiNext.hidden = true;
-    alibiCharge.textContent = 'Three statements. One lie. Bring receipts.'; stage('ready', mode === 'alibi' ? 'The interview room' : HANDSHAKE_RITUALS[ritualSelect.value].name + ' ritual');
+    alibiCharge.textContent = 'Three statements. One lie. They think you will be too polite to mention it.'; stage('ready', mode === 'alibi' ? 'The interview room' : HANDSHAKE_RITUALS[ritualSelect.value].name + ' ritual');
     start.hidden = mode === 'chase'; replay.hidden = true; start.textContent = STARTS[mode] || STARTS.memory;
     document.getElementById('playTitle').textContent = TITLES[mode] || TITLES.memory;
     document.getElementById('playName').textContent = (EYEBROWS[mode] || EYEBROWS.memory) + pet.name;
@@ -133,6 +138,10 @@ export function initPlay(state, refresh) {
       const example = document.createElement('p'); example.textContent = examples[game.ritual];
       const goal = document.createElement('p'); goal.textContent = 'Start with 2 moves. Add one each round, up to ' + (game.rounds + 1) + '. Finish all ' + game.rounds + ' rounds. No timer; mistakes only restart the current round.';
       ritualGuide.append(rule, example, goal);
+      const memory = handshakeMemory(pet, game.ritual);
+      const familiarity = document.createElement('p'); familiarity.className = 'handshake-familiarity';
+      familiarity.textContent = memory ? pet.name + ' remembers your opening: ' + memory.opening.map(move => GESTURES[move]).join(', ') + '. Learned together in ' + memory.completions + (memory.completions === 1 ? ' completed lesson. New moves follow it.' : ' completed lessons. New moves follow it.') : 'Finish a lesson and ' + pet.name + ' will keep its opening as your shared greeting, even during reward rest.';
+      ritualGuide.append(familiarity);
       status.textContent = 'Watch the resident light up the pads. When it says “Your turn”, tap them or use keys 1–4.';
     }
     previewReward();
@@ -179,7 +188,8 @@ export function initPlay(state, refresh) {
     evidencePanel.hidden = alibi?.mode !== 'prove';
     if (!round) return;
     stage('testimony', 'Interview ' + (alibi.round + 1) + ' · select a lie'); puppet?.gesture('testify');
-    alibiCharge.textContent = 'Interview ' + (alibi.round + 1) + ' of ' + alibi.rounds.length + '. Select the false statement.';
+    alibiRoot.dataset.proofMode = alibi.mode;
+    alibiCharge.textContent = alibi.mode === 'prove' ? '1 · Choose the lie. 2 · Pair it with the contradictory record.' : 'Choose the false statement. You can change your mind before presenting.';
     round.statements.forEach((text, i) => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'alibi-statement'; b.dataset.alibi = String(i); b.setAttribute('aria-pressed', 'false');
       const number = document.createElement('span'); number.className = 'alibi-number'; number.textContent = String(i + 1); number.setAttribute('aria-hidden', 'true');
@@ -267,7 +277,7 @@ export function initPlay(state, refresh) {
     });
     [...evidenceList.children].forEach((el, i) => { el.disabled = true; if (i === round.proof) { el.classList.add('proved'); const tag = document.createElement('small'); tag.textContent = 'Contradicts the lie'; el.append(tag); } });
     const explanation = verdict === 'right' ? (alibi.mode === 'prove' ? 'Caught and proved. ' : 'Lie caught. ') : verdict === 'unsupported' ? 'Right lie, unrelated evidence. Your record is true, but it does not contradict this claim. ' : 'That statement was true. The false claim is “' + round.statements[round.lie] + '” ';
-    alibiVerdict.textContent = explanation + 'On record: ' + round.evidence + ' ' + alibiReaction(round);
+    alibiVerdict.textContent = explanation + 'On record: ' + round.evidence + ' ' + alibiReaction(round, pet);
     cue.textContent = verdict === 'right' ? 'The witness has developed a tremor.' : 'It asks whether you work alone.';
     puppet?.gesture(verdict === 'right' ? 'confess' : 'deny'); stage(verdict === 'right' ? 'caught' : 'escaped', verdict === 'right' ? 'The record survives' : 'A hole in the case');
     progress();
@@ -288,8 +298,7 @@ export function initPlay(state, refresh) {
     lock(true); replay.disabled = true; slowerReplay.hidden = true; progress(); paintTrail(); previewReward();
     const ritual = HANDSHAKE_RITUALS[game.ritual || 'echo'];
     ritualGuide.hidden = true;
-    const stageLines = ['The audience died for these seats. Literally.', 'A second row has appeared. Do not turn around.', 'The applause is coming from inside the walls.', 'Someone is keeping time with a femur.', 'Your understudy has been buried. No pressure.'];
-    status.textContent = ritual.rule + ' ' + stageLines[Math.min(game.round, stageLines.length - 1)]; stage('watch', ritual.name + ' · watch the ritual');
+    status.textContent = ritual.rule + ' ' + handshakeReaction(pet); stage('watch', ritual.name + (game.familiar && game.round === 0 ? ' · your familiar opening' : ' · watch the ritual'));
     const sequence = handshakeDemonstration(game);
     cue.textContent = 'Watch…';
     const names = game.names || GESTURES;
@@ -342,21 +351,25 @@ export function initPlay(state, refresh) {
     const result = reward(game); progress();
     trail.replaceChildren(); trail.setAttribute('aria-label', 'Handshake complete');
     encore.disabled = false; ritualSelect.disabled = false; veil.classList.remove('ritual-active'); stage('win', HANDSHAKE_RITUALS[game.ritual || 'echo'].name + ' ritual complete');
-    cue.textContent = game.encore ? 'Six moves. Your pulse is optional.' : 'The audience wants you to stay. Forever.';
+    cue.textContent = 'A secret with ' + pet.name;
     document.getElementById('playAnnouncement').textContent = 'Handshake complete. ' + game.rounds + ' rounds remembered.';
-    status.textContent = rewardSummary(result) + ' The audience has started practising behind your back.';
-    status.textContent += ' ' + game.rounds + ' rounds · ' + game.mistakes + (game.mistakes === 1 ? ' slip · ' : ' slips · ') + game.replays + (game.replays === 1 ? ' replay.' : ' replays.');
+    status.textContent = rewardSummary(result) + ' ' + handshakeReaction(pet, 'complete');
+    ritualRecordText.textContent = game.rounds + ' rounds · ' + game.mistakes + (game.mistakes === 1 ? ' slip · ' : ' slips · ') + game.replays + (game.replays === 1 ? ' replay.' : ' replays.');
     const bestRun = pet.handshakeBest?.[handshakeRecordKey(game)];
-    if (bestRun) status.textContent += ' Personal best: ' + bestRun.rounds + ' rounds with ' + bestRun.mistakes + (bestRun.mistakes === 1 ? ' slip and ' : ' slips and ') + bestRun.replays + (bestRun.replays === 1 ? ' replay.' : ' replays.');
+    if (bestRun) ritualRecordText.textContent += ' Personal best: ' + bestRun.rounds + ' rounds with ' + bestRun.mistakes + (bestRun.mistakes === 1 ? ' slip and ' : ' slips and ') + bestRun.replays + (bestRun.replays === 1 ? ' replay.' : ' replays.');
+    const memory = handshakeMemory(pet, game.ritual);
+    if (memory) ritualRecordText.textContent += ' Your saved opening: ' + memory.opening.map(move => GESTURES[move]).join(', ') + '. ' + memory.completions + ' lessons together.';
+    ritualRecord.hidden = false; ritualRecord.open = false;
     puppet.gesture('win'); playFuss();
-    start.hidden = false; start.textContent = 'New ritual'; replay.hidden = true; again.hidden = false; start.focus({ preventScroll: true });
+    start.hidden = false; start.textContent = 'Another lesson'; replay.hidden = true; again.hidden = false; start.focus({ preventScroll: true });
   }
   start.addEventListener('click', () => {
     if (mode === 'alibi') { startAlibi(); return; }
     if (!game || game.complete) game = freshHandshake();
+    ritualRecord.hidden = true;
     encore.disabled = true; ritualSelect.disabled = true; memoryOptions.open = false; workspace.scrollTop = 0; veil.classList.add('ritual-active'); start.hidden = true; replay.hidden = false; again.hidden = true; demonstrate();
   });
-  again.addEventListener('click', () => { if (mode !== 'memory' || !game?.complete) return; game = restartHandshake(game); encore.disabled = true; ritualSelect.disabled = true; memoryOptions.open = false; workspace.scrollTop = 0; veil.classList.add('ritual-active'); start.hidden = true; again.hidden = true; replay.hidden = false; demonstrate(); });
+  again.addEventListener('click', () => { if (mode !== 'memory' || !game?.complete) return; game = restartHandshake(game); ritualRecord.hidden = true; encore.disabled = true; ritualSelect.disabled = true; memoryOptions.open = false; workspace.scrollTop = 0; veil.classList.add('ritual-active'); start.hidden = true; again.hidden = true; replay.hidden = false; demonstrate(); });
   ritualSelect.addEventListener('change', () => { if (pet && mode === 'memory' && !ritualSelect.disabled) setMode('memory'); });
   function replayPattern(slower = false) {
     if (!replayHandshake(game)) return;
@@ -390,14 +403,15 @@ export function initPlay(state, refresh) {
     if (navigator.vibrate) navigator.vibrate(8);
     if (result === 'retry') {
       lock(true); generation++; stage('retry', 'Same round. Another rehearsal.'); cue.textContent = 'No harm done.';
-      status.textContent = 'That was ' + GESTURES[i] + '. Watch the pattern again when you are ready. Your completed rounds are safe.';
+      status.textContent = handshakeReaction(pet, 'retry') + ' Watch the same pattern again. Completed rounds stay safe.';
       replay.disabled = false; slowerReplay.hidden = slow.checked; replay.focus({ preventScroll: true });
       return;
     }
     if (result === 'correct') { status.textContent = game.cursor + ' of ' + handshakePattern(game).length + ' remembered. ' + (game.ritual === 'mirror' ? 'Keep working backwards.' : game.ritual === 'duet' ? 'Your beats only.' : 'Keep going.'); return; }
     lock(true); replay.disabled = true; slowerReplay.hidden = true;
     if (result === 'round') {
-      stage('round', 'Round ' + game.round + ' remembered'); cue.textContent = 'They give a very small standing ovation.';
+      stage('round', 'Round ' + game.round + ' remembered'); cue.textContent = pet.name + ' moves a little closer.';
+      animate(host, [{ transform: 'translateY(0) scale(1)' }, { transform: 'translateY(8px) scale(1.06)', offset: .65 }, { transform: 'translateY(0) scale(1)' }], { duration: 650, easing: 'ease-out' });
       status.textContent = 'Round ' + game.round + ' complete. Next: ' + handshakePattern(game).length + ' moves. Start when you are ready.';
       progress(); start.hidden = false; start.textContent = 'Watch round ' + (game.round + 1); replay.hidden = true;
       start.focus({ preventScroll: true });

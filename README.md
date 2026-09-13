@@ -13,6 +13,22 @@ No build step, no runtime dependencies, no backend. Fonts and their licenses are
 
 ---
 
+## A household worth interrupting
+
+New residents have a quick **Meet [name]** path alongside the full creator. A first housewarming offers a real bowl and a temporary visit from Madam Moth. Share the first serving for company or keep it for more food. The choice becomes a saved scene; a permanent neighbour is always your decision. Existing households keep their saves and skip this introduction.
+
+Resident cards now show what someone is actually planning and what they can truthfully remember. Recorded names, care, kept promises, games, visitors, shared scenes and relationships support personal callbacks. Seven more scene endings use specific traits. A served bowl always consumes a serving, even when care rewards are full; empty bowls never show an imaginary meal. **Focus occupied shelves** hides unused rows without changing positions or adjacency.
+
+- **Crumb Chase / Midnight Run:** original movement and Hop remain intact. Intermissions offer alternate contracts separately from upgrades, with explicit goals and rewards. Results keep the essentials visible and expand for the details.
+- **Handshake:** finishing a lesson teaches that resident a real opening gesture. Later lessons retain it, including practice at full trust, while adding new moves.
+- **Alibi:** a wider desktop desk puts testimony beside records. Recorded renames, care, promises and personal game history create additional fair claims.
+- **Shelf Court:** a compact matrix distinguishes untested comparisons, compatible evidence and contradictions. Saved personal asides never alter the deduction. Court scenes use the actual participants.
+- **Night Market:** new trips use eight stalls, premium delivery bonuses and optional pairing advice. Passing and changing a purchase can still lead to three completed errands. Earlier saved markets replay their original rules and keep separate records.
+- **Expeditions:** crew and equipment previews expose real costs, new missions can bank one recovered part, and completed route editions unlock field notes. Unvisited stops grant no imaginary rewards. Older missions preserve their saved rules.
+
+The release includes regression coverage for eight household fixtures and the changed rules. See [the revision coverage and limitations](docs/household-revision-review.md) and [save and CPU measurements](docs/qa-fixture-results.md). Responsive browser checks are distinct from physical iOS/Android testing.
+
+
 ## Interface and control polish
 
 Character creation now has two reversible steps: **Appearance**, then **Name & personality**. Next opens the identity review instead of immediately adding a resident. Going back, changing art tabs, and undoing appearance changes preserve the personality draft. Existing residents still use a single appearance-editing step. Creator actions and Close stay reachable on phones and short desktop windows; landscape drawing opens the canvas beside its tools.

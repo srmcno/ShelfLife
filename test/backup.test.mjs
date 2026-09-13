@@ -124,3 +124,40 @@ test('transfer controls preserve the email attachment name and only mark success
     else delete globalThis.navigator;
   }
 });
+
+test('unavailable sharing offers an explicit download retry, and a failed download cannot mark the shelf backed up', async () => {
+  const previousDocument = globalThis.document;
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const elements = new Map();
+  const element = id => {
+    if (!elements.has(id)) {
+      const listeners = new Map();
+      elements.set(id, { hidden: true, disabled: false, textContent: '', classList: { add() {}, remove() {} },
+        addEventListener: (name, handler) => listeners.set(name, handler), fire: name => listeners.get(name)?.({}) });
+    }
+    return elements.get(id);
+  };
+  globalThis.document = { getElementById: element, addEventListener() {} };
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {} });
+  let blocked = true, requested = 0, marked = 0;
+  try {
+    initBackupTransfer({ state: blankState(), download() { if (blocked) throw Error('download blocked'); requested++; }, markBackup() { marked++; } });
+    await element('transferShare').fire('click');
+    assert.match(element('transferStatus').textContent, /Choose Download backup/);
+    assert.equal(element('transferDownload').disabled, false);
+    assert.equal(requested, 0, 'the player chooses whether to download after an unsupported share');
+    element('transferDownload').fire('click');
+    assert.equal(marked, 0);
+    assert.equal(element('transferEmail').hidden, true);
+    assert.match(element('transferStatus').textContent, /download could not start/);
+    blocked = false;
+    element('transferDownload').fire('click');
+    assert.equal(requested, 1); assert.equal(marked, 1);
+    assert.equal(element('transferEmail').hidden, false);
+    assert.match(element('transferStatus').textContent, /attach it yourself/);
+  } finally {
+    globalThis.document = previousDocument;
+    if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor);
+    else delete globalThis.navigator;
+  }
+});

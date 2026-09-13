@@ -1,5 +1,5 @@
 import { SHELF_SCENES } from '../content/shelf-theatre.js';
-import { availableShelfScenes, performShelfScene, sceneAvailability } from '../engine/shelf-theatre.js';
+import { availableShelfScenes, performShelfScene, sceneAvailability, shelfSceneRewardPreview } from '../engine/shelf-theatre.js';
 import { initShelfTheatre } from '../art/shelf-theatre.js';
 import { PROPS } from '../content/props.js';
 import { totalBond } from '../engine/unlocks.js';
@@ -55,7 +55,8 @@ export function initTheatreControls({ getState, refresh }) {
     play.disabled=busy||!ready;stop.hidden=!busy;
     repertoire.querySelectorAll('[data-scene-kind]').forEach(button=>{button.disabled=busy;});
     play.textContent=lastEvent?'Play another':'Play a scene';
-    availability.textContent=busy?'The cast is occupied.':!ready?sceneAvailability(state,{...(selected?{kind:selected}:{}),manual:true},Date.now()):reduced.matches?'Reduced motion: request a scene to read a still performance.':'Place residents within two spaces of furniture, on the same shelf.';
+    const suggested=candidates.filter(s=>!selected||s.kind===selected).sort((a,b)=>b.weight-a.weight)[0];
+    availability.textContent=busy?'The cast is occupied.':!ready?sceneAvailability(state,{...(selected?{kind:selected}:{}),manual:true},Date.now()):(reduced.matches?'Still performance. ':'')+shelfSceneRewardPreview(state,suggested);
     const seen=new Set(state.theatre?.seen||[]), total=SHELF_SCENES.reduce((n,s)=>n+s.variants.length,0);
     document.getElementById('theatreCount').textContent=seen.size+' / '+total+' endings seen';
     const key=JSON.stringify([state.slots,state.props.map(p=>p.kind),[...new Set(candidates.map(s=>s.kind))],[...seen],totalBond(state)]);
@@ -64,7 +65,7 @@ export function initTheatreControls({ getState, refresh }) {
     for(const scene of SHELF_SCENES){
       const entry=document.createElement('article');entry.className='theatre-entry';
       const info=document.createElement('div'), title=document.createElement('h3'), hint=document.createElement('p'), tally=document.createElement('p');
-      title.textContent=scene.title;hint.textContent=scene.requirements;tally.className='theatre-tally';tally.textContent=scene.variants.filter(v=>seen.has(v.id)).length+' / '+scene.variants.length+' endings';
+      title.textContent=scene.title;hint.textContent=candidates.some(c=>c.kind===scene.kind)?scene.requirements:sceneAvailability(state,{kind:scene.kind,manual:true},Date.now());tally.className='theatre-tally';tally.textContent=scene.variants.filter(v=>seen.has(v.id)).length+' / '+scene.variants.length+' endings';
       info.append(title,hint,tally);entry.append(info);
       const button=document.createElement('button');button.className='btn btn-sm';button.type='button';
       const prop=PROPS[scene.propKind], owned=state.props.some(p=>p.kind===scene.propKind);

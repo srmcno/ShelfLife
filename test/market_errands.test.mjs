@@ -6,6 +6,7 @@ import { errandLayout, initialErrands, applyErrandMove, deliveryOptions, bestErr
 import { marketMarkup } from '../src/ui/market.js';
 
 const now=new Date(2026,8,10,12).getTime();
+function legacyStart(s){startMarket(s,{errands:true});s.life.market.version=3;delete s.life.market.patronIds;}
 function fixture(){const s=blankState();s.pets=[{id:'p',name:'Pip',traits:[],art:{},needs:{food:60,fuss:60,clean:60},bond:0}];s.slots[0]='p';return s;}
 // Independent planner: a hand-in consumes the two selected items; money is a
 // running ledger. Returns a witness route, not the engine's cached score.
@@ -39,7 +40,7 @@ test('every sampled route permits all three deliveries and the advertised optimu
 });
 
 test('deliveries consume exactly two objects, pay once, preserve the stall and survive every restore',()=>{
-  let s=fixture();startMarket(s,{errands:true});const seed=s.life.market.seed,plan=oracle(seed).plan;
+  let s=fixture();legacyStart(s);const seed=s.life.market.seed,plan=oracle(seed).plan;
   const originalNeeds={...s.pets[0].needs};let spent=0,refunds=0,paid=0;
   for(const move of plan){
     const before=marketSnapshot(s);
@@ -68,7 +69,7 @@ test('one multi-tag object cannot count as two or satisfy two errands after deli
 });
 
 test('leaving is explicit, final-stall deliveries remain available, and impossible imported actions stop safely',()=>{
-  const s=fixture();startMarket(s,{errands:true});assert.equal(leaveMarket(s),false);assert.equal(claimMarket(s),null);
+  const s=fixture();legacyStart(s);assert.equal(leaveMarket(s),false);assert.equal(claimMarket(s),null);
   const first=marketSnapshot(s).stalls[0][0],saved=structuredClone(s.life.market);
   assert.equal(deliverMarket(s,'errand-0',[first.id,'invented']),false);assert.deepEqual(s.life.market,saved);
   for(let i=0;i<6;i++)assert.equal(chooseMarket(s,null),true);
@@ -81,7 +82,7 @@ test('leaving is explicit, final-stall deliveries remain available, and impossib
 
 test('new market explains deliveries, removes secret/charm scoring, and escapes patron names',()=>{
   const s=fixture();s.pets[0].name='<img src=x>';const intro=marketMarkup(s,null);assert.match(intro,/Send a pair home/);assert.ok(!intro.includes('Sell a secret'));
-  startMarket(s,{errands:true});const m=marketSnapshot(s),view=marketMarkup(s,m,'',null,'','requests');
+  legacyStart(s);const m=marketSnapshot(s),view=marketMarkup(s,m,'',null,'','requests');
   assert.ok(view.includes('&lt;img src=x&gt;'));assert.ok(!view.includes('<img src=x>'));assert.ok(!view.includes('charm'));assert.ok(!view.includes('market-secret'));
   assert.match(view,/two named objects/);assert.match(view,/four buttons/);
 });

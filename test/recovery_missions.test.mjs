@@ -47,8 +47,8 @@ test('older expeditions retain their encounters and every new scene has an expli
  for(const steps of Object.values(PROJECT_STOPS))for(const step of steps)assert.notEqual(curioSVG(step.prop,{literal:true}),curioSVG('unknown',{literal:true}),step.title+' needs its actual prop');
 });
 
-test('securing the objective allows an early return without inventing encounters or paying twice',()=>{
- let s=fixture();startOuting(s,'drawer','thread',['p'],{mission:true});assert.equal(returnFromMission(s,now),false);
+test('legacy missions preserve the two-part early return without inventing encounters or paying twice',()=>{
+ let s=fixture();startOuting(s,'drawer','thread',['p'],{mission:true,missionRevision:1});assert.equal(returnFromMission(s,now),false);
  chooseOuting(s,1,now);assert.equal(returnFromMission(s,now),false);chooseOuting(s,2,now);
  assert.equal(returnFromMission(s,now),true);assert.ok(s.life.projects.includes('drawer'));assert.equal(s.life.outings,1);
  assert.match(outingSnapshot(s).log.at(-1),/unexplored/);const xp=s.life.xp;s=copy(s);

@@ -298,6 +298,24 @@ function reading(scene, key = 'record') {
 
 export function sceneDirection(scene = {}) {
   const declared = String(scene.stage?.key || '');
+  if (declared === 'welcome') {
+    const branch=scene.stage?.branch, sleepy=scene.stage?.object==='sleepy';
+    const setup=beat('One bowl. Two interested faces.',[actor(27,0,sleepy?'nap':'look'),actor(77,8,'look')],{bowl:pos(50),crumb:pos(50,25)});
+    const action=sleepy&&['share','keep'].includes(branch)?[
+      beat('A quiet feeding beside the bowl',[actor(43,0,'nap'),actor(72,8,'look')],{crumb:pos(43,25,{scale:branch==='share'?.5:1})}),
+      beat(branch==='share'?'Madam Moth takes her half':'Madam Moth studies the empty spoon',[actor(43,0,'nap'),actor(branch==='share'?60:72,4,branch==='share'?'eat':'look')],{crumb:branch==='share'?pos(60,23,{scale:.5}):hidden(43,25)}),
+      beat(branch==='share'?'The visitor settles beside the bowl':'She quietly chews a loose thread',[actor(43,0,'nap'),actor(65,0,branch==='share'?'nap':'eat')],{crumb:hidden(60,23)})
+    ]:branch==='share'?[
+      beat('Half a serving changes hands',[actor(43,0,sleepy?'nap':'offer'),actor(65,8,'catch')],{crumb:pos(60,27,{scale:.55})}),
+      beat('Madam Moth notices the stare',[actor(43,0,sleepy?'nap':'look'),actor(64,8,'surprise')],{crumb:pos(59,27,{scale:.3})}),
+      beat('A small flake is pushed back',[actor(43,0,sleepy?'nap':'eat'),actor(62,8,'offer')],{crumb:hidden(45,27)})
+    ]:branch==='keep'?[
+      beat('The resident gets the whole serving',[actor(45,0,sleepy?'nap':'eat'),actor(77,8,'look')],{crumb:pos(45,28)}),
+      beat('The visitor tries looking abandoned',[actor(45,0,sleepy?'nap':'eat'),actor(72,0,'sad')],{crumb:hidden(45,28)}),
+      beat('A very deliberate pause in the chewing',[actor(43,0,sleepy?'nap':'look'),actor(73,3,'deny')],{crumb:hidden(45,28)})
+    ]:[];
+    return complete('welcome','shelf',[prop('bowl','bowl','The housewarming bowl'),prop('crumb','crumb','One actual serving')],[setup,...action],'moth');
+  }
   const scheme = SCHEMES.find(s => declared === 'scheme:' + s.id) || (!declared ? SCHEMES.find(s => s.id === scene.kind || s.title === scene.title) : null);
   if (scheme) {
     const direction = DIRECTIONS[scheme.id], branch = schemeBranch(scene, scheme);

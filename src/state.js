@@ -345,6 +345,13 @@ export function normalizeState(raw) {
       if (!['encore', 'standard', 'mirror', 'mirror-encore', 'duet', 'duet-encore'].includes(key) || !record(r)) { delete p.handshakeBest[key]; continue; }
       p.handshakeBest[key] = {rounds:Math.floor(finite(r.rounds,3,3,5)),mistakes:Math.floor(finite(r.mistakes,0,0,10000)),replays:Math.floor(finite(r.replays,0,0,10000)),at:finite(r.at,now,0,now)};
     }
+    p.handshakeRituals = record(p.handshakeRituals) ? p.handshakeRituals : {};
+    for (const key of Object.keys(p.handshakeRituals)) {
+      const r = p.handshakeRituals[key], length = key === 'duet' ? 4 : 2;
+      if (!['echo', 'mirror', 'duet'].includes(key) || !record(r) || !Array.isArray(r.opening) || r.opening.length !== length || !r.opening.every(move => Number.isInteger(move) && move >= 0 && move <= 3) || !(r.completions > 0)) { delete p.handshakeRituals[key]; continue; }
+      const completions = Math.floor(finite(r.completions, 1, 1, 100000));
+      p.handshakeRituals[key] = { opening: r.opening.slice(), completions, clean: Math.floor(finite(r.clean, 0, 0, completions)), at: finite(r.at, now, 0, now) };
+    }
     for (const key of ['expeditions', 'handshakes', 'dustPatrols', 'chases', 'alibis', 'alibiWins', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
     p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];
     p.stats = record(p.stats) ? p.stats : {};

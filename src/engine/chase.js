@@ -22,17 +22,32 @@ export const RUN_WAVES = [
   { name: 'Above suspicion', venue: 'moon', stat: 'finaleCaught', target: 5, gentleTarget: 3, goal: 'final gold crumbs', bonus: 100, intro: 'Low gravity. One final gold arc. Leave nothing for the coroner.' }
 ];
 export const RUN_UPGRADES = {
-  boots: { name: 'Undertaker’s boots', description: 'Dash recharges in 1.35s. Smashing dust or a broom earns 10 extra points.' },
-  spring: { name: 'Borrowed kneecaps', description: 'Higher hops. Every airborne catch earns 15 extra points.' },
-  salvage: { name: 'Grave robber’s licence', description: 'Grounded crumbs last 1.2s longer and pay 8 extra points when collected from the floor.' }
+  boots: { name: 'Undertaker’s boots', description: 'Dash recharges in 1.35s. Smashing dust or a broom earns 10 extra points.', plan: 'For deliberate dust attacks. No extra catch points or longer crumb life.' },
+  spring: { name: 'Borrowed kneecaps', description: 'Higher hops. Every airborne catch earns 15 extra points.', plan: 'For airborne contracts and biscuits. Floor catches receive no bonus.' },
+  salvage: { name: 'Crumb catcher’s apron', description: 'Grounded crumbs last 1.2s longer and pay 8 extra points when collected from the floor.', plan: 'For patient collecting. Biscuits still break on the floor; airborne catches receive no apron bonus.' }
 };
+// Contracts change the incentive, never the handling or the course. Existing
+// in-memory runs without a contract selection retain their original goals.
+export const RUN_CONTRACT_ALTERNATES = [null,
+  { id: 'floor', name: 'Dinner for one', stat: 'caught', target: 9, gentleTarget: 7, goal: 'crumbs', bonus: 55, intro: 'Ignore the impressive biscuits if you like. Bring home enough little pieces to call it a meal.' },
+  { id: 'air', name: 'Nothing touches the carpet', stat: 'airCatches', target: 6, gentleTarget: 4, goal: 'airborne catches', bonus: 70, intro: 'Ordinary crumbs, gold, moths and biscuits all count when your feet are off the floor.' }
+];
+export function chaseContractOptions(game, wave = game.wave) {
+  if (game.format !== 'run' || !RUN_WAVES[wave]) return [];
+  return [{ ...RUN_WAVES[wave], id: 'house' }, RUN_CONTRACT_ALTERNATES[wave]].filter(Boolean).map(contract => ({ ...contract, target: game.gentle ? contract.gentleTarget : contract.target }));
+}
+export function selectChaseContract(game, id) {
+  if (!game?.awaitingChoice || game.finished || !chaseContractOptions(game, game.wave + 1).some(option => option.id === id)) return false;
+  game.pendingContract = id;
+  return true;
+}
 export const chaseDuration = game => game.format === 'run' ? RUN_WAVE_SECONDS * RUN_WAVES.length : CHASE_SECONDS;
 export const chaseWaveTime = game => game.format === 'run' ? game.time - game.wave * RUN_WAVE_SECONDS : game.time;
 export function chaseWaveContract(game) {
   if (game.format !== 'run') return null;
-  const wave = RUN_WAVES[game.wave], target = game.gentle ? wave.gentleTarget : wave.target;
-  const progress = Math.max(0, game[wave.stat] - (game.waveBaseline[wave.stat] || 0));
-  return { ...wave, target, progress, done: progress >= target };
+  const options = chaseContractOptions(game), contract = options.find(option => option.id === game.contracts?.[game.wave]) || options[0];
+  const progress = Math.max(0, game[contract.stat] - (game.waveBaseline[contract.stat] || 0));
+  return { ...contract, progress, done: progress >= contract.target };
 }
 // Intermission is a stopped clock, and choosing an upgrade is an atomic action.
 // Closing the dialog never awards a partial run or spends anything from the shelf.
@@ -43,9 +58,11 @@ export function selectChaseUpgrade(game, upgrade) {
 }
 export function advanceChaseWave(game, upgrade = game?.pendingUpgrade) {
   if (!game || game.format !== 'run' || !game.awaitingChoice || game.finished || !RUN_UPGRADES[upgrade] || game.upgrades.includes(upgrade)) return false;
-  game.upgrades.push(upgrade); game.wave++; game.awaitingChoice = false; game.pendingUpgrade = null;
+  const contract = chaseContractOptions(game, game.wave + 1).find(option => option.id === game.pendingContract)?.id || 'house';
+  game.contracts ||= ['house', 'house', 'house']; game.contracts[game.wave + 1] = contract;
+  game.upgrades.push(upgrade); game.wave++; game.awaitingChoice = false; game.pendingUpgrade = null; game.pendingContract = null;
   game.venue = RUN_WAVES[game.wave].venue;
-  game.waveBaseline = { caught: game.caught, biscuits: game.biscuits, finaleCaught: game.finaleCaught };
+  game.waveBaseline = { caught: game.caught, biscuits: game.biscuits, finaleCaught: game.finaleCaught, airCatches: game.airCatches };
   game.items = []; game.crumbsMade = 0; game.nextCrumb = .15; game.nextBunny = 3.2;
   game.nextMoth = game.gentle ? 11 : 8; game.nextBiscuit = game.wave === 1 ? 1.2 : 5;
   game.nextSugar = 7; game.nextBroom = 4.5; game.broomsMade = 0;
@@ -124,7 +141,7 @@ export function newChase(pet, { gentle = false, rng = Math.random, seed = null, 
   const temper = temperOf(mood);
   return {
     kind: 'chase', seed, format: format === 'run' ? 'run' : 'quick', venue: format === 'run' ? 'shelf' : CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
-    wave: 0, waveBaseline: { caught: 0, biscuits: 0, finaleCaught: 0 }, waveResults: [], upgrades: [], pendingUpgrade: null, awaitingChoice: false, nextBroom: 4.5, broomsMade: 0,
+    wave: 0, waveBaseline: { caught: 0, biscuits: 0, finaleCaught: 0, airCatches: 0 }, waveResults: [], contracts: ['house', 'house', 'house'], upgrades: [], pendingUpgrade: null, pendingContract: null, awaitingChoice: false, nextBroom: 4.5, broomsMade: 0,
     rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { id: objective, ...CHASE_OBJECTIVES[objective], done: false } : null,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
     dashes: 0, dashSmashes: 0, finaleWarned: false, finaleStarted: false, finaleCaught: 0, finaleComplete: false,

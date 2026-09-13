@@ -12,7 +12,7 @@ export function pairFits(items, request) {
     (items[0].tags.includes(request.tags[0])&&items[1].tags.includes(request.tags[1]) ||
      items[1].tags.includes(request.tags[0])&&items[0].tags.includes(request.tags[1]));
 }
-export function errandLayout(seed) {
+export function errandLayout(seed, {version=3}={}) {
   const random=randomFor(seed);
   // Plant a legal three-delivery route before adding alternatives. Each pair
   // costs at most six, so ten starting buttons plus four per delivery suffice.
@@ -27,7 +27,15 @@ export function errandLayout(seed) {
     const request=candidates.find(r=>!used.has(r.id))||candidates[0];used.add(request.id);
     return {...request,template:request.id,id:'errand-'+i};
   });
-  return {stalls:plan.map((item,i)=>shuffled([item,alternatives[i]],random)),requests};
+  const stalls=plan.map((item,i)=>shuffled([item,alternatives[i]],random));
+  if(version>=4){
+    // Two genuine alternate stops leave room to pass or replace a mistake.
+    // Keep the six affordable planted objects in order, with delivery windows.
+    const stocked=new Set(stalls.flat().map(item=>item.id));
+    const extras=shuffled([...MARKET_ITEMS,...MARKET_RARITIES].filter(item=>!stocked.has(item.id)),random).slice(0,4);
+    stalls.splice(2,0,extras.slice(0,2));stalls.splice(5,0,extras.slice(2));
+  }
+  return {stalls,requests};
 }
 export function deliveryOptions(snapshot, request) {
   if(snapshot.delivered.includes(request.id))return [];
@@ -59,13 +67,17 @@ export function errandPurchasePreview(snapshot, item, trade=null) {
   };
 }
 export function maxRemainingErrands(snapshot, passed=false) {
-  const purchases=Math.max(0,6-snapshot.step-(passed?1:0));
+  const purchases=Math.max(0,snapshot.stalls.length-snapshot.step-(passed?1:0));
   return Math.min(snapshot.requests.length,snapshot.delivered.length+Math.floor((snapshot.bag.length+purchases)/2));
 }
+// Premium objects pay for their extra cost only when actually delivered.
+// They compete with keeping enough cash to finish another pair.
+export function deliveryBonus(item,version=4) { return version>=4?Math.max(0,item.cost-3)*2:0; }
 export function errandScore(snapshot) {
   const fulfilled=snapshot.requests.map(r=>snapshot.delivered.includes(r.id));
   const requestPoints=fulfilled.filter(Boolean).length*ERRAND_POINTS;
-  return {fulfilled,requestPoints,buttons:snapshot.buttons,total:requestPoints+snapshot.buttons};
+  const premiumPoints=snapshot.receipts.reduce((sum,receipt)=>sum+receipt.items.reduce((n,item)=>n+deliveryBonus(item,snapshot.version),0),0);
+  return {fulfilled,requestPoints,...(snapshot.version>=4?{premiumPoints}:{}),buttons:snapshot.buttons,total:requestPoints+premiumPoints+snapshot.buttons};
 }
 export function applyErrandMove(s, move) {
   if(s.complete||!move||typeof move!=='object')return false;
@@ -76,14 +88,15 @@ export function applyErrandMove(s, move) {
     if(items.some(i=>!i)||!pairFits(items,request))return false;
     s.bag=s.bag.filter(i=>!move.items.includes(i.id));s.delivered.push(request.id);s.buttons+=ERRAND_PAY;
     const patron=s.patrons?.[Number(request.id.slice(-1))]||'The household';
-    s.lastReceipt=patron+' received '+items.map(i=>i.name).join(' and ')+'. +4 buttons; two bag spaces freed. '+request.delivered;
+    const bonus=items.reduce((sum,item)=>sum+deliveryBonus(item,s.version),0);
+    s.lastReceipt=patron+' received '+items.map(i=>i.name).join(' and ')+'. +4 buttons; two bag spaces freed.'+(bonus?' +'+bonus+' special-delivery points.':'')+' '+request.delivered;
     s.receipts.push({request:request.id,items:items.map(i=>({...i}))});
     return true;
   }
   if(move.type==='leave'){
-    if(s.step!==6)return false;s.complete=true;return true;
+    if(s.step!==s.stalls.length)return false;s.complete=true;return true;
   }
-  if(move.type!==undefined||move.secret||s.step>=6||!(move.pick===null||typeof move.pick==='string')||!(move.trade===null||typeof move.trade==='string'))return false;
+  if(move.type!==undefined||move.secret||s.step>=s.stalls.length||!(move.pick===null||typeof move.pick==='string')||!(move.trade===null||typeof move.trade==='string'))return false;
   const item=s.stalls[s.step].find(i=>i.id===move.pick),trade=s.bag.find(i=>i.id===move.trade);
   if(move.pick!==null&&!item||move.trade!==null&&(!trade||!item||s.traded))return false;
   const bag=trade?s.bag.filter(i=>i.id!==trade.id):s.bag.slice(),purse=s.buttons+(trade?1:0);
@@ -92,11 +105,12 @@ export function applyErrandMove(s, move) {
   s.lastReceipt=item?'Bought '+item.name+' for '+item.cost+' buttons.'+(trade?' Returned '+trade.name+' for 1 button.':'')+' '+ERRAND_VENDOR_LINES[s.step].bought:ERRAND_VENDOR_LINES[s.step].passed;
   s.step++;return true;
 }
-export function initialErrands(seed, patrons=[]) {
-  return {...errandLayout(seed),version:3,seed,patrons,step:0,buttons:10,bag:[],delivered:[],receipts:[],traded:false,complete:false,claimed:false,lastReceipt:''};
+export function initialErrands(seed, patrons=[], {version=3}={}) {
+  return {...errandLayout(seed,{version}),version,seed,patrons,step:0,buttons:10,bag:[],delivered:[],receipts:[],traded:false,complete:false,claimed:false,lastReceipt:''};
 }
 export function errandSnapshot(saved) {
-  const snapshot=initialErrands(saved.seed,saved.patrons);
+  const snapshot=initialErrands(saved.seed,saved.patrons,{version:saved.version===4?4:3});
+  if(snapshot.version>=4)snapshot.patronIds=(saved.patronIds||[]).slice();
   let count=0;for(const move of saved.moves){if(!applyErrandMove(snapshot,move))break;count++;}
   if(count!==saved.moves.length){saved.moves=saved.moves.slice(0,count);saved.claimed=false;}
   snapshot.claimed=snapshot.complete&&saved.claimed===true;snapshot.score=errandScore(snapshot);
@@ -105,17 +119,20 @@ export function errandSnapshot(saved) {
 // Search legal transactions, including deliveries between stalls. Show the
 // attainable score only after returning home. Kept separate from live play.
 const bestCache=new Map();
-export function bestErrandScore(seed) {
-  if(bestCache.has(seed))return bestCache.get(seed);
-  const seen=new Set();let best=0;
+export function bestErrandScore(seed, {version=3}={}) {
+  const cacheKey=seed+':'+version;
+  if(bestCache.has(cacheKey))return bestCache.get(cacheKey);
+  const seen=new Map();let best=0;
   function visit(s){
-    const key=[s.step,s.buttons,s.traded,s.delivered.slice().sort(),s.bag.map(i=>i.id).sort()].join('|');
-    if(seen.has(key))return;seen.add(key);
+    const key=[s.step,s.buttons,s.traded,s.delivered.slice().sort(),s.bag.map(i=>i.id).sort()].join('|'),premium=s.receipts.reduce((n,r)=>n+r.items.reduce((v,item)=>v+deliveryBonus(item,s.version),0),0);
+    // With identical stock position, cash, bag and delivered errands, a lower
+    // premium total cannot improve any future decision. Prune that dominated prefix.
+    if(seen.has(key)&&seen.get(key)>=premium)return;seen.set(key,premium);
     const next=move=>{const copy={...s,bag:s.bag.slice(),delivered:s.delivered.slice(),receipts:s.receipts.slice()};if(applyErrandMove(copy,move))visit(copy);};
     for(const request of s.requests)for(const pair of deliveryOptions(s,request))next({type:'deliver',request:request.id,items:pair.map(i=>i.id)});
-    if(s.step===6){best=Math.max(best,errandScore(s).total);return;}
+    if(s.step===s.stalls.length){best=Math.max(best,errandScore(s).total);return;}
     for(const pick of [null,...s.stalls[s.step].map(i=>i.id)])for(const trade of [null,...(!s.traded&&pick?s.bag.map(i=>i.id):[])])next({pick,trade});
   }
-  visit(initialErrands(seed));
-  if(bestCache.size>=20)bestCache.delete(bestCache.keys().next().value);bestCache.set(seed,best);return best;
+  visit(initialErrands(seed,[],{version}));
+  if(bestCache.size>=20)bestCache.delete(bestCache.keys().next().value);bestCache.set(cacheKey,best);return best;
 }

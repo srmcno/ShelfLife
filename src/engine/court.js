@@ -74,6 +74,30 @@ export function courtClearingReason(game,suspect) {
   (game.rejected?.includes(suspect)||game.comparisons?.includes(suspect+':'+i)));
  return evidence<0?null:{evidence,text:contradiction(game.axes,facts,game.rules[evidence])};
 }
+// The board records the player's deductions. A sealed or untested cell stays
+// unknown even when the engine could already calculate the answer.
+export function courtComparisonState(game,suspect,evidence) {
+ const rule=game?.rules?.[evidence],person=game?.suspects?.[suspect];
+ if(!rule||!person)return 'unknown';
+ const sources=[rule.first,...(game.version===3&&rule.second?[rule.second]:[])];
+ if(!sources.every(atom=>game.inspected?.includes(atom.axis)))return 'unknown';
+ const compared=game.comparisons?.includes(suspect+':'+evidence);
+ const appealShown=game.rejected?.includes(suspect)&&courtEvidence(game,suspect).findIndex(fit=>!fit)===evidence;
+ if(!compared&&!appealShown)return 'unknown';
+ return courtRuleFits(person.facts,rule)?'compatible':'contradictory';
+}
+export function courtPersonalAside(state,pet) {
+ const past=(state.life?.scenes||[]).find(scene=>scene.kind==='court'&&scene.cast?.includes(pet.id));
+ if(past)return '“I remember '+past.title+'. I have chosen a chair with a better escape route this time.”';
+ const names=Array.isArray(pet.names)?pet.names:[];
+ if(names.length>1&&names[0]?.name)return '“You used to call me '+names[0].name+'. Now you call me a suspect. I preferred the other one.”';
+ if((pet.fulfilledRequests||0)>0)return '“You have kept '+pet.fulfilledRequests+' of my requests. I thought that meant you were on my side.”';
+ if((pet.handshakes||0)>0)return '“We have a secret handshake. If you demonstrate it under oath, I will never touch that hand again.”';
+ if((pet.careLog?.food||0)>0)return '“You have fed me '+pet.careLog.food+' time'+(pet.careLog.food===1?'':'s')+'. You knew I had teeth before this hearing.”';
+ if(pet.traits?.includes('clingy'))return '“Can I sit beside you while you accuse me? This arrangement feels unnecessarily lonely.”';
+ if(pet.traits?.includes('tidy'))return '“I brought a cloth for the dock. Whatever happens, I refuse to be sticky in public.”';
+ return '';
+}
 function makeRules(level,rng,reworked=false) {
  const axes=shuffle([0,1,2],rng),values=axes.map(()=>shuffle([0,1,2],rng));
  const atom=(axis,value)=>({axis:axes[axis],value:values[axis][value]});
@@ -101,7 +125,7 @@ export function newCourt(state,rng=Math.random,options={}) {
   return pool[draw(rng,pool.length)].slice();
  })];
  const shuffled=shuffle(roles,rng),count=shuffled.length;
- const cast=shuffle(state.pets,rng).slice(0,count).map(p=>({id:p.id,name:p.name}));
+ const cast=shuffle(state.pets,rng).slice(0,count).map(p=>({id:p.id,name:p.name,...(p.memory?{memory:p.memory}:{})}));
  const standins=shuffle(['The Reflection','The Unclaimed Sock','A Passing Crumb','The Spare Button'],rng);
  while(cast.length<count)cast.push({id:'witness-'+cast.length,name:standins[cast.length-state.pets.length]||standins[cast.length%standins.length]});
  const defences=shuffle(options.reworked?COURT_BANTER[caseIndex].lines:COURT_DEFENCES,rng);
@@ -236,7 +260,7 @@ export function startCourt(state,options={},rng=Math.random) {
  const l=lifeState(state);if(!state.pets.length)return null;
  const level=Number.isInteger(options.level)?clamp(options.level,0,2):0;
  const caseIndex=Number.isInteger(options.caseIndex)?clamp(options.caseIndex,0,COURT_CASES.length-1):l.courtPlays%COURT_CASES.length;
- const host=state.pets.find(p=>p.id===options.petId)||state.pets[0],cast=[host,...state.pets.filter(p=>p!==host)].slice(0,4).map(p=>({id:p.id,name:p.name}));
+ const host=state.pets.find(p=>p.id===options.petId)||state.pets[0],cast=[host,...state.pets.filter(p=>p!==host)].slice(0,4).map(p=>({id:p.id,name:p.name,...(courtPersonalAside(state,p)?{memory:courtPersonalAside(state,p)}:{})}));
  l.court={version:options.reworked?3:2,seed:1+draw(rng,4294967295),level,caseIndex,cast,petId:host.id,moves:[],claimed:false,ui:{chapter:'investigation',witness:null,statement:null,exhibit:null}};
  return currentCourt(state);
 }
@@ -312,7 +336,12 @@ export function accuseCourt(state,game,choice,now=Date.now()) {
    explanation:failed.map(exhibit=>contradiction(game.axes,suspect.facts,game.rules[exhibit-1])).join(' ')};
  });
  const text=culprit.name+' is the only suspect who fits all '+game.clues.length+' exhibits. '+game.end;
- if(correct){recordScene(state,'court',game.title,text,state.pets.slice(0,2).map(p=>p.id),now,{key:'court',branch:'guilty',object:'gavel'});addNote(state,text,'Shelf Court','scheme');}
+ if(correct){
+  // Stage and remember the actual culprit with the participating host. A
+  // stand-in cannot silently give the first resident a criminal history.
+  const cast=[...new Set([culprit.id,p.id])].filter(id=>state.pets.some(p=>p.id===id));
+  recordScene(state,'court',game.title,text,cast,now,{key:'court',branch:'guilty',object:'gavel'});addNote(state,text,'Shelf Court','scheme');
+ }
  const dialogue=[{speaker:'Judge',text:correct?game.trial.conviction:game.trial.acquittal},
   {speaker:'Prosecutor',text:culprit.name+' is the only suspect who survives all '+game.clues.length+' exhibits.'},
   {speaker:culprit.name,text:game.trial.plea},{speaker:'Judge',text:game.trial.sentence}];

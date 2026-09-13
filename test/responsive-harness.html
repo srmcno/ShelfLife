@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ShelfLife developer test households</title>
+<style>body{margin:12px;background:#eee;color:#211823;font:15px system-ui}header{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}button,select{font:inherit;padding:8px}label{display:flex;align-items:center;gap:5px}iframe{display:block;border:2px solid #24132d;background:#211823}output{display:block;white-space:pre-wrap;max-width:1100px;margin:8px 0}small{display:block;margin:8px 0}</style>
+<h1>ShelfLife developer test households</h1>
+<small>Synthetic local testing only. This page is excluded from the GitHub Pages package. These frames test CSS layout, not a physical phone or its touch hardware. Use a separate local port to avoid changing another test session.</small>
+<header><label>Household <select id="fixture"></select></label><label>Viewport <select id="size"><option>1366×768</option><option>1280×720</option><option>390×844</option><option>360×640</option><option>844×390</option></select></label><button id="load">Load synthetic household</button><button id="reload">Reload current household</button><button id="measure">Measure next 5 seconds</button><label><input type="checkbox" id="large">150% base text</label><button id="restore">Restore previous local shelf</button></header>
+<output id="results" aria-live="polite">Select a household and load it.</output><iframe id="game" title="ShelfLife game under test"></iframe>
+<script type="module">
+import { FIXTURE_NAMES, householdFixture } from './household-fixtures.mjs';
+const frame=document.getElementById('game'),pick=document.getElementById('fixture'),sizes=document.getElementById('size'),results=document.getElementById('results');
+for(const name of FIXTURE_NAMES){const option=document.createElement('option');option.value=option.textContent=name;pick.append(option);}
+const originalKey='shelflife.qa.original';
+function resize(){const [width,height]=sizes.value.split('×').map(Number);frame.width=width;frame.height=height;}
+sizes.addEventListener('change',resize);resize();
+function applyText(){if(frame.contentDocument?.documentElement)frame.contentDocument.documentElement.style.fontSize=document.getElementById('large').checked?'150%':'';}
+document.getElementById('large').addEventListener('change',applyText);frame.addEventListener('load',applyText);
+document.getElementById('load').addEventListener('click',()=>{
+  if(!localStorage.getItem(originalKey)) localStorage.setItem(originalKey,JSON.stringify({value:localStorage.getItem('shelflife.v4')}));
+  for(const key of ['shelflife.v1','shelflife.v2','shelflife.v3','shelflife.v4'])localStorage.removeItem(key);
+  const state=householdFixture(pick.value);localStorage.setItem(pick.value==='legacy'?'shelflife.v3':'shelflife.v4',JSON.stringify(state));
+  localStorage.setItem('shelflife.tab','shelf');frame.src='../index.html?qa='+Date.now();results.textContent='Loaded '+pick.value+' at '+sizes.value+'.';
+});
+document.getElementById('reload').addEventListener('click',()=>{frame.src='../index.html?qa='+Date.now();});
+document.getElementById('restore').addEventListener('click',()=>{const original=JSON.parse(localStorage.getItem(originalKey)||'null');if(!original)return;if(original.value===null)localStorage.removeItem('shelflife.v4');else localStorage.setItem('shelflife.v4',original.value);localStorage.removeItem(originalKey);frame.src='../index.html?qa='+Date.now();results.textContent='Previous local test shelf restored.';});
+document.getElementById('measure').addEventListener('click',()=>{
+  if(!frame.contentDocument?.querySelector('#cabinet')) {results.textContent='Load the game first.';return;}
+  const doc=frame.contentDocument,win=frame.contentWindow,start=performance.now(),intervals=[];let last=start,changes=0,added=0,removed=0;
+  const observer=new MutationObserver(records=>{changes+=records.length;for(const r of records){added+=r.addedNodes.length;removed+=r.removedNodes.length;}});observer.observe(doc.body,{childList:true,subtree:true,attributes:true,characterData:true});
+  const beginNodes=doc.querySelectorAll('*').length,longTasks=[];let tasks;try{tasks=new PerformanceObserver(list=>longTasks.push(...list.getEntries().map(e=>Math.round(e.duration))));tasks.observe({type:'longtask'});}catch{}
+  results.textContent='Measuring 5 seconds. Interact with the game if testing input.';
+  function sample(now){intervals.push(now-last);last=now;if(now-start<5000){requestAnimationFrame(sample);return;}observer.disconnect();tasks?.disconnect();intervals.sort((a,b)=>a-b);
+    const report={fixture:pick.value,viewport:sizes.value,sampleSeconds:+((now-start)/1000).toFixed(2),frames:intervals.length,frameMedianMs:+intervals[Math.floor(intervals.length/2)].toFixed(2),frameP95Ms:+intervals[Math.floor(intervals.length*.95)].toFixed(2),frameOver50ms:intervals.filter(n=>n>50).length,longTasksMs:longTasks,domNodesBefore:beginNodes,domNodesAfter:doc.querySelectorAll('*').length,mutationRecords:changes,nodesAdded:added,nodesRemoved:removed,horizontalOverflow:doc.documentElement.scrollWidth>win.innerWidth,openDialogs:doc.querySelectorAll('.veil.open').length};
+    results.textContent=JSON.stringify(report,null,2)+'\nCloud desktop browser measurement; frame timing is not physical-device input latency.';
+  }requestAnimationFrame(sample);
+});
+</script></html>

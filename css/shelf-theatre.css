@@ -12,6 +12,7 @@
 .shelf-theatre-tub-front{z-index:5}
 .shelf-theatre-furniture{position:absolute;z-index:2;transform-origin:50% 100%;filter:drop-shadow(0 4px 3px #0008)}
 .shelf-theatre-furniture>svg{width:100%;height:100%;display:block}
+.shelf-theatre-crumb{position:absolute;z-index:6;left:0;top:0;width:9px;height:7px;border:1px solid #B17735;border-radius:35% 20% 45% 25%;background:#F3C47A;box-shadow:inset 2px 1px #FFE1A8,0 2px 2px #0008}
 [data-action="phone"] .shelf-theatre-furniture[data-active="true"]{animation:theatre-ring .28s ease-in-out 6}
 [data-action="meal"] .shelf-theatre-furniture[data-active="true"]{animation:theatre-plate 1.2s ease-in-out infinite}
 @keyframes theatre-ring{0%,100%{rotate:-3deg}50%{rotate:3deg}}

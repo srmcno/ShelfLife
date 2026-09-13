@@ -1,0 +1,14 @@
+/* One domestic event stays ahead of the wider catalogue during the first visit. */
+.welcome-panel{margin:18px 0;padding:20px;border:1px solid var(--hair-lit);border-radius:14px;background:linear-gradient(130deg,#a98a5520,transparent 65%),var(--night-2);color:var(--ink)}
+.welcome-panel h2{font:clamp(24px,4vw,34px) var(--display);margin:6px 0 10px;line-height:1.15;overflow-wrap:anywhere}
+.welcome-panel p{font-size:14px;line-height:1.55;margin:8px 0 12px}.welcome-panel .hint{font-size:12px;color:var(--ink-2)}
+.welcome-actions{display:flex;flex-wrap:wrap;gap:8px}.welcome-actions .btn{flex:1 1 180px;min-height:48px;white-space:normal}.welcome-actions small{display:block;font-size:11px;line-height:1.5}
+#welcomeStage .household-stage{height:180px;min-height:150px}.welcome-panel .household-caption p{margin:4px 0}.welcome-panel .household-controls{margin:5px 0 14px}
+.settling-in #lifeHub,.settling-in #shelfTheatre,.settling-in #shelfProgress,.settling-in #shelfTeaser{display:none}
+.quick-resident{display:flex;gap:12px;align-items:center;padding:12px 14px;margin:10px 0;border:1px solid var(--hair-lit);border-radius:10px;background:#bda17110}.quick-resident div{flex:1;min-width:0}.quick-resident b,.quick-resident small{display:block}.quick-resident small{font-size:12px;color:var(--ink-2);line-height:1.5}.quick-resident button{flex:none;min-height:46px}
+.quick-resident[hidden]{display:none}
+.resident-intention{padding:10px 13px;border-left:3px solid var(--mint);background:#a4c6b409;font-size:13px;line-height:1.5;margin:12px 0}.resident-intention strong{display:block}.resident-memories ul{padding-left:20px}.resident-memories li{padding:6px 0;font-size:13px;line-height:1.5}.resident-memories small{display:block;color:var(--ink-2);font-size:11px}
+.shelf-framing{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:8px 0;font-size:12px;color:var(--ink-2)}.shelf-framing .btn{min-height:44px}
+body.focus-shelf .shelf-row.row-empty{display:none}body.focus-shelf .shelf-row:not(:has(.pet)):not(:has(.prop)){display:none}
+@media(max-width:600px){.welcome-panel{margin:10px 10px 16px;padding:15px}.welcome-actions{gap:7px}.welcome-actions .btn{flex-basis:130px}.quick-resident{align-items:stretch;flex-direction:column}.quick-resident button{width:100%}.resident-intention{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.welcome-panel *{animation:none!important;transition:none!important}}

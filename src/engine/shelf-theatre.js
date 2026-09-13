@@ -1,6 +1,6 @@
 import { SHELF_SCENES, SHELF_SCENE_BY_KIND } from '../content/shelf-theatre.js';
 import { normalizeTheatre } from '../theatre-state.js';
-import { affinityFor, socialPull, petsFeud, frictionBetween, depleteProp } from './behavior.js';
+import { affinityFor, socialPull, petsFeud, frictionBetween, depleteProp, DEPLETE_AT, REFILL_MS } from './behavior.js';
 import { isAsleep } from './tick.js';
 import { feudPairKey } from './achievements.js';
 import { addNote } from '../state.js';
@@ -109,9 +109,17 @@ export function sceneAvailability(state, options = {}, now = Date.now()) {
   if (family?.propKind) {
     const props = (state.props || []).filter(prop => prop.kind === family.propKind && (!options.propId || prop.id === options.propId) && state.slots.includes(prop.id));
     const nearby = awakeResidents(state, now).filter(pet => (!options.petId || pet.id === options.petId) && props.some(prop => cross(state.slots.indexOf(pet.id), state.slots.indexOf(prop.id))));
+    if (!props.length) return 'Place ' + (family.propKind === 'yarn' ? 'yarn' : 'a ' + ({musicbox:'music box',phone:'phone'}[family.propKind] || family.propKind)) + ' on the shelf, then put an awake resident within two spaces on that row.';
+    if (!nearby.length) return 'Move an awake resident within two spaces of the ' + ({musicbox:'music box'}[family.propKind] || family.propKind) + ', on the same row. Residents on another row cannot reach it.';
+    if (nearby.length < family.minActors) return 'Two awake residents are needed here. Move a second resident beside the ' + ({musicbox:'music box'}[family.propKind] || family.propKind) + ', within two spaces of the first.';
+    if (family.minActors === 2 && !nearby.some((a, i) => nearby.some((b, j) => i !== j && cross(state.slots.indexOf(a.id), state.slots.indexOf(b.id))))) return 'Both residents can reach the furniture, but they are too far apart. Move them within two spaces of one another on that row.';
     if (nearby.length && family.kind === 'bath') return 'The nearby residents dislike baths and are still clean enough to refuse. Try a resident who enjoys water, or come back when cleanliness falls below 55.';
     if (nearby.length && family.kind === 'lamp') return 'Nearby residents already have the light as they like it. Try the switch or place a neighbour with different tastes nearby.';
+    if (family.kind === 'mirror') return 'None of the nearby residents likes this mirror. Try a theatrical, narcissistic, haunted or unblinking resident.';
+    if (family.kind === 'phone') return 'None of the nearby residents wants a call. Try a gossip, socialite or clingy resident near the phone.';
+    if (['musicbox','yarn'].includes(family.kind)) return 'The nearby cast does not get along with this activity. Pair a willing resident with a compatible neighbour who does not dislike the ' + (family.kind === 'musicbox' ? 'music box' : 'yarn') + '.';
   }
+  if (family?.kind === 'pair' && awakeResidents(state, now).length === 1) return 'A second awake resident is needed. Add a companion when you want a permanent neighbour, or try a solo furniture scene for now.';
   return family?.requirements || 'Place awake residents within two spaces of furniture or one another, on the same row. Their quirks decide which performances suit them.';
 }
 
@@ -151,9 +159,11 @@ export function performShelfScene(state, options = {}, now = Date.now(), random 
     mode = (b ? 'dispute-' : '') + (after.lit ? 'on' : 'off');
   } else if (choice.kind === 'pair') mode = pairAction(state, actors, theatre, now);
   else if (choice.kind === 'bowl' && state.behavior?.props?.[choice.propId]?.emptyUntil > now) mode = 'empty';
-  const eligible = family.variants.filter(variant => variant.mode === mode);
+  if (choice.kind === 'bowl') before.servings = mode === 'empty' ? 0 : Math.max(0, DEPLETE_AT - (state.behavior?.props?.[choice.propId]?.uses || 0));
+  const eligible = family.variants.filter(variant => variant.mode === mode && (!variant.traits || has(a, variant.traits)));
   if (!eligible.length) return null;
-  const unseen = eligible.filter(variant => !theatre.seen.includes(variant.id));
+  const personal = eligible.filter(variant => variant.traits && !theatre.seen.includes(variant.id));
+  const unseen = personal.length ? personal : eligible.filter(variant => !theatre.seen.includes(variant.id));
   const nonrepeat = eligible.filter(variant => variant.id !== theatre.recent.find(scene => scene.kind === choice.kind)?.variant);
   const variant = choose(unseen.length ? unseen : nonrepeat.length ? nonrepeat : eligible, random);
   const fill = text => text.replace(/\{a\}|\{b\}/g, key => residentName(key === '{a}' ? a : b));
@@ -166,12 +176,13 @@ export function performShelfScene(state, options = {}, now = Date.now(), random 
   else if (choice.kind === 'mirror') care(theatre, a, 'fuss', 2, now, rewards);
   else if (choice.kind === 'bowl' && mode !== 'empty') {
     care(theatre, a, 'food', 5, now, rewards); if (b) care(theatre, b, 'food', 2, now, rewards);
-    if (rewards.length) {
+    {
       // Share the real bowl's two-serving/refill rules with ordinary behaviour.
       state.behavior ||= {}; state.behavior.props ||= {};
       const serving = state.behavior.props[choice.propId] ||= { uses: 0, emptyUntil: 0, touched: {} };
       serving.uses = (Number.isFinite(serving.uses) ? serving.uses : 0) + 1;
-      if (serving.uses >= 2) depleteProp(state, choice.propId, now);
+      if (serving.uses >= DEPLETE_AT) depleteProp(state, choice.propId, now);
+      after.servings = Math.max(0, before.servings - 1);
     }
   } else if (choice.kind === 'phone') {
     care(theatre, a, 'fuss', 3, now, rewards);
@@ -184,6 +195,10 @@ export function performShelfScene(state, options = {}, now = Date.now(), random 
   const event = { id: ++theatre.serial, kind: choice.kind, action: variant.action, variant: variant.id, title: variant.title,
     actorIds: choice.actorIds, propId: choice.propId, lines: variant.lines.map(line => ({ actorId: actors[line.actor].id, text: fill(line.text) })),
     before, after, fresh, summary, rewards };
+  if (choice.kind === 'bowl') {
+    event.meal = mode === 'empty' ? 'empty' : 'served';
+    if (mode === 'empty') after.servings = 0;
+  }
   theatre.lastAt = now;
   if (fresh) theatre.seen.push(variant.id);
   theatre.recent.unshift({ id: event.id, kind: event.kind, action: event.action, variant: event.variant, title: event.title,
@@ -194,6 +209,26 @@ export function performShelfScene(state, options = {}, now = Date.now(), random 
     addNote(state, summary, 'the little theatre', 'note'); theatre.lastNoteAt = now;
   }
   return event;
+}
+
+// State-based preview uses the same cooldown and real bowl stock as performance.
+export function shelfSceneRewardPreview(state, candidate, now = Date.now()) {
+  if (!candidate) return '';
+  const actors = candidate.actorIds.map(id => state.pets.find(p => p.id === id)).filter(Boolean);
+  const family = SHELF_SCENE_BY_KIND[candidate.kind];
+  if (!family) return '';
+  if (candidate.kind === 'pair' && pairAction(state, actors, reading(state, now), now) === 'argument') return 'A disagreement becomes shared history. No care or trust is awarded. Comfort them or change their company before trying for a reconciliation.';
+  const key = candidate.kind === 'bath' ? 'clean' : candidate.kind === 'bowl' ? 'food' : 'fuss';
+  const cooldowns = actors.map(p => Math.max(0, SHELF_SCENE_CARE_INTERVAL - (now - (state.theatre?.careAt?.[p.id] || 0))));
+  const eligible = actors.some((p, i) => need(p, key) < 100 && cooldowns[i] === 0 && (candidate.kind !== 'mirror' || i === 0) && (candidate.kind !== 'lamp' || lightPreference(p) === lightPreference(actors.at(-1))));
+  let result = eligible ? 'Small ' + ({clean:'cleanliness',food:'food',fuss:'attention'}[key]) + ' gains, up to 100. Shared scene care rests for 20 minutes.'
+    : 'New endings and shared memories still count. ' + (cooldowns.some(ms => ms > 0) ? 'Care returns in up to ' + Math.ceil(Math.max(...cooldowns) / 60000) + ' min.' : 'These needs are already full.');
+  if (candidate.kind === 'bowl') {
+    const bowl = state.behavior?.props?.[candidate.propId];
+    result = bowl?.emptyUntil > now ? 'The bowl is empty. An empty-bowl scene gives no food. Refills in ' + Math.ceil((bowl.emptyUntil - now) / 60000) + ' min.'
+      : 'Uses 1 shared serving, even when full. ' + Math.max(0, DEPLETE_AT - (bowl?.uses || 0)) + ' remaining; refill after ' + REFILL_MS / 60000 + ' min when empty. ' + result;
+  }
+  return result;
 }
 
 export function toggleLamp(state, propId, now = Date.now()) {

@@ -7,7 +7,7 @@ import { playStomp } from '../audio/sound.js';
 import { curioSVG } from '../art/curios.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { mountHouseholdScene } from '../art/household-scene.js';
-import { marketMarkup, marketSelectedOffer } from './market.js';
+import { marketMarkup, marketSelectedOffer, mountMarketRecipients } from './market.js';
 import { trailTheatre, mountTrailCrew, trailDareSelect, trailDareStatus, wrapTrailLayout, projectBoard, missionPlan, missionStatus, missionResult } from './expeditions.js';
 import { checkAchievements } from '../engine/achievements.js';
 import { checkUnlocks } from '../engine/unlocks.js';
@@ -89,7 +89,7 @@ export function initLife(state,refresh) {
   }
   const step=modern?o.steps[o.step]:r.steps[o.step];
   if(interlude){
-   content.innerHTML='<span class="eyebrow">Field report · '+o.step+' of 3</span>'+missionStatus(o)+trailTheatre(o.route,Math.max(0,o.step-1),{travel:true,mission:o.mission})+'<p class="scene-script">'+esc(o.log.at(-1))+'</p>'+(modern?'<p class="trail-report-resources">'+o.score+' points · '+o.nerve+' nerve · '+(o.toolUsed?'equipment used':'equipment ready')+'</p>':'')+'<div class="trail-report-actions">'+(o.mission&&o.parts.length>=2?button('Return home with the parts','outing-return'):'')+button('Next stop: '+esc(step.title),'continue-outing')+'</div>'+trailDareStatus(o);wrapTrailLayout(content,'report',o);mountTrailCrew(content,crew);return;
+   content.innerHTML='<span class="eyebrow">Field report · '+o.step+' of 3</span>'+missionStatus(o)+trailTheatre(o.route,Math.max(0,o.step-1),{travel:true,mission:o.mission})+'<p class="scene-script">'+esc(o.log.at(-1))+'</p>'+(modern?'<p class="trail-report-resources">'+o.score+' points · '+o.nerve+' nerve · '+(o.toolUsed?'equipment used':'equipment ready')+'</p>':'')+'<div class="trail-report-actions">'+(o.mission&&(o.missionRevision>=2?o.recovered.length>=1:o.parts.length>=2)?button('Return home with '+o.recovered.length+' recovered part'+(o.recovered.length===1?'':'s'),'outing-return'):'')+button('Next stop: '+esc(step.title),'continue-outing')+'</div>'+trailDareStatus(o);wrapTrailLayout(content,'report',o);mountTrailCrew(content,crew);return;
   }
   const p=modern?null:outingPreview(state,o.route,o.gear,o.cast)?.[o.step];
   const choices=modern?o.options.map(option=>button(esc(option.label)+'<small>'+esc(option.hint)+'</small>','outing-choice','data-choice="'+option.choice+'" '+(option.available?'':'disabled'))).join(''):step.options.map((t,i)=>button(esc(t)+'<small>'+esc(i===0?(p?.gear?'Your equipment supports this.':'Best with '+GEAR.find(g=>g.id===step.good).name+'. Improvisation still gets you home.'):(p?.skill?'Your crew has the '+step.stat+' for this.':step.stat+' 7+ helps. Your crew will improvise.'))+'</small>','outing-choice','data-choice="'+i+'"')).join('');
@@ -103,6 +103,7 @@ export function initLife(state,refresh) {
   if(m?.complete&&!m.claimed){claimMarket(state);refresh();m=marketSnapshot(state);}
   if(m&&!m.complete)marketSelection=marketSelectedOffer(m,marketSelection,marketTrade)?.id||'';
   content.innerHTML=marketMarkup(state,m,marketTrade,marketAction,marketSelection,marketPanel);
+  mountMarketRecipients(content,state);
  }
  function focusMarketProgress(){
   content.querySelector('.adventure-scroll')?.scrollTo({top:0});
@@ -175,7 +176,7 @@ export function initLife(state,refresh) {
    selectedRoute=previous.route;selectedGear=previous.gear;selectedDare=previous.dare||'';[leadId,companionId='']=previous.cast;
    finishOuting(state);
    if(action==='outing-retry'){
-    if(startOuting(state,selectedRoute,selectedGear,previous.cast,{edition:previous.edition,dare:previous.dare,mission:previous.mission===true}))lifeState(state).outing.expertise=previous.expertise.slice();
+    if(startOuting(state,selectedRoute,selectedGear,previous.cast,{edition:previous.edition,dare:previous.dare,mission:previous.mission===true,missionRevision:previous.missionRevision||1}))lifeState(state).outing.expertise=previous.expertise.slice();
    }
    interlude=false;save();refresh();outing();focusOutingProgress();return;
   }
@@ -201,7 +202,13 @@ export function initLife(state,refresh) {
   if(action==='court-call'){
    if(!court||court.claimed)return;const suspect=Number(b.dataset.choice),v=courtView(court);if(!court.suspects[suspect])return;
    courtAction(state,{type:'focus',suspect});court=currentCourt(state);
-   courtResponse(court,{kind:'testimony',speaker:court.suspects[suspect].name,text:court.suspects[suspect].defence});save();courtPaint('#courtPanelTitle');courtAnnounce(courtHearing(court).line);return;
+   courtResponse(court,{kind:'testimony',speaker:court.suspects[suspect].name,text:court.suspects[suspect].memory||court.suspects[suspect].defence});save();courtPaint('#courtPanelTitle');courtAnnounce(courtHearing(court).line);return;
+  }
+  if(action==='court-pair'){
+   if(!court||court.claimed)return;const suspect=Number(b.dataset.choice),clue=Number(b.dataset.clue);
+   if(!Number.isInteger(suspect)||!Number.isInteger(clue)||!court.suspects[suspect]||!court.rules[clue])return;
+   courtAction(state,{type:'focus',chapter:'hearing',suspect,statement:clue,evidence:court.rules[clue].first.axis});court=currentCourt(state);
+   courtResponse(court,{kind:'testimony',speaker:court.suspects[suspect].name,text:court.suspects[suspect].memory||court.suspects[suspect].defence});save();courtPaint('[data-life="court-pair"][data-choice="'+suspect+'"][data-clue="'+clue+'"]');courtAnnounce('Comparing '+court.suspects[suspect].name+' with clue '+(clue+1)+'. No argument submitted.');return;
   }
   if(action==='court-compare'){
    if(!court||court.claimed)return;const v=courtView(court);courtMove({type:'compare',suspect:v.witness,evidence:Math.min(v.statement,court.rules.length-1)},'#courtPanelTitle');return;

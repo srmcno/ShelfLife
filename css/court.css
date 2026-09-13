@@ -269,3 +269,42 @@ body[data-effects="light"] .court-playable *{animation:none!important;transition
 .court-verdict-ledger .court-rule-help>summary,.court-proof-sheet .court-rule-help>summary{color:#50383e}
 .court-verdict-ledger .court-rule-help>p,.court-proof-sheet .court-rule-help>p{font:13px/1.55 var(--body);color:#392c30}
 @media(max-height:500px){.court-case-progress{font-size:10px;margin-top:3px}}
+
+/* The notebook remembers tested deductions without revealing untouched cells. */
+.court-comparison-board{margin:10px 0 14px;min-width:0}
+.court-comparison-matrix{border-collapse:separate;border-spacing:4px;width:100%;table-layout:fixed;font:12px/1.3 var(--body)}
+.court-comparison-matrix caption{text-align:left;color:var(--court-paper);font-weight:700;padding:0 4px 7px}
+.court-comparison-matrix caption small{display:block;font-weight:400;color:#c4b59e;margin-top:3px;font-size:11px}
+.court-comparison-matrix th{font-size:10px;font-weight:600;color:#d4bea0;text-align:center}
+.court-comparison-matrix thead th:first-child{width:39%;text-align:left}
+.court-comparison-matrix tbody th{text-align:left}
+.court-comparison-matrix th .btn{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;width:100%;min-height:48px;min-width:0;padding:5px 7px;gap:3px;white-space:normal;text-align:left}
+.court-comparison-matrix th .btn b{font-size:11px;line-height:1.3;overflow-wrap:anywhere}
+.court-comparison-matrix th .btn small{font-size:9px;color:#c4b59e}
+.court-comparison-matrix .is-cleared th .btn{border-color:#91b7a168}
+.court-comparison-matrix .is-selected th .btn{border-color:var(--court-brass);background:#e1b97418}
+.court-matrix-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;min-width:0;min-height:48px;border:1px solid #786672;border-radius:7px;background:#332933;color:#d7cbbd;font:700 18px/1 var(--body);cursor:pointer;touch-action:manipulation}
+.court-matrix-cell small{font:10px/1.3 var(--body)}
+.court-matrix-cell.state-compatible{color:#d3e7bb;border-color:#a6c189;background:#263a30}
+.court-matrix-cell.state-contradictory{color:#ffcfba;border-color:#e1a08c;background:#492e36}
+.court-matrix-cell[aria-pressed=true]{outline:2px solid var(--court-brass);outline-offset:1px}
+.court-matrix-cell:focus-visible{outline:3px solid #fff2d4;outline-offset:2px}
+.court-matrix-legend{font:10px/1.45 var(--body);color:#c9bba6;margin:5px 4px 0}
+.court-matrix-legend span{display:block}
+.court-sentence-details{margin-top:12px;border-top:1px solid var(--hair-lit);font:13px/1.5 var(--body)}
+.court-sentence-details>summary{display:flex;align-items:center;min-height:44px;padding:8px 0;color:var(--court-brass);cursor:pointer}
+.court-playable .phase-relief .court-dock-actor{animation:court-relieved .65s ease-out both}
+.court-playable .phase-relief .court-prosecutor{animation:court-recoil .55s ease-out both}
+.court-playable .phase-relief .court-stamp{color:#d3e7bb;background:#263a30ee}
+@keyframes court-relieved{0%{transform:translateY(5px) scale(.94,1.04)}45%{transform:translateY(-7px) rotate(3deg)}100%{transform:none}}
+@media(min-width:761px){
+ .court-deduction .court-workspace{grid-template-columns:minmax(0,1.15fr) minmax(350px,1fr)}
+ .court-deduction .court-fact-pair{padding:12px;gap:9px}
+ .court-deduction .court-fact-pair p{font-size:17px}
+ .court-deduction .court-clue-tabs .btn{min-height:44px;padding:7px 5px}
+}
+@media(max-width:380px){
+ .court-comparison-matrix{border-spacing:3px}
+ .court-comparison-matrix th .btn b{font-size:10px}
+ .court-matrix-cell small{font-size:9px}
+}

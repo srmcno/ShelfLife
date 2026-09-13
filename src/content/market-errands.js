@@ -19,7 +19,9 @@ export const ERRAND_VENDOR_LINES = [
   { opening:'“Everything is edible at least once. Read the labels for our stricter definition.”', passed:'The vendor takes a sample off the tray and quietly changes which tray it came from.', bought:'“Would you like a bag?” The purchase rustles inside your bag. “Never mind. It has chosen.”' },
   { opening:'“Everything comes from somewhere. Our labels avoid being specific.”', passed:'The vendor checks its own shopping list. For a moment you both look worried.', bought:'The vendor circles “no returns”. You point to the one-button return policy. It circles “one”.' },
   { opening:'“I polish the stock until it can see the price. Most of it looks away.”', passed:'The vendor checks its reflection for signs of a lost sale. It finds two.', bought:'The vendor breathes on the wrapping and buffs out a fingerprint that was not yours.' },
-  { opening:'“Last stall. Regret is available at every exit.”', passed:'The vendor calls this a missed opportunity. You call it still having buttons.', bought:'“A wise choice.” The vendor has said that to every customer, including the one who bought the bell.' }
+  { opening:'“Nothing is broken. Some things have simply finished being useful to me.”', passed:'The vendor calls this a missed opportunity. You call it still having buttons.', bought:'“A wise choice.” The vendor has said that to every customer, including the one who bought the bell.' },
+  { opening:'“Take your time. My previous customer is still deciding what species to be.”', passed:'The vendor waves you on with the hand it is trying to sell. You wave with the hand you intend to keep.', bought:'The vendor gives your parcel a gentle kiss. “Do not tell the others.”' },
+  { opening:'“Last stall. You can still go home with your dignity. It does not fit in the bag.”', passed:'The final vendor sits down beside the unsold stock. Something pats its knee.', bought:'The wrapping twitches. The vendor tucks in the corners until it settles.' }
 ];
 
 // Descriptions follow the object's behaviour rather than an unrelated obituary.
@@ -49,3 +51,5 @@ export const ERRAND_ITEM_LINES = {
   'saints-biscuit':'Edible gold leaf over a biscuit. Venerated briefly, then served with tea.',
   'future-heirloom':'Warm, polished, and already disappointed in your descendants.'
 };
+
+export const ERRAND_STALL_NAMES = ['The Rag & Bone Pocket','Mother Needle’s Drawer','The Almost Edible Stall','The Borrowed Light Counter','The Unclaimed Cupboard','The Soft Things Exchange','The Affection Dealer','The Last Little Temptation'];

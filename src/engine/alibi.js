@@ -121,6 +121,32 @@ export function statementsFor(state, pet, now = Date.now()) {
   push(truths, 'shake', shakes ? 'You have learned my handshake ' + shakes + ' time' + (shakes === 1 ? '' : 's') + '.' : 'You have never learned my handshake.');
   push(lies, 'shake', shakes ? 'You have never learned my handshake.' : 'You have learned my handshake twice.');
 
+  // Established households get contradictions with consequences. These are
+  // derived from recorded totals and named scenes, never invented backstory.
+  if ((log.food || 0) !== (log.clean || 0) && (log.food || 0) + (log.clean || 0) >= 3) {
+    const fedMore = (log.food || 0) > (log.clean || 0);
+    push(truths, 'care-pattern', 'You have ' + (fedMore ? 'fed me more often than you have cleaned me' : 'cleaned me more often than you have fed me') + '.');
+    push(lies, 'care-pattern', 'You have ' + (fedMore ? 'cleaned me more often than you have fed me' : 'fed me more often than you have cleaned me') + '.');
+  }
+  for (const [key, count, activity] of [
+    ['journeys', pet.expeditions || 0, 'been on an expedition'],
+    ['kept-request', pet.fulfilledRequests || 0, 'had one of my requests fulfilled'],
+    ['refused-request', pet.refusedRequests || 0, 'had one of my requests refused']
+  ]) if (count > 0) {
+    push(truths, key, 'I have ' + activity + ' ' + count + ' time' + (count === 1 ? '' : 's') + '.');
+    push(lies, key, 'I have never ' + activity + '.');
+  }
+  const incident = (state.life?.scenes || []).find(scene => scene.cast?.includes(pet.id) && typeof scene.title === 'string');
+  if (incident) {
+    push(truths, 'incident', 'I am named in the saved household incident “' + incident.title + '”.');
+    push(lies, 'incident', 'I am not named in the saved household incident “' + incident.title + '”.');
+  }
+  const shared = pets.filter(other => pets.filter(p => p.name === other.name).length === 1).map(other => ({ other, count: state.stories?.relationships?.[[pet.id, other.id].sort().join('|')]?.plots || 0 })).find(r => r.count > 0);
+  if (shared) {
+    push(truths, 'company', shared.other.name + ' and I have ' + shared.count + ' shared adventure' + (shared.count === 1 ? '' : 's') + ' recorded together.');
+    push(lies, 'company', shared.other.name + ' and I have no shared adventures recorded together.');
+  }
+
   void now;
   return { truths, lies };
 }
@@ -135,6 +161,11 @@ export function newAlibi(state, pet, rng = Math.random, { mode = 'quick' } = {})
     return a;
   };
   const truthBag = shuffle(truths), lieBag = shuffle(lies.filter(l => truths.some(t => t.key === l.key)));
+  // Let the first interview acknowledge an established life while keeping its
+  // answer position shuffled. Later interviews still draw from the full shelf.
+  const personal = new Set(['care-pattern', 'journeys', 'kept-request', 'refused-request', 'incident', 'company']);
+  const personalLie = lieBag.findIndex(l => personal.has(l.key));
+  if (personalLie > 0) lieBag.unshift(lieBag.splice(personalLie, 1)[0]);
   const usedKeys = new Set(), rounds = [];
   for (let r = 0; r < ALIBI_ROUNDS; r++) {
     const lie = lieBag.find(l => !usedKeys.has(l.key));
@@ -238,10 +269,20 @@ const ALIBI_REPLIES = {
   trust: '“An exact figure. How intimate. Please stand further away.”',
   name: '“The old name is still on a headstone. I prefer not to complicate things.”',
   age: '“We disagree on what qualifies as arriving alive.”',
-  shake: '“I taught you a gesture. You keep calling it a friendship.”'
+  shake: '“I taught you a gesture. You keep calling it a friendship.”',
+  'care-pattern': '“Yes, you have a favourite chore. I have to live inside its consequences.”',
+  journeys: '“I went outside and came back to you. Please stop making that sound romantic.”',
+  'kept-request': '“You did what I asked. I have been trying to ask for something smaller ever since.”',
+  'refused-request': '“I remember the no. I have been warming it under my tongue.”',
+  incident: '“We were there together. I was hoping you remembered it worse.”',
+  company: '“We have survived things together. Now we have to decide where to stand.”'
 };
-export function alibiReaction(round) {
-  return ALIBI_REPLIES[round?.keys?.[round.lie]] || '“I would like to amend my statement to a scream.”';
+export function alibiReaction(round, pet = null) {
+  const key = round?.keys?.[round.lie], traits = pet?.traits || [];
+  if (['shake', 'company', 'care-fuss'].includes(key) && traits.includes('clingy')) return '“You remembered. I hate that this is working on me. Move your hand closer.”';
+  if (['care-pattern', 'care-clean'].includes(key) && traits.includes('tidy')) return '“I kept the clean patch in case this became a trial. Kindly admire it from there.”';
+  if (key === 'name' && traits.includes('haunted')) return '“That name still makes me turn around. You can stop trying it while I sleep.”';
+  return ALIBI_REPLIES[key] || '“I would like to amend my statement to a scream.”';
 }
 export function alibiRank(game) {
   const total = game?.rounds?.length || 0;

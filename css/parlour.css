@@ -159,3 +159,40 @@
  .memory-mode .play-theatre::before,.memory-mode .play-theatre::after{transition:none}
  .memory-mode .gesture,.alibi-mode .alibi-statement{transition:none;animation:none}
 }
+
+/* Desktop testimony and evidence share the width of the interview desk. */
+@media(min-width:721px) and (min-height:501px){
+ #playVeil.alibi-mode{padding:24px 16px;overflow:hidden}
+ #playVeil.alibi-mode>.sheet{display:flex;flex-direction:column;max-width:1080px;height:min(820px,calc(100dvh - 48px));max-height:calc(100dvh - 48px);overflow:hidden;padding:16px 20px}
+ #playVeil.alibi-mode .sheet-head{flex:none;margin:0 0 10px;padding-bottom:10px}
+ #playVeil.alibi-mode .sheet-head h2{font-size:26px;line-height:1.15;margin:0}
+ #playVeil.alibi-mode .play-modes{flex:none;margin:0 0 8px}
+ #playVeil.alibi-mode .parlour-workspace{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:0 5px 10px;scroll-padding:12px}
+ #playVeil.alibi-mode .play-theatre{display:grid;grid-template-columns:82px minmax(0,1fr);align-items:center;gap:16px;padding:22px 20px 9px;margin:0 0 7px;min-height:88px;text-align:left}
+ #playVeil.alibi-mode #playPortrait{height:58px}
+ #playVeil.alibi-mode #playPortrait .sprite{--pet-h:62px;width:62px}
+ #playVeil.alibi-mode #playCue{font-size:19px;margin:0}
+ #playVeil.alibi-mode .play-theatre::after{left:10px;right:auto;width:102px;bottom:6px}
+ #playVeil.alibi-mode .play-rounds{margin:6px 0;min-height:16px}
+ #playVeil.alibi-mode:not(.alibi-complete):not([data-investigation-step=setup]) #playStatus{display:none}
+ #playVeil.alibi-mode #alibiArea{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 20px;align-items:start}
+ #playVeil.alibi-mode #alibiArea>.parlour-select{grid-column:1/-1;max-width:320px;margin:4px 0}
+ #playVeil.alibi-mode .alibi-charge{grid-column:1/-1;grid-row:1;text-align:left;font:600 12px/1.4 var(--body);letter-spacing:0;margin:3px 0}
+ #playVeil.alibi-mode[data-investigation-step=setup] .alibi-charge{display:none}
+ #playVeil.alibi-mode .alibi-statements{grid-column:1;grid-row:2;max-width:none;margin:4px 3px;gap:10px;width:calc(100% - 6px)}
+ #playVeil.alibi-mode .alibi-statement{min-height:69px;padding:12px;font:16px/1.45 var(--body);transform:none;box-shadow:2px 4px 0 #0003}
+ #playVeil.alibi-mode .alibi-evidence-panel{grid-column:2;grid-row:2;margin:0;padding:12px}
+ #playVeil.alibi-mode .alibi-evidence-panel h3{font-size:19px;margin:0 0 7px}
+ #playVeil.alibi-mode .alibi-evidence-panel>.hint{font-size:11px;line-height:1.45;margin:0 0 9px}
+ #playVeil.alibi-mode .alibi-selected-claim{font-size:12px;margin:0 0 9px;padding:8px 10px}
+ #playVeil.alibi-mode .alibi-exhibit{min-height:59px;padding:9px;grid-template-columns:54px minmax(0,1fr)}
+ #playVeil.alibi-mode .alibi-notebook{grid-column:1/-1;grid-row:3;margin:0;font-size:12px}
+ #playVeil.alibi-mode .alibi-notebook ul{max-height:none;overflow:visible;columns:2;column-gap:32px}
+ #playVeil.alibi-mode .alibi-notebook li{break-inside:avoid}
+ #playVeil.alibi-mode .alibi-verdict{grid-column:1/-1;grid-row:4;margin:0;padding:10px 0;font-size:17px;text-align:left}
+ #playVeil.alibi-mode #alibiArea[data-proof-mode=quick] .alibi-statements{grid-column:1/-1;max-width:760px;margin-inline:auto}
+ #playVeil.alibi-mode .parlour-footer{flex:none;border-top:1px solid var(--hair-lit);padding-top:10px;background:var(--night-2)}
+ #playVeil.alibi-mode .parlour-footer .play-controls{display:flex;gap:10px;margin:0}
+ #playVeil.alibi-mode .parlour-footer .play-controls>.btn{flex:1;min-height:46px}
+ #playVeil.alibi-mode #playReward{margin:6px 0 0;font-size:11px;line-height:1.4;text-align:center;min-height:0}
+}

@@ -5,6 +5,7 @@ import { chaseKeyAction } from './game-controls.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { createPuppet } from '../art/animator.js';
 import { playFeed, playFuss, playClean, playStomp, playPowerUp, playStar } from '../audio/sound.js';
+import { chaseContractOptions, selectChaseContract } from '../engine/chase.js';
 
 const CRUMB = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 4 10-2 7 9-6 11L3 18 1 10Z" fill="currentColor"/><path d="m7 7 6-1m-5 9 5 2" stroke="#fff4cc" stroke-width="2" stroke-linecap="round"/></svg>';
 const BUNNY = '<svg viewBox="0 0 40 34" aria-hidden="true"><path d="M7 18C-1 3 8-2 14 14 11-5 25-3 23 12 36 4 40 17 32 22c8 13-29 15-27 3Z" fill="#998399"/><path d="m4 21-4-3m5 8-5 2m34-9 5-3m-5 10 6 2" stroke="#cdbdce" stroke-width="2"/><circle cx="15" cy="22" r="3" fill="#261b2b"/><circle cx="26" cy="22" r="3" fill="#261b2b"/><path d="m19 29 4-1" stroke="#261b2b" stroke-width="2"/></svg>';
@@ -71,6 +72,10 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
   const waveBanner = document.createElement('div'); waveBanner.className = 'chase-wave-banner'; waveBanner.setAttribute('aria-live', 'polite');
   const loadout = document.createElement('div'); loadout.className = 'chase-loadout';
   const upgrades = document.createElement('div'); upgrades.className = 'chase-upgrades'; upgrades.hidden = true; go.before(upgrades);
+  const contractPicker = document.createElement('fieldset'); contractPicker.className = 'chase-contract-picker'; contractPicker.hidden = true;
+  const contractTitle = document.createElement('legend'); contractTitle.textContent = 'Choose the next contract';
+  const contractChoices = document.createElement('div'); contractChoices.className = 'chase-contract-choices'; contractPicker.append(contractTitle, contractChoices);
+  upgrades.before(contractPicker);
   const objective = root.querySelector('#chaseObjective');
   const venuePicker = root.querySelector('#chaseVenue');
   const practiceTools = document.createElement('div');
@@ -111,7 +116,10 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
   readout.append(dash);
   const overlayScroll = document.createElement('div'); overlayScroll.className = 'chase-overlay-scroll';
   const overlayFooter = document.createElement('div'); overlayFooter.className = 'chase-overlay-footer';
-  overlay.prepend(overlayScroll); overlayScroll.append(title, stars, description, quip, upgrades);
+  overlay.prepend(overlayScroll); overlayScroll.append(title, stars, description, quip, contractPicker, upgrades);
+  const resultDetails = document.createElement('details'); resultDetails.className = 'chase-result-details'; resultDetails.hidden = true;
+  const resultTitle = document.createElement('summary'); resultTitle.textContent = 'Run details & contracts';
+  const resultText = document.createElement('p'); resultDetails.append(resultTitle, resultText); overlayScroll.append(resultDetails);
   const coaching = document.createElement('p'); coaching.className = 'chase-coaching'; coaching.hidden = true;
   description.after(coaching);
   const guide = document.createElement('details'); guide.className = 'chase-guide';
@@ -154,6 +162,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     root.dataset.chaseScreen = value; configure.hidden = value !== 'result'; mobileSetup.hidden = value !== 'setup';
     guide.hidden = !['setup', 'paused'].includes(value); coaching.hidden = value !== 'result';
     restart.hidden = value !== 'paused'; pausePortrait.hidden = value !== 'paused'; onPhase(value);
+    contractPicker.hidden = value !== 'upgrade'; resultDetails.hidden = value !== 'result'; resultDetails.open = false;
   };
   function fitLayout() {
     if (mobileLayout.matches) {
@@ -303,6 +312,11 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
   }
   const pick = list => list[(game.score + game.caught) % list.length];
   function quipFor(rating, newBest) {
+    const traits = pet.traits || [];
+    if (traits.some(id => ['clingy', 'sugar', 'lifecoach', 'porcelain'].includes(id))) return game.complete ? pet.name + ' pushes the best crumb toward you, then sits on it so you have to stay.' : pet.name + ' leans against you. Apparently the important part was having an accomplice.';
+    if (traits.some(id => ['spiteful', 'bitey', 'feral', 'napoleon'].includes(id))) return game.complete ? pet.name + ' bites the winning crumb into smaller losing crumbs.' : pet.name + ' stares at the carpet until it becomes awkward for the carpet.';
+    if (traits.some(id => ['haunted', 'cult', 'undertaker', 'cryptid'].includes(id))) return game.complete ? pet.name + ' saves one crumb for whatever lives behind the wall. Something taps thank you.' : pet.name + ' lays a crumb-shaped shadow beside you. It appears to be a consolation prize.';
+    if (traits.some(id => ['damp', 'fungal'].includes(id))) return game.complete ? pet.name + ' sits on the haul. The biscuits are becoming a single damp biscuit.' : pet.name + ' leaves a damp trail spelling something unkind about traction.';
     if (!game.complete) return newBest ? 'A personal best, technically. The bar was on the floor.' : pick(QUIPS.lost);
     return pick(newBest ? QUIPS.best : rating === 3 ? QUIPS.three : QUIPS.two);
   }
@@ -310,8 +324,10 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     const n = (count, word) => count + ' ' + word + (count === 1 ? '' : /(?:s|sh|ch|x|z)$/.test(word) ? 'es' : 's');
     const contracts = game.format === 'run' ? 'Contracts: ' + game.waveResults.filter(result => result.bonus > 0).length + '/3. ' : '';
     const line = contracts + n(game.caught, 'crumb') + ' · ' + n(game.dodged, 'dodge') + ' · ' + n(game.stomps, 'stomp') + ' · ' + n(game.dashSmashes, 'dash smash') + ' · ' + n(game.score, 'point') + ' · best streak ' + game.bestCombo + ' · ' + n(game.airCatches, 'air catch') + ' · ' + n(game.bumps, 'bump') + (game.finaleComplete ? ' · Gold sweep +60' : '') + '. ';
-    if (!game.complete) return line + 'Reach ' + game.goal + ' crumbs to win. Nothing on your shelf was lost.';
-    return line + rewardSummary(reward);
+    resultText.textContent = line + (game.format === 'run' ? game.waveResults.map((result, index) => 'Act ' + (index + 1) + ': ' + result.name + ', ' + result.progress + '/' + result.target + ' ' + result.goal + ', +' + result.bonus + ' points.').join(' ') : '') + (game.upgrades.length ? ' Equipment: ' + game.upgrades.map(id => RUN_UPGRADES[id].name).join(', ') + '.' : '');
+    const scoreline = pet.name + ' caught ' + game.caught + '/' + game.goal + ' crumbs · ' + game.score + ' points. ';
+    if (!game.complete) return scoreline + 'No shelf needs were lost. Your personal best stays saved; another attempt can improve it.';
+    return scoreline + rewardSummary(reward);
   }
   function showStars(rating) {
     stars.replaceChildren(...[1, 2, 3].map(n => { const s = document.createElement('span'); s.textContent = '★'; s.classList.toggle('lit', n <= rating); return s; }));
@@ -385,16 +401,28 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
   function intermission() {
     stopFrame(); disabled(true); paint();
     screen('upgrade');
-    const result = game.waveResults.at(-1), next = RUN_WAVES[game.wave + 1];
-    title.textContent = result.bonus ? 'Contract fulfilled. Nobody survived breakfast.' : 'The bread has retained counsel.';
-    description.textContent = result.progress + '/' + result.target + ' ' + result.goal + (result.bonus ? ' · +' + result.bonus + ' contract points. ' : '. No contract bonus. ') + 'Next: collect ' + (gentle ? next.gentleTarget : next.target) + ' ' + next.goal + ' for +' + next.bonus + ' points. ' + next.intro;
-    quip.textContent = game.wave === 0 ? 'Choose something from the lost property drawer. The owners are no longer using their legs.' : 'The moon accepts no liability for what you bring back down.';
+    const result = game.waveResults.at(-1);
+    title.textContent = result.bonus ? pet.name + ' has brought dinner.' : 'Still hungry. Still in the running.';
+    description.textContent = result.progress + '/' + result.target + ' ' + result.goal + (result.bonus ? ' · +' + result.bonus + ' contract points. ' : '. No contract bonus. ') + 'Pick your next goal, then equipment to suit it. A lower-paying contract can be safer. Missing one never ends the run.';
+    quip.textContent = game.wave === 0 ? 'There are spare kneecaps in the drawer. Nobody has admitted whose.' : 'The moon makes everything lighter, including your judgment.';
     quip.hidden = false; stars.hidden = true; go.hidden = true; upgrades.hidden = false;
+    game.pendingContract = 'house';
+    contractChoices.replaceChildren(...chaseContractOptions(game, game.wave + 1).map(contract => {
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'btn chase-contract'; button.setAttribute('aria-pressed', String(contract.id === 'house'));
+      const name = document.createElement('b'), detail = document.createElement('span'); name.textContent = contract.name + ' · +' + contract.bonus;
+      detail.textContent = contract.target + ' ' + contract.goal + '. ' + contract.intro; button.append(name, detail);
+      button.addEventListener('click', () => {
+        if (!selectChaseContract(game, contract.id)) return;
+        for (const choice of contractChoices.children) choice.setAttribute('aria-pressed', String(choice === button));
+        onStatus('Next contract: ' + contract.target + ' ' + contract.goal + ' for ' + contract.bonus + ' points. Choose equipment, then begin when ready.');
+      }); return button;
+    }));
     upgrades.replaceChildren(...Object.entries(RUN_UPGRADES).filter(([id]) => !game.upgrades.includes(id)).map(([id, data]) => {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'chase-upgrade btn';
       button.setAttribute('aria-pressed', 'false');
       const name = document.createElement('b'), description = document.createElement('span');
-      name.textContent = data.name; description.textContent = data.description; button.append(name, description);
+      const plan = document.createElement('small'); plan.textContent = data.plan;
+      name.textContent = data.name; description.textContent = data.description; button.append(name, description, plan);
       button.addEventListener('click', () => {
         if (!selectChaseUpgrade(game, id)) return;
         for (const option of upgrades.children) option.setAttribute('aria-pressed', String(option === button));
@@ -405,7 +433,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
       return button;
     }));
     overlay.classList.remove('best'); overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0;
-    upgrades.firstElementChild?.focus({ preventScroll: true });
+    contractChoices.firstElementChild?.focus({ preventScroll: true });
     onStatus('Act ' + (game.wave + 1) + ' complete. ' + (result.bonus ? result.bonus + ' contract points. ' : '') + 'The clock is stopped. Choose one upgrade for the rest of this run.');
   }
   function frame(now) {
@@ -426,7 +454,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     settings.open = false;
     measure(); lastTime = performance.now(); frameId = requestAnimationFrame(frame);
     field.focus({ preventScroll: true });
-    onStatus(game.format === 'run' ? RUN_WAVES[game.wave].intro + ' Complete this act’s contract for bonus points. Two intermissions let you choose upgrades. Each act lasts 18 seconds; pauses stop the clock.' : 'Collect ' + game.goal + ' crumbs. Hop over dust or dash through it. Every catch recharges Dash sooner. Sweep the five gold crumbs at last call for a bonus.');
+    onStatus(game.format === 'run' ? chaseWaveContract(game).intro + ' Contract: ' + chaseWaveContract(game).target + ' ' + chaseWaveContract(game).goal + ' for +' + chaseWaveContract(game).bonus + '. Each act lasts 18 seconds; pauses stop the clock.' : 'Collect ' + game.goal + ' crumbs. Hop over dust or dash through it. Every catch recharges Dash sooner. Sweep the five gold crumbs at last call for a bonus.');
   }
   function start(keepCourse = false) {
     if (!pet || root.hidden) return;

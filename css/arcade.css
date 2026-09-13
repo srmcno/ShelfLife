@@ -15,6 +15,18 @@
 .chase-upgrade b{font-size:13px;color:#f5d29b}.chase-upgrade span{font-size:11px;line-height:1.35;font-weight:400;color:var(--ink-2)}
 .chase-upgrade:hover{background:#70513055}.chase-upgrade:focus-visible{outline:3px solid var(--mint);outline-offset:-3px}
 .chase-upgrade[aria-pressed="true"]{border-color:var(--mint);background:#294a414d;box-shadow:inset 3px 0 var(--mint)}
+.chase-upgrade small{font-size:11px;line-height:1.4;color:#dcccb8;font-weight:400}
+.chase-contract-picker{min-width:0;padding:10px 0;margin:10px 0;border:0;border-top:1px solid var(--hair-lit);text-align:left}
+.chase-contract-picker legend{padding:0 8px 0 0;font-size:13px;color:var(--mint);font-weight:700}
+.chase-contract-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.chase-overlay .chase-contract{position:static;display:grid;gap:5px;box-shadow:none;white-space:normal;text-align:left;padding:10px;min-width:0;width:100%;min-height:68px}
+.chase-contract b{font-size:13px;color:#f5d29b}.chase-contract span{font-size:11px;line-height:1.4;font-weight:400;color:var(--ink-2)}
+.chase-contract[aria-pressed="true"]{border-color:var(--mint);background:#294a414d;box-shadow:inset 3px 0 var(--mint)}
+.chase-result-details,.handshake-result-details{margin:12px 0;text-align:left;border:1px solid var(--hair-lit);border-radius:10px;padding:0 10px;overflow-wrap:anywhere}
+.chase-result-details summary,.handshake-result-details summary{min-height:44px;display:flex;align-items:center;font-size:13px;color:var(--mint);cursor:pointer}
+.chase-result-details p,.handshake-result-details p{font-size:13px;line-height:1.5;margin:0 0 12px}
+.handshake-familiarity{color:var(--mint)}
+@media(max-width:400px){.chase-contract-choices{grid-template-columns:1fr}.chase-overlay .chase-contract{min-height:64px}}
 .chase-depth{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.65;transform:translateX(var(--track,0px))}
 .chase-orb{position:absolute;width:45px;height:45px;border-radius:50%;left:11%;top:12%;background:radial-gradient(circle at 35% 38%,#ffd9a5 0 5%,#e7b389 40%,#8b647400 70%);opacity:.25;box-shadow:0 0 40px #eabf7930}
 .chase-bottles{position:absolute;right:12%;bottom:29%;width:20px;height:42px;border-radius:6px 6px 4px 4px;background:#786b6035;border:1px solid #a0806950;box-shadow:26px 8px 0 -2px #797e6330,44px -6px 0 -4px #97826e35}

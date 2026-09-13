@@ -657,6 +657,27 @@ export function behaviorProfile(pet) {
   };
 }
 
+// Display a recorded intention without running a simulation pass from a render.
+export function residentIntention(state, pet, now = Date.now()) {
+  const slot = state.slots?.indexOf(pet?.id) ?? -1;
+  if (!pet || slot < 0) return { status: 'away', label: 'Off the shelf', text: 'Place this resident on a shelf to see its plans.', slot: null };
+  if (safeAsleep(pet, now)) return { status: 'asleep', label: 'Sleeping', text: 'Its plans can wait until it wakes. No need to disturb it.', slot };
+  const want = pet.wants;
+  if (Number.isInteger(want?.slot) && want.slot >= 0 && want.slot < state.slots.length && want.slot !== slot && want.since > 0 && now >= want.since && now - want.since < WANT_FORGET_MS) {
+    const destination = String.fromCharCode(65 + Math.floor(want.slot / ROW_WIDTH)) + (want.slot % ROW_WIDTH + 1);
+    const others = neighborSlots(want.slot, state.slots.length).map(i => state.slots[i]).filter(id => id !== pet.id);
+    const favorite = (state.props || []).filter(p => others.includes(p.id) && (p.kind !== 'lamp' || state.theatre?.lamps?.[p.id] !== false))
+      .map(p => ({ p, appeal: affinityFor(pet, p.kind) })).filter(x => x.appeal > 0).sort((a, b) => b.appeal - a.appeal)[0]?.p;
+    const returning = pet.displacedFrom === want.slot && pet.displacedAt > 0 && now - pet.displacedAt < WANT_FORGET_MS;
+    return { status: 'planning', label: returning ? 'Wants its old spot back' : 'Eyeing ' + destination,
+      text: (returning ? 'Still prefers ' + destination + ', where you moved it from.' : favorite ? 'Considering ' + destination + ' beside the ' + propName(favorite.kind).toLowerCase() + '.' : 'Considering a move to ' + destination + '.') + ' It will move when the space is worth the effort.', slot: want.slot };
+  }
+  const favorites = neighborSlots(slot, state.slots.length).flatMap(i => (state.props || []).filter(p => p.id === state.slots[i] && affinityFor(pet, p.kind) > 0 && (p.kind !== 'lamp' || state.theatre?.lamps?.[p.id] !== false)));
+  return { status: 'settled', label: favorites.length ? 'Beside a favourite' : 'No move planned', text: favorites.length
+    ? 'The ' + propName(favorites[0].kind).toLowerCase() + ' suits its tastes. Staying put can be a decision too.'
+    : 'No current destination. Its needs, neighbours and furniture can give it a reason to move.', slot };
+}
+
 // How much better somewhere else has to be before this pet will get up.
 export function inertiaOf(pet) {
   let n = BASE_INERTIA + traitSum(pet, ROOTEDNESS);
@@ -849,6 +870,13 @@ export function pairScore(state, pet, other, now = Date.now()) {
   if ((pet.grudgeStage || 0) >= 2) s -= 1.5;
   // ... and whatever this particular pair has actually done to each other.
   s -= frictionBetween(state, pet.id, other.id, now) * FRICTION_WEIGHT;
+  // A recent small kindness makes this particular companion more appealing.
+  // Read the latest real performance only: encores cannot stack social bonuses.
+  const shared = state.theatre?.pairs?.[frictionKey(pet.id, other.id)];
+  if (shared?.actorIds?.includes(pet.id) && shared.actorIds.includes(other.id) && shared.at <= now && now - shared.at < WANT_FORGET_MS) {
+    if (shared.last === 'comfort') s += .4;
+    if (shared.last === 'makeup') s += .7;
+  }
   return s;
 }
 

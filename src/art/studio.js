@@ -27,6 +27,7 @@ import { reactTo } from './animator.js';
 import { toast } from '../ui/toast.js';
 import { remixCreature } from './studio-model.js';
 import { TRAITS, TRAIT_BY_ID } from '../content/traits.js';
+import { FALLBACK_NAMES } from '../content/copy.js';
 import { createPersonalityDraft, normalizePersonalityDraft, resolvePersonality, creationCareRates, ORIGIN_LIMIT, CREATION_STATS } from '../engine/creation.js';
 
 // Ported verbatim from ~/Documents/shelf-life.html (lines ~475-480). Studio-only concern:
@@ -176,6 +177,24 @@ export function initStudio({ onSave }) {
   steps.className = 'studio-steps'; steps.setAttribute('aria-label', 'Create your resident');
   steps.innerHTML = '<button class="studio-step" type="button" id="studioLooks" aria-controls="studioAppearance" aria-current="step"><span>1</span> Appearance</button><button class="studio-step" type="button" id="studioIdentityStep" aria-controls="studioIdentity"><span>2</span> Name &amp; personality</button>';
   appearancePanel.before(steps);
+  const quickResident=document.createElement('section');quickResident.className='quick-resident';
+  quickResident.innerHTML='<div><b>Ready to cause trouble</b><small class="quick-identity"></small><small>Keep this character now. You can change its appearance and name later.</small></div><button type="button" class="btn btn-primary" id="quickAdopt">Meet this resident</button>';
+  steps.after(quickResident);
+  const quickAdopt=quickResident.querySelector('button');
+  function syncQuickResident(){
+    quickResident.hidden=!!editingId||creationStep==='identity';
+    if(editingId||!personalityDraft)return;
+    const name=petName.value.trim()||FALLBACK_NAMES[personalityDraft.seed%FALLBACK_NAMES.length];
+    quickResident.querySelector('.quick-identity').textContent=name+' · '+personalityDraft.traits.map(id=>TRAIT_BY_ID[id]?.name).filter(Boolean).join(' / ');
+    quickAdopt.textContent='Meet '+name;
+  }
+  quickAdopt.addEventListener('click',()=>{
+    if(savePet.disabled)return;
+    if(mode==='draw'&&isEmpty()&&!stamps.length){toast('Draw a body or place a stamp first.');return;}
+    if(!petName.value.trim())petName.value=FALLBACK_NAMES[personalityDraft.seed%FALLBACK_NAMES.length];
+    setCreationStep('identity');savePet.click();
+  });
+  petName.addEventListener('input',syncQuickResident);
   const backToLooks = document.createElement('button');
   backToLooks.type = 'button'; backToLooks.id = 'studioBack'; backToLooks.className = 'btn'; backToLooks.textContent = 'Back'; backToLooks.hidden = true;
   savePet.before(backToLooks);
@@ -186,6 +205,7 @@ export function initStudio({ onSave }) {
   }
   function setCreationStep(next, focus = false) {
     creationStep = editingId ? 'appearance' : next;
+    syncQuickResident();
     const identity = creationStep === 'identity';
     appearancePanel.hidden = identity; identityPanel.hidden = !identity;
     steps.hidden = !!editingId; backToLooks.hidden = !identity;
@@ -224,6 +244,7 @@ export function initStudio({ onSave }) {
   }
   function syncPersonality() {
     const resolved = resolvePersonality(personalityDraft);
+    syncQuickResident();
     quirkSelects.forEach((select, index) => {
       const id = personalityDraft.traits[index] || '';
       select.value = id;

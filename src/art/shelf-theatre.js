@@ -24,7 +24,7 @@ export function furnitureSceneX(center, side, actorSize, propWidth, cabinetWidth
 
 // Normalized choreography is independent of DOM size and wall-clock timers.
 // Translation is on a carrier, leaving the resident's authored body rig intact.
-export function shelfSceneFrame(action, elapsed, reduced = false) {
+export function shelfSceneFrame(action, elapsed, reduced = false, event = {}) {
   const t = clamp(elapsed, 0, SHELF_SCENE_MS);
   const arriving = t < 2200, leaving = t >= 8600;
   const progress = arriving ? smooth(t / 2200) : leaving ? 1 - smooth((t - 8600) / 2200) : 1;
@@ -50,11 +50,13 @@ export function shelfSceneFrame(action, elapsed, reduced = false) {
     actors.forEach((a, i) => {
       const sign = i ? -1 : 1;
       if (action === 'dance') { a.pose = 'dance'; a.angle = reduced ? sign * 6 : Math.sin(beat * 4.7 + i * Math.PI) * 9; a.lift = reduced ? 0 : Math.max(0, Math.sin(beat * 4.7)) * .08; }
-      if (action === 'tug') { a.pose = 'pull'; a.angle = sign * -9; a.offset = reduced ? sign * -.05 : Math.sin(beat * 4) * .055 - sign * .035; }
+      if (action === 'tug') { a.pose = 'pull'; a.angle = sign * -9; a.offset = reduced ? sign * -.05 : Math.sin(beat * 4) * .055 - sign * .035;
+        if (!reduced && t >= 7100) { const recoil = Math.sin(clamp((t - 7100) / 1500) * Math.PI); a.offset -= sign * recoil * .13; a.angle -= sign * recoil * 9; }
+      }
       if (action === 'mirror') { a.pose = 'mirror'; a.angle = reduced ? -8 : Math.sin((beat - i * .23) * 2.8) * 12; }
       if (action === 'comfort' || action === 'makeup') { a.pose = i ? 'receive' : 'comfort'; a.angle = sign * 6; }
       if (action === 'argument') { a.pose = 'argue'; a.angle = reduced ? sign * -7 : sign * (-4 + Math.sin(beat * 3 + i * Math.PI) * 5); }
-      if (action === 'meal') a.pose = 'eat';
+      if (action === 'meal') { a.pose = event.meal === 'empty' ? 'mirror' : 'eat'; if(event.meal === 'empty')a.angle = reduced ? -7 : Math.sin(beat * 1.4) * 7; }
       if (action === 'phone') { a.pose = 'phone'; a.angle = i ? 0 : -7; }
       if (action === 'lamp') { a.pose = 'switch'; a.angle = sign * (reduced ? 5 : Math.max(0, Math.sin(beat * 3)) * 8); }
     });
@@ -66,6 +68,13 @@ export function shelfSceneFrame(action, elapsed, reduced = false) {
     caption: t < 3700 ? 0 : t < 7100 ? 1 : 2,
     done: t >= SHELF_SCENE_MS
   };
+}
+
+export function shelfMealFrame(event, elapsed, reduced = false) {
+  if (event.meal === 'empty') return { visible: false, travel: 0, gone: true };
+  if (reduced) return { visible: true, travel: .55, gone: false };
+  const progress = smooth((elapsed - 3100) / 1900);
+  return { visible: elapsed >= 2600 && elapsed < 5100, travel: progress, gone: elapsed >= 5100 };
 }
 
 function element(tag, cls, parent) {
@@ -198,6 +207,7 @@ export function initShelfTheatre({ getState = () => null, onCaption = () => {}, 
       a.targetX = clamp(a.targetX, a.size * .45, base.width - a.size * .45);
     });
     let bathBack, bathFront, splash, rope, effect, propClone;
+    const crumbs = [];
     if (event.action === 'bath') {
       prop.classList.add('sl-theatre-prop-source');
       bathBack = bathArt(root, 'back'); bathFront = bathArt(root, 'front');
@@ -221,11 +231,17 @@ export function initShelfTheatre({ getState = () => null, onCaption = () => {}, 
       propClone.style.width = size + 'px'; propClone.style.height = size + 'px';
       propClone.style.left = (center - size / 2) + 'px'; propClone.style.top = (floor - size) + 'px';
       propClone.appendChild(cleanClone(prop.querySelector('svg')));
+      if(event.action === 'meal') {
+        // The amber ellipse is the bowl's food. The scene uses an empty plate
+        // plus real traveling crumbs, and shows no food during an empty scene.
+        [...propClone.querySelectorAll('ellipse')].at(-1)?.setAttribute('fill', 'var(--wood-lip)');
+        if(event.meal !== 'empty') for(let i=0;i<actors.length;i++) crumbs.push(element('i','shelf-theatre-crumb',root));
+      }
     }
     if (event.action === 'tug' && actors.length === 2) rope = element('div', 'shelf-theatre-rope', root);
     if (['dance', 'comfort', 'makeup', 'argument', 'phone', 'meal'].includes(event.action)) {
       effect = element('div', 'shelf-theatre-symbol', root);
-      effect.textContent = ({ dance: '♫', comfort: '♡', makeup: '♡', argument: '! ?', phone: '…', meal: '· · ·' })[event.action];
+      effect.textContent = ({ dance: '♫', comfort: '♡', makeup: '♡', argument: '! ?', phone: '…', meal: event.meal === 'empty' ? '?' : '' })[event.action];
       effect.style.left = center + 'px'; effect.style.top = Math.max(3, floor - maxSize * .86) + 'px';
     }
     const current = scene = { event, root, actors, prop, release, abort, raf: 0, observer: null, resize: null, caption: -1 };
@@ -298,7 +314,7 @@ export function initShelfTheatre({ getState = () => null, onCaption = () => {}, 
         if (!stillValid()) { cancel(); return; }
       }
       if (started === null) started = time;
-      const frame = shelfSceneFrame(event.action, time - started, isReduced);
+      const frame = shelfSceneFrame(event.action, time - started, isReduced, event);
       const captionIndex = Math.min(lines.length - 1, frame.caption);
       if (captionIndex !== current.caption) {
         current.caption = captionIndex;
@@ -340,6 +356,15 @@ export function initShelfTheatre({ getState = () => null, onCaption = () => {}, 
         rope.hidden = !frame.active; rope.style.left = left + 'px'; rope.style.width = (right - left) + 'px'; rope.style.top = Math.min(drawn[0].y, drawn[1].y) + 'px';
       }
       if (effect) effect.hidden = !frame.active;
+      if(crumbs.length) {
+        const serving = shelfMealFrame(event,time-started,isReduced);
+        crumbs.forEach((crumb,i)=>{
+          crumb.hidden=!serving.visible;
+          const target=drawn[i], actor=actors[i];
+          const x=mix(center,target.x,serving.travel), y=mix(floor-furnitureSize*.46,actor.floor-actor.size*.48,serving.travel)-Math.sin(serving.travel*Math.PI)*actor.size*.12;
+          crumb.style.transform='translate('+x.toFixed(2)+'px,'+y.toFixed(2)+'px) rotate('+(i?-18:22)+'deg)';
+        });
+      }
       if (propClone) propClone.dataset.active = String(frame.active);
       if (event.action === 'lamp') {
         const before = event.before?.lit !== false, after = event.after?.lit !== false;
