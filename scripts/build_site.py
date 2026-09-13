@@ -24,7 +24,7 @@ def build(output=None):
     worker = output / "service-worker.js"
     worker.write_text(re.sub(r"const CACHE_VERSION = '[^']+';", f"const CACHE_VERSION = 'shelflife-{revision[:12]}';", worker.read_text()))
     (output / ".nojekyll").touch()
-    (output / "release.json").write_text(json.dumps({"revision": revision, "channel": "tester"}) + "\n")
+    (output / "release.json").write_text(json.dumps({"revision": revision, "channel": "production"}) + "\n")
     return output
 
 

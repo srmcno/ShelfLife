@@ -67,7 +67,10 @@ function trailMove(step,gear,expertise,nerve,toolUsed,choice) {
   return null;
 }
 export function outingSnapshot(state) {
-  const o=lifeState(state).outing;
+  const l=lifeState(state),o=l.outing;
+  // A resident can be rehomed while its saved trip is closed. Retire an empty
+  // crew before rendering choices, while retaining already completed reports.
+  if(o&&o.step<3&&!state.pets.some(p=>o.cast.includes(p.id))){l.outing=null;return null;}
   if(!o||o.version!==2)return o;
   const steps=outingTrail(o.route,o.edition,o.mission,o.missionRevision);
   if(!steps||!GEAR.some(g=>g.id===o.gear))return null;
@@ -81,6 +84,9 @@ export function outingSnapshot(state) {
     if(returning&&o.missionRevision>=2){if(choice!==0)break;choices.push(choice);log.push('You left '+steps[choices.length-1].title+' unexplored and carried the recovered parts home.');continue;}
     choices.push(choice);log.push(returning?'You left '+steps[choices.length-1].title+' unexplored and carried the recovered parts home.':move.text);nerve=move.nerve;toolUsed=move.toolUsed;score+=move.points;
   }
+  // A receipt means the trip already paid out. A damaged replay prefix must
+  // never turn it back into an active trip and award the same homecoming twice.
+  if(o.result&&choices.length<3){l.outing=null;return null;}
   // Rebuild resource counters from legal moves, including after save restoration.
   const dare=OUTING_DARES.find(d=>d.id===o.dare),dareMet=!!dare&&trailDareMet(dare.id,o.missionRevision>=2&&o.returnedAt?choices.slice(0,o.returnedAt):choices,nerve,toolUsed),dareBonus=choices.length===3&&dareMet?2:0;
   const baseScore=score;score+=dareBonus;

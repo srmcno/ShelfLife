@@ -12,6 +12,7 @@ import {
 } from './state.js';
 import { TRAIT_BY_ID } from './content/traits.js';
 import { FALLBACK_NAMES } from './content/copy.js';
+import { arrivalDraft } from './content/arrivals.js';
 import { resolvePersonality } from './engine/creation.js';
 import { tick, isNight } from './engine/tick.js';
 import { checkShelf, petLine, checkWait } from './engine/loop.js';
@@ -89,6 +90,12 @@ const studio = initStudio({
 document.getElementById('newPetBtn').addEventListener('click', () => {
   if (state.slots.every(s => s !== null)) { toast('The shelf is full. Rehome someone first.'); return; }
   studio.open(totalBond(state));
+});
+
+window.addEventListener('shelflife:create', event => {
+  if (document.querySelector('.veil.open') || state.slots.every(Boolean)) return;
+  const draft = arrivalDraft(event.detail?.arrival);
+  if (draft) studio.open(totalBond(state), null, draft);
 });
 
 // ---------- toolbar ----------

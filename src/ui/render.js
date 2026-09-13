@@ -20,6 +20,7 @@ import { currentScheme, SCHEME_DEADLINE } from '../engine/schemes.js';
 import { storyState, caseGate, currentCase, VISIT_LENGTH } from '../engine/stories.js';
 import { VISITORS } from '../content/stories.js';
 import { renderTheatreControls } from './shelf-theatre.js';
+import { createArrivalInvitation } from './arrival.js';
 
 const cabinet = document.getElementById('cabinet');
 const notesEl = document.getElementById('notes');
@@ -185,6 +186,12 @@ function propEl(pr, slotIndex) {
 
 let shelfLayout = '';
 export function renderShelf(state) {
+  // A household can outlive its residents. Keep its furniture, notes and
+  // museum accessible after the last resident leaves; only a new shelf needs
+  // the full invitation in place of those views.
+  const vacant = !state.pets.length && !state.props.length &&
+    !state.gone?.length && !state.stories?.residents?.length;
+  document.body.classList.toggle('shelf-vacant', vacant);
   document.body.classList.toggle('focus-shelf',state.pets.length>0&&state.life?.focusShelf===true);
   const framing=document.getElementById('shelfFocus');
   if(framing){framing.hidden=!state.pets.length;framing.setAttribute('aria-pressed',String(state.life?.focusShelf===true));framing.textContent=state.life?.focusShelf?'Show all shelves':'Focus occupied shelves';}
@@ -207,12 +214,11 @@ export function renderShelf(state) {
     }
     const slots = row.firstElementChild;
     const rowEmpty = state.slots.slice(r * 6, r * 6 + 6).every(id => !id);
-    const bareShelf = r === 0 && rowEmpty && !state.pets.length;
+    const bareShelf = r === 0 && rowEmpty && vacant;
     row.classList.toggle('row-empty', rowEmpty && !bareShelf);
     if (bareShelf) {
       if (!slots.querySelector('.empty-shelf')) {
-        slots.innerHTML = '<div class="empty-shelf"><span class="empty-kicker">Vacancy. Eighteen small rooms.</span><strong>Someone should live here.</strong><span>Grow a peculiar little creature, or draw your own. They cannot die. They can hold a grudge, and they will hold it against you.</span><button class="btn btn-primary" type="button">Make your first pet</button></div>';
-        slots.querySelector('button').addEventListener('click', () => document.getElementById('newPetBtn').click());
+        slots.replaceChildren(createArrivalInvitation());
       }
       continue;
     }

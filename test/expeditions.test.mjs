@@ -80,3 +80,29 @@ test('bad new-expedition requests do not replace a trip or award anything',()=>{
  for(const move of [-1,3,NaN,'1',undefined,{}])assert.equal(chooseOuting(s,move,now),null);
  assert.equal(outingSnapshot(s).step,0);
 });
+
+test('reopening a trip whose entire crew was rehomed returns to planning without rewards',()=>{
+ for(const legacy of [false,true]){
+  const s=fixture();startOuting(s,'drawer','thread',['a']);
+  if(legacy)delete s.life.outing.version;
+  chooseOuting(s,0,now);
+  s.pets[0].id='replacement';s.slots[0]='replacement';
+  const xp=s.life.xp;
+  assert.equal(outingSnapshot(s),null);
+  assert.equal(s.life.outing,null);
+  assert.equal(s.life.xp,xp);assert.equal(s.life.outings,0);assert.equal(s.life.relics.length,0);
+  assert.equal(startOuting(s,'fridge','biscuit',['replacement']),true,'the new resident can set out immediately');
+ }
+});
+
+test('a restored completion receipt cannot pay again after a damaged decision log is repaired',()=>{
+ let s=fixture();startOuting(s,'drawer','thread',['a']);plan(s,[2,0,1]);
+ const earned={xp:s.life.xp,outings:s.life.outings,expeditions:s.pets[0].expeditions,fuss:s.pets[0].needs.fuss,relics:s.life.relics.slice()};
+ s.life.outing.choices=[2,2,1]; // The second use of the one-shot tool cannot be replayed.
+ s=normalizeState(s);
+ assert.equal(outingSnapshot(s),null,'retire the damaged report instead of reopening an already paid trip');
+ assert.equal(s.life.outing,null);
+ assert.equal(chooseOuting(s,0,now),null);
+ assert.deepEqual({xp:s.life.xp,outings:s.life.outings,expeditions:s.pets[0].expeditions,fuss:s.pets[0].needs.fuss,relics:s.life.relics},earned);
+ assert.equal(startOuting(s,'drawer','thread',['a']),true);
+});

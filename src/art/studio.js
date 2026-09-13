@@ -634,7 +634,7 @@ export function initStudio({ onSave }) {
     });
   }
 
-  function open(unlockedBond, existing=null) {
+  function open(unlockedBond, existing=null, draft=null) {
     const generation=++openGeneration; editingId=existing?.id||null;
     studioVeil.querySelector('h2').textContent=existing?'Edit '+existing.name:'Make a pet';
     document.getElementById('petNameHint').textContent=existing?'Appearance changes keep their traits, needs and history. Rename them from their resident card.':'Leave it blank and one gets picked for you. You may regret that.';
@@ -645,10 +645,10 @@ export function initStudio({ onSave }) {
     stamps = [];
     stampEls = [];
     stampLayer.innerHTML = '';
-    petName.value = existing?.name||''; petName.disabled=!!existing;
+    petName.value = existing?.name || draft?.name || ''; petName.disabled=!!existing;
     personalityEditor.hidden = !!existing;
-    personalityDraft = existing ? null : createPersonalityDraft();
-    originInput.value = '';
+    personalityDraft = existing ? null : draft?.personality ? normalizePersonalityDraft(draft.personality) : createPersonalityDraft();
+    originInput.value = personalityDraft?.origin || '';
     personalityEditor.querySelector('.personality-introduction').open = false;
     if (!existing) syncPersonality();
     brush.stamp = null;
@@ -659,7 +659,7 @@ export function initStudio({ onSave }) {
     // a finished creature, not an empty box asking them to be an artist.
     setMode('generate');
     undo.length = 0; redo.length = 0; lockedParts.clear(); selectedPart = 'body'; creature = null;
-    setCreature(existing?.art?.creature || generateCreature(), false);
+    setCreature(existing?.art?.creature || draft?.creature || generateCreature(), false);
     syncLocks();
     syncBlueprints();
     if(existing && !existing.art?.creature){

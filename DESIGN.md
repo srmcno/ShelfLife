@@ -1,6 +1,6 @@
 # Shelf Life v2 — Design
 
-Source of truth for the rebuild. Original single-file prototype: `~/Documents/shelf-life.html` (untouched, kept as reference).
+Historical design for the original v2 rebuild. For the current edition, see [the production redesign](docs/production-redesign.md) and [README](README.md). Original single-file prototype: `~/Documents/shelf-life.html` (untouched, kept as reference).
 
 ## Goal
 A hilarious, dark-passive-aggressive tamagotchi-style shelf game. You draw creatures, they live on a shelf, they have needs, grudges, feuds, and long memories. Works on mobile and PC as an installable app. No backend — static, client-side, localStorage saves.
@@ -55,4 +55,4 @@ Must be served over http(s) — ES modules + the service worker do not run from 
 - Both require a user gesture before playing (browser autoplay policy) — satisfied naturally since every trigger in this game is a button click.
 
 ## 8. Verification
-No JS test framework in scope (would conflict with the "no build step" choice). Manual smoke test via local static server: draw a layered pet and confirm animation, run the decay/feud/care loop, confirm save/reload, confirm offline reload + install prompt, check a mobile viewport in devtools. Flagged explicitly if anything is left unverified.
+The original rebuild used Node unit tests and manual browser checks. The current edition also uses development-only Playwright tests without adding a runtime build step. Manual smoke test via local static server: draw a layered pet and confirm animation, run the decay/feud/care loop, confirm save/reload, confirm offline reload + install prompt, check a mobile viewport in devtools. Flagged explicitly if anything is left unverified.

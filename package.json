@@ -1,0 +1,14 @@
+{
+  "name": "shelf-life",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:browser": "playwright test",
+    "build": "python3 scripts/build_site.py"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

@@ -275,7 +275,7 @@ export function normalizeState(raw) {
   Object.keys(s.achievementAt).forEach(k => {
     if (!Number.isFinite(s.achievementAt[k])) delete s.achievementAt[k];
   });
-  s.feudArcs = s.feudArcs && typeof s.feudArcs === 'object' ? s.feudArcs : {};
+  s.feudArcs = record(s.feudArcs) ? s.feudArcs : {};
   s.streak = s.streak && typeof s.streak === 'object' ? Object.assign(defaultStreak(), s.streak) : defaultStreak();
   s.settings = s.settings && typeof s.settings === 'object' ? Object.assign(defaultSettings(), s.settings) : defaultSettings();
   // Keep valid positions, remove stale/duplicate occupants, then seat missing ones.
@@ -295,7 +295,7 @@ export function normalizeState(raw) {
   s.visits = Array.isArray(s.visits) ? s.visits.filter(v => Number.isFinite(v.at)).slice(-20) : [];
   s.ledger = s.ledger && typeof s.ledger === 'object' ? Object.assign(defaultLedger(), s.ledger) : defaultLedger();
   if (!s.ledger.struck || typeof s.ledger.struck !== 'object') s.ledger.struck = {};
-  s.roster = s.roster && typeof s.roster === 'object' ? s.roster : {};
+  s.roster = record(s.roster) ? s.roster : {};
   s.rosterSeeded = s.rosterSeeded === true;
   s.formLog = Array.isArray(s.formLog) ? s.formLog.filter(f => FORMS.indexOf(f) >= 0).slice(0, FORM_LOG_MAX) : [];
   s.noteCount = Math.floor(finite(s.noteCount, s.notes.length, s.notes.length));

@@ -23,9 +23,12 @@ export function initDialogs() {
     if (!e.isTrusted) return;
     pendingTrigger = e.target.closest?.(controls) || null;
     const generation = ++triggerGeneration;
-    queueMicrotask(() => queueMicrotask(() => {
+    // WebKit can drain microtasks between capture and target listeners. Keep
+    // the trusted opener until this event task finishes, after the target has
+    // opened the dialog and its MutationObserver has captured the return path.
+    setTimeout(() => {
       if (generation === triggerGeneration) pendingTrigger = null;
-    }));
+    }, 0);
   }, true);
   const release = () => { locked.forEach(el => { el.inert = false; }); locked = []; };
   function restoreFocus() {

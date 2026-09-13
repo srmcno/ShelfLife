@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { migratePet, normalizeState, blankState, clamp, defaultNeeds, SLOT_COUNT, petById, addNote, onNote } from '../src/state.js';
+import { checkShelf } from '../src/engine/loop.js';
 
 test('clamp bounds a value', () => {
   assert.equal(clamp(150, 0, 100), 100);
@@ -54,6 +55,20 @@ test('normalizeState rejects non-save shapes and fills in every default field on
   assert.equal(n.slots[0], 'p1');
   assert.deepEqual(n.achievements, []);
   assert.equal(n.pets[0].art.body, 'data:x');
+});
+
+test('restoring array-shaped bookkeeping cannot crash the next shelf check or lose the residents', () => {
+  for (const key of ['feudArcs', 'roster']) {
+    const raw = { pets: [{ id: 'p1', name: 'Still here', img: 'data:x' }], [key]: [null], rosterSeeded: true };
+    const state = normalizeState(raw);
+    assert.ok(state, key + ' is optional bookkeeping, not a reason to reject the shelf');
+    assert.doesNotThrow(() => checkShelf(state), key + ' must be repaired before gameplay');
+    assert.equal(state.pets[0].name, 'Still here');
+    assert.equal(state.pets[0].art.body, 'data:x');
+    assert.equal(state.slots[0], 'p1');
+    assert.equal(Array.isArray(state[key]), false);
+    assert.deepEqual(raw[key], [null], 'restoring leaves the backup untouched');
+  }
 });
 
 test('petById finds by id in a given state, not a global', () => {

@@ -27,6 +27,8 @@
 <link rel="stylesheet" href="css/shelf-theatre.css">
 <link rel="stylesheet" href="css/theatre-controls.css">
 <link rel="stylesheet" href="css/controls.css">
+<link rel="stylesheet" href="css/home.css">
+<link rel="stylesheet" href="css/playroom.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
@@ -59,24 +61,15 @@
 <main class="app">
   <!-- ---- the shelf ------------------------------------------------------- -->
   <section class="pane pane-shelf" id="paneShelf" aria-label="Your residents">
-    <div class="shelf-heading"><div><span class="eyebrow">A small world, badly supervised</span><h1>Your shelf. Their rules.</h1></div><span class="room-live"><i></i> Alive & opinionated</span></div>
+    <div class="shelf-heading"><div><span class="eyebrow">At home with the peculiar</span><h1>Your shelf. Their rules.</h1></div><span class="room-live"><i></i> Alive & opinionated</span></div>
     <div id="shelfBrief" class="shelf-brief"></div>
-    <div class="shelf-framing"><button class="btn btn-ghost btn-sm" id="shelfFocus" type="button" aria-pressed="false" hidden>Focus occupied shelves</button></div>
+    <div class="shelf-framing"><span>Tap a resident. Make their day slightly less terrible.</span><button class="btn btn-ghost btn-sm" id="shelfFocus" type="button" aria-pressed="false" hidden>Focus occupied shelves</button></div>
     <div class="stage">
       <!-- .cabinet-wrap draws the carcass; #cabinet is the run of shelves inside it. -->
       <div class="cabinet-wrap" id="cabinetWrap">
         <div class="cabinet" id="cabinet" tabindex="-1" aria-label="Your creature shelf"></div>
       </div>
     </div>
-    <section id="welcomePanel" class="welcome-panel" aria-labelledby="welcomeTitle" hidden></section>
-    <section id="shelfTheatre" class="shelf-theatre-controls" aria-labelledby="theatreHeading" hidden>
-      <div class="theatre-heading"><h2 id="theatreHeading">Small domestic disasters</h2><span id="theatreCount"></span></div>
-      <div class="theatre-caption" id="theatreCaption" role="status" aria-live="polite" aria-atomic="true">Give them furniture. They will supply the incident.</div>
-      <div class="theatre-buttons"><label class="sr-only" for="theatreKind">Choose a scene</label><select id="theatreKind" aria-describedby="theatreAvailability"><option value="">Surprise me</option></select><button class="btn btn-primary" id="theatrePlay" aria-describedby="theatreAvailability">Play a scene</button><button class="btn" id="theatreStop" hidden>End scene</button><button class="btn btn-ghost" id="theatreDecor">Add furniture</button></div>
-      <div class="theatre-preferences"><label><input type="checkbox" id="theatreAuto"> Let them improvise</label><span class="theatre-auto-hint">On: residents choose nearby furniture and company while you watch.</span><span id="theatreAvailability"></span></div>
-      <details class="theatre-repertoire"><summary>The repertoire <span>Change the cast. Change the furniture. See what happens.</span></summary><p class="hint">Scenes have different endings. Try a new neighbour or a different mood. Care benefits rest for 20 minutes; encores are for the drama.</p><div id="theatreRepertoire"></div></details>
-    </section>
-    <div id="needsYou" class="needs-you" aria-label="What needs you"></div>
     <div class="actions" id="actions">
       <button class="btn btn-check" id="checkBtn">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5h14M3 10h14M3 14.5h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="6" cy="5.5" r="1.6" fill="currentColor"/><circle cx="13" cy="10" r="1.6" fill="currentColor"/><circle cx="8" cy="14.5" r="1.6" fill="currentColor"/></svg>
@@ -94,6 +87,20 @@
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5H7l1.2-1.6h3.6L13 6h2.5A1.5 1.5 0 0 1 17 7.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="11" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
       </button>
     </div>
+    <div id="needsYou" class="needs-you" aria-label="What needs you"></div>
+    <div class="home-guide" aria-label="Life on the shelf">
+      <article><span aria-hidden="true">♡</span><h2>A little care</h2><p>Meals, fuss and a bath. They notice who shows up.</p></article>
+      <article><span aria-hidden="true">✧</span><h2>A little mischief</h2><p>Six games, odd visitors and furniture worth arguing over.</p></article>
+      <article><span aria-hidden="true">✎</span><h2>A long memory</h2><p>Keep their notes, shared moments and improbable achievements.</p></article>
+    </div>
+    <section id="welcomePanel" class="welcome-panel" aria-labelledby="welcomeTitle" hidden></section>
+    <section id="shelfTheatre" class="shelf-theatre-controls" aria-labelledby="theatreHeading" hidden>
+      <div class="theatre-heading"><h2 id="theatreHeading">Small domestic disasters</h2><span id="theatreCount"></span></div>
+      <div class="theatre-caption" id="theatreCaption" role="status" aria-live="polite" aria-atomic="true">Give them furniture. They will supply the incident.</div>
+      <div class="theatre-buttons"><label class="sr-only" for="theatreKind">Choose a scene</label><select id="theatreKind" aria-describedby="theatreAvailability"><option value="">Surprise me</option></select><button class="btn btn-primary" id="theatrePlay" aria-describedby="theatreAvailability">Play a scene</button><button class="btn" id="theatreStop" hidden>End scene</button><button class="btn btn-ghost" id="theatreDecor">Add furniture</button></div>
+      <div class="theatre-preferences"><label><input type="checkbox" id="theatreAuto"> Let them improvise</label><span class="theatre-auto-hint">On: residents choose nearby furniture and company while you watch.</span><span id="theatreAvailability"></span></div>
+      <details class="theatre-repertoire"><summary>The repertoire <span>Change the cast. Change the furniture. See what happens.</span></summary><p class="hint">Scenes have different endings. Try a new neighbour or a different mood. Care benefits rest for 20 minutes; encores are for the drama.</p><div id="theatreRepertoire"></div></details>
+    </section>
     <button class="shelf-teaser" id="shelfTeaser" type="button" hidden aria-label="Open the notes">
       <span class="teaser-kicker">Latest from the board</span>
       <span class="teaser-text"></span>

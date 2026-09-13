@@ -1,0 +1,102 @@
+/* The playroom is a cabinet of miniature scenes. The picture teaches the kind
+   of play; the quiet labels explain time and progress without opening a guide. */
+#playroomVeil .sheet-playroom { max-width: 860px; }
+#playroomVeil .sheet-head .eyebrow { text-transform: none; letter-spacing: 0; font: 17px/1.2 var(--hand); color: var(--ink-2); }
+#playroomVeil .sheet-head h2 { font-size: 34px; }
+#playroomVeil .playroom-toolbar { margin-bottom: 9px; }
+#playroomVeil .playroom-company { border-color: var(--hair); background: var(--glass); border-radius: 10px; padding: 8px 12px; }
+#playroomVeil .playroom-company label { text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink-2); }
+#playroomVeil .playroom-company label > span { max-width: none; }
+#playroomVeil .playroom-company select { font-weight: 600; }
+#playroomVeil .playroom-passport { min-height: 33px; padding: 7px 2px 0; font-size: 12px; }
+#playroomVeil .passport-count { font-variant-numeric: tabular-nums; }
+#playroomVeil .passport-dots { gap: 7px; }
+#playroomVeil .passport-dots > span { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--hair-lit); border-radius: 50%; font-size: 12px; }
+#playroomVeil .passport-dots > .earned { background: color-mix(in srgb, var(--mint) 10%, transparent); border-color: color-mix(in srgb, var(--mint) 50%, transparent); }
+
+#playroomVeil .activity-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+#playroomVeil .activity-card {
+  display: grid;
+  grid-template-rows: 80px auto auto 1fr auto;
+  align-items: start;
+  gap: 7px;
+  min-height: 220px;
+  padding: 14px;
+  border: 1px solid var(--hair-lit);
+  border-radius: 12px;
+  background: var(--night-2);
+  color: var(--ink);
+  overflow: hidden;
+  isolation: isolate;
+  transition: border-color .15s, background-color .15s;
+}
+#playroomVeil .activity-card:hover:not(:disabled) { translate: none; border-color: var(--activity); background: color-mix(in srgb, var(--activity) 4%, var(--night-2)); }
+#playroomVeil .activity-card:active:not(:disabled) { background: color-mix(in srgb, var(--activity) 10%, var(--night-2)); }
+#playroomVeil .activity-card:focus-visible { outline: 3px solid var(--activity); outline-offset: 3px; }
+#playroomVeil .activity-card:disabled { opacity: .58; }
+#playroomVeil .activity-scene { display: grid; place-items: center; align-self: stretch; min-width: 0; margin: -14px -14px 0; padding-top: 3px; color: var(--activity); background: color-mix(in srgb, var(--activity) 7%, var(--night-3)); border-bottom: 1px solid var(--hair); }
+#playroomVeil .activity-scene svg { display: block; width: 100%; height: 90px; max-width: 240px; }
+#playroomVeil .scene-shadow { fill: #08060d; stroke: none; opacity: .4; }
+#playroomVeil .scene-accent { fill: var(--activity); stroke: var(--activity); }
+#playroomVeil .scene-paper { fill: #e8ddc7; stroke: #e8ddc7; }
+#playroomVeil .scene-dark { fill: #382b3d; }
+#playroomVeil .scene-ink { fill: #382b3d; stroke: none; }
+#playroomVeil .scene-ink-line { stroke: #382b3d; }
+#playroomVeil .activity-top { min-height: 15px; gap: 5px; line-height: 1.3; }
+#playroomVeil .activity-top > span { font: 11px/1.3 var(--body); letter-spacing: 0; }
+#playroomVeil .activity-top > span:last-child { font-size: 11px; color: var(--ink-2); }
+#playroomVeil .activity-kind { color: var(--activity); }
+#playroomVeil .activity-card strong { margin: 0; font: 24px/1.12 var(--display); letter-spacing: -.015em; overflow-wrap: normal; }
+#playroomVeil .activity-hook { color: var(--ink-2); font: 13px/1.45 var(--body); }
+#playroomVeil .activity-bottom { align-items: center; gap: 7px; margin: 3px 0 0; padding-top: 9px; font: 11px/1.35 var(--body); }
+#playroomVeil .activity-bottom > span { min-width: 0; }
+#playroomVeil .activity-bottom .activity-action { padding: 5px 9px; border-radius: 5px; background: color-mix(in srgb, var(--activity) 12%, transparent); color: var(--activity); font: 600 12px/1.2 var(--body); }
+#playroomVeil .activity-continue { border-color: color-mix(in srgb, var(--activity) 65%, var(--night-2)); }
+#playroomVeil .activity-continue .activity-action { background: var(--activity); color: #231829; }
+#playroomVeil .playroom-guide { margin-top: 12px; border: 0; border-radius: 0; padding: 0 2px; }
+#playroomVeil .playroom-guide > summary { color: var(--ink-2); font-size: 13px; }
+#playroomVeil .playroom-guide-body { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+#playroomVeil .playroom-guide-body article { border-color: var(--hair-lit); }
+
+@media (max-width: 720px), (max-height: 500px) {
+  #playroomVeil .sheet-head .eyebrow { font-size: 15px; }
+  #playroomVeil .sheet-head h2 { font-size: 25px; }
+  #playroomVeil .playroom-toolbar { margin-bottom: 7px; }
+  #playroomVeil .playroom-company { padding: 4px 8px; }
+  #playroomVeil .playroom-company label { font-size: 11px; }
+  #playroomVeil .playroom-company label > span { max-width: none; }
+  #playroomVeil .playroom-passport { padding-top: 5px; min-height: 29px; font-size: 11px; }
+  #playroomVeil .passport-dots > span { width: 18px; height: 18px; font-size: 11px; }
+  #playroomVeil .playroom-workspace { padding-top: 3px; scroll-padding: 7px; }
+  #playroomVeil .activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  #playroomVeil .activity-card { grid-template-rows: 52px auto auto 1fr auto; min-height: 185px; gap: 5px; padding: 10px; border-radius: 10px; }
+  #playroomVeil .activity-scene { margin: -10px -10px 0; padding-top: 0; }
+  #playroomVeil .activity-scene svg { height: 61px; max-width: 180px; }
+  #playroomVeil .activity-top { min-height: 14px; }
+  #playroomVeil .activity-top > span,
+  #playroomVeil .activity-top > span:last-child { font-size: 10px; }
+  #playroomVeil .activity-card strong { font-size: 20px; }
+  #playroomVeil .activity-hook { font-size: 12px; line-height: 1.35; }
+  #playroomVeil .activity-bottom { gap: 4px; margin-top: 1px; padding-top: 6px; font-size: 10px; }
+  #playroomVeil .activity-bottom .activity-action { padding: 5px 7px; font-size: 11px; }
+  #playroomVeil .playroom-guide { margin-top: 5px; }
+  #playroomVeil .playroom-guide-body { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 360px) {
+  #playroomVeil .activity-card { padding: 9px; }
+  #playroomVeil .activity-scene { margin: -9px -9px 0; }
+  #playroomVeil .activity-card strong { font-size: 18px; }
+  #playroomVeil .activity-bottom .activity-action { padding-inline: 5px; }
+}
+
+@media (min-width: 560px) and (max-height: 500px) {
+  #playroomVeil .activity-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #playroomVeil .playroom-toolbar { margin-bottom: 0; }
+  #playroomVeil .sheet-head .eyebrow { display: none; }
+  #playroomVeil .sheet-head h2 { font-size: 21px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #playroomVeil .activity-card { transition: none; }
+}

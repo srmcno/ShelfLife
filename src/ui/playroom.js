@@ -2,23 +2,60 @@ import { ACTIVITIES, activityRecord, activityPassport } from '../content/activit
 import { renderPetSprite } from '../art/sprite.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-const drawings = {
-  crumb: '<path d="M10 9 19 5l9 7-2 12-12 4-8-9z"/><path d="m13 13 1 1m7 4 1 1m-8 3 1 1M4 5l2 1m25 21 1 1"/>',
-  hand: '<path d="M10 26 5 17q-1-4 3-2l3 4V8q0-4 3-2v9-11q3-3 4 0v11-8q3-3 4 0v10-5q4-2 4 2v8q0 9-8 9-5 0-8-5z"/>',
-  eye: '<path d="M3 17q13-17 26 0-13 17-26 0z"/><circle cx="16" cy="17" r="4"/><path d="M7 5 4 2m21 3 3-3M16 2v4"/>',
-  map: '<path d="m3 8 8-4 10 4 8-4v23l-8 4-10-4-8 4zM11 4v23m10-19v23"/><path d="m7 18 3-3 8 6 7-9" stroke-dasharray="2 3"/>',
-  scales: '<path d="M16 4v25M9 29h14M5 9h22M8 10l-5 11h10zm16 0-5 11h10z"/><circle cx="16" cy="5" r="2"/>',
-  market: '<path d="M4 13h24v17H4zM3 13 6 4h20l3 9M11 4l-1 9m11-9 1 9M4 13q4 7 8 0 4 7 8 0 4 7 8 0M13 22h6v8"/>'
+// Tiny scenes describe the actual games. Keeping this art inside the catalogue
+// avoids six image requests and keeps the playroom available offline.
+const scenes = {
+  chase: '<path d="m22 53 16-2m-11-9 16-2m-7 23 8-2" opacity=".45"/>' +
+    '<path class="scene-accent" d="M44 58q-2-19 13-27l1-10 9 7 10-7 1 11q13 7 10 24-2 14-22 14-18 0-22-12Z"/>' +
+    '<path class="scene-dark" d="m50 66-7 10h14l7-7m13-1 9 9h12l-12-12"/><ellipse class="scene-paper" cx="72" cy="44" rx="12" ry="9"/>' +
+    '<circle class="scene-ink" cx="72" cy="44" r="2"/><circle class="scene-ink" cx="80" cy="43" r="2"/><path class="scene-ink-line" d="m70 58 7 2 4-4"/>' +
+    '<path class="scene-paper" d="m119 45 10-5 9 9-4 12-13 2-7-10Z"/><path class="scene-ink-line" d="m122 48 1 1m8 5 1 1m-10 3 1 1"/>' +
+    '<path d="m99 26 3-4m5 48 3 2m38-30 2-2m-4 25 4 1"/><path class="scene-dark" d="m163 54 13-10 20 21-20 8Z"/><path d="m178 48 10-30m-14 39 12 12m-18-8 9 12"/>',
+  memory: '<path d="M21 25h26m-8-6 8 6-8 6m117 0h26m-8-6 8 6-8 6" opacity=".5"/>' +
+    '<path class="scene-dark" d="m42 70 8-16 23 6-5 15Z"/><path class="scene-accent" d="M52 55 44 40q-3-6 2-7 3-1 8 6V23q0-6 5-6t5 6v11-16q0-5 5-5t5 5v17-10q0-6 5-6t5 6v17-7q1-5 6-4 4 1 3 7l-2 17q-2 14-15 15-13 1-24-15Z"/>' +
+    '<path class="scene-dark" d="m152 70-8-16-23 6 5 15Z"/><path class="scene-paper" d="M142 55 150 40q3-6-2-7-3-1-8 6V23q0-6-5-6t-5 6v11-16q0-5-5-5t-5 5v17-10q0-6-5-6t-5 6v17-7q-1-5-6-4-4 1-3 7l2 17q2 14 15 15 13 1 24-15Z"/>' +
+    '<path class="scene-ink-line" d="M61 46q13-8 20 4m40-4q12-8 14 4"/><path d="m92 16 5-7 5 7m-9 57 4 4 4-4"/>',
+  alibi: '<path class="scene-dark" d="m39 23 59-7 7 54-59 7Z"/><path class="scene-paper" d="m58 16 59 5-4 56-59-5Z"/>' +
+    '<path class="scene-ink-line" d="m70 31 28 2m-28 9 21 2m-22 9 31 2m-32 9 19 2"/>' +
+    '<path class="scene-accent" d="M129 22q-20 0-20 20t20 20q20 0 20-20t-20-20Z"/><circle class="scene-dark" cx="129" cy="42" r="14"/>' +
+    '<path class="scene-paper" d="m143 55 8-3 18 19q2 3-1 6-3 3-6 0Z"/><path class="scene-ink-line" d="m117 42 22 2m-19 5 17 2"/>' +
+    '<path d="m126 33 7 2m-92-2-6-3m143 17 6-3m-25-20 4-5" opacity=".55"/>',
+  outing: '<path class="scene-dark" d="m29 69 11-20 12 20m104 0 13-24 12 24"/>' +
+    '<path class="scene-paper" d="m58 24 30-7 29 10 29-7-4 45-27 9-28-10-31 6Z"/><path class="scene-ink-line" d="m88 17-1 47m30-37-2 47" opacity=".45"/>' +
+    '<path class="scene-ink-line" d="m68 55 9-14 26 16 22-16" stroke-dasharray="3 5"/><path class="scene-accent" d="m123 24 14 4-11 8Z"/><path class="scene-ink-line" d="m123 24 2 19"/>' +
+    '<circle class="scene-accent" cx="53" cy="65" r="15"/><circle class="scene-ink" cx="49" cy="61" r="2"/><circle class="scene-ink" cx="56" cy="61" r="2"/><circle class="scene-ink" cx="49" cy="68" r="2"/><circle class="scene-ink" cx="56" cy="68" r="2"/>' +
+    '<path d="m156 24 5-8 5 8m-9-4h7m-138 8h8m-4-4v8" opacity=".5"/>',
+  court: '<path class="scene-paper" d="m27 32 31-6 7 41-31 6Z"/><path class="scene-ink-line" d="m37 41 13-3m-12 11 15-3m-14 11 16-3"/>' +
+    '<path d="M109 20v47m-22 5h44m-49-40h54m-43 1-13 23h27Zm31 0-13 23h27Z"/><path class="scene-accent" d="M80 56h27q-13 17-27 0m32 0h27q-13 17-27 0"/><circle class="scene-accent" cx="109" cy="21" r="5"/>' +
+    '<path class="scene-dark" d="m147 67 27-8 4 11-27 8Z"/><path class="scene-accent" d="m146 45 8-6 14 19-8 6Z"/><path d="m156 49 19-14"/>' +
+    '<path d="m63 16 5-4m80 9 6-3" opacity=".5"/>',
+  market: '<path d="M26 20q70 18 151-4" opacity=".55"/><path class="scene-paper" d="m43 23-1 8m115-10 1 9"/>' +
+    '<path class="scene-accent" d="M36 31h13l-2 13h-9Zm116-1h13l-2 13h-9Z"/>' +
+    '<path class="scene-dark" d="M62 41h78v33H62Z"/><path class="scene-paper" d="m57 43 13-21h62l13 21Z"/><path class="scene-accent" d="m79 22-6 21H57l13-21Zm20 0v21H85l4-21Zm19 0 11 21h16l-13-21Z"/>' +
+    '<path class="scene-paper" d="M62 61h78v13H62Z"/><path class="scene-accent" d="m78 49 7-5 7 6-2 9H79Z"/><path class="scene-paper" d="M107 48h15v11h-15Zm3-4h9v4h-9Z"/>' +
+    '<path class="scene-dark" d="M153 59h25l-3 17h-19Z"/><path d="M159 60v-5q0-7 7-7t7 7v5"/><path class="scene-ink-line" d="M71 68h60" opacity=".3"/>'
 };
-const icon = name => '<svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + drawings[name] + '</svg>';
+const scene = id => '<span class="activity-scene" aria-hidden="true"><svg viewBox="0 0 200 88" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><ellipse class="scene-shadow" cx="100" cy="78" rx="83" ry="5"/>' + scenes[id] + '</svg></span>';
 const cardCopy = {
-  chase: { title:'Crumb Chase', time:'22s / 3 acts', hook:'Dodge, dash, steal crumbs.' },
-  memory: { title:'Handshake', time:'Your pace', hook:'Copy. Reverse. Duet.' },
-  alibi: { title:'The Alibi', time:'No timer', hook:'Catch a lie. Prove it.' },
-  outing: { title:'Expeditions', time:'3 stops', hook:'Recover parts. Build a home.' },
-  court: { title:'Shelf Court', time:'No timer', hook:'Read. Compare. Accuse.' },
-  market: { title:'Night Market', time:'6 stalls', hook:'Shop, pair, deliver. Repeat.' }
+  chase: { title:'Crumb Chase', time:'22s or 3 acts', hook:'Dodge the broom. Get the crumbs.' },
+  memory: { title:'Handshake', time:'Your pace', hook:'Copy a secret. Or reverse it.' },
+  alibi: { title:'The Alibi', time:'No timer', hook:'Spot the lie. Find the proof.' },
+  outing: { title:'Expeditions', time:'3 stops', hook:'Find parts. Build a better home.' },
+  court: { title:'Shelf Court', time:'No timer', hook:'Follow the clues. Name a suspect.' },
+  market: { title:'Night Market', time:'8 stalls', hook:'Find a pair. Send the shopping home.' }
 };
+
+function activityTime(id, life = {}) {
+  // Saves retain the route seed and rules version, not the generated stalls.
+  if (id === 'market' && life.market && (life.market.version || 1) < 4) return '6 stalls';
+  return cardCopy[id].time;
+}
+
+function activityDetail(activity, life = {}) {
+  if (activity.id !== 'market' || !life.market || life.market.version >= 4) return activity.detail;
+  if (life.market.version === 3) return 'This saved trip has six stalls. Buy pairs for three errands, then deliver them to free bag space and earn shopping money. A new trip uses eight stalls.';
+  return 'This saved trip keeps its original six-stall rules. Buy matching objects for the household’s requests. Your final basket, spare buttons and charm determine your score. A new trip uses eight-stall delivery errands.';
+}
 
 function continueLabel(id, life = {}) {
   if (id === 'court' && life.court && !life.court.claimed) return 'Continue case';
@@ -83,18 +120,18 @@ export function initPlayroom(state) {
     passport.hidden = !pet;
     if (pet) {
       const progress = activityPassport(state);
-      passport.innerHTML = '<span class="passport-count">' + progress.completed + '/6 games tried</span>' +
+      passport.innerHTML = '<span class="passport-count">' + progress.completed + '/' + progress.stamps.length + ' games tried</span>' +
         '<span class="passport-dots">' + progress.stamps.map(s => '<span class="' + (s.earned ? 'earned' : '') + '" title="' + esc(s.title) + '"><span aria-hidden="true">' + (s.earned ? '✓' : '○') + '</span><span class="sr-only">' + esc(s.title) + (s.earned ? ', completed' : ', not yet completed') + '</span></span>').join('') + '</span>';
     }
     cards.innerHTML = ACTIVITIES.map(a => {
       const copy = cardCopy[a.id], resume = pet ? continueLabel(a.id, state.life) : '';
       const record = resume || shortRecord(a, state, pet);
-      return '<button type="button" class="activity-card activity-' + a.id + (resume ? ' activity-continue' : '') + '" data-activity="' + a.id + '" aria-label="' + esc((resume ? 'Continue ' : 'Play ') + a.title + '. ' + activityRecord(a, state, pet)) + '" ' + (!pet ? 'disabled' : '') + '>' +
-        '<span class="activity-top"><span class="activity-icon">' + icon(a.icon) + '</span><span>' + (resume ? 'IN PROGRESS' : esc(copy.time)) + '</span></span>' +
+      return '<button type="button" class="activity-card activity-' + a.id + (resume ? ' activity-continue' : '') + '" data-activity="' + a.id + '" aria-label="' + esc((resume ? 'Continue ' : 'Play ') + copy.title + '. ' + activityTime(a.id, state.life) + '. ' + activityRecord(a, state, pet)) + '" ' + (!pet ? 'disabled' : '') + '>' +
+        scene(a.id) + '<span class="activity-top"><span class="activity-kind">' + esc(a.kind) + '</span><span>' + esc(activityTime(a.id, state.life)) + '</span></span>' +
         '<strong>' + esc(copy.title) + '</strong><span class="activity-hook">' + esc(copy.hook) + '</span>' +
-        '<span class="activity-bottom"><span>' + esc(record) + '</span><b aria-hidden="true">→</b></span></button>';
+        '<span class="activity-bottom"><span>' + esc(record) + '</span><b class="activity-action" aria-hidden="true">' + (resume ? 'Resume' : 'Play') + '</b></span></button>';
     }).join('');
-    guideBody.innerHTML = ACTIVITIES.map(a => '<article><h3>' + esc(a.title) + '</h3><p class="playroom-guide-joke">' + esc(a.line) + '</p><p>' + esc(a.detail) + '</p><small>' + esc(activityRecord(a, state, pet)) + '</small></article>').join('');
+    guideBody.innerHTML = ACTIVITIES.map(a => '<article><h3>' + esc(a.title) + '</h3><p class="playroom-guide-joke">' + esc(a.line) + '</p><p>' + esc(activityDetail(a, state.life)) + '</p><small>' + esc(activityRecord(a, state, pet)) + '</small></article>').join('');
   }
   function open() {
     // Shortcuts never interrupt a game or an unfinished drawing.

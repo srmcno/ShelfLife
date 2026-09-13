@@ -5,8 +5,8 @@ import { initDialogs } from '../src/ui/dialogs.js';
 // Exercise the shared focus/Escape controller with actual event order: targets
 // can consume Escape before the document, whose later game listeners must wait.
 function fixture(t) {
-  const previous = { document: globalThis.document, MutationObserver: globalThis.MutationObserver, queueMicrotask: globalThis.queueMicrotask };
-  const observers = [], microtasks = [], events = new Map();
+  const previous = { document: globalThis.document, MutationObserver: globalThis.MutationObserver, queueMicrotask: globalThis.queueMicrotask, setTimeout: globalThis.setTimeout };
+  const observers = [], microtasks = [], timers = [], events = new Map();
   class Node {
     constructor(tag = 'div', id = '', classes = '') {
       this.tagName = tag.toUpperCase(); this.id = id; this.children = []; this.parentElement = null;
@@ -72,22 +72,24 @@ function fixture(t) {
   const event = (target, extra = {}) => ({ target, defaultPrevented: false, stopped: false, immediate: false,
     preventDefault() { this.defaultPrevented = true; }, stopPropagation() { this.stopped = true; },
     stopImmediatePropagation() { this.stopped = this.immediate = true; }, ...extra });
-  function dispatchClick(target, trusted = true) {
+  function dispatchClick(target, trusted = true, checkpoint = false) {
     const e = event(target, { isTrusted: trusted });
     for (const listener of events.get('click') || []) if (listener.capture) listener.callback(e);
+    if (checkpoint) while (microtasks.length) microtasks.shift()();
     target.listeners.get('click')?.(e);
     for (const listener of events.get('click') || []) if (!listener.capture) listener.callback(e);
   }
   globalThis.document = doc;
   globalThis.MutationObserver = class { constructor(callback) { this.callback = callback; } observe() { observers.push(this.callback); } };
   globalThis.queueMicrotask = callback => microtasks.push(callback);
+  globalThis.setTimeout = callback => timers.push(callback);
   t.after(() => Object.assign(globalThis, previous));
   initDialogs();
   let hiddenGameCloses = 0;
   doc.addEventListener('keydown', e => { if (e.key === 'Escape') hiddenGameCloses++; });
   return { doc, app, cabinet, makeElement, makeButton, opener, newPet, more, tabMore, activeTab, card, play, restore, tray,
     click: dispatchClick, get hiddenGameCloses() { return hiddenGameCloses; },
-    flush() { observers.forEach(callback => callback()); while (microtasks.length) microtasks.shift()(); },
+    flush() { observers.forEach(callback => callback()); while (microtasks.length) microtasks.shift()(); while (timers.length) timers.shift()(); },
     open(dialog, trigger = opener) { trigger.addEventListener('click', () => dialog.root.classList.add('open')); dispatchClick(trigger); this.flush(); },
     key(target, key, values = {}) {
       const e = event(target, { key, ...values }); target.listeners.get('keydown')?.(e);
@@ -103,6 +105,15 @@ test('pointer-opened dialogs return focus to the real trigger even when the brow
   assert.equal(f.doc.activeElement, f.card.title); assert.equal(f.app.inert, true);
   f.card.close.click(); f.flush();
   assert.equal(f.doc.activeElement, f.opener); assert.equal(f.app.inert, false);
+});
+
+test('a native event microtask checkpoint cannot forget the opener before the target opens its sheet', t => {
+  const f = fixture(t); f.doc.activeElement = f.newPet;
+  f.opener.addEventListener('click', () => f.card.root.classList.add('open'));
+  f.click(f.opener, true, true); f.flush();
+  assert.equal(f.doc.activeElement, f.card.title);
+  f.card.close.click(); f.flush();
+  assert.equal(f.doc.activeElement, f.opener);
 });
 
 test('More-to-sheet handoffs preserve the original opener and choose its visible counterpart after rotation', t => {
