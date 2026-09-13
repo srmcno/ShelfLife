@@ -76,6 +76,9 @@ export function mountHouseholdScene(host,state,scene,{mini=false}={}) {
  let index=0,timer=null,gestureTimer=null,settleTimer=null,moveTimer=null,running=false,destroyed=false,previousActors=[];
  const media=window.matchMedia('(prefers-reduced-motion: reduce)');
  const light=()=>media.matches||document.body.dataset.effects==='light';
+ let onScreen=true;
+ const veil=root.closest('.veil');
+ const blocked=()=>document.hidden||!root.isConnected||!onScreen||(veil&&!veil.classList.contains('open'))||[...document.querySelectorAll('.veil.open')].some(dialog=>dialog!==veil);
  const beats=direction.beats?.length?direction.beats:[{label:scene.title}];
  let caption,progress,toggle,next;
  if(!mini){
@@ -99,24 +102,30 @@ export function mountHouseholdScene(host,state,scene,{mini=false}={}) {
   for(const [id,{node,prop}]of props)place(node,beat.props?.[id],prop);
   clearTimeout(gestureTimer);
   if(animate&&!light())gestureTimer=setTimeout(()=>{
-   if(destroyed||!root.isConnected||document.hidden)return;
+   if(destroyed||blocked())return;
    puppets.forEach((p,i)=>{const kind=beat.actors?.[i]?.gesture||'inspect';p?.gesture(gestures[kind]||kind);});
   },160);
   if(caption){caption.textContent=beat.label||scene.title;progress.textContent='Scene '+(index+1)+' of '+beats.length;next.disabled=index===beats.length-1;toggle.textContent=running?'Pause scene':index===beats.length-1?'Replay scene':'Play scene';toggle.setAttribute('aria-pressed',String(running));}
  }
  function schedule(){clearTimeout(timer);if(!running)return;timer=setTimeout(()=>{
-  if(destroyed||!root.isConnected||document.hidden){pause();return;}
+  if(destroyed||blocked()){pause();return;}
   if(index<beats.length-1){index++;paint(true);schedule();}else pause();
  },Math.max(2200,Math.min(4200,(beats[index].label||'').length*34+1100)));}
- function play(){if(destroyed||mini||document.hidden||!root.isConnected)return;if(index===beats.length-1)index=0;running=true;root.classList.remove('is-paused');paint(true);schedule();}
+ function play(){if(destroyed||mini||blocked())return;if(index===beats.length-1)index=0;running=true;root.classList.remove('is-paused');paint(true);schedule();}
  function pause(){if(destroyed)return;running=false;clearTimeout(timer);clearTimeout(gestureTimer);clearTimeout(settleTimer);clearTimeout(moveTimer);root.classList.add('is-paused');paint(false);}
- function step(){if(destroyed)return;pause();index=Math.min(index+1,beats.length-1);paint(!light());}
+ function step(){if(destroyed||mini||blocked())return;pause();index=Math.min(index+1,beats.length-1);paint(!light());}
  function visibility(){if(document.hidden)pause();}
  function preference(){if(light())pause();}
- const veil=root.closest('.veil');
- const observer=!mini?new MutationObserver(()=>{if(light()||(veil&&!veil.classList.contains('open')))pause();}):null;
- if(observer){if(veil)observer.observe(veil,{attributes:true,attributeFilter:['class']});observer.observe(document.body,{attributes:true,attributeFilter:['data-effects']});}
- function destroy(){if(destroyed)return;pause();destroyed=true;puppets.forEach(p=>p?.release());observer?.disconnect();document.removeEventListener('visibilitychange',visibility);media.removeEventListener?.('change',preference);}
+ // Observe dialog shells only: watching every animated descendant would create
+ // unnecessary callbacks on each pose. Dialog shells are permanent in index.html.
+ const observer=!mini?new MutationObserver(()=>{if(light()||blocked())pause();}):null;
+ if(observer){for(const dialog of document.querySelectorAll('.veil'))observer.observe(dialog,{attributes:true,attributeFilter:['class']});observer.observe(document.body,{attributes:true,attributeFilter:['data-effects']});}
+ const intersection=!mini&&typeof IntersectionObserver!=='undefined'?new IntersectionObserver(entries=>{
+  if(destroyed)return;
+  for(const entry of entries)if(entry.target===root){onScreen=entry.isIntersecting;if(!onScreen)pause();}
+ }):null;
+ intersection?.observe(root);
+ function destroy(){if(destroyed)return;pause();destroyed=true;puppets.forEach(p=>p?.release());observer?.disconnect();intersection?.disconnect();document.removeEventListener('visibilitychange',visibility);media.removeEventListener?.('change',preference);}
  if(mini){index=beats.length-1;paint(false);}
  else {document.addEventListener('visibilitychange',visibility);media.addEventListener?.('change',preference);paint(false);if(!light())play();}
  return {play,pause,step,destroy};

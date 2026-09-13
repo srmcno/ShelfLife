@@ -34,3 +34,9 @@ The first-session path is engineered for a short sequence of actions, but the ro
 Companion choice still often rewards bringing the strongest relevant skills. Expedition editions remix nine alternate encounters rather than providing eight wholly independent stories. Delivery animation shows recipients and real objects but is not a bespoke physical routine for every errand. Relationship development remains a lightweight simulation, not an unrestricted narrative engine. The interface still contains a large catalogue below its immediate household view.
 
 Fun, humor and attachment should be assessed through further play and returning-player feedback. Feature count alone does not justify a perfect score.
+
+## Scene lifecycle follow-up
+
+A source review found that the inline housewarming player could continue behind an open dialog or below the viewport. Scene playback now pauses on either condition and requires deliberate resumption. Hidden-tab behavior, reduced-motion manual stepping, modal replay and observer cleanup have direct controller regression coverage. These tests use a controlled DOM fixture; they do not establish browser rendering correctness.
+
+The follow-up JavaScript suite passed 707 tests without skips; all four Python tests and static packaging passed. The browser connection remained unresponsive during this follow-up, so timed first-session play, the responsive viewport matrix and physical-device checks remain outstanding. No save format or gameplay reward rule changed in this follow-up.
