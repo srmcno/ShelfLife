@@ -32,11 +32,11 @@ was added. New stories are immediately available; there is no calendar gate.
 
 ## Verification
 
-The September 13 development pass passed 738 domain tests, including all story
+The September 13 development pass passed 747 domain tests, including all story
 approaches, sixteen unique endings, capped rewards, stale callbacks, malformed
 saves, actual cast attribution, replay identity and authored scene lifecycle.
 
-The full browser suite passed 58 scenarios across desktop Chromium, phone-sized
+The full browser suite passed 61 scenarios across desktop Chromium, phone-sized
 Chromium and WebKit. It completed real 22-second Chase adventures and imperfect
 Market trips, checked interruption/reload, full-needs care, another crew's saved
 trip, original/replay receipts, and all sixteen keepsakes with long names at
@@ -47,6 +47,16 @@ service-worker offline emulation. Chromium offline adventure/care checks pass.
 Independent review found and verified fixes for replay attribution, long-name
 layout overflow, and saved-case guidance. Additional phone, landscape and desktop
 handoffs preserved dialog focus and produced no observed browser errors.
+
+The Linux WebKit release gate also exposed an older Chase timing bug: frames
+longer than 250ms discarded elapsed time. A controlled 500ms frame schedule
+reproduced the failure before the fix. Chase now accumulates exact 60Hz steps,
+with at most 120 steps per frame, and visibly pauses after unexplained gaps over
+two seconds. Tests compare slow-frame collision sequences with 60FPS, verify
+intermission boundaries, and exercise safe pause/resume in real browsers.
+The adventure dialog also honors Light effects without a costly backdrop blur.
+Long, multi-action browser tests budget for measured Linux trace-capture costs;
+the 35-second gameplay-completion assertion remains unchanged.
 
 Release gates remain the domain, Python, browser and packaging checks in the
 Pages workflow. Verify `release.json`, the service-worker revision and important

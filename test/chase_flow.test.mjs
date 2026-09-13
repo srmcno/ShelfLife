@@ -21,6 +21,9 @@ test('dash commits to a direction, crosses dust safely, and cannot be spammed', 
   assert.equal(dashChase(game, -1), false);
   assert.equal(game.player.dashCooldown, DASH_COOLDOWN);
   const events = updateChase(game, { axis: -1 }, .18);
+  // The fixed-step clock holds the unfinished last frame; observe the first
+  // complete physics frame after the 0.18-second burst before judging distance.
+  events.push(...updateChase(game, { axis: -1 }, 1 / 60));
   assert.ok(game.player.x > 160, 'steering cannot reverse a burst midway');
   assert.equal(game.bumps, 0);
   assert.equal(game.dashSmashes, 2);

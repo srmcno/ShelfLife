@@ -442,6 +442,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     const events = updateChase(game, { axis, targetX: axis ? null : targetX }, (now - lastTime) / 1000);
     lastTime = now;
     for (const event of events) {
+      if (event.type === 'pause') { pause('The browser stalled, so the chase is paused. Resume when ready.'); return; }
       if (event.type === 'finish') { finish(); return; }
       if (event.type === 'intermission') { intermission(); return; }
       react(event);
@@ -474,17 +475,18 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     root.dataset.finished = 'false'; pop.textContent = ''; stars.hidden = true; quip.hidden = true;
     overlay.classList.remove('best'); upgrades.hidden = true; go.hidden = false; fx.replaceChildren(); paint(); run();
   }
-  function pause() {
+  function pause(reason = '') {
     if (!running) return;
+    const explanation = typeof reason === 'string' ? reason : '';
     stopFrame(); paused = true; disabled(true); paint();
     screen('paused');
     title.textContent = 'The crumbs can wait.';
     const remaining = Math.ceil((game.format === 'run' ? RUN_WAVE_SECONDS : chaseDuration(game)) - chaseWaveTime(game));
-    description.textContent = 'Paused at ' + game.caught + '/' + game.goal + ' crumbs and ' + game.score + ' points. ' + remaining + ' seconds remain' + (game.format === 'run' ? ' in act ' + (game.wave + 1) : '') + '. Resume when you are ready.';
+    description.textContent = (explanation ? explanation + ' ' : '') + 'Paused at ' + game.caught + '/' + game.goal + ' crumbs and ' + game.score + ' points. ' + remaining + ' seconds remain' + (game.format === 'run' ? ' in act ' + (game.wave + 1) : '') + '. Resume when you are ready.';
     pauseCaption.textContent = pet.name + [' is on a very small union break.', ' is negotiating with the biscuit.', ' insists this was a strategic pause.'][(game.caught + game.bumps) % 3];
     restart.textContent = game.format === 'run' ? 'Restart whole run' : 'Restart this course';
     go.textContent = 'Resume chase'; go.hidden = false; upgrades.hidden = true; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; go.focus({ preventScroll: true });
-    onStatus('Paused. Resume whenever you are ready.');
+    onStatus(explanation || 'Paused. Resume whenever you are ready.');
   }
   function jump() { if (running && jumpChase(game, { buffer: true })) { puppet.gesture('jump'); if (navigator.vibrate) navigator.vibrate(8); } }
   function burst() {

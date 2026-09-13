@@ -9,6 +9,9 @@ export const CHASE_GROUND = 20;
 // must not send its face out of the arena while the controls remain active.
 export const CHASE_CEILING = CHASE_HEIGHT - CHASE_GROUND - 76;
 export const CHASE_SECONDS = 22;
+export const CHASE_MAX_FRAME_SECONDS = 2;
+const PHYSICS_STEP = 1 / 60;
+const MAX_PHYSICS_STEPS = 120;
 export const RUSH_SECONDS = 4;
 export const DASH_SECONDS = .18;
 export const DASH_COOLDOWN = 2.4;
@@ -140,7 +143,7 @@ export function newChase(pet, { gentle = false, rng = Math.random, seed = null, 
   const art = artPersonality(pet);
   const temper = temperOf(mood);
   return {
-    kind: 'chase', seed, format: format === 'run' ? 'run' : 'quick', venue: format === 'run' ? 'shelf' : CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
+    kind: 'chase', seed, format: format === 'run' ? 'run' : 'quick', venue: format === 'run' ? 'shelf' : CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, frameRemainder: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
     wave: 0, waveBaseline: { caught: 0, biscuits: 0, finaleCaught: 0, airCatches: 0 }, waveResults: [], contracts: ['house', 'house', 'house'], upgrades: [], pendingUpgrade: null, pendingContract: null, awaitingChoice: false, nextBroom: 4.5, broomsMade: 0,
     rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { id: objective, ...CHASE_OBJECTIVES[objective], done: false } : null,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
@@ -456,14 +459,23 @@ function step(game, input, dt, events) {
   }
 }
 
-// Small physics steps keep catches and jumps consistent at different frame rates.
+// Catch up a slow foreground frame without skipping any collision steps. The
+// old .25-second clip silently made a 22-second chase take 44 seconds at 2 FPS.
+// A larger unexplained freeze pauses instead of playing unseen hazards; normal
+// visibility/blur pauses already reset the renderer's clock when resumed.
 export function updateChase(game, input = {}, elapsed = 0) {
   const events = [];
   if (!game || game.finished || game.awaitingChoice || !Number.isFinite(elapsed) || elapsed <= 0) return events;
-  let remaining = Math.min(.25, elapsed);
-  while (remaining > 1e-7 && !game.finished && !game.awaitingChoice) {
-    const dt = Math.min(1 / 60, remaining); step(game, input, dt, events); remaining -= dt;
+  if (elapsed > CHASE_MAX_FRAME_SECONDS) return [{ type: 'pause', reason: 'frame-gap' }];
+  const carried = Number.isFinite(game.frameRemainder) && game.frameRemainder >= 0 && game.frameRemainder < PHYSICS_STEP ? game.frameRemainder : 0;
+  let remaining = elapsed + carried;
+  for (let steps = 0; steps < MAX_PHYSICS_STEPS && remaining + 1e-9 >= PHYSICS_STEP && !game.finished && !game.awaitingChoice; steps++) {
+    step(game, input, PHYSICS_STEP, events); remaining -= PHYSICS_STEP;
   }
+  // Preserve sub-frame time rather than shortening the final physics step; even
+  // tiny rounding differences can change which equidistant crumb a moth takes.
+  // The player owns the stopped intermission, so unused catch-up ends there.
+  game.frameRemainder = game.finished || game.awaitingChoice ? 0 : Math.max(0, Math.min(PHYSICS_STEP - Number.EPSILON, remaining));
   return events;
 }
 

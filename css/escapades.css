@@ -162,6 +162,7 @@
   .escapade-choice { transition:none; }
 }
 body[data-effects="light"] .escapade-receipt-art svg { animation:none; }
+body[data-effects="light"] #escapadeVeil { backdrop-filter:none; -webkit-backdrop-filter:none; }
 
 .escapade-hub-copy, .escapade-shelf-keepsake, #escapadeContent,
 .escapade-care-note, .escapade-game-purpose, .shelf-brief > div { overflow-wrap:anywhere; }

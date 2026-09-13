@@ -260,6 +260,8 @@ test('installed shell reloads offline with saved adventure progress and usable c
 async function beginObservatory(page, approach = 'orbit', petId = 'qa0') {
   await page.locator('#escapadeOpen').click();
   await expect(page.locator('#escapadeTitle')).toHaveText('The Crumb Observatory');
+  const effects = await page.evaluate(() => ({ mode:document.body.dataset.effects, blur:getComputedStyle(document.getElementById('escapadeVeil')).backdropFilter }));
+  if (effects.mode === 'light') expect(effects.blur, 'adventure dialog honors light effects').toBe('none');
   await page.locator('#escapadeResident').selectOption(petId);
   await page.locator('[data-escapade="start"][data-approach="' + approach + '"]').click();
   await expect.poll(async () => (await savedShelf(page)).escapades.active?.petId).toBe(petId);
@@ -273,8 +275,19 @@ async function adventureSnack(page) {
   await page.locator('#cardVeil [data-escapade="open"]').click();
 }
 
-test('a real Crumb Chase adventure earns a chosen keepsake that survives reload', async ({ page }) => {
-  test.setTimeout(65_000);
+test('a real Crumb Chase adventure earns a chosen keepsake that survives reload', async ({ page }, testInfo) => {
+  // The full journey has ~20 pointer actions plus a 22-second game. Linux
+  // WebKit trace capture takes 1–3s per action at native phone pixel density;
+  // preserve the 35s gameplay deadline while budgeting for the entire journey.
+  test.setTimeout(90_000);
+  if (testInfo.project.name === 'desktop-chromium') {
+    // Exercise the actual UI with a slow foreground frame schedule. A frame
+    // must retain its elapsed simulation time instead of stretching the game.
+    await page.addInitScript(() => {
+      window.requestAnimationFrame = callback => window.setTimeout(() => callback(performance.now()), 500);
+      window.cancelAnimationFrame = id => window.clearTimeout(id);
+    });
+  }
   await openHousehold(page);
   await beginObservatory(page);
   await adventureSnack(page);
@@ -327,6 +340,7 @@ test('full needs permit a story moment while cancelling play never completes it'
 });
 
 test('a fourth resident leads their own market adventure and imperfect play counts', async ({ page }) => {
+  test.setTimeout(60_000);
   await openHousehold(page, 'conflicting');
   await beginObservatory(page, 'equipment', 'qa3');
   await page.locator('#escapadeContent [data-escapade="play"]').click();
@@ -381,6 +395,8 @@ test('replayed ending celebrates the current resident while the album preserves 
 });
 
 test('the complete keepsake album and long resident names fit a 320px screen', async ({ page }) => {
+  // Opening all 16 receipts means 34 pointer actions plus acceptance of a story.
+  test.setTimeout(60_000);
   await page.setViewportSize({ width:320, height:740 });
   await openHousehold(page, 'nearly-full', snapshot => {
     const petName = 'W'.repeat(22), at = Date.now() - 60_000;
@@ -403,4 +419,29 @@ test('the complete keepsake album and long resident names fit a 320px screen', a
   await noHorizontalOverflow(page);
   await page.locator('#escapadeClose').click();
   await noHorizontalOverflow(page);
+});
+
+test('a long browser frame gap pauses Chase without consuming the remaining game', async ({ page }) => {
+  await page.addInitScript(() => {
+    const request = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = callback => request(time => {
+      if (window.shelfTestFrameDelay) window.setTimeout(() => callback(performance.now()), window.shelfTestFrameDelay);
+      else callback(time);
+    });
+  });
+  await openHousehold(page);
+  await playroomLauncher(page).click();
+  await page.locator('[data-activity="chase"]').click();
+  await page.locator('#chaseGo').click();
+  await page.evaluate(() => { window.shelfTestFrameDelay = 2400; });
+  await expect(page.locator('#chaseArea')).toHaveAttribute('data-paused', 'true');
+  await expect(page.locator('#chaseGo')).toHaveText('Resume chase');
+  await expect(page.locator('#chaseDescription')).toContainText('browser');
+  const pausedDescription = await page.locator('#chaseDescription').textContent();
+  await page.evaluate(() => { window.shelfTestFrameDelay = 0; });
+  await expect(page.locator('#chaseDescription')).toHaveText(pausedDescription);
+  await page.locator('#chaseGo').click();
+  await expect(page.locator('#chaseArea')).toHaveAttribute('data-running', 'true');
+  await page.locator('#chasePause').click();
+  await expect(page.locator('#chaseGo')).toHaveText('Resume chase');
 });
