@@ -86,8 +86,7 @@ test('fresh boot shows three playable arrivals and a responsive shelf', async ({
   await expect(page.locator('#quickHelp')).toBeFocused();
 });
 
-test('fresh mobile navigation opens populated notes and stories, then returns to arrivals', async ({ page, isMobile }) => {
-  test.skip(!isMobile, 'desktop presents these panels together');
+test('navigation opens populated notes and stories, then returns to arrivals at every size', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.arrival-resident')).toHaveCount(3);
   for (const tab of ['notes', 'plots']) {
@@ -227,7 +226,7 @@ for (const activity of activities) {
   });
 }
 
-test('installed shell reloads offline with saved adventure progress and usable care', async ({ page, context, browserName }) => {
+test('installed shell reloads offline with saved adventure progress, usable care and the illustrated play rug', async ({ page, context, browserName }) => {
   // Playwright documents service-worker tooling for Chromium only. WebKit's
   // emulated offline navigation fails internally before the cached page loads.
   // Keep its UI/save coverage above; do not report this as an iOS offline check.
@@ -249,15 +248,24 @@ test('installed shell reloads offline with saved adventure progress and usable c
     await page.locator('#cardVeil [data-care="food"]').click();
     await expect.poll(async () => (await savedShelf(page)).escapades.active.careAt).not.toBeNull();
     await page.reload();
+    await page.locator('.tab[data-tab="plots"]').click();
     await page.locator('#escapadeOpen').click();
     await expect(page.locator('#escapadeContent .escapade-steps .done')).toHaveCount(1);
     await noHorizontalOverflow(page);
+    await page.keyboard.press('Escape');await page.locator('.tab[data-tab="shelf"]').click();
+    await page.locator('#hangoutBtn').click();
+    const illustration=await page.evaluate(async()=>{const result=await fetch('assets/rooms/play-rug.webp');const bytes=await result.blob();return{ok:result.ok,type:bytes.type,size:bytes.size};});
+    expect(illustration.ok).toBe(true);expect(illustration.type).toContain('image/webp');expect(illustration.size).toBeGreaterThan(100_000);
+    await page.locator('[data-rug-toy="bubbles"]').click();await page.locator('#rugAction').click();await page.locator('#rugPop').click();
+    await expect(page.locator('#rugTally')).toHaveText('1 / 6');
+    await page.reload();await page.locator('#hangoutBtn').click();await expect(page.locator('#rugTally')).toHaveText('1 / 6');
   } finally {
     await context.setOffline(false);
   }
 });
 
 async function beginObservatory(page, approach = 'orbit', petId = 'qa0') {
+  await page.locator('.tab[data-tab="plots"]').click();
   await page.locator('#escapadeOpen').click();
   await expect(page.locator('#escapadeTitle')).toHaveText('The Crumb Observatory');
   const effects = await page.evaluate(() => ({ mode:document.body.dataset.effects, blur:getComputedStyle(document.getElementById('escapadeVeil')).backdropFilter }));
@@ -292,6 +300,7 @@ test('a real Crumb Chase adventure earns a chosen keepsake that survives reload'
   await beginObservatory(page);
   await adventureSnack(page);
   await page.reload();
+  await page.locator('.tab[data-tab="plots"]').click();
   await page.locator('#escapadeOpen').click();
   await expect(page.locator('#escapadeContent .escapade-steps .done')).toHaveCount(1);
   await page.locator('#escapadeContent [data-escapade="play"]').click();
@@ -312,6 +321,7 @@ test('a real Crumb Chase adventure earns a chosen keepsake that survives reload'
   expect(finished.life.scenes[0].stage.object).toBe('orbit-saucer');
   await noHorizontalOverflow(page);
   await page.reload();
+  await page.locator('.tab[data-tab="plots"]').click();
   await page.locator('#escapadeAlbum').click();
   await expect(page.locator('.escapade-album-item')).toHaveCount(1);
   await page.locator('.escapade-album-item').click();
@@ -333,6 +343,7 @@ test('full needs permit a story moment while cancelling play never completes it'
   const active = (await savedShelf(page)).escapades.active;
   expect(active.careAt).not.toBeNull();
   expect(active.playAt).toBeNull();
+  await page.locator('.tab[data-tab="plots"]').click();
   await page.locator('#escapadeOpen').click();
   await expect(page.locator('#escapadeContent .escapade-steps .done')).toHaveCount(1);
   await expect(page.locator('[data-escapade="finish"]')).toHaveCount(0);
@@ -351,6 +362,7 @@ test('a fourth resident leads their own market adventure and imperfect play coun
   await page.locator('[data-life="market-leave"]').click();
   await expect.poll(async () => (await savedShelf(page)).escapades.active.playAt).not.toBeNull();
   await page.locator('#lifeClose').click();
+  await page.locator('.tab[data-tab="plots"]').click();
   await page.locator('#escapadeOpen').click();
   await adventureSnack(page);
   await page.locator('[data-escapade="finish"][data-ending="discovery"]').click();
@@ -380,6 +392,7 @@ test('replayed ending celebrates the current resident while the album preserves 
     snapshot.escapades = { version:1, completions:1, album:[{ key:'crumb-observatory:discovery', episodeId:'crumb-observatory', endingId:'discovery', approachId:'orbit', petId:'qa0', petName:'Agnes', at }], active:{ episodeId:'crumb-observatory', approachId:'orbit', petId:'qa2', petName:'Pip', startedAt:at+1000, careAt:at+2000, playAt:at+3000 } };
   });
   const before = (await savedShelf(page)).life.xp;
+  await page.locator('.tab[data-tab="plots"]').click();
   await page.locator('#escapadeOpen').click();
   await page.locator('[data-escapade="finish"][data-ending="discovery"]').click();
   await expect(page.locator('.escapade-receipt')).toContainText('Kept with Pip');
@@ -404,6 +417,7 @@ test('the complete keepsake album and long resident names fit a 320px screen', a
     snapshot.escapades = { version:1, active:null, completions:16, album:ESCAPADES.flatMap((episode, i) => episode.endings.map((ending, j) => ({ key:episode.id+':'+ending.id, episodeId:episode.id, endingId:ending.id, approachId:episode.approaches[0].id, petId:'qa0', petName, at:at+i*100+j }))) };
   });
   await noHorizontalOverflow(page);
+  await page.locator('.tab[data-tab="plots"]').click();
   await page.locator('#escapadeAlbum').click();
   await expect(page.locator('.escapade-album-item')).toHaveCount(16);
   await noHorizontalOverflow(page);

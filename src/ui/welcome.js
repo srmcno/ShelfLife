@@ -41,6 +41,7 @@ export function initWelcome(state, refresh) {
       const petId=lifeState(state).welcome.petId;
       lifeState(state).welcome.dismissed=true;
       scenePlayer?.destroy();scenePlayer=null;
+      if(action==='dismiss')window.dispatchEvent(new CustomEvent('shelflife:goto',{detail:{tab:'shelf',target:'#cabinet'}}));
       if(action==='neighbour')document.getElementById('newPetBtn').click();
       if(action==='play')window.dispatchEvent(new CustomEvent('shelflife:play',{detail:{petId}}));
     }

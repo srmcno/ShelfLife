@@ -1,11 +1,8 @@
-// The chrome that is not the game: tabs on a phone, the More tray at every
-// width, sheets you can pull shut, and the little badges that say something
-// happened while you were looking elsewhere.
+// One set of destinations at every width, a More drawer, sheets you can pull
+// shut on a phone, and badges for things that happened elsewhere in the room.
 //
 // The three panes and every button keep the ids the rest of src/ queries.
 // Dialog modules still own closing, saving and game cleanup.
-// On a desktop the panes are laid out together and the tab bar does not exist,
-// so most of this simply no-ops there.
 import { state, onNote } from '../state.js';
 
 const PHONE = window.matchMedia('(max-width:720px)');
@@ -20,7 +17,7 @@ const moreClose = document.getElementById('moreClose');
 const tabs = [...document.querySelectorAll('.tabbar .tab[data-tab]')];
 const notesBadge = document.getElementById('notesBadge');
 const plotsDot = document.getElementById('plotsDot');
-const storyCards = ['schemeCard', 'caseCard', 'visitorCard'].map(id => document.getElementById(id)).filter(Boolean);
+const storyCards = ['schemeCard', 'caseCard', 'visitorCard', 'welcomePanel', 'needsYou'].map(id => document.getElementById(id)).filter(Boolean);
 const playTab = document.getElementById('tabPlay');
 const playroomButton = document.getElementById('playroomBtn');
 playTab?.setAttribute('aria-controls', 'playroomVeil');
@@ -41,13 +38,13 @@ export function currentTab() {
 export function setTab(name, opts = {}) {
   if (TABS.indexOf(name) < 0) name = 'shelf';
   const changed = currentTab() !== name;
-  if (changed && isPhone()) tabScroll.set(currentTab(), window.scrollY || 0);
+  if (changed) tabScroll.set(currentTab(), window.scrollY || 0);
   document.body.dataset.tab = name;
   tabs.forEach(t => { if (t.dataset.tab === name) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
   try { localStorage.setItem(TAB_KEY, name); } catch (e) { /* storage is optional */ }
   if (name === 'notes') unseenNotes = 0;
   syncBadges();
-  if (isPhone() && !opts.keepScroll && (changed || opts.top)) window.scrollTo({ top: opts.top ? 0 : tabScroll.get(name) || 0, behavior: 'auto' });
+  if (!opts.keepScroll && (changed || opts.top)) window.scrollTo({ top: opts.top ? 0 : tabScroll.get(name) || 0, behavior: 'auto' });
   if (opts.focus) {
     const pane = document.getElementById('pane' + name.charAt(0).toUpperCase() + name.slice(1));
     if (pane) { pane.tabIndex = -1; pane.focus({ preventScroll: true }); }
@@ -56,14 +53,14 @@ export function setTab(name, opts = {}) {
 
 function syncBadges() {
   if (notesBadge) {
-    const show = isPhone() && unseenNotes > 0 && currentTab() !== 'notes';
+    const show = unseenNotes > 0 && currentTab() !== 'notes';
     notesBadge.hidden = !show;
     notesBadge.textContent = unseenNotes > 9 ? '9+' : String(unseenNotes);
     tabs.find(tab => tab.dataset.tab === 'notes')?.setAttribute('aria-label', show ? 'Notes, ' + unseenNotes + ' unread' : 'Notes');
   }
   if (plotsDot) {
-    const ready = storyCards.some(card => !card.hidden && [...card.querySelectorAll('.scheme-choice, [data-case-choice], [data-case-next], [data-visitor], [data-life="visitor"]')].some(button => !button.disabled && !button.closest('[hidden]')));
-    const show = isPhone() && currentTab() !== 'plots' && ready;
+    const ready = storyCards.some(card => !card.hidden && [...card.querySelectorAll('.scheme-choice, [data-case-choice], [data-case-next], [data-visitor], [data-life="visitor"], [data-welcome], .need-chip')].some(button => !button.disabled && !button.closest('[hidden]')));
+    const show = currentTab() !== 'plots' && ready;
     plotsDot.hidden = !show;
     tabs.find(tab => tab.dataset.tab === 'plots')?.setAttribute('aria-label', show ? 'Stories, a choice is ready' : 'Stories');
   }
@@ -71,26 +68,30 @@ function syncBadges() {
 
 tabs.forEach(t => t.addEventListener('click', () => setTab(t.dataset.tab, { top: currentTab() === t.dataset.tab })));
 document.querySelectorAll('.wordmark').forEach(link => link.addEventListener('click', e => {
-  if (!isPhone()) return;
   e.preventDefault(); setTab('shelf', { top: true });
 }));
+document.querySelector('.skip-link')?.addEventListener('click', e => {
+  e.preventDefault();
+  setTab('shelf', { top: true });
+  document.getElementById('cabinet')?.focus({ preventScroll: true });
+});
 document.getElementById('shelfTeaser')?.addEventListener('click', () => setTab('notes', { focus: true }));
 
 // Notes written while another tab is showing count toward the badge. A batch
-// from "Check the shelf" also flips the phone to the notes tab, which is where
+// from "Check the shelf" also opens the notes tab, which is where
 // the player was heading anyway.
 onNote(() => {
-  if (!isPhone() || currentTab() === 'notes') return;
+  if (currentTab() === 'notes') return;
   unseenNotes++;
   syncBadges();
 });
 window.addEventListener('shelflife:checked', e => {
   const added = e.detail && e.detail.added;
-  if (isPhone() && added > 0) setTab('notes');
+  if (added > 0) setTab('notes');
 });
 storyCards.forEach(card => new MutationObserver(syncBadges).observe(card, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'hidden'] }));
 
-// Restore the last tab a phone was on. A desktop ignores this entirely.
+// Restore the player's last destination on either device.
 (function restoreTab() {
   let saved = null;
   try { saved = localStorage.getItem(TAB_KEY); } catch (e) { /* ignore */ }
@@ -179,7 +180,8 @@ if (tray) {
 }
 
 // Somewhere else in the app wants a pane and a card in it on screen: the needs
-// strip, for one. On a phone that is a tab switch; on a desktop a scroll.
+// strip, for one. The target's actual pane wins over older callers' tab hints,
+// and closed folders open before focus moves into them.
 let destinationGeneration = 0;
 window.addEventListener('shelflife:goto', e => {
   // An explicit destination (such as a newly built workshop project) wins
@@ -187,13 +189,18 @@ window.addEventListener('shelflife:goto', e => {
   resetGameReturn();
   const generation = ++destinationGeneration;
   const d = e.detail || {};
-  if (d.tab) setTab(d.tab, { keepScroll: true });
   const target = d.target ? document.querySelector(d.target) : null;
+  const owner = target?.closest?.('.pane');
+  const destination = ({ paneShelf: 'shelf', panePlots: 'plots', paneNotes: 'notes' })[owner?.id] || d.tab;
+  if (destination) setTab(destination, { keepScroll: true });
   if (target) {
     // Dialog cleanup first releases the shelf's inert boundary and restores
     // its opener. Move focus to the requested destination after that cleanup.
     requestAnimationFrame(() => {
       if (generation !== destinationGeneration || !target.isConnected || document.querySelector('.veil.open,#moreTray.open')) return;
+      for (let ancestor = target; ancestor; ancestor = ancestor.parentElement) {
+        if (ancestor.tagName === 'DETAILS') ancestor.open = true;
+      }
       target.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
       if (typeof target.focus === 'function') {
         // Existing buttons/links retain their place in keyboard navigation.

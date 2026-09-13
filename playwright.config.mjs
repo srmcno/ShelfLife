@@ -22,9 +22,7 @@ export default defineConfig({
     { name: 'mobile-webkit', use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, browserName: 'webkit' } }
   ],
   webServer: {
-    // The loopback server needs no reverse DNS. HTTPServer's default getfqdn
-    // can stall for a minute on Macs whose network has no PTR response.
-    command: 'python3 -u -c "import http.server, socket; socket.getfqdn = lambda name=\'\': \'localhost\'; http.server.test(HandlerClass=http.server.SimpleHTTPRequestHandler, ServerClass=http.server.ThreadingHTTPServer, port=4175, bind=\'127.0.0.1\')"',
+    command: 'node test/serve.mjs',
     url: 'http://localhost:4175',
     reuseExistingServer: false,
     stderr: 'ignore',

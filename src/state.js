@@ -2,6 +2,7 @@ import { blankLife, normalizeLife } from './life-state.js';
 import { PROPS } from './content/props.js';
 import { normalizeTheatre } from './theatre-state.js';
 import { blankEscapades, normalizeEscapades } from './escapade-state.js';
+import { blankRug, normalizeRug } from './play-rug-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -166,7 +167,7 @@ export function defaultLedger() { return { meeting: 1, carried: 0, struck: {}, a
 
 export function blankState() {
   return {
-    v: 4, life: blankLife(), escapades: blankEscapades(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
+    v: 4, life: blankLife(), escapades: blankEscapades(), rug: blankRug(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
     notes: [], seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
@@ -393,6 +394,7 @@ export function normalizeState(raw) {
   });
   s.theatre = normalizeTheatre(s.theatre, s, now);
   s.escapades = normalizeEscapades(s.escapades, s, now);
+  s.rug = normalizeRug(s.rug, s, now);
   return s;
 }
 

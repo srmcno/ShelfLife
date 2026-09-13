@@ -1,7 +1,13 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v34';
+const CACHE_VERSION = 'shelflife-v35';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
+  "./src/play-rug-state.js",
+  "./src/engine/play-rug.js",
+  "./src/ui/play-rug.js",
+  "./css/play-rug.css",
+  "./css/room.css",
+  "./assets/rooms/play-rug.webp",
   "./src/content/escapades.js",
   "./src/escapade-state.js",
   "./src/engine/escapades.js",

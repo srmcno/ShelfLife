@@ -18,6 +18,7 @@ function sheetGesture({id='',mode=''}={}) {
   const document = {
     body: { dataset: {}, style: {} },
     getElementById: () => null,
+    querySelector: () => null,
     querySelectorAll: () => [],
     addEventListener(name, listener) {
       const list = events.get(name) || [];

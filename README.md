@@ -13,13 +13,33 @@ face you take into the creator. Change its features, colours, name, quirks and b
 or draw a creature with your own hand. Appearance changes later keep its personality and history.
 
 Tap a resident for food, attention and a wash. Individual care builds trust and unlocks furniture.
-**Do the rounds** gives everyone a modest top-up; **Check the shelf** collects their latest opinions.
+**Do the rounds** gives everyone a modest top-up; **Notes → Check the shelf** collects their latest opinions.
 Drag residents and furniture to rearrange them. On a phone, hold first. Each row always has six
 positions: neighbours, furniture, wings, horns and personalities have real effects.
+
+The cabinet gets its own screen. The same five destinations work on phone and desktop:
+**Shelf**, **Play**, **Stories**, **Notes** and **More**. Stories holds little adventures,
+household correspondence and the workshop; folders keep their contents within easy reach.
 
 The cabinet also hosts small domestic scenes. Place appropriate furniture near residents and choose
 **Play a scene**, or let them improvise while you watch. Bowl servings, lamp switches, relationships,
 requests, case files and keepsakes persist. The residents remember how you treat them.
+
+## The play rug
+
+Take any resident onto a lamplit rug with a patchwork ball and an improbable number of bubbles.
+These are your actual creatures, including the ones you drew. They scamper, jump, catch and pop;
+you can give them a snack, some attention or a wash without leaving the room.
+
+Tap to toss, or drag and release to aim your own throw. Try **Soft toss**, **Sky high** and
+**Bounce pass**, or blow bubbles and race your resident to pop them. The toy controls also work
+with a keyboard. Six little tricks belong to each resident, from their first catch to five
+catches in one visit. Each new trick earns one discovery, saves immediately and becomes a
+memory in the scene journal. Repeating it is for the pleasure of being very good at something.
+
+There is no timer or penalty for leaving. Backgrounding pauses the toys; reopening starts a
+fresh rug with your earned tricks intact. The rug is free play. Little adventures still ask
+you to finish one of the games in the Playroom.
 
 ## Little adventures
 
@@ -80,8 +100,8 @@ No runtime dependencies, backend or bundler. Plain ES modules, local styles, SVG
 bundled licensed fonts. Serve over HTTP; opening `index.html` as a file does not support modules.
 
 ```sh
-python3 -m http.server 4173
-# Open http://localhost:4173
+node test/serve.mjs
+# Open http://localhost:4175
 ```
 
 Node 24 and Python 3.12+ are used for release checks. Browser tooling is development-only:
@@ -97,7 +117,8 @@ npm run build
 
 The browser suite uses isolated synthetic households and a separate local server. It checks
 creation, saved appearance, care, all six activity entrances, completed adventure endings,
-interrupted play, replay identity, all sixteen keepsakes, responsive layouts and runtime errors
+interrupted play, replay identity, all sixteen keepsakes, real rug catches and bubble pops,
+cancelled gestures, failed saves, responsive layouts and runtime errors
 in desktop Chromium and phone-sized Chromium/WebKit. Offline reload is tested in Chromium;
 Playwright does not support WebKit service-worker tooling. This is browser automation, not physical-device
 testing. `test/responsive-harness.html` provides additional local fixture exploration.
@@ -105,6 +126,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | Location | Responsibility |
 | --- | --- |
 | `src/state.js`, `src/life-state.js` | Saves, validation, migration and bounded history |
+| `src/play-rug-state.js`, `src/engine/play-rug.js` | Resident trick collections and a bounded toy simulation |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
 | `src/art/` | Creature/drawing data, SVG rendering, animation and the studio |

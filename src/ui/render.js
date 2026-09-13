@@ -1,6 +1,8 @@
 import { renderLife } from './life.js';
 import { renderWelcome } from './welcome.js';
 import { renderEscapades } from './escapades.js';
+import { renderPlayRug } from './play-rug.js';
+import { welcomeView } from '../engine/welcome.js';
 import { escapadeView } from '../engine/escapades.js';
 import { advanceStories, withStories } from '../engine/stories.js';
 import { renderStories } from './stories.js';
@@ -59,6 +61,7 @@ export function renderAll(state) {
     renderWelcome(state);
     renderEscapades(state);
     renderTheatreControls(state);
+    renderPlayRug(state);
     save();
   });
 }
@@ -423,6 +426,12 @@ function renderBrief(state) {
   briefState = state;
   const host = document.getElementById('shelfBrief');
   if (!host) return;
+  const welcome = welcomeView(state);
+  if (welcome && !state.life?.welcome?.dismissed && welcome.stage !== 'finished') {
+    const markup = '<span class="brief-icon" aria-hidden="true">✦</span><div><b>' + escapeHtml(welcome.pet.name + ' has a housewarming invitation.') + '</b><span>Unpack a little bowl. Make your first household memory.</span></div><button class="btn btn-sm">Come in</button>';
+    if (updateMarkup(host, markup)) host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent('shelflife:goto', {detail:{tab:'plots',target:'#welcomePanel'}})));
+    return;
+  }
   const adventure = escapadeView(state).active;
   if (adventure) {
     const text = adventure.ready ? 'The story is ready for its ending. You get to choose.' : 'Your place is saved. ' + adventure.completedSteps + ' of 2 moments shared.';
