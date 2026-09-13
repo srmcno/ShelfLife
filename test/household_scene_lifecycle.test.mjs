@@ -106,3 +106,10 @@ test('dialog interruption works without IntersectionObserver support', t => {
   const f = fixture(t, { intersections: false }); assert.ok(f.timers.size > 0);
   f.dialog.classList.add('open'); f.mutate(); assert.equal(f.timers.size, 0);
 });
+
+test('light effects preserve a requested scene timeline and still stop when its dialog closes', t => {
+  const f = fixture(t, { modal: true });
+  f.player.pause(); f.doc.body.dataset.effects = 'light'; f.mutate();
+  f.player.play(); assert.ok(f.timers.size > 0); assert.equal(f.root.classList.contains('is-moving'), true);
+  f.dialog.classList.remove('open'); f.mutate(); assert.equal(f.timers.size, 0);
+});

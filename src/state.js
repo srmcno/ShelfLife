@@ -3,6 +3,7 @@ import { PROPS } from './content/props.js';
 import { normalizeTheatre } from './theatre-state.js';
 import { blankEscapades, normalizeEscapades } from './escapade-state.js';
 import { blankRug, normalizeRug } from './play-rug-state.js';
+import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -168,7 +169,7 @@ export function defaultLedger() { return { meeting: 1, carried: 0, struck: {}, a
 export function blankState() {
   return {
     v: 4, life: blankLife(), escapades: blankEscapades(), rug: blankRug(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
-    notes: [], seq: 1, lastTick: Date.now(), started: Date.now(),
+    notes: [], paperwork: blankPaperwork(), seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
     gone: [], visits: [], ledger: defaultLedger(), roster: {}, rosterSeeded: false,
@@ -261,7 +262,8 @@ export function normalizeState(raw) {
   s.lastCheck = finite(s.lastCheck, 0, 0, now);
   s.notes = (Array.isArray(s.notes) ? s.notes : []).filter(n => record(n) && typeof n.text === 'string')
     .slice(0, 40).map(n => ({ ...n, text: n.text.slice(0, 10000), from: typeof n.from === 'string' ? n.from : 'the shelf',
-      kind: typeof n.kind === 'string' && /^[a-z-]+$/.test(n.kind) ? n.kind : 'note', at: finite(n.at, now) }));
+      kind: typeof n.kind === 'string' && /^[a-z-]+$/.test(n.kind) ? n.kind : 'note', at: finite(n.at, now),
+      ...(n.cast !== undefined ? { cast: Array.isArray(n.cast) ? [...new Set(n.cast.filter(validId))].slice(0, SLOT_COUNT) : [] } : {}) }));
   s.v = 4;
   s.notes = Array.isArray(s.notes) ? s.notes : [];
   s.seq = s.seq || (s.pets.length + 1);
@@ -325,6 +327,7 @@ export function normalizeState(raw) {
   s.streak.count = Math.floor(finite(s.streak.count, 0));
   s.streak.lastCheckin = finite(s.streak.lastCheckin, 0, 0, now);
   s.life = normalizeLife(s.life, s.pets.length > 0);
+  s.paperwork = normalizePaperwork(s.paperwork, s.notes, s.life.scenes);
   s.pets = s.pets.map(migratePet);
   s.pets.forEach(p => {
     p.name = typeof p.name === 'string' && p.name.trim() ? p.name.trim().slice(0, 22) : 'Someone';
@@ -610,6 +613,7 @@ export function onNote(listener) { noteListeners.push(listener); }
 export function addNote(state, text, from, kind = 'note', form) {
   const f = FORMS.indexOf(form) >= 0 ? form : chooseForm(state, AMBIENT_FORMS);
   const n = { text, from, kind, form: f, at: Date.now() };
+  fileNote(state, n);
   state.notes.unshift(n);
   if (state.notes.length > 40) state.notes.length = 40;
   if (!Array.isArray(state.formLog)) state.formLog = [];

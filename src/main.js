@@ -313,7 +313,7 @@ function renderIncidents() {
     (streak ? ' &middot; checked in ' + streak + (streak === 1 ? ' day' : ' days') + ' running' : '') +
     '</div></div>' +
     '<button class="btn btn-ghost btn-sm" id="incidentsClose">Close</button></div>';
-  if (!unlocked.size) html += '<div class="incident-empty">No incidents logged. Give it time. They are working on it.</div>';
+  html += '<p class="incident-explainer">Your household milestones live here. Care for residents, play together and watch relationships develop. Each unfinished card tells you what to try; completed incidents stay on record.</p>';
   // In chapters, so the parts of the shelf a player has never touched are visible
   // as gaps rather than buried in one long list.
   const when = state.achievementAt || {};
@@ -330,9 +330,9 @@ function renderIncidents() {
       const on = has ? dated(when[a.id]) : null;
       const progress = has ? null : incidentProgress(state, a.id);
       html += '<div class="incident' + (has ? '' : ' locked') + '"><div><b>' +
-        escapeHtml(has ? a.label : 'Not yet') + '</b><p>' +
+        escapeHtml(a.label) + '</b><p>' +
         escapeHtml(has ? a.desc : a.hint || 'Something has not happened here yet.') + '</p>' +
-        (progress && progress.have > 0
+        (progress
           ? '<span class="incident-progress"><i style="width:' +
             Math.round(progress.have / progress.need * 100) + '%"></i></span>' +
             '<small>' + progress.have + ' of ' + progress.need + '</small>'

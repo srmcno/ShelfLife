@@ -1,5 +1,5 @@
-import { lifeState, useProject, returnFromMission, favoriteFor, outingPreview, outingSnapshot, outingTrail, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, deliverMarket, leaveMarket, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
-import { OUTINGS, GEAR, RELICS, FRAMES } from '../content/life.js';
+import { lifeState, useProject, returnFromMission, favoriteFor, outingSnapshot, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, deliverMarket, leaveMarket, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
+import { OUTINGS, RELICS, FRAMES } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
 import { startCourt, currentCourt, courtAction, finishCourt } from '../engine/court.js';
 import { courtMarkup, mountCourtArt, courtFinishedMarkup, courtHearing, courtView, courtResponse } from './court.js';
@@ -8,7 +8,7 @@ import { curioSVG } from '../art/curios.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { mountHouseholdScene } from '../art/household-scene.js';
 import { marketMarkup, marketSelectedOffer, mountMarketRecipients } from './market.js';
-import { trailTheatre, mountTrailCrew, trailDareSelect, trailDareStatus, wrapTrailLayout, projectBoard, missionPlan, missionStatus, missionResult } from './expeditions.js';
+import { projectBoard, expeditionView, mountExpedition } from './expeditions.js';
 import { checkAchievements } from '../engine/achievements.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 import { save } from '../state.js';
@@ -30,7 +30,7 @@ export function renderLife(state) {
   hub.innerHTML='<div class="chapter-intro"><span class="eyebrow">Getting acquainted · '+(cared?'2':'1')+' of 3</span><h2>'+esc(cared?'Make your first shared memory.':'Someone small is counting on you.')+'</h2><p>'+esc(cared?'Play a game together. Your first completed game opens the door to visitors, mysteries and expeditions.':'Start with a little individual care for '+first.name+'. Then try a game together.')+'</p>'+button(cared?'Play together':'Meet '+esc(first.name),cared?'play':'care')+button('Explore everything','skip')+'</div>';
   return;
  }
- hub.innerHTML='<div class="life-heading"><div><span class="eyebrow">Your small world</span><h2>Something worth coming back for.</h2></div><span class="discovery-count">'+l.xp+' discoveries</span></div><div class="life-links">'+button('Play with a resident','play')+button(l.outing?'Continue expedition':'Go beyond the shelf','outing')+button('Shelf Court','court')+button(l.market&&!l.market.claimed?'Continue night market':'Visit the night market','market')+'</div><div class="display-cabinet frame-'+l.frame+'" aria-label="Your displayed curiosities">'+(l.displayed.length?l.displayed.map(id=>{const d=curioDetails(id);return d?'<button class="display-curio" data-life="curio" data-id="'+id+'" aria-label="Inspect '+esc(d.name)+'">'+art(id)+'<span>'+esc(d.name)+'</span></button>':'';}).join(''):'<p>Your first curiosity belongs here.<br><small>Welcome a visitor or bring something home from an expedition.</small></p>')+'</div><div class="display-footer"><span>'+esc(next?next.name+' at '+next.at+' discoveries · '+(next.at-l.xp)+' to go':'Every display finish unlocked. The velvet is impressed.')+'</span>'+button('Arrange display','display')+'</div>'+(scene?'<article class="scene-preview"><div class="scene-mini" id="sceneMini"></div><div><span class="eyebrow">'+(l.recap.length?'While you were out':'Latest household scene')+'</span><h3>'+esc(scene.title)+'</h3><p>'+esc(scene.text)+'</p>'+button(l.recap.length?'Read the recap':'Watch the scene','scene')+'</div></article>':'<div class="scene-empty">The cast is assembled. Their first scene is only a terrible decision away.</div>')+'<p class="life-footnote">Discoveries come from new games, keepsakes and visitor chapters, plus your first care, play, outing, market and visitor activity each day. No streak to lose.</p>';
+ hub.innerHTML='<div class="life-heading"><div><span class="eyebrow">Your small world</span><h2>Something worth coming back for.</h2></div><span class="discovery-count">'+l.xp+' discoveries</span></div><div class="life-links">'+button('Play with a resident','play')+button(l.outing?'Continue expedition':'Go beyond the shelf','outing')+button('Shelf Court','court')+button(l.market&&!l.market.claimed?'Continue night market':'Visit the night market','market')+'</div><div class="display-cabinet frame-'+l.frame+'" aria-label="Your displayed curiosities">'+(l.displayed.length?l.displayed.map(id=>{const d=curioDetails(id);return d?'<button class="display-curio" data-life="curio" data-id="'+id+'" aria-label="Inspect '+esc(d.name)+'">'+art(id)+'<span>'+esc(d.name)+'</span></button>':'';}).join(''):'<div class="display-empty"><p>'+((l.relics.length||(state.stories?.collection||[]).length)?'You have keepsakes ready to display.<br><small>Choose Arrange display below to place up to three in this cabinet.</small>':'Your first curiosity belongs here.<br><small>Finish an expedition or welcome a visitor to earn a keepsake. Then choose Arrange display to put it here.</small>')+'</p></div>')+'</div><div class="display-footer"><span>'+esc(next?next.name+' at '+next.at+' discoveries · '+(next.at-l.xp)+' to go':'Every display finish unlocked. The velvet is impressed.')+'</span>'+button('Arrange display','display')+'</div>'+(scene?'<article class="scene-preview"><div class="scene-mini" id="sceneMini"></div><div><span class="eyebrow">'+(l.recap.length?'While you were out':'Latest household scene')+'</span><h3>'+esc(scene.title)+'</h3><p>'+esc(scene.text)+'</p>'+button(l.recap.length?'Read the recap':'Watch the scene','scene')+'</div></article>':'<div class="scene-empty">Your shared memories will play here. Finish a game, help a visitor or return from an expedition to create the first scene.</div>')+'<p class="life-footnote">Discoveries come from new games, keepsakes and visitor chapters, plus your first care, play, outing, market and visitor activity each day. No streak to lose.</p>';
  hub.querySelector('.display-cabinet').insertAdjacentHTML('beforebegin',projectBoard(l));
  hub.querySelectorAll('.project-occupant').forEach(holder=>holder.appendChild(renderPetSprite(first)));
  if(scene)mountHouseholdScene(hub.querySelector('#sceneMini'),state,scene,{mini:true});
@@ -70,31 +70,16 @@ export function initLife(state,refresh) {
   control?.focus({preventScroll:true});
  }
  function outing(){
-  const l=lifeState(state),o=outingSnapshot(state);open(o?'An expedition in progress':'Beyond the shelf');
+  const l=lifeState(state),o=outingSnapshot(state);
+  if(o&&!OUTINGS.some(route=>route.id===o.route)){l.outing=null;save();outing();return;}
   if(!o){
    if(l.outing){l.outing=null;save();}
    if(!state.pets.some(p=>p.id===leadId))leadId=state.pets[0]?.id||'';
    if(companionId===leadId||!state.pets.some(p=>p.id===companionId))companionId='';
-   const crew=state.pets.filter(p=>[leadId,companionId].includes(p.id)),trail=outingTrail(selectedRoute,l.outings%8);
-   content.innerHTML=missionPlan(state,selectedRoute,selectedGear,leadId,companionId,selectedDare);
-   wrapTrailLayout(content,'planning');return;
   }
-  const r=OUTINGS.find(r=>r.id===o.route);if(!r){l.outing=null;outing();return;}
-  const modern=o.version===2,crew=state.pets.filter(p=>o.cast.includes(p.id));
-  if(o.step===3){
-   title.textContent=o.mission?'Back home':'Expedition complete';
-   const tier=modern?(o.score>=6?2:o.score>=3?1:0):(o.score>=3?2:o.score>=1?1:0),relic=RELICS.find(x=>x.id===o.route+':'+tier);
-   content.innerHTML=missionResult(o)+(o.mission?'':trailTheatre(o.route,2,{done:true}))+'<div class="expedition-prize">'+curioSVG(relic.shape)+'<span class="eyebrow">Everyone returned with the parts they left with.</span><h3>'+esc(relic.name)+'</h3><p>'+esc(relic.line)+'</p>'+(modern?'<div class="trail-final-score"><b>'+o.score+'</b><span>trail points'+(o.dareBonus?' · includes +2 wager':'')+'<br>'+o.best+' possible with this crew and plan</span></div><p>'+(o.score===o.best?'A perfect trail. The undertaker returned your deposit through clenched teeth.':o.score>=6?'An excellent haul. Whatever is scratching inside the bag can wait until morning.':'You all came back. The person who packed the tiny body bags is trying not to look disappointed.')+'</p>':'<p>'+o.score+' of 3 situations supported by your equipment or crew.</p>')+'</div>'+trailDareStatus(o)+'<div class="life-links trail-final-actions">'+(modern?button('Try this trail again','outing-retry')+button('Plan another expedition','outing-next'):'')+(o.mission?button(o.parts.length>=2?'Use it at home':'Return to the workshop','project-home'):button('Display your curiosity','finish-outing'))+'</div><details class="trail-map"><summary>Your expedition report</summary><ol class="outing-log">'+o.log.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol><p class="hint">Everyone gains up to 8 attention. Curiosities unlock at 0, 3 and 6 points. Each new curiosity earns four discoveries. Replays keep these stops, crew skills and wager.</p></details>';
-   wrapTrailLayout(content,'result',o);mountTrailCrew(content,crew);return;
-  }
-  const step=modern?o.steps[o.step]:r.steps[o.step];
-  if(interlude){
-   content.innerHTML='<span class="eyebrow">Field report · '+o.step+' of 3</span>'+missionStatus(o)+trailTheatre(o.route,Math.max(0,o.step-1),{travel:true,mission:o.mission})+'<p class="scene-script">'+esc(o.log.at(-1))+'</p>'+(modern?'<p class="trail-report-resources">'+o.score+' points · '+o.nerve+' nerve · '+(o.toolUsed?'equipment used':'equipment ready')+'</p>':'')+'<div class="trail-report-actions">'+(o.mission&&(o.missionRevision>=2?o.recovered.length>=1:o.parts.length>=2)?button('Return home with '+o.recovered.length+' recovered part'+(o.recovered.length===1?'':'s'),'outing-return'):'')+button('Next stop: '+esc(step.title),'continue-outing')+'</div>'+trailDareStatus(o);wrapTrailLayout(content,'report',o);mountTrailCrew(content,crew);return;
-  }
-  const p=modern?null:outingPreview(state,o.route,o.gear,o.cast)?.[o.step];
-  const choices=modern?o.options.map(option=>button(esc(option.label)+'<small>'+esc(option.hint)+'</small>','outing-choice','data-choice="'+option.choice+'" '+(option.available?'':'disabled'))).join(''):step.options.map((t,i)=>button(esc(t)+'<small>'+esc(i===0?(p?.gear?'Your equipment supports this.':'Best with '+GEAR.find(g=>g.id===step.good).name+'. Improvisation still gets you home.'):(p?.skill?'Your crew has the '+step.stat+' for this.':step.stat+' 7+ helps. Your crew will improvise.'))+'</small>','outing-choice','data-choice="'+i+'"')).join('');
-  content.innerHTML='<span class="eyebrow">'+esc(r.name)+' · Stop '+(o.step+1)+' of 3</span>'+(modern?'<ol class="trail-progress" aria-label="Expedition progress">'+o.steps.map((x,i)=>'<li class="'+(i<o.step?'visited':i===o.step?'current':'')+'" '+(i===o.step?'aria-current="step"':'')+'><span>'+(i+1)+'</span><small>'+esc(x.title)+'</small></li>').join('')+'</ol>':'')+missionStatus(o)+trailTheatre(o.route,o.step,{mission:o.mission})+'<h3 class="trail-choice-heading">'+esc(step.title)+'</h3><p class="scene-script">'+esc(step.text)+'</p>'+(modern?'<div class="trail-supplies"><div><b>'+o.score+'</b><span>trail points</span></div><div><b>'+o.nerve+' / 3</b><span>nerve</span></div><div><b>'+(o.toolUsed?'Used':'Ready')+'</b><span>'+esc(GEAR.find(g=>g.id===o.gear)?.name)+'</span></div></div>':'')+'<div class="expedition-choices '+(modern?'trail-choices':'')+'">'+choices+'</div>'+trailDareStatus(o)+'<details class="trail-map"><summary>Look ahead and check your crew</summary><p class="hint">'+esc(crew.map(p=>p.name).join(' & '))+' · '+esc(GEAR.find(g=>g.id===o.gear)?.name)+'</p>'+(modern?o.steps.slice(o.step+1).map(x=>'<article><b>'+esc(x.title)+'</b><span>Detour: '+x.points+' points / '+(o.expertise.includes(x.stat)?1:2)+' nerve · '+x.stat+'</span><small>Equipment match: '+esc(GEAR.find(g=>g.id===x.good).name)+'</small></article>').join('')+(o.step===2?'<p>This is the last stop. Nerve only earns extra points if your selected wager requires it.</p>':''):'')+'<p class="hint">Everyone comes home. Trip nerve never changes your residents’ needs. Close whenever you like; progress is saved.</p></details>';
-  wrapTrailLayout(content,'playing',o);mountTrailCrew(content,crew);
+  open(o?'An expedition in progress':'Beyond the shelf');
+  const view=expeditionView(state,o,{route:selectedRoute,gear:selectedGear,lead:leadId,companion:companionId,dare:selectedDare,interlude});
+  title.textContent=view.title;content.innerHTML=view.html;mountExpedition(content,view);
  }
 
  function market(){
@@ -119,8 +104,10 @@ export function initLife(state,refresh) {
  }
  function courtPaint(focusSelector,resetPanel=false){
   const panelScroll=resetPanel?0:content.querySelector('.court-action-panel')?.scrollTop||0,workspaceScroll=resetPanel?0:content.querySelector('.court-workspace')?.scrollTop||0;
+  const notebookOpen=content.querySelector('.court-notebook')?.open||false;
   content.innerHTML=court.claimed&&court.result?courtFinishedMarkup(court,court.result,lifeState(state).courtWins):courtMarkup(court);
   mountCourtArt(content,court,state);const panel=content.querySelector('.court-action-panel');if(panel)panel.scrollTop=panelScroll;
+  const notebook=content.querySelector('.court-notebook');if(notebook)notebook.open=notebookOpen;
   const workspace=content.querySelector('.court-workspace');if(workspace)workspace.scrollTop=workspaceScroll;
   veil.scrollTop=0;const sheet=content.closest('.sheet');if(sheet)sheet.scrollTop=0;
   if(focusSelector)(content.querySelector(focusSelector)||content.querySelector('#courtPanelTitle,#courtVerdictTitle'))?.focus({preventScroll:true});

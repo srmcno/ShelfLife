@@ -87,6 +87,16 @@ export function courtComparisonState(game,suspect,evidence) {
  if(!compared&&!appealShown)return 'unknown';
  return courtRuleFits(person.facts,rule)?'compatible':'contradictory';
 }
+// The clerk can suggest a next person, never the hidden answer. This docket
+// uses only collected evidence and rulings already entered by the player.
+export function courtDocket(game) {
+ const cleared=[...new Set([...(game.eliminations||[]),...(game.rejected||[])])];
+ const remaining=game.suspects.flatMap((_,i)=>cleared.includes(i)?[]:[i]);
+ const collected=game.rules.map(rule=>[rule.first,...(game.version===3&&rule.second?[rule.second]:[])].every(atom=>game.inspected?.includes(atom.axis)));
+ const selected=game.ui?.witness??game.selection;
+ return {cleared,remaining,collected,ready:collected.every(Boolean),
+  nextSuspect:remaining.find(i=>i>selected)??remaining[0]??null};
+}
 export function courtPersonalAside(state,pet) {
  const past=(state.life?.scenes||[]).find(scene=>scene.kind==='court'&&scene.cast?.includes(pet.id));
  if(past)return '“I remember '+past.title+'. I have chosen a chair with a better escape route this time.”';
@@ -148,7 +158,7 @@ const respond = (game,kind,speaker,text) => {
 function investigativeCourt(saved) {
  const rng=seeded(saved.seed),game=newCourt({pets:saved.cast,life:{courtPlays:saved.caseIndex}},rng,{level:saved.level,caseIndex:saved.caseIndex,reworked:saved.version===3});
  const story=COURT_INVESTIGATIONS[game.caseIndex],motives=shuffle(story.motives,rng);
- Object.assign(game,{version:saved.version,petId:saved.petId,scene:story.scene,phase:'investigation',inspected:[],questioned:[],pressed:[],exposures:[],attempts:[],comparisons:[],eliminations:[],rejected:[],mistakes:0,appeals:0,canFile:false,ui:{chapter:'investigation',witness:null,statement:null,exhibit:null}});
+ Object.assign(game,{version:saved.version,seed:saved.seed,petId:saved.petId,scene:story.scene,phase:'investigation',inspected:[],questioned:[],pressed:[],exposures:[],attempts:[],comparisons:[],eliminations:[],rejected:[],mistakes:0,appeals:0,canFile:false,ui:{chapter:'investigation',witness:null,statement:null,exhibit:null}});
  // Each account contains exactly one falsifiable claim. It is not safe to
  // convict from testimony alone; the physical record can contradict it.
  game.witnesses=game.suspects.map((suspect,i)=>{

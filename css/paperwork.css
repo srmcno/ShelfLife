@@ -1,0 +1,26 @@
+.note-filters .filter-chip{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px}
+.pane-notes.is-paperwork .notes-tools{display:none}
+.filter-count{font-size:10px;min-width:17px;padding:2px 4px;border:1px solid currentColor;border-radius:6px;opacity:.68;line-height:1.2;font-variant-numeric:tabular-nums}
+.paperwork-desk{margin-top:22px;padding:24px;border:1px solid #a9885266;border-radius:12px;background:linear-gradient(125deg,#342925,#211f29);color:#f2e6d2;box-shadow:0 10px 30px #0002}
+.paperwork-heading{display:flex;gap:19px;align-items:flex-start}
+.paperwork-desk h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:7px 0 10px}
+.paperwork-desk p{font:14px/1.65 var(--body);color:#d1c1b0;max-width:70ch;margin:0}
+.paperwork-seal{flex:none;display:grid;place-content:center;width:58px;height:64px;transform:rotate(-9deg);border:3px double #d8a378;color:#eab993;border-radius:50%;font:700 12px/1.4 var(--body);text-align:center;letter-spacing:.08em}
+.paperwork-actions{display:flex;flex-wrap:wrap;gap:9px;margin:18px 0 12px}
+.paperwork-desk .paperwork-status{font-size:12px;color:#cfba9f}
+.document-title{font:700 17px/1.35 var(--body);letter-spacing:0;white-space:normal;margin:0 0 18px;padding-bottom:12px;border-bottom:1px solid #856f5045;color:#453326}
+.filed-document summary{cursor:pointer;white-space:normal;list-style:none;padding-right:22px;position:relative;min-height:44px}
+.filed-document summary::-webkit-details-marker{display:none}
+.filed-document summary::after{content:'+';position:absolute;right:0;top:0;font:22px var(--body);color:#7b5734}
+.filed-document[open] summary::after{content:'−'}
+.filed-document summary .document-title{margin:0;border:0;padding:0}
+.filed-document .note-time{color:#665442;opacity:1;font-size:11px}
+.document-body{padding-top:16px;margin-top:14px;border-top:1px solid #856f5045}
+.paperwork-desk:not([hidden])~.notes .note{transform:none;--pin:#ac8453;border-top:4px double #ab8458;box-shadow:0 3px 8px #0002,0 12px 24px #0002;padding:22px;filter:none}
+.paperwork-desk:not([hidden])~.notes{align-items:start;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px;padding-top:22px}
+.paperwork-desk:not([hidden])~.notes .note--doc{grid-column:auto;font-size:13px;line-height:1.65}
+.paperwork-desk:not([hidden])~.notes .note::before,.paperwork-desk:not([hidden])~.notes .note::after{display:none}
+.paperwork-desk:not([hidden])~.notes .note--new{animation:paper-file-in .38s ease-out both}
+@keyframes paper-file-in{from{opacity:0;transform:translateY(12px) rotate(1deg)}to{opacity:1;transform:none}}
+@media(max-width:540px){.paperwork-desk{padding:18px 15px}.paperwork-heading{gap:12px}.paperwork-seal{width:42px;height:50px;font-size:10px}.paperwork-desk h2{font-size:24px}.paperwork-desk p{font-size:13px}.paperwork-actions .btn{flex:1 1 120px;min-height:44px;font-size:12px}.paperwork-actions [data-file-report]{flex-basis:100%}.note-filters .filter-chip{flex:0 1 auto;font-size:11px;padding:8px 10px}}
+@media(prefers-reduced-motion:reduce){.paperwork-desk:not([hidden])~.notes .note--new{animation:none}}

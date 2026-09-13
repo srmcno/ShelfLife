@@ -36,7 +36,7 @@
 .scene-mini{min-width:0}
 @media(max-width:720px){.household-stage{height:210px}.household-actor{width:88px;height:88px}.household-prop{width:58px;height:58px}.household-prop[data-object="lamp"]{width:90px;height:120px}.household-name{font-size:10px;max-width:95px}.household-caption{padding:10px 12px 3px}.household-controls{padding:8px 12px 12px}.household-caption p{font-size:14px}.household-player{margin-top:6px}.scene-history{display:flex;flex-direction:column;gap:7px}.scene-history .btn{min-height:44px;text-align:left}}
 @media(prefers-reduced-motion:reduce){.household-player *{animation:none!important;transition:none!important}}
-body[data-effects="light"] .household-player *{animation:none!important;transition:none!important}
+body[data-effects="light"] .household-player :is(.household-pool,.household-prop){filter:none}
 body.app-hidden .household-player *{animation-play-state:paused!important}
 
 /* Keep the object-specific mobile sizes from enlarging still previews. */

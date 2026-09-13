@@ -199,18 +199,18 @@ test('hidden and reduced-motion courtroom scenes cancel held gestures and reject
   });
 });
 
-test('light effects skip puppet gesture clips and pose timers until full effects return', async () => {
+test('light effects retain finite gameplay reactions on touch devices and release their timers', async () => {
   await withAnimator('court-light-effects', ({ mod, sprite, act, timers, doc }) => {
     const puppet = mod.createPuppet(sprite);
     doc.body.dataset.effects = 'light';
     for (const kind of ['blink', 'testify', 'deny', 'confess', 'inspect', 'celebrate']) puppet.gesture(kind);
-    assert.equal(timers.size, 0); assert.equal(act.style.animation, '');
+    assert.equal(timers.size, 6); assert.ok(act.style.animation.startsWith('sl2-celebrate '));
     for (const held of ['sl-blink', 'sl-testifying', 'sl-denying', 'sl-confessing', 'sl-inspecting', 'sl-celebrating']) {
-      assert.equal(sprite.classList.contains(held), false);
+      assert.equal(sprite.classList.contains(held), true);
     }
     doc.body.dataset.effects = 'full';
     puppet.gesture('testify');
-    assert.equal(timers.size, 1); assert.ok(act.style.animation.startsWith('sl2-testify '));
+    assert.equal(timers.size, 6); assert.ok(act.style.animation.startsWith('sl2-testify '));
     puppet.release(); assert.equal(timers.size, 0);
   });
 });

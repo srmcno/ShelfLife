@@ -81,7 +81,9 @@ export function mountHouseholdScene(host,state,scene,{mini=false}={}) {
  }
  let index=0,timer=null,gestureTimer=null,settleTimer=null,moveTimer=null,running=false,destroyed=false,previousActors=[];
  const media=window.matchMedia('(prefers-reduced-motion: reduce)');
- const light=()=>media.matches||document.body.dataset.effects==='light';
+ // This is a requested, finite scene. Light effects trim decoration while
+ // keeping the actors' actions readable; only reduced motion stops travel.
+ const reducedMotion=()=>media.matches;
  let onScreen=true;
  const veil=root.closest('.veil');
  const blocked=()=>document.hidden||!root.isConnected||!onScreen||(veil&&!veil.classList.contains('open'))||[...document.querySelectorAll('.veil.open')].some(dialog=>dialog!==veil);
@@ -98,7 +100,7 @@ export function mountHouseholdScene(host,state,scene,{mini=false}={}) {
   controls.append(toggle,next);root.append(controls);
  }
  function paint(animate=false){
-  const beat=beats[index],moving=animate&&!light();root.classList.toggle('is-moving',moving);root.dataset.beat=index;
+  const beat=beats[index],moving=animate&&!reducedMotion();root.classList.toggle('is-moving',moving);root.dataset.beat=index;
   clearTimeout(settleTimer);
   // Pausing the timeline must not freeze the next manually requested gesture.
   if(moving){root.classList.remove('is-paused');if(!running)settleTimer=setTimeout(()=>{if(!destroyed&&!running){root.classList.add('is-paused');root.classList.remove('is-moving');}},1500);}
@@ -107,7 +109,7 @@ export function mountHouseholdScene(host,state,scene,{mini=false}={}) {
   if(moving)moveTimer=setTimeout(()=>puppets.forEach(p=>p?.move(false)),950);
   for(const [id,{node,prop}]of props)place(node,beat.props?.[id],prop);
   clearTimeout(gestureTimer);
-  if(animate&&!light())gestureTimer=setTimeout(()=>{
+  if(animate&&!reducedMotion())gestureTimer=setTimeout(()=>{
    if(destroyed||blocked())return;
    puppets.forEach((p,i)=>{const kind=beat.actors?.[i]?.gesture||'inspect';p?.gesture(gestures[kind]||kind);});
   },160);
@@ -119,12 +121,12 @@ export function mountHouseholdScene(host,state,scene,{mini=false}={}) {
  },Math.max(2200,Math.min(4200,(beats[index].label||'').length*34+1100)));}
  function play(){if(destroyed||mini||blocked())return;if(index===beats.length-1)index=0;running=true;root.classList.remove('is-paused');paint(true);schedule();}
  function pause(){if(destroyed)return;running=false;clearTimeout(timer);clearTimeout(gestureTimer);clearTimeout(settleTimer);clearTimeout(moveTimer);root.classList.add('is-paused');paint(false);}
- function step(){if(destroyed||mini||blocked())return;pause();index=Math.min(index+1,beats.length-1);paint(!light());}
+ function step(){if(destroyed||mini||blocked())return;pause();index=Math.min(index+1,beats.length-1);paint(!reducedMotion());}
  function visibility(){if(document.hidden)pause();}
- function preference(){if(light())pause();}
+ function preference(){if(reducedMotion())pause();}
  // Observe dialog shells only: watching every animated descendant would create
  // unnecessary callbacks on each pose. Dialog shells are permanent in index.html.
- const observer=!mini?new MutationObserver(()=>{if(light()||blocked())pause();}):null;
+ const observer=!mini?new MutationObserver(()=>{if(reducedMotion()||blocked())pause();}):null;
  if(observer){for(const dialog of document.querySelectorAll('.veil'))observer.observe(dialog,{attributes:true,attributeFilter:['class']});observer.observe(document.body,{attributes:true,attributeFilter:['data-effects']});}
  const intersection=!mini&&typeof IntersectionObserver!=='undefined'?new IntersectionObserver(entries=>{
   if(destroyed)return;
@@ -133,6 +135,6 @@ export function mountHouseholdScene(host,state,scene,{mini=false}={}) {
  intersection?.observe(root);
  function destroy(){if(destroyed)return;pause();destroyed=true;puppets.forEach(p=>p?.release());observer?.disconnect();intersection?.disconnect();document.removeEventListener('visibilitychange',visibility);media.removeEventListener?.('change',preference);}
  if(mini){index=beats.length-1;paint(false);}
- else {document.addEventListener('visibilitychange',visibility);media.addEventListener?.('change',preference);paint(false);if(!light())play();}
+ else {document.addEventListener('visibilitychange',visibility);media.addEventListener?.('change',preference);paint(false);if(!reducedMotion())play();}
  return {play,pause,step,destroy};
 }

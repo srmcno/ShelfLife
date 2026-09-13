@@ -28,7 +28,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
@@ -39,3 +41,23 @@ jobs:
       - name: Publish
         id: deployment
         uses: actions/deploy-pages@v5.0.1
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify the published game
+        env:
+          EXPECTED_REVISION: ${{ github.sha }}
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+        run: node scripts/verify_pages.mjs
+      - name: Keep live browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: live-pages-evidence
+          path: live-check-results/
+          if-no-files-found: ignore
+          retention-days: 7

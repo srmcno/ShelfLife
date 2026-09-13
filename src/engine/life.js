@@ -6,6 +6,7 @@ import { missionStops } from '../content/project-encounters.js';
 import { PROJECTS, PROJECT_STOPS } from '../content/projects.js';
 import { addNote, clamp } from '../state.js';
 import { recordEscapadeEvent } from '../escapade-state.js';
+import { fileScene } from '../paperwork-state.js';
 const checked = new WeakSet();
 export function lifeState(state) {
   if (!state.life || !checked.has(state.life)) { state.life=normalizeLife(state.life,state.pets.length>0); checked.add(state.life); }
@@ -29,6 +30,7 @@ export function recordScene(state, kind, title, text, cast=[], now=Date.now(), s
   const scene={id:++l.serial,kind,title,text,cast:cast.slice(0,2),at:now};
   if(stage && typeof stage==='object')scene.stage={...stage};
   l.scenes.unshift(scene); l.scenes.length=Math.min(18,l.scenes.length);
+  fileScene(state, scene);
   return scene;
 }
 export function recordGameLife(state, pet, kind, now=Date.now(), victory=true) {
@@ -100,7 +102,8 @@ export function outingSnapshot(state) {
     const move=trailMove(step,o.gear,expertise,nerve,toolUsed,choice),cost=expertise.includes(step.stat)?1:2;
     const part=PROJECTS.find(p=>p.id===o.route)?.parts[o.step],pickup=stored.includes(o.step)?'Already stored · earn trail points':'Recover: '+part;
     const missionHint=choice===0?'Leave the part · restore 2 nerve':choice===1?pickup+' · spend '+cost+' nerve':toolUsed?'Equipment already used':step.good===o.gear?pickup+' · use tool · no nerve cost':'Your packed tool fits another stop';
-    return {choice,available:!!move&&(!o.mission||choice!==2||step.good===o.gear),label:choice===0?(o.mission?'Leave this part & recover':'Take the quiet way around'):choice===1?step.options[1]:step.good===o.gear?step.options[0]:o.mission?'Save the tool for another stop':'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:o.mission?missionHint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
+    const available=!!move&&(!o.mission||choice!==2||step.good===o.gear);
+    return {choice,available,preview:available?{nerve:move.nerve,toolUsed:move.toolUsed,points:move.points,partIndex:o.mission&&choice!==0?o.step:null,partNew:!!(o.mission&&choice!==0&&!stored.includes(o.step))}:null,label:choice===0?(o.mission?'Leave this part & recover':'Take the quiet way around'):choice===1?step.options[1]:step.good===o.gear?step.options[0]:o.mission?'Save the tool for another stop':'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:o.mission?missionHint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
   }):[]};
 }
 export function outingPreview(state, routeId, gearId, cast) {

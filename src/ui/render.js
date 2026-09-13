@@ -7,6 +7,7 @@ import { escapadeView } from '../engine/escapades.js';
 import { advanceStories, withStories } from '../engine/stories.js';
 import { renderStories } from './stories.js';
 import { save } from '../state.js';
+import { fileDocument, householdReport, PAPERWORK_LIMIT } from '../paperwork-state.js';
 import { syncEffects } from './effects.js';
 import { roundsWait } from '../engine/care.js';
 import { checkWait } from '../engine/loop.js';
@@ -295,7 +296,7 @@ function syncPetChip() {
   host.appendChild(chip);
 }
 function noteMatches(n, filter) {
-  if (petFilter && !noteAbout(n, petFilter)) return false;
+  if (petFilter && !noteAbout(n, petFilter) && !(Array.isArray(n.cast) && n.cast.includes(notesState?.pets.find(p => p.name === petFilter)?.id))) return false;
   switch (filter) {
     case 'said': return ['two', 'react', 'direct'].includes(n.form) || n.from === 'overheard';
     case 'complaints': return n.kind === 'angry' || n.kind === 'feud';
@@ -306,6 +307,16 @@ function noteMatches(n, filter) {
   }
 }
 const filterHost = document.getElementById('noteFilters');
+const paperworkDesk = document.getElementById('paperworkDesk');
+paperworkDesk?.addEventListener('click', e => {
+  if (!e.target.closest('[data-file-report]') || !notesState) return;
+  const report = fileDocument(notesState, householdReport(notesState));
+  if (!report) return;
+  const persisted = save();
+  renderNotes(notesState);
+  const status = paperworkDesk.querySelector('.paperwork-status');
+  if (status) status.textContent = persisted ? 'Stamped and filed. Your household report is saved.' : 'Filed for this visit. Storage is unavailable; export a backup in More to keep this record.';
+});
 if (filterHost) filterHost.addEventListener('click', e => {
   const petChip = e.target.closest('[data-pet-filter]');
   if (petChip) { setPetFilter(notesState, null); return; }
@@ -330,26 +341,57 @@ function renderTeaser(state) {
 let notesKey = null;
 export function renderNotes(state) {
   notesState = state;
-  const key = JSON.stringify([state.notes, noteFilter, petFilter, expandedNotes, !!state.pets.length, document.getElementById('clearNotes').dataset.undo]);
+  const papers = state.paperwork?.entries || [];
+  const report = noteFilter === 'papers' ? householdReport(state) : null;
+  const key = JSON.stringify([state.notes, papers, report?.key, noteFilter, petFilter, expandedNotes, !!state.pets.length, document.getElementById('clearNotes').dataset.undo]);
   if (key === notesKey) return;
   notesKey = key;
+  const pane = document.getElementById('paneNotes');
+  pane.classList.toggle('is-paperwork', noteFilter === 'papers');
+  pane.querySelector('.destination-heading h1').textContent = noteFilter === 'papers' ? 'Paperwork' : 'The note board';
+  pane.querySelector('.destination-heading > p').textContent = noteFilter === 'papers' ? 'The official record of a deeply unofficial household.' : 'Complaints, confessions and the occasional compliment. Mostly complaints.';
   renderTeaser(state);
-  const list = state.notes.filter(n => noteMatches(n, noteFilter));
+  const list = (noteFilter === 'papers' ? papers : state.notes).filter(n => noteMatches(n, noteFilter));
+  filterHost?.querySelectorAll('[data-filter]').forEach(chip => {
+    const label = chip.dataset.label || (chip.dataset.label = chip.textContent);
+    const source = chip.dataset.filter === 'papers' ? papers : state.notes;
+    const count = source.filter(n => noteMatches(n, chip.dataset.filter)).length;
+    chip.innerHTML = escapeHtml(label) + '<span class="filter-count" aria-hidden="true">' + count + '</span>';
+    chip.setAttribute('aria-label', label + ', ' + count + (chip.dataset.filter === 'papers' ? ' filed documents' : ' notes'));
+  });
+  if (paperworkDesk) {
+    paperworkDesk.hidden = noteFilter !== 'papers';
+    if (!paperworkDesk.hidden) {
+      const filed = report && papers.some(doc => doc.key === report.key);
+      paperworkDesk.innerHTML = '<div class="paperwork-heading"><span class="paperwork-seal" aria-hidden="true">SL<br>FILED</span><div><span class="eyebrow">The household filing desk</span><h2 id="paperworkTitle">A paper trail. Finally.</h2><p>Court verdicts, expedition reports, market receipts and the residents’ own documents. The latest ' + PAPERWORK_LIMIT + ' stay here when you clear the note board.</p></div></div>' +
+        '<div class="paperwork-actions"><button type="button" class="btn" data-file-report' + (!report || filed ? ' disabled' : '') + '>' + (filed ? 'Report up to date' : 'File household report') + '</button>' +
+        (state.pets.length ? '<button type="button" class="btn btn-ghost" data-life="court">Open Shelf Court</button><button type="button" class="btn btn-ghost" data-life="outing">Plan an expedition</button>' : '') + '</div>' +
+        '<p class="paperwork-status" role="status">' + (!report ? 'Welcome a resident to start your household register.' : filed ? 'This report matches your current household. Care, play and rearrange the shelf to give the clerk something new to record.' : 'Request a real census of your residents, care and completed adventures. The clerk insists on checking the numbers.') + '</p>';
+    }
+  }
   const more = document.getElementById('notesMore');
   more.hidden = list.length <= 6;
-  more.textContent = expandedNotes ? 'Keep the latest six' : 'Read ' + (list.length - 6) + (list.length === 7 ? ' older note' : ' older notes');
+  more.textContent = expandedNotes ? 'Keep the latest six' : 'Read ' + (list.length - 6) + (noteFilter === 'papers' ? ' older documents' : list.length === 7 ? ' older note' : ' older notes');
   more.setAttribute('aria-expanded', String(expandedNotes));
   syncPetChip();
   notesEl.innerHTML = '';
   document.getElementById('clearNotes').disabled = !state.notes.length && document.getElementById('clearNotes').dataset.undo !== 'true';
+  document.getElementById('clearNotes').hidden = noteFilter === 'papers';
   if (!list.length) {
     const d = document.createElement('div');
     d.className = 'notes-empty';
-    d.textContent = state.notes.length ? (petFilter ? 'Nothing on file about ' + petFilter + '. Yet.' : 'Nothing filed under that. Yet.') : state.pets.length ? 'Check the shelf to see what they have to say. Care for them individually to build trust and unlock new things.' : 'First, a creature. Then, the complaints.';
+    const empty = {
+      papers: 'The filing desk is ready. File a household report above, or finish a court case, expedition or market trip to add its record automatically.',
+      said: 'No conversations in the latest 40 notes. Check the shelf or care for a resident to hear from the household.',
+      complaints: 'No complaints in the latest 40 notes. Enjoy the peace; it is a perfectly good outcome.',
+      unsaid: 'No private thoughts in the latest 40 notes. These appear occasionally when you check the shelf, including while residents dream.',
+      plots: 'No recent conspiracies on the board. Open Visitors & conspiracies in Stories to follow the household’s current plots.'
+    };
+    d.textContent = petFilter ? 'No ' + (noteFilter === 'papers' ? 'filed documents' : 'matching notes') + ' about ' + petFilter + '. Remove the “Only” filter to read the whole household.' : !state.pets.length ? 'First, a creature. Then, the complaints.' : empty[noteFilter] || 'Check the shelf to collect notes. Care for a resident to build trust and hear a reply.';
     notesEl.appendChild(d);
     return;
   }
-  (expandedNotes ? list : list.slice(0, 6)).forEach(n => {
+  (expandedNotes ? list : list.slice(0, 6)).forEach((n, index) => {
     const key = n.at + '|' + n.text;
     const fresh = !firstRender && !shown.has(key);
     shown.add(key);
@@ -363,7 +405,7 @@ export function renderNotes(state) {
     // The byline stays the bare name: tapping it filters the board to that
     // resident, and that lookup is by textContent. The "not out loud" qualifier a
     // thought carries is CSS generated content for exactly that reason.
-    d.innerHTML = escapeHtml(n.text) + '<span class="from">' + escapeHtml(n.from) + '</span>';
+    d.innerHTML = (n.title ? '<h3 class="document-title">' + escapeHtml(n.title) + '</h3>' : '') + escapeHtml(n.text) + '<span class="from">' + escapeHtml(n.from) + '</span>';
     const time = document.createElement('time');
     const date = new Date(n.at);
     if (Number.isFinite(date.getTime())) {
@@ -371,6 +413,16 @@ export function renderNotes(state) {
       time.className = 'note-time';
       time.textContent = date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
       d.appendChild(time);
+    }
+    if (noteFilter === 'papers' && n.title) {
+      const folded = document.createElement('details');
+      folded.className = 'filed-document'; folded.open = index === 0;
+      const summary = window.document.createElement('summary');
+      summary.appendChild(d.querySelector('.document-title'));
+      const time = d.querySelector('time'); if (time) summary.appendChild(time);
+      const body = window.document.createElement('div');body.className = 'document-body';
+      while (d.firstChild) body.appendChild(d.firstChild);
+      folded.append(summary, body);d.appendChild(folded);
     }
     notesEl.appendChild(d);
   });
@@ -406,7 +458,7 @@ function renderDoors(state) {
   const streak = state.streak && state.streak.count || 0;
   updateText(sub, n
     ? n + ' of ' + ACHIEVEMENTS.length + ' on record' + (streak > 1 ? ' · ' + streak + ' days running' : '')
-    : 'Nothing on file. Give it time.');
+    : 'Milestones from care, games and household drama.');
 }
 
 let briefState;

@@ -71,10 +71,23 @@ and rehoming, and their exact objects appear in the scene journal.
 Older saved activities retain their original rules. Continue unfinished expeditions, hearings and
 market trips from the Playroom. Practice stays available when care rewards need a rest.
 
+Court pairs each clue with the suspect's actual record, with an optional deduction notebook
+and a full sentence after the verdict. Expeditions show your crew, packed equipment, route,
+exact choice consequences and a saved journey log. Returning home keeps only the parts you
+actually recovered; two distinct parts build a permanent household project.
+
+**Notes → Paperwork** keeps the latest 120 filed documents independently of the temporary
+note board. Court verdicts, expedition reports, market receipts and resident documents are
+filed automatically. You can request a household register drawn from your actual care and
+activity records. Clearing notes preserves these documents. Empty filters and display areas
+explain what belongs there and how to add it.
+
 On desktop, **P** opens the Playroom. In Chase use arrows or A/D, Space to hop and P to pause.
 Touch controls are built into the game. Other games explain their keys beside the actions.
 **Escape** closes the current sheet and returns focus to its opener. Motion follows your system
 preference; More also offers Automatic, Light and Full effects. The narrator is off until enabled.
+Light retains brief gameplay reactions and scene movement while simplifying decoration.
+See [the hearing, expedition and paperwork design notes](docs/hearings-and-expeditions.md).
 
 ## Your save
 
@@ -117,7 +130,8 @@ npm run build
 
 The browser suite uses isolated synthetic households and a separate local server. It checks
 creation, saved appearance, care, all six activity entrances, completed adventure endings,
-interrupted play, replay identity, all sixteen keepsakes, real rug catches and bubble pops,
+interrupted play, full court hearings and expedition returns, report persistence,
+replay identity, all sixteen keepsakes, real rug catches and bubble pops,
 cancelled gestures, failed saves, responsive layouts and runtime errors
 in desktop Chromium and phone-sized Chromium/WebKit. Offline reload is tested in Chromium;
 Playwright does not support WebKit service-worker tooling. This is browser automation, not physical-device

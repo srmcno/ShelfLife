@@ -961,7 +961,9 @@ export function createPuppet(el) {
       el.style.setProperty('--sl-face', direction < 0 ? '-1' : '1');
     },
     gesture(kind) {
-      if (released || document.hidden || reduced?.matches || document.body.dataset.effects === 'light') return;
+      // Light effects simplify ambient/limb loops, not the feedback for a
+      // player's action. In Auto this is the normal mode on a touch device.
+      if (released || document.hidden || reduced?.matches) return;
       if (kind === 'blink') { holdGesture('sl-blink', 340); return; }
       const clips = {
         knock: ['sl2-poke', 620, 'sl-reaching'], wiggle: ['sl2-wiggle', 680, 'sl-care-fuss'],

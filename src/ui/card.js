@@ -93,7 +93,7 @@ function personalityDetails(pet) {
 function onFile(state, pet) {
   const all = (state.notes || []).filter(n => noteAbout(n, pet.name));
   const mine = all.slice(0, 3);
-  if (!mine.length) return '<p class="on-file-empty">Nothing on file. It is early. It has plans.</p>';
+  if (!mine.length) return '<p class="on-file-empty">No recent notes about this resident. Check the shelf to collect their words; care and play create memories below. Filed reports stay in Notes → Paperwork.</p>';
   return '<ul class="on-file">' + mine.map(n => {
     const text = n.text.length > 150 ? n.text.slice(0, 147).trimEnd() + '…' : n.text;
     return '<li class="' + escapeHtml(n.kind || 'note') + '">' + escapeHtml(text) + '</li>';

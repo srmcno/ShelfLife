@@ -1,3 +1,14 @@
+// The player's brief names the offence; the generated exhibits establish who
+// committed it. These questions never imply which resident is guilty.
+export const COURT_BRIEFS = [
+  'Who took the bite?', 'Who buried a living crumb?', 'Who stole the communal lamp?',
+  'Who forged the eviction notice?', 'Who sold the stolen last word?',
+  'Who helped the pea seize the throne?', 'Who staged the raisin emergency?',
+  'Who tried to pay the rent in moths?', 'Who altered the inheritance portrait?',
+  'Who declared the living teaspoon dead?', 'Who sold the counterfeit eclipse?',
+  'Who ran the fraudulent witness protection scheme?'
+];
+
 // Unsworn remarks are about this charge. None invent a fact used by the puzzle.
 export const COURT_BANTER = [
   { cleared:'The surviving half has withdrawn its objection. It still wants the crumbs back.', lines:[
