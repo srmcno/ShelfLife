@@ -14,12 +14,33 @@ async function household(page,customize=()=>{}){
  await page.addInitScript(snapshot=>{if(!sessionStorage.getItem('expedition-fixture')){localStorage.setItem('shelflife.v4',JSON.stringify(snapshot));sessionStorage.setItem('expedition-fixture','1');}},s);
  await page.goto('/');await expect(page.locator('#cabinet .pet')).toHaveCount(s.pets.length);return s;
 }
-async function open(page){await page.locator('#tabPlay').click();await page.locator('[data-activity="outing"]').click();await expect(page.locator('#lifeVeil.outing-mode')).toBeVisible();}
-async function fits(page){
- const sizes=await page.evaluate(()=>{
-  const sheet=document.querySelector('#lifeVeil .sheet'),workspace=document.querySelector('.expedition-view'),dock=document.querySelector('.expedition-action-dock').getBoundingClientRect();
-  return {width:innerWidth,height:innerHeight,doc:document.documentElement.scrollWidth,sheet:[sheet.clientWidth,sheet.scrollWidth],workspace:[workspace.clientWidth,workspace.scrollWidth],dock:{top:dock.top,bottom:dock.bottom}};
- });
+async function open(page){
+ // Back to games restores this launcher; the shelf's Play tab is then inert.
+ const playroom=page.locator('#playroomVeil');
+ if(!await playroom.isVisible())await page.locator('#tabPlay').click();
+ await expect(playroom).toBeVisible();await playroom.locator('[data-activity="outing"]').click();
+ await expect(page.locator('#lifeVeil.outing-mode')).toBeVisible();
+}
+async function fits(page,expectedCrew=1){
+ let sizes,previous='',stableSamples=0;
+ // A native select redraws the planning scene. WebKit can return the new DOM
+ // while the sheet-up transform and crew arrival are still being composited.
+ // Wait for that real entrance to finish, then measure the unchanged limits.
+ await expect.poll(async()=>{
+  sizes=await page.evaluate(()=>{
+   const sheet=document.querySelector('#lifeVeil .sheet'),workspace=document.querySelector('.expedition-view'),dock=document.querySelector('.expedition-action-dock').getBoundingClientRect();
+   const sheetBox=sheet.getBoundingClientRect(),stage=document.querySelector('.expedition-stage').getBoundingClientRect();
+   const crew=[...document.querySelectorAll('[data-expedition-cast] .sprite-creature,[data-expedition-cast] .sprite-body')].map(art=>{
+    const box=art.getBoundingClientRect();let opacity=1,visible=true;
+    for(let node=art;node;node=node.parentElement){const style=getComputedStyle(node);opacity*=Number(style.opacity);visible&&=style.display!=='none'&&style.visibility!=='hidden';}
+    return {width:box.width,height:box.height,opacity,visible,inside:box.left>=stage.left-1&&box.right<=stage.right+1&&box.top>=stage.top-1&&box.bottom<=stage.bottom+1};
+   });
+   return {width:innerWidth,height:innerHeight,doc:document.documentElement.scrollWidth,sheet:[sheet.clientWidth,sheet.scrollWidth],workspace:[workspace.clientWidth,workspace.scrollWidth],sheetBox:{top:sheetBox.top,bottom:sheetBox.bottom},dock:{top:dock.top,bottom:dock.bottom},entering:sheet.getAnimations().some(animation=>animation.pending||animation.playState==='running'),fontsReady:document.fonts.status==='loaded',crew};
+  });
+  const geometry=JSON.stringify([sizes.width,sizes.height,sizes.sheet,sizes.workspace,sizes.sheetBox,sizes.dock]);
+  stableSamples=!sizes.entering&&geometry===previous?stableSamples+1:0;previous=geometry;
+  return {entranceFinished:!sizes.entering&&sizes.fontsReady,geometryStable:stableSamples>=2,visibleCrew:sizes.crew.length===expectedCrew&&sizes.crew.every(art=>art.visible&&art.opacity>=.99&&art.width>=24&&art.height>=24&&art.inside)};
+ },{message:'the expedition entrance settles with the actual crew visibly inside the stage',timeout:5000,intervals:[50,100,100,200]}).toEqual({entranceFinished:true,geometryStable:true,visibleCrew:true});
  expect(sizes.width).toBeLessThanOrEqual(page.viewportSize().width+1);expect(sizes.doc).toBeLessThanOrEqual(sizes.width+1);
  expect(sizes.sheet[1]).toBeLessThanOrEqual(sizes.sheet[0]+1);expect(sizes.workspace[1]).toBeLessThanOrEqual(sizes.workspace[0]+1);
  expect(sizes.dock.top).toBeGreaterThanOrEqual(0);expect(sizes.dock.bottom).toBeLessThanOrEqual(sizes.height+1);
@@ -39,11 +60,11 @@ test('pack a real crew, finish all three choices, resume a save and reopen one e
  await expect(page.locator('.expedition-packed-resident').first()).toContainText('Pip');
  await expect(page.locator('.expedition-packed-resident').last()).toContainText('1-nerve detours at stops 1 & 3');
  await expect(page.locator('.expedition-packed-tool')).toContainText('at stop 2 without spending nerve');
- await fits(page);const before=await saved(page);await page.locator('[data-life="set-out"]').click();
+ await fits(page,2);const before=await saved(page);await page.locator('[data-life="set-out"]').click();
  await expect(page.locator('[data-expedition-cast] .sprite')).toHaveCount(2);expect((await saved(page)).life.outing.cast).toEqual(['qa2','qa0']);
  await expect(page.locator('[data-choice="2"][data-life="outing-choice"]')).toBeDisabled();await expect(page.locator('[data-choice="2"][data-life="outing-choice"]')).toContainText('This stop needs Emergency biscuit');
  const first=await choose(page,1);await expect(page.locator('.expedition-field-report')).toContainText('Part safely in the bag');
- await expect(page.locator('.expedition-cast')).toHaveCSS('animation-name','expedition-travel');await fits(page);
+ await expect(page.locator('.expedition-cast')).toHaveCSS('animation-name','expedition-travel');await fits(page,2);
  await page.locator('#lifeClose').click();await page.reload();await open(page);
  expect(outingSnapshot(await saved(page)).choices).toEqual(first.choices);await expect(page.locator('.expedition-last-event')).toBeVisible();
  await page.locator('.expedition-last-event summary').click();await expect(page.locator('.expedition-last-event p')).toHaveText(first.log.at(-1));
@@ -53,13 +74,14 @@ test('pack a real crew, finish all three choices, resume a save and reopen one e
  await expect(page.locator('.expedition-rewards')).toContainText('New curiosity · +4 discoveries');await expect(page.locator('.expedition-rewards')).toContainText('New field note · +2 discoveries');
  const completed=await saved(page);expect(completed.life.xp).toBe(before.life.xp+13);expect(completed.life.projectParts.drawer).toEqual([0,1,2]);expect(completed.life.projects).toEqual(['drawer']);
  expect(completed.pets.find(p=>p.id==='qa2').expeditions).toBe((fixture.pets[2].expeditions||0)+1);expect(completed.pets.find(p=>p.id==='qa1').expeditions||0).toBe(fixture.pets[1].expeditions||0);
- expect(completed.paperwork.entries.filter(e=>e.title.startsWith('Expedition report'))).toHaveLength(1);await fits(page);
+ expect(completed.paperwork.entries.filter(e=>e.title.startsWith('Expedition report'))).toHaveLength(1);await fits(page,2);
  const receipt=await page.locator('.expedition-rewards').textContent();await page.locator('#lifeClose').click();await open(page);
  await expect(page.locator('.expedition-rewards')).toHaveText(receipt);expect((await saved(page)).life.xp).toBe(completed.life.xp);
  await page.reload();await open(page);const restored=await saved(page);
  expect(restored.life.xp).toBe(completed.life.xp);expect(restored.life.outings).toBe(completed.life.outings);expect(restored.life.outing.result).toEqual(completed.life.outing.result);
- expect(restored.paperwork.entries.filter(e=>e.title.startsWith('Expedition report'))).toHaveLength(1);await fits(page);
+ expect(restored.paperwork.entries.filter(e=>e.title.startsWith('Expedition report'))).toHaveLength(1);await fits(page,2);
  await page.locator('[data-life="project-home"]').click();await expect(page.locator('#lifeVeil')).not.toBeVisible();
+ await expect(page.locator('#playroomVeil')).not.toBeVisible();await expect(page.locator('.household-workshop')).toBeFocused();
  await expect(page.locator('[data-life="use-project"][data-id="drawer"]')).toBeVisible();expect((await saved(page)).life.outing).toBeNull();
 });
 

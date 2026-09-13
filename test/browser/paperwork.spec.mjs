@@ -10,7 +10,7 @@ async function setup(page,customize=()=>{}) {
   await page.addInitScript(s=>{if(!sessionStorage.getItem('paperwork-fixture')){localStorage.setItem('shelflife.v4',JSON.stringify(s));sessionStorage.setItem('paperwork-fixture','1');}},s);
   await page.goto('/');await expect(page.locator('#cabinet .pet')).toHaveCount(s.pets.length);
 }
-async function papers(page){await page.locator('[data-tab="notes"]').click();await page.locator('[data-filter="papers"]').click();await expect(page.locator('#paperworkDesk')).toBeVisible();}
+async function papers(page){await page.locator('.tabbar .tab[data-tab="notes"]').click();await page.locator('[data-filter="papers"]').click();await expect(page.locator('#paperworkDesk')).toBeVisible();}
 async function fits(page){expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize().width+1);}
 
 test('file a real household report, retain it across clear notes and reload, and refresh it after care',async({page})=>{
@@ -25,7 +25,7 @@ test('file a real household report, retain it across clear notes and reload, and
   await page.locator('[data-filter="all"]').click();await page.locator('#clearNotes').click();
   await page.reload();await papers(page);
   await expect(page.locator('#notes .document-title')).toHaveCount(1);await expect(page.locator('[data-file-report]')).toBeDisabled();
-  await page.locator('[data-tab="shelf"]').click();await page.locator('#hangoutBtn').click();
+  await page.locator('.tabbar .tab[data-tab="shelf"]').click();await page.locator('#hangoutBtn').click();
   await page.locator('[data-rug-care="food"]').click();await page.locator('#rugClose').click();
   await papers(page);await expect(page.locator('[data-file-report]')).toBeEnabled();await page.locator('[data-file-report]').click();
   await expect(page.locator('#notes .document-title')).toHaveCount(2);
@@ -37,7 +37,7 @@ test('migrate existing documents and explain filters, owned keepsakes and unfini
   await papers(page);await expect(page.locator('#notes')).toContainText('MEETING 4');
   await expect(page.locator('[data-filter="papers"] .filter-count')).toHaveText('1');
   await page.locator('[data-filter="complaints"]').click();await expect(page.locator('#notes')).toContainText('Enjoy the peace');
-  await page.locator('[data-tab="plots"]').click();await page.locator('#workshopFolder summary').click();
+  await page.locator('.tabbar .tab[data-tab="plots"]').click();await page.locator('#workshopFolder summary').click();
   await expect(page.locator('.display-cabinet')).toContainText('keepsakes ready to display');
   await page.locator('[data-life="display"]').click();await page.locator('[data-life="display-toggle"]').first().click();
   await page.locator('#lifeClose').click();await expect(page.locator('.display-curio')).toHaveCount(1);
