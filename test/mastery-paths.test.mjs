@@ -9,7 +9,7 @@ test('one-errand learning market and later markets are feasible across seeds',()
 import {blankState,normalizeState} from '../src/state.js';
 import {newAlibi,answerAlibi,advanceAlibi,rewardAlibi} from '../src/engine/alibi.js';
 import {startCourt,currentCourt,courtAction,finishCourt,courtEvidence} from '../src/engine/court.js';
-import {startOuting,outingSnapshot,chooseOuting,returnFromMission,startMarket,marketSnapshot,chooseMarket,deliverMarket,leaveMarket,claimMarket} from '../src/engine/life.js';
+import {startOuting,retryOuting,outingSnapshot,chooseOuting,returnFromMission,startMarket,marketSnapshot,chooseMarket,deliverMarket,leaveMarket,claimMarket} from '../src/engine/life.js';
 const now=new Date(2026,8,19,12).getTime();
 function fixture(){const s=blankState();s.lastTick=now;s.pets=[{id:'a',name:'Pip',traits:[],stats:{cute:8,damp:8,menace:8,mystique:8},bond:25,needs:{food:60,clean:60,fuss:60},art:{}}];s.slots[0]='a';return s;}
 test('fresh beginner Market practice and its replay never unlock lessons after reload',()=>{
@@ -33,6 +33,34 @@ test('five-round Encore stays independent of beginner Echo practice',()=>{
  assert.equal(g.rounds,5);assert.equal(g.ritual,'echo');
  while(!g.complete)for(const n of handshakePattern(g))tapHandshake(g,n);
  assert.ok(rewardHandshake(s,g,now));assert.equal(mastery(s.pets[0],'handshake').tier,0);
+});
+test('Encore advances the selected mastery lesson at every non-final tier',()=>{
+ for(const tier of [0,1,2]){
+  const s=fixture();mastery(s.pets[0],'handshake').tier=tier;
+  const g=newHandshake(s.pets[0],()=>.4,{encore:true});assert.equal(g.rounds,5);assert.equal(g.masteryTier,tier);
+  while(!g.complete)for(const n of handshakePattern(g))tapHandshake(g,n);
+  rewardHandshake(s,g,now);assert.equal(mastery(s.pets[0],'handshake').tier,tier+1);
+ }
+});
+test('retrying a failed survey preserves its lesson and can advance after real decisions',()=>{
+ let s=fixture();startOuting(s,'drawer','thread',['a'],{mission:true,learning:true,edition:0});
+ for(let i=0;i<3;i++)chooseOuting(s,0,now);s=normalizeState(s);
+ const oldReceipt=s.life.outing.receipt;assert.equal(mastery(s,'expedition').tier,0);
+ assert.ok(retryOuting(s));assert.notEqual(s.life.outing.receipt,oldReceipt);s=normalizeState(s);
+ assert.equal(s.life.outing.masteryTier,0);assert.deepEqual(s.life.outing.expertise,[]);
+ for(const choice of [1,0,1])chooseOuting(s,choice,now);
+ assert.equal(mastery(s,'expedition').tier,1);
+ assert.ok(retryOuting(s));assert.equal(s.life.outing.masteryTier,0,'replay retains the cleared route rules');
+});
+test('retry retains advanced branches, explicit practice and legacy route rules',()=>{
+ for(const options of [{learning:true},{learning:true,practice:true},{}]){
+  let s=fixture();mastery(s,'expedition').tier=2;startOuting(s,'drawer','thread',['a'],{mission:true,edition:0,...options});
+  chooseOuting(s,1,now);const steps=outingSnapshot(s).steps;
+  chooseOuting(s,0,now);chooseOuting(s,0,now);s=normalizeState(s);
+  const before=s.life.outing;assert.ok(retryOuting(s));s=normalizeState(s);
+  assert.equal(s.life.outing.masteryTier,before.masteryTier);assert.equal(s.life.outing.practice,before.practice);assert.deepEqual(s.life.outing.expertise,before.expertise);
+  chooseOuting(s,1,now);assert.deepEqual(outingSnapshot(s).steps,steps);
+ }
 });
 test('fresh Expedition practice preserves recovered parts through reload without advancing mastery',()=>{
  let s=fixture();startOuting(s,'drawer','thread',['a'],{mission:true,learning:true,practice:true,edition:0});

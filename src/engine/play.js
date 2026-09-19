@@ -114,6 +114,7 @@ export function replayHandshake(game) {
 }
 export function newHandshake(pet, rng = Math.random, { encore = false, ritual = null, practice = false } = {}) {
   const tier = practice ? 0 : mastery(pet, 'handshake').tier;
+  const lessonTier = ritual == null ? tier : ritual === 'duet' ? 3 : ritual === 'mirror' ? 2 : Math.min(tier,1);
   ritual ||= ['echo','echo','mirror','duet'][tier];
   const rounds = encore ? 5 : practice ? 3 : handshakeRounds(pet);
   ritual = Object.hasOwn(HANDSHAKE_RITUALS, ritual) ? ritual : 'echo';
@@ -121,7 +122,7 @@ export function newHandshake(pet, rng = Math.random, { encore = false, ritual = 
   const memory = handshakeMemory(pet, ritual);
   if (memory) sequence.splice(0, memory.opening.length, ...memory.opening);
   return {
-    practice, masteryTier: ritual==='duet'?3:ritual==='mirror'?2:rounds>=4?1:0, receipt: masteryTicket(pet, 'handshake'), petId: pet.id, rounds, encore, ritual: Object.hasOwn(HANDSHAKE_RITUALS, ritual) ? ritual : 'echo', mistakes: 0, replays: 0,
+    practice, masteryTier: lessonTier, receipt: masteryTicket(pet, 'handshake'), petId: pet.id, rounds, encore, ritual: Object.hasOwn(HANDSHAKE_RITUALS, ritual) ? ritual : 'echo', mistakes: 0, replays: 0,
     names: gesturesFor(pet),
     // One more gesture than there are rounds: round 1 asks for two, and the last
     // round asks for the lot.

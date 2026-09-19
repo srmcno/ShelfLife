@@ -1,5 +1,5 @@
 import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
-import { lifeState, useProject, returnFromMission, favoriteFor, outingSnapshot, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, deliverMarket, leaveMarket, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
+import { lifeState, useProject, returnFromMission, favoriteFor, outingSnapshot, startOuting, retryOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, deliverMarket, leaveMarket, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
 import { OUTINGS, RELICS, FRAMES } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
 import { startCourt, currentCourt, courtAction, finishCourt } from '../engine/court.js';
@@ -167,10 +167,7 @@ export function initLife(state,refresh) {
   if(action==='outing-retry'||action==='outing-next'){
    const previous=outingSnapshot(state);if(!previous||previous.step!==3)return;
    selectedRoute=previous.route;selectedGear=previous.gear;selectedDare=previous.dare||'';[leadId,companionId='']=previous.cast;
-   finishOuting(state);
-   if(action==='outing-retry'){
-    if(startOuting(state,selectedRoute,selectedGear,previous.cast,{edition:previous.edition,dare:previous.dare,mission:previous.mission===true,missionRevision:previous.missionRevision||1}))lifeState(state).outing.expertise=previous.expertise.slice();
-   }
+   if(action==='outing-retry')retryOuting(state);else finishOuting(state);
    interlude=false;save();refresh();outing();focusOutingProgress();return;
   }
   if(action==='finish-outing'){finishOuting(state);refresh();display();return;}

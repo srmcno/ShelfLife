@@ -132,6 +132,16 @@ export function startOuting(state, routeId, gearId, cast, options={}) {
   if(OUTING_DARES.some(d=>d.id===options.dare))l.outing.dare=options.dare;
   return true;
 }
+// Replay the same route rules with a fresh completion receipt. Mastery may
+// have advanced since this route began; it must not rewrite the replay.
+export function retryOuting(state) {
+  const previous=outingSnapshot(state);
+  if(!previous||previous.version!==2||previous.step!==3||!finishOuting(state))return false;
+  const learning=Number.isInteger(previous.masteryTier);
+  const started=startOuting(state,previous.route,previous.gear,previous.cast,{edition:previous.edition,dare:previous.dare,mission:previous.mission===true,missionRevision:previous.missionRevision||1,learning,practice:previous.practice===true});
+  if(started){const next=lifeState(state).outing;next.expertise=previous.expertise.slice();if(learning)next.masteryTier=previous.masteryTier;}
+  return started;
+}
 export function chooseOuting(state, choice, now=Date.now()) {
   const l=lifeState(state), o=l.outing, route=OUTINGS.find(x=>x.id===o?.route);
   if(!o||!route||![0,1,2].includes(choice))return null;
