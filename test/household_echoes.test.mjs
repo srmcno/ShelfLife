@@ -4,6 +4,19 @@ import {blankState,normalizeState} from '../src/state.js';
 import {rememberEcho,normalizeEchoes,householdAftermath} from '../src/household-echoes.js';
 import {rugReaction} from '../src/content/rug-comedy.js';
 const now=Date.now();const pet={id:'a',name:'Agnes',traits:[],art:{body:'',stamps:[]},needs:{food:80,fuss:80,clean:80},bond:0,cared:0};
+test('the same real rug interaction after a module reload creates a new persistent aftermath',async()=>{
+ const s=blankState();s.pets=[structuredClone(pet)];s.slots[0]='a';
+ const engines=await Promise.all([import('../src/engine/play-rug.js?first-page'),import('../src/engine/play-rug.js?reloaded-page')]);
+ let state=s;
+ for(const [i,engine] of engines.entries()){
+  const g=engine.createRug(pet);engine.tossPreset(g);
+  const events=Array.from({length:600},()=>engine.updateRug(g,1/60)).flat();const caught=events.find(e=>e.type==='catch');assert.ok(caught);
+  assert.equal(rememberEcho(state,'catch',pet.id,caught.id,now-60000+i*31000),true);
+  assert.equal(rememberEcho(state,'catch',pet.id,caught.id,now-29000),false,'same receipt stays deduplicated');
+  state=normalizeState(JSON.parse(JSON.stringify(state)));
+ }
+ assert.equal(state.householdEchoes.events.length,2);
+});
 test('true aftermath survives reload without altering names, art, or slots',()=>{
  const s=blankState();s.pets=[structuredClone(pet)];s.slots[0]='a';const before=structuredClone(s.pets[0].art);
  assert.equal(householdAftermath(s),null);rememberEcho(s,'miss','a','throw-1',now);

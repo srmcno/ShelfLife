@@ -28,6 +28,12 @@ test('fresh beginner Handshake practice completes without advancing mastery',()=
  assert.ok(rewardHandshake(s,g,now));assert.equal(mastery(s.pets[0],'handshake').tier,0);
  assert.equal(s.pets[0].handshakes,1);assert.equal(rewardHandshake(s,g,now),null);
 });
+test('five-round Encore stays independent of beginner Echo practice',()=>{
+ const s=fixture(),g=newHandshake(s.pets[0],()=>.4,{practice:true,encore:true});
+ assert.equal(g.rounds,5);assert.equal(g.ritual,'echo');
+ while(!g.complete)for(const n of handshakePattern(g))tapHandshake(g,n);
+ assert.ok(rewardHandshake(s,g,now));assert.equal(mastery(s.pets[0],'handshake').tier,0);
+});
 test('fresh Expedition practice preserves recovered parts through reload without advancing mastery',()=>{
  let s=fixture();startOuting(s,'drawer','thread',['a'],{mission:true,learning:true,practice:true,edition:0});
  for(const choice of [1,0,1]){assert.ok(chooseOuting(s,choice,now));s=normalizeState(s);}

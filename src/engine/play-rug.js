@@ -12,6 +12,9 @@ const sessions = new WeakMap(), issued = new WeakMap(), consumed = new WeakSet()
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 let serial = 0;
+// Receipt identities must remain distinct after reload; physics stays seeded
+// only by resident identity, independently of this page-instance namespace.
+const pageId = globalThis.crypto?.randomUUID?.() || Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
 
 function session(game) { return game && typeof game === 'object' ? sessions.get(game) : null; }
 function emit(game, events, type, details = {}) {
@@ -33,7 +36,7 @@ export function createRug(resident) {
   if (!resident || typeof resident.id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(resident.id)
     || ['__proto__', 'prototype', 'constructor'].includes(resident.id)) return null;
   const seed = [...resident.id].reduce((value, char) => (value * 31 + char.charCodeAt(0)) >>> 0, 17);
-  const game = { version: 1, sessionId: 'rug-' + ++serial, time: 0,
+  const game = { version: 1, sessionId: 'rug-' + pageId + '-' + ++serial, time: 0,
     pet: { id: resident.id, x: 500, y: RUG_WORLD.ground, vx: 0, vy: 0, facing: 1, pose: 'idle' },
     balls: [], bubbles: [], catches: 0, pops: 0, misses: 0, recoveries: 0, fumbles: 0, refusals: 0 };
   sessions.set(game, { petId: resident.id, seed, toy: 0, event: 0, ticks: 0, accumulator: 0,

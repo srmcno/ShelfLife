@@ -115,7 +115,7 @@ export function replayHandshake(game) {
 export function newHandshake(pet, rng = Math.random, { encore = false, ritual = null, practice = false } = {}) {
   const tier = practice ? 0 : mastery(pet, 'handshake').tier;
   ritual ||= ['echo','echo','mirror','duet'][tier];
-  const rounds = practice ? 3 : encore ? 5 : handshakeRounds(pet);
+  const rounds = encore ? 5 : practice ? 3 : handshakeRounds(pet);
   ritual = Object.hasOwn(HANDSHAKE_RITUALS, ritual) ? ritual : 'echo';
   const sequence = Array.from({ length: (rounds + 1) * (ritual === 'duet' ? 2 : 1) }, () => Math.min(3, Math.max(0, Math.floor(rng() * 4))));
   const memory = handshakeMemory(pet, ritual);

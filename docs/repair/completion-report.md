@@ -18,14 +18,14 @@ Reviewed baseline: `e77b69bf0736d616ada031806742ca7f82e6e80c`. Implementation: P
 
 ## Verification checkpoint
 
-- Local domain: 841/841 passing after review fixes.
+- Local domain: 843/843 passing after review fixes.
 - Python: 4/4 passing; production build passes.
 - Independent Chase review fixed stationary-safe-side crossing and reward consumption during cooldown.
 - Whole-branch review fixed multi-event rug challenge receipts, novice Market wording and exact opening callbacks. Targeted re-review approved; 30 focused checks passed.
 - Browser checkpoint: 123 passed and 3 intentional skips on b058db5 (Actions run 35454037276). This includes actual keyboard-earned Chase lessons 1–2, progression after reload, phone ball geometry and long-name layouts. Final exact-revision gates and live Pages inspection are recorded in the PR #14 release report.
 - Normal UI on original published edition: completed all three Alibi rounds and the Curious funeral Court case (The Beadle, 125 points, no individually cleared innocents); completed Handshake (3 rounds, no errors), Market (1/3 errands, 9 buttons, 19 points), and Chase (6/8 crumbs, 60 points, one-star loss); played rug and completed an Under Fridge Expedition for 7/7 trail points, recovering two parts and installing Midnight Larder. All six activities plus the rug were replayed through normal UI on the reviewed edition. Automated isolated households remain separate from normal UI play evidence.
 
-Repository review additionally reproduced fresh-tier practice advancement in Market, Handshake and Expeditions, and a missing passport stamp for a losing campaign attempt. Explicit practice intent survives Market/Expedition reload and retry; all four regressions now pass without removing completed activity or recovered parts.
+Repository review additionally reproduced fresh-tier practice advancement in Market, Handshake and Expeditions, and a missing passport stamp for a losing campaign attempt. Explicit practice intent survives Market/Expedition reload and retry; all four regressions now pass without removing completed activity or recovered parts. Two further regressions verify unique rug aftermath receipts across fresh module loads and a real five-round Encore when Echo practice is selected.
 
 ## Product limits
 
