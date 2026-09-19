@@ -109,11 +109,13 @@ body::before{
     var(--night);
 }
 #wall{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.9}
-body.wall-stripes #wall{background-image:repeating-linear-gradient(90deg,var(--wall-ink) 0 2px,transparent 2px 30px)}
-body.wall-dots #wall{background-image:radial-gradient(var(--wall-ink) 1.5px,transparent 1.6px);background-size:26px 26px}
-body.wall-grid #wall{background-image:repeating-linear-gradient(0deg,var(--wall-ink) 0 1px,transparent 1px 36px),repeating-linear-gradient(90deg,var(--wall-ink) 0 1px,transparent 1px 36px)}
-body.wall-web #wall{background-image:repeating-radial-gradient(circle at 0 0,transparent 0 30px,var(--wall-ink) 30px 31px),repeating-radial-gradient(circle at 100% 0,transparent 0 30px,var(--wall-ink) 30px 31px)}
-body.wall-diamond #wall{background-image:repeating-linear-gradient(45deg,var(--wall-ink) 0 1px,transparent 1px 28px),repeating-linear-gradient(-45deg,var(--wall-ink) 0 1px,transparent 1px 28px)}
+body { --wall-pattern: none; --wall-pattern-size: auto; }
+#wall { background-image: var(--wall-pattern); background-size: var(--wall-pattern-size); }
+body.wall-stripes { --wall-pattern: repeating-linear-gradient(90deg,var(--wall-ink) 0 2px,transparent 2px 30px); }
+body.wall-dots { --wall-pattern: radial-gradient(var(--wall-ink) 1.5px,transparent 1.6px); --wall-pattern-size: 26px 26px; }
+body.wall-grid { --wall-pattern: repeating-linear-gradient(0deg,var(--wall-ink) 0 1px,transparent 1px 36px),repeating-linear-gradient(90deg,var(--wall-ink) 0 1px,transparent 1px 36px); }
+body.wall-web { --wall-pattern: repeating-radial-gradient(circle at 0 0,transparent 0 30px,var(--wall-ink) 30px 31px),repeating-radial-gradient(circle at 100% 0,transparent 0 30px,var(--wall-ink) 30px 31px); }
+body.wall-diamond { --wall-pattern: repeating-linear-gradient(45deg,var(--wall-ink) 0 1px,transparent 1px 28px),repeating-linear-gradient(-45deg,var(--wall-ink) 0 1px,transparent 1px 28px); }
 /* dust in the beam */
 #wall::before{
   content:'';position:absolute;left:0;right:0;top:-4vh;height:70vh;pointer-events:none;opacity:.14;
@@ -223,13 +225,8 @@ input,select{font:inherit}
 body.night{--night:#040309;--night-2:#0B0810;--night-3:#120D18;--case-lit:#0C0813;--case-mid:#06040A;--case-deep:#020104;
   --key-soft:color-mix(in srgb,var(--key) 11%,transparent)}
 body.night::before{background:radial-gradient(60% 42% at 50% 0%,color-mix(in srgb,var(--key) 9%,transparent),transparent 70%),radial-gradient(120% 90% at 50% 45%,transparent 30%,rgba(0,0,0,.72) 100%),var(--night)}
-body.night .cabinet{background:
-    radial-gradient(70% 46% at 92% -8%,rgba(176,203,236,.17),transparent 68%),
-    radial-gradient(120% 60% at var(--key-x) var(--key-y),color-mix(in srgb,var(--key) 24%,transparent) 0%,color-mix(in srgb,var(--key) 6%,transparent) 40%,transparent 70%),
-    repeating-linear-gradient(90deg,rgba(255,240,215,.02) 0 1px,transparent 1px 52px),
-    linear-gradient(180deg,var(--case-lit) 0%,var(--case-mid) 46%,var(--case-deep) 100%)}
 body.night .cabinet::before{background:radial-gradient(80% 64% at var(--key-x) 2%,transparent 18%,rgba(0,0,0,.58) 66%,rgba(0,0,0,.9) 100%)}
-body.night .plank{filter:brightness(.82)}
+/* Keep chosen wood and engraved labels readable; the cabinet vignette owns night lighting. */
 body.night #wall::before{opacity:.07}
 body.night .sl2 .sl-part[data-part="eye"]{filter:drop-shadow(0 0 2.5px rgba(255,250,232,.7)) drop-shadow(0 0 6px rgba(255,250,232,.28))}
 body.night .sl2.sl-asleep .sl-part[data-part="eye"]{filter:none}
@@ -1659,3 +1656,17 @@ body[data-effects="light"] .chase-item{filter:none;animation:none}
 .chase-settings>summary{cursor:pointer;font-size:12px;color:var(--ink-2);min-height:24px;line-height:24px}
 .chase-settings[open]>summary{margin-bottom:10px}.chase-settings .chase-practice-tools{margin-bottom:0}
 @media(max-width:540px){.playroom-passport{padding:12px}.passport-heading strong{font-size:17px}.passport-stamps{grid-template-columns:repeat(3,minmax(0,1fr));margin:10px 0}.passport-stamps>span{flex-direction:row;justify-content:center;font-size:10px;padding:7px 2px}.passport-stamps>span>b{font-size:12px}.passport-next{gap:8px;align-items:stretch;flex-direction:column}.passport-next .btn{width:100%}.passport-seal{width:44px;height:44px;font-size:8px}}
+
+/* A material preview beside the choices; uses the same paint and plank layers
+   as the shelf, with the player's own residents rather than stock mascots. */
+.decor-preview { margin: 0 0 18px; padding: 12px; background: var(--night-2); border: 1px solid var(--hair); border-radius: 8px; }
+.decor-preview-wall { background: var(--cabinet-surface); background-size: var(--wall-pattern-size), auto, auto; border: 7px solid var(--wood); border-top: 10px solid var(--wood-lip); border-bottom: 0; padding-top: 8px; box-shadow: inset 0 3px 9px #0005; }
+.decor-preview-residents { display: flex; align-items: end; justify-content: space-evenly; height: 78px; overflow: hidden; }
+.decor-preview-residents .sprite { width: 74px; --pet-h: 74px; flex: 0 0 74px; }
+.decor-preview-residents .sprite * { animation: none !important; }
+.decor-preview-empty { color: var(--ink-2); font: 16px var(--hand); align-self: center; }
+.decor-preview-plank { height: 15px; }
+.decor-preview figcaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+.decor-preview figcaption span:first-child { border-bottom: 2px solid var(--pink); color: var(--ink); }
+#decorSaveStatus[data-failed] { color: var(--warn); }
+#decorVeil .opt { min-height: 44px; }

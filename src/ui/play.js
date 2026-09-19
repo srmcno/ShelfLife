@@ -116,7 +116,7 @@ export function initPlay(state, refresh) {
     if(alibiMode.selectedOptions[0]?.disabled)alibiMode.value='auto';
     mode = next; game = mode === 'memory' ? freshHandshake() : null; alibi = null; lock(true);
     modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.playMode === mode)));
-    pads.forEach(p => p.classList.remove('lit')); again.hidden = true; slowerReplay.hidden = true; ritualSelect.disabled = false; alibiMode.disabled = false; accuse.hidden = true; evidencePanel.hidden = true; accusation = null; exhibit = null;
+    pads.forEach(p => p.classList.remove('lit')); replay.textContent = 'Replay pattern'; again.hidden = true; slowerReplay.hidden = true; ritualSelect.disabled = false; alibiMode.disabled = false; accuse.hidden = true; evidencePanel.hidden = true; accusation = null; exhibit = null;
     veil.classList.toggle('chase-mode', mode === 'chase');
     veil.classList.toggle('alibi-mode', mode === 'alibi'); veil.classList.toggle('memory-mode', mode === 'memory'); veil.classList.remove('ritual-active', 'alibi-complete');
     document.getElementById('memoryOption').hidden = mode !== 'memory'; memorySetup.hidden = mode !== 'memory'; memoryOptions.open = false;
@@ -142,7 +142,7 @@ export function initPlay(state, refresh) {
     if (mode === 'memory') {
       const ritual = HANDSHAKE_RITUALS[game.ritual];
       status.textContent = masteryText(pet,'handshake');
-      const examples = { echo: 'Watch: Knock, Blink. Your turn: Knock, Blink.', mirror: 'Watch: Knock, Blink. Your turn: Blink, Knock.', duet: 'Their beat: Knock. Your beat: Blink. Your turn: Blink only.' };
+      const examples = { echo: 'Watch: Knock, Blink. Your turn: Knock, Blink.', mirror: 'Watch: Knock, Blink. Your turn: Blink, Knock.', duet: 'Watch only: Knock. Remember: Blink. Your turn: Blink only.' };
       ritualGuide.replaceChildren();
       const rule = document.createElement('strong'); rule.textContent = ritual.rule;
       const example = document.createElement('p'); example.textContent = examples[game.ritual];
@@ -306,19 +306,19 @@ export function initPlay(state, refresh) {
   async function demonstrate() {
     const token = ++generation;
     const pace = slow.checked ? 1.6 : 1;
-    lock(true); replay.disabled = true; slowerReplay.hidden = true; progress(); paintTrail(); previewReward();
+    lock(true); replay.disabled = true; replay.textContent = 'Replay pattern'; slowerReplay.hidden = true; progress(); paintTrail(); previewReward();
     const ritual = HANDSHAKE_RITUALS[game.ritual || 'echo'];
     ritualGuide.hidden = true;
-    status.textContent = ritual.rule + ' ' + handshakeReaction(pet); stage('watch', ritual.name + (game.familiar && game.round === 0 ? ' · your familiar opening' : ' · watch the ritual'));
+    status.textContent = 'Watch first. Gesture pads unlock after the demonstration. ' + ritual.rule + ' ' + handshakeReaction(pet); stage('watch', ritual.name + (game.familiar && game.round === 0 ? ' · your familiar opening' : ' · watch the ritual'));
     const sequence = handshakeDemonstration(game);
     cue.textContent = 'Watch…';
     const names = game.names || GESTURES;
-    document.getElementById('playAnnouncement').textContent = ritual.rule + ' Demonstration: ' + sequence.map((g, i) => (game.ritual === 'duet' ? (i % 2 ? 'your beat: ' : 'their beat: ') : '') + GESTURES[g]).join(', ');
+    document.getElementById('playAnnouncement').textContent = 'Watch first. ' + ritual.rule + ' Demonstration: ' + sequence.map((g, i) => (game.ritual === 'duet' ? (i % 2 ? 'remember: ' : 'watch only: ') : '') + GESTURES[g]).join(', ');
     await wait(650);
     for (const [beat, gesture] of sequence.entries()) {
       if (token !== generation) return;
-      pads[gesture].classList.add('lit'); cue.textContent = (game.ritual === 'duet' ? (beat % 2 ? 'YOUR BEAT · ' : 'Their beat · ') : '') + GESTURES[gesture]+' · '+names[gesture];
-      stage(game.ritual === 'duet' && beat % 2 === 0 ? 'their-beat' : 'watch', game.ritual === 'duet' ? (beat % 2 ? 'Remember this beat' : 'Their beat · do not repeat') : 'Move ' + (beat + 1) + ' of ' + sequence.length);
+      pads[gesture].classList.add('lit'); cue.textContent = (game.ritual === 'duet' ? (beat % 2 ? 'Watch · Remember ' : 'Watch · their move ') : '') + GESTURES[gesture]+' · '+names[gesture];
+      stage(game.ritual === 'duet' && beat % 2 === 0 ? 'their-beat' : 'watch', game.ritual === 'duet' ? (beat % 2 ? 'Remember this move for your turn' : 'Their move · watch only') : 'Move ' + (beat + 1) + ' of ' + sequence.length);
       animate(pads[gesture].querySelector('svg'), [{ transform: 'scale(.85)' }, { transform: 'scale(1.14)' }, { transform: 'scale(1)' }], { duration: 400 });
       puppet.gesture(GESTURES[gesture].toLowerCase());
       await wait(700 * pace);
@@ -326,7 +326,7 @@ export function initPlay(state, refresh) {
       pads[gesture].classList.remove('lit'); cue.textContent = '·'; await wait(220 * pace);
     }
     if (token !== generation) return;
-    cue.textContent = game.ritual === 'mirror' ? 'Last move first' : game.ritual === 'duet' ? 'Your half of the duet' : 'Your turn';
+    cue.textContent = game.ritual === 'mirror' ? 'Your turn · last move first' : game.ritual === 'duet' ? 'Your turn · your beats only' : 'Your turn';
     stage('answer', ritual.name + ' · your turn'); status.textContent = ritual.rule + ' ' + handshakePattern(game).length + ' moves. Keys 1–4 or tap. Take your time.';
     document.getElementById('playAnnouncement').textContent = 'Your turn. ' + ritual.rule;
     lock(false); replay.disabled = false; slowerReplay.hidden = slow.checked; pads[0].focus({ preventScroll: true });
@@ -346,10 +346,10 @@ export function initPlay(state, refresh) {
     if (mode !== 'memory' || !game || game.complete || !start.hidden || !veil.classList.contains('open')) return;
     cancelStageMotion();
     generation++; lock(true); game.cursor = 0; paintTrail(); pads.forEach(p => p.classList.remove('lit'));
-    status.textContent = 'Paused. Replay the pattern when you are ready. Your completed rounds are safe.';
+    status.textContent = 'Gesture pads are paused. Choose Resume this round to watch the pattern again from its first move. Your completed rounds are safe.';
     document.getElementById('playAnnouncement').textContent = status.textContent;
     stage('paused', 'The rehearsal is waiting');
-    cue.textContent = 'Take your time'; replay.disabled = false; slowerReplay.hidden = replay.hidden || slow.checked;
+    cue.textContent = 'Paused · resume this round'; replay.textContent = 'Resume this round'; replay.disabled = false; slowerReplay.hidden = replay.hidden || slow.checked;
   }
   window.addEventListener('blur', pauseHandshake);
   window.addEventListener('shelflife:play', e => {
@@ -413,9 +413,9 @@ export function initPlay(state, refresh) {
     puppet.gesture(result === 'retry' ? 'bump' : GESTURES[i].toLowerCase());
     if (navigator.vibrate) navigator.vibrate(8);
     if (result === 'retry') {
-      lock(true); generation++; stage('retry', 'Same round. Another rehearsal.'); cue.textContent = 'No harm done.';
-      status.textContent = handshakeReaction(pet, 'retry') + ' Watch the same pattern again. Completed rounds stay safe.';
-      replay.disabled = false; slowerReplay.hidden = slow.checked; replay.focus({ preventScroll: true });
+      lock(true); generation++; stage('retry', 'Same round · retry when ready'); cue.textContent = 'Wrong move · replay this round';
+      status.textContent = 'Wrong move. ' + HANDSHAKE_RITUALS[game.ritual || 'echo'].rule + ' Choose Retry this round or Replay slowly to watch again. Completed rounds stay safe. ' + handshakeReaction(pet, 'retry');
+      replay.textContent = 'Retry this round'; replay.disabled = false; slowerReplay.hidden = slow.checked; replay.focus({ preventScroll: true });
       return;
     }
     if (result === 'correct') { status.textContent = game.cursor + ' of ' + handshakePattern(game).length + ' remembered. ' + (game.ritual === 'mirror' ? 'Keep working backwards.' : game.ritual === 'duet' ? 'Your beats only.' : 'Keep going.'); return; }
