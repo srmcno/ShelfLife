@@ -17,6 +17,8 @@ test('shabby rug, readable ball, physical outcomes and saved aftermath at phone 
   await page.setViewportSize({width,height:844});await page.locator('#hangoutBtn').click();
   await page.locator('#rugThrow').selectOption('soft');await page.locator('#rugAction').click();
   const ball=page.locator('.rug-ball').first();await expect(ball).toBeVisible();const bounds=await ball.boundingBox();expect(bounds.width).toBeGreaterThanOrEqual(30);expect(bounds.width).toBeLessThanOrEqual(35);
+  const offset=await ball.evaluate(el=>{const b=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();return Math.hypot(b.x+b.width/2-p.x-parseFloat(el.style.left)*p.width/100,b.y+b.height/2-p.y-parseFloat(el.style.top)*p.height/100);});
+  expect(offset,'the spinning ball stays centred on its physics position').toBeLessThan(1);
   await expect(page.locator('#rugOutcome')).toContainText(/catch/i);
   await page.screenshot({path:`test-results/repair-rug-${info.project.name}-${width}.png`,fullPage:true});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);

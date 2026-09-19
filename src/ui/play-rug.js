@@ -166,7 +166,7 @@ export function initPlayRug(state, refresh) {
         if(kind==='bubble'){node.type='button';node.dataset.bubble=String(item.id);node.setAttribute('aria-label','Pop bubble');node.tabIndex=-1;}
         nodes.set(key,node);entities.append(node);}
       node.style.left=item.x/10+'%';node.style.top=item.y/6+'%';node.style.setProperty('--diameter',((item.radius||item.r||24)*2/10)+'%');
-      if(kind==='ball'){node.dataset.state=item.state;node.style.setProperty('--ball-rotation',item.rotation+'rad');}if(kind==='ball')node.style.rotate=((item.x+item.y)*.6)+'deg';
+      if(kind==='ball'){node.dataset.state=item.state;node.firstElementChild.style.transform='rotate('+((item.x+item.y)*.6)+'deg)';}
     }
     for(const [key,node] of nodes)if(!current.has(key)){node.remove();nodes.delete(key);}
     el('rugPop').disabled=!game.bubbles.length;
