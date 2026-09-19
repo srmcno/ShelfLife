@@ -6,7 +6,7 @@ export function createArrivalInvitation() {
   invitation.className = 'empty-shelf arrival-invitation';
   const heading = document.createElement('div');
   heading.className = 'arrival-copy';
-  heading.innerHTML = '<span class="empty-kicker">Room for someone peculiar</span><h1>Small creatures.<br>Long memories.</h1><p>Make a little life. Feed it, play together, and discover what it gets up to when you look away.</p>';
+  heading.innerHTML = '<span class="empty-kicker">Nobody here stays buried</span><h1>Small creatures.<br>Long memories.</h1><p>Move someone in. Feed it, play with it, and keep an eye on the teeth. Nothing here dies properly.</p>';
   const cast = document.createElement('div');
   cast.className = 'arrival-cast';
   for (const arrival of ARRIVALS) {

@@ -56,7 +56,7 @@ export function initPlay(state, refresh) {
   memorySetup.after(ritualGuide);
   const alibiLabel = document.createElement('label'); alibiLabel.className = 'parlour-select'; alibiLabel.textContent = 'Investigation';
   const alibiMode = document.createElement('select'); alibiMode.id = 'alibiDifficulty'; alibiMode.setAttribute('aria-label', 'Alibi investigation');
-  alibiMode.innerHTML = '<option value="prove">Prove it · lie + evidence</option><option value="quick">Spot the lie · casual</option>'; alibiLabel.append(alibiMode); alibiRoot.prepend(alibiLabel);
+  alibiMode.innerHTML = '<option value="prove">Prove it · lie + evidence</option><option value="quick">Spot the lie · beginner practice</option>'; alibiLabel.append(alibiMode); alibiRoot.prepend(alibiLabel);
   const evidencePanel = document.createElement('div'); evidencePanel.className = 'alibi-evidence-panel'; evidencePanel.hidden = true;
   const evidenceTitle = document.createElement('h3'); evidenceTitle.textContent = 'Which record contradicts it?';
   const evidenceHint = document.createElement('p'); evidenceHint.className = 'hint'; evidenceHint.textContent = 'Every record is true. Only one disproves the lie. A–C: records · 1–3: statements.';
@@ -219,7 +219,7 @@ export function initPlay(state, refresh) {
   function startAlibi() {
     veil.classList.remove('alibi-complete');
     previewReward();
-    alibi = newAlibi(state, pet, Math.random, { mode: alibiMode.value === 'auto' ? null : alibiMode.value }); alibiMode.disabled = true;
+    alibi = newAlibi(state, pet, Math.random, { mode: alibiMode.value === 'auto' ? null : alibiMode.value, practice: alibiMode.value === 'quick' }); alibiMode.disabled = true;
     notebook.hidden = false; notebook.open = false;
     facts.replaceChildren(...alibi.notebook.map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
     alibiNext.hidden = true; alibiVerdict.textContent = '';
@@ -380,7 +380,7 @@ export function initPlay(state, refresh) {
     ritualRecord.hidden = true;
     encore.disabled = true; ritualSelect.disabled = true; memoryOptions.open = false; workspace.scrollTop = 0; veil.classList.add('ritual-active'); start.hidden = true; replay.hidden = false; again.hidden = true; demonstrate();
   });
-  again.addEventListener('click', () => { if (mode !== 'memory' || !game?.complete) return; game = restartHandshake(game); ritualRecord.hidden = true; encore.disabled = true; ritualSelect.disabled = true; memoryOptions.open = false; workspace.scrollTop = 0; veil.classList.add('ritual-active'); start.hidden = true; again.hidden = true; replay.hidden = false; demonstrate(); });
+  again.addEventListener('click', () => { if (mode !== 'memory' || !game?.complete) return; game = restartHandshake(game, pet); ritualRecord.hidden = true; encore.disabled = true; ritualSelect.disabled = true; memoryOptions.open = false; workspace.scrollTop = 0; veil.classList.add('ritual-active'); start.hidden = true; again.hidden = true; replay.hidden = false; demonstrate(); });
   ritualSelect.addEventListener('change', () => { if (pet && mode === 'memory' && !ritualSelect.disabled) setMode('memory'); });
   function replayPattern(slower = false) {
     if (!replayHandshake(game)) return;

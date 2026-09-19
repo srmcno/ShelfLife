@@ -34,7 +34,7 @@ export function recordScene(state, kind, title, text, cast=[], now=Date.now(), s
   l.scenes.unshift(scene); l.scenes.length=Math.min(18,l.scenes.length);
   fileScene(state, scene);
   const echoKind = ({court:'court',market:'market',outing:'expedition'})[kind] || (stage?.key==='game:chase'?'chase':null);
-  if(echoKind&&cast[0])rememberEcho(state,echoKind,cast[0],'scene:'+scene.id,now);
+  if(echoKind&&cast[0])rememberEcho(state,echoKind,cast[0],'scene:'+scene.id,now,echoKind==='court'?stage?.branch:null);
   return scene;
 }
 export function recordGameLife(state, pet, kind, now=Date.now(), victory=true) {
@@ -172,7 +172,11 @@ export function chooseOuting(state, choice, now=Date.now()) {
   const text=crew.map(p=>p.name).join(' and ')+' returned with '+relic.name.toLowerCase()+'. '+relic.line+' '+line;
   recordScene(state,'outing',route.name,text,crew.map(p=>p.id),now,{key:'outing',branch:route.id,object:relic.id});addNote(state,text,'beyond the shelf','scheme');
   o.result={relic:relic.id,fresh};
-  if(o.receipt && !o.practice && !o.returnedAt && o.score>=3) completeMastery(state,'expedition',o.masteryTier,o.receipt);
+  if(o.receipt && !o.practice && !o.returnedAt && o.score>=3) {
+    const before=mastery(state,'expedition').tier;
+    completeMastery(state,'expedition',o.masteryTier,o.receipt);
+    if(mastery(state,'expedition').tier>before)o.result.masteryUnlocked=mastery(state,'expedition').tier;
+  }
   recordEscapadeEvent(state, { kind: 'play', petIds: crew.map(p => p.id), activity: 'outing' }, now);
   if(o.mission){
     const after=outingSnapshot(state),builtBefore=l.projects.includes(o.route);
@@ -180,7 +184,9 @@ export function chooseOuting(state, choice, now=Date.now()) {
     if(after.parts.length>=2&&!builtBefore){l.projects.push(o.route);awardDiscovery(state,'built:'+o.route,6,now);}
     o.result.project=o.route;o.result.built=!builtBefore&&l.projects.includes(o.route);o.result.found=after.recovered;
     if(o.missionRevision>=2&&!o.returnedAt){
-      const page=o.route+':'+o.edition; l.trailPages||=[];
+      // A detour visits different encounters. Keep its field note separate so
+      // the archive never attributes unvisited stops or consumes the main page.
+      const page=o.route+':'+o.edition+(o.masteryTier>=2&&o.choices[0]===1?':detour':''); l.trailPages||=[];
       o.result.page=page;o.result.pageFresh=!l.trailPages.includes(page);
       if(o.result.pageFresh){l.trailPages.push(page);l.xp+=2;}
     }

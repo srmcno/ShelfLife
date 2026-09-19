@@ -1,5 +1,7 @@
 # SHELF LIFE — COMEDY DIRECTION & IMPLEMENTATION SPEC
 
+September 19 follow-through: the sections below are historical direction, not a claim that their old counts or proposed distribution rules describe the current runtime. The current voice pass covers arrivals, common care, rug events/discoveries, Handshake, Chase and all sixteen adventure endings. See `repair/completion-sep19.md` for implementation and evidence. Keep instructions plain, let physical beats land, and use the actual participant and event for callbacks. Existing keepsake albums retain their original authored edition; do not retroactively rewrite saved experiences.
+
 *Grounded against the actual repo: `src/state.js` (`addNote(state,text,from,kind)`, notes capped at 40), `src/content/copy.js` (298 strings, median ~53 chars), `src/engine/behavior.js` (`fill()` with `{p}{n}{m}{q}`), `src/content/traits.js` (65 archetypes with `notes[]`/`social[]`), `css/style.css:210` (`.note` — 20px handwriting, 28px line-height, `minmax(224px,1fr)` grid, **no `white-space` rule**), `src/ui/render.js:157` (`innerHTML` after `escapeHtml`).*
 
 ---

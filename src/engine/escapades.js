@@ -1,4 +1,5 @@
 import { ESCAPADES, escapadeById } from '../content/escapades.js';
+import { ESCAPADE_CONTENT_VERSION, escapadeAtVersion } from '../content/escapades-legacy.js';
 import { normalizeEscapades } from '../escapade-state.js';
 import { addNote } from '../state.js';
 import { awardDiscovery, recordScene } from './life.js';
@@ -7,7 +8,7 @@ const personalize = (text, petName) => String(text || '').replaceAll('{name}', (
 const storyKey = (episodeId, endingId) => episodeId + ':' + endingId;
 
 function albumView(record) {
-  const episode = escapadeById(record.episodeId), ending = episode.endings.find(item => item.id === record.endingId);
+  const episode = escapadeAtVersion(record.episodeId, record.contentVersion), ending = episode.endings.find(item => item.id === record.endingId);
   return { ...record, episode, ending, keepsake: ending.keepsake,
     text: personalize(ending.text, record.petName), callback: personalize(ending.callback, record.petName) };
 }
@@ -50,7 +51,7 @@ export function finishEscapade(state, endingId, now = Date.now()) {
   const key = storyKey(episode.id, ending.id), previous = journal.album.find(item => item.key === key);
   const fresh = !previous;
   const receipt = previous || { key, episodeId: episode.id, endingId: ending.id, approachId: active.approachId,
-    petId: active.petId, petName: active.petName, at: now };
+    petId: active.petId, petName: active.petName, at: now, contentVersion: ESCAPADE_CONTENT_VERSION };
   if (fresh) journal.album.push(receipt);
   journal.completions = Math.min(100000, journal.completions + 1);
   journal.active = null;
@@ -60,7 +61,7 @@ export function finishEscapade(state, endingId, now = Date.now()) {
   const discoveries = fresh && awardDiscovery(state, 'escapade:' + key, 2, now) ? 2 : 0;
   const text = personalize(ending.text, active.petName), callback = personalize(ending.callback, active.petName);
   recordScene(state, 'escapade', ending.title, text, [active.petId], now,
-    { key: 'escapade', branch: episode.id, object: ending.keepsake });
+    { key: 'escapade', branch: episode.id, object: ending.keepsake, endingId: ending.id, contentVersion: ESCAPADE_CONTENT_VERSION });
   addNote(state, callback || text, active.petName, 'note');
   return { fresh, discoveries, record: albumView(receipt), episode, ending, text, callback };
 }

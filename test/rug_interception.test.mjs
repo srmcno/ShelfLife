@@ -47,3 +47,53 @@ test('challenge counts every catch independently of caption priority and ignores
  const recovery=[{type:'recover',id:'recovery'},{type:'catch',id:'recovered',bounces:1,high:true,recovered:true}];
  for(const level of [1,2]){const next={level,count:0};countRugChallenge(next,recovery);assert.equal(next.count,1);countRugChallenge(next,recovery);assert.equal(next.count,1);}
 });
+
+test('a real fast throw fumbles, stays physical, recovers after a reaction, then returns only once', () => {
+  const game = createRug(pet);
+  const ball = tossBall(game, { x: 80, y: 120, vx: -1100, vy: 0 });
+  const events = [];
+  let dropped = false;
+  for (let frame = 0; frame < 600; frame++) {
+    const previous = { x: ball.x, y: ball.y };
+    const packet = updateRug(game, 1 / 60);
+    events.push(...packet);
+    if (packet.some(event => event.type === 'fumble')) {
+      dropped = true;
+      assert.equal(ball.state, 'dropped');
+      assert.equal(game.catches, 0);
+      assert.ok(Math.hypot(ball.x - previous.x, ball.y - previous.y) < 30, 'contact does not teleport the ball');
+    }
+    if (ball.state === 'dropped') {
+      assert.equal(ball.id, game.balls.find(item => item.id === ball.id)?.id);
+      assert.ok(ball.x >= ball.r && ball.x <= 1000 - ball.r);
+      assert.ok(ball.y >= ball.r && ball.y <= 490 - ball.r);
+    }
+  }
+  assert.equal(dropped, true);
+  const fumbles = events.filter(event => event.type === 'fumble');
+  const recoveries = events.filter(event => event.type === 'recover');
+  const catches = events.filter(event => event.type === 'catch');
+  const returns = events.filter(event => event.type === 'return');
+  assert.equal(fumbles.length, 1);
+  assert.equal(recoveries.length, 1);
+  assert.equal(catches.length, 1);
+  assert.equal(returns.length, 1);
+  assert.ok(recoveries[0].time - fumbles[0].time >= .3);
+  assert.ok(returns[0].time - catches[0].time >= 1.15);
+  assert.ok([...fumbles, ...recoveries, ...catches, ...returns].every(event => event.ballId === ball.id));
+  assert.equal(catches[0].recovered, true);
+  assert.equal(game.catches, 1);
+  assert.equal(game.misses, 0);
+  assert.equal(game.balls.length, 0);
+});
+
+test('personality refusal is a visible unresolved throw, never a catch or reward', () => {
+  const game = createRug({ id: 'refuses', traits: ['spiteful'] });
+  tossPreset(game);
+  const refused = tossPreset(game);
+  const events = advance(game, 9).filter(event => event.ballId === refused.id);
+  assert.equal(events.filter(event => event.type === 'refuse').length, 1);
+  assert.equal(events.some(event => ['catch', 'recover', 'return'].includes(event.type)), false);
+  assert.equal(game.refusals, 1);
+  assert.equal(game.balls.length, 0);
+});

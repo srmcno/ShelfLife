@@ -13,29 +13,29 @@ export const ESCAPADES = [
     ],
     endings: [
       { id: 'discovery', label: 'Name a new constellation', keepsake: 'crumb-telescope', title: 'The Biscuit-Scope',
-        text: '{name} builds a telescope from a paper tube and names the crumb The Great Maybe. Its orbit ends when someone opens a window. The star chart is adjusted: the constellation now includes the floor. Nobody has proved that the floor is not part of space.',
-        callback: '{name} insists that a clear view of the carpet is excellent seeing conditions.' },
+        text: '{name} trains the paper telescope on the crumb. There is something eating it from the other side. The new star chart has eight legs. The astronomer folds the tube shut and labels it after the discoverer. It scratches at the label.',
+        callback: '{name} keeps a thumb over the telescope when the scratching starts.' },
       { id: 'supper', label: 'Invite the comet to supper', keepsake: 'orbit-saucer', title: 'A Saucer for a Comet',
-        text: '{name} sets a place for the crumb and gently untangles it. The comet lands on a saucer with no casualties and rather more butter than expected. A wire model preserves its famous orbit. The comet sheds a piece of crust. They bury it under the saucer. Breakfast is now a protected graveyard.',
-        callback: '{name} reserves the little saucer for distinguished visitors from above.' }
+        text: '{name} untangles the crumb and seats it on a saucer. It has legs underneath. They set eight more places. The butter is carried away before anyone can introduce themselves; the saucer stays as a warning about inviting food home.',
+        callback: '{name} checks beneath the saucer before laying the table.' }
     ]
   },
   {
     id: 'small-haunting',
     title: 'A Very Small Haunting',
-    pitch: 'A ghost the size of a sugar grain has applied to haunt {name}. Its audition is mostly a draught. In the margin of its application, it has written: “Somewhere quiet would be nice.”',
-    care: { need: 'fuss', label: 'A little reassurance', line: 'Give {name} a moment of personal fuss before meeting the applicant. Being chosen for a haunting is a lot to process.' },
+    pitch: 'A ghost the size of a sugar grain has applied to haunt {name}. It fits through a stitch. It has already measured the hollow behind one eye.',
+    care: { need: 'fuss', label: 'Steady the host', line: 'Give {name} a moment of personal fuss before meeting the applicant. The ghost has brought its own key.' },
     approaches: [
-      { id: 'rehearse', activity: 'memory', label: 'Rehearse the haunting', line: 'Play Secret Handshake. An imperfect performance will make the nervous little ghost feel considerably better.' },
+      { id: 'rehearse', activity: 'memory', label: 'Rehearse the haunting', line: 'Play Secret Handshake. The ghost must learn which movements belong to the resident.' },
       { id: 'references', activity: 'alibi', label: 'Check its references', line: 'Finish a round of The Alibi. {name} would like some practice before asking a ghost about a gap in its employment.' }
     ],
     endings: [
       { id: 'home', label: 'Offer it a place to stay', keepsake: 'ghost-bed', title: 'The Spare Matchbox',
-        text: '{name} lines a matchbox with cotton and calls it a guest room. The ghost spends its first evening haunting the pillow, then falls asleep halfway through “boo”. In the morning the pillow is one degree colder. The rent is one small shiver, payable whenever.',
-        callback: '{name} leaves the matchbox open a crack. The guest dislikes draughts.' },
+        text: '{name} gives the ghost a matchbox bed. By morning it has hollowed a second pillow out of the first. It says its mother is staying. The ghost is a sugar grain wide; the impression beside it has adult teeth.',
+        callback: '{name} knocks on the matchbox. Two things answer at different heights.' },
       { id: 'holiday', label: 'Give it some time off', keepsake: 'holiday-bell', title: 'The Off-Duty Bell',
-        text: '{name} excuses the ghost from haunting and lends it a bell to ring when it feels like company. It takes the bell for a long, inaudible walk. When it returns, there is a tiny sunset caught in the clapper. The clapper is now a tooth. It was not a tooth when it left. The ghost refuses to say whose holiday this was.',
-        callback: '{name} sometimes holds the bell to the light to see where the ghost went.' }
+        text: '{name} gives the ghost a bell and a day off. It returns without the clapper. A tooth fits the gap perfectly. The ghost says the owner was finished with it. The bell rings once from inside the locked matchbox.',
+        callback: '{name} keeps the bell away from its mouth. It rings when it gets too close.' }
     ]
   },
   {
@@ -49,11 +49,11 @@ export const ESCAPADES = [
     ],
     endings: [
       { id: 'crown', label: 'Give the button a monarch', keepsake: 'button-crown', title: 'The Crown of Almost Nothing',
-        text: '{name} crowns the button with a bottle cap. The new monarch immediately abolishes buttonholes, calling them a threat to national unity. The thread is appointed foreign minister. It crosses the border six times before lunch, which everyone agrees is diplomacy.',
-        callback: '{name} still refers to the button tin as “the neighbouring powers”.' },
+        text: '{name} crowns the button with a bottle cap. The monarch demands a neck for the opening ceremony. The thread supplies one and pulls it tight. They prop the cap back up afterwards. The coronation portrait is taken from below.',
+        callback: '{name} loosens the thread before addressing the crown.' },
       { id: 'passport', label: 'Make everyone a citizen', keepsake: 'button-passport', title: 'A Passport to One Button',
-        text: '{name} opens all four borders and issues passports small enough to lose inside a passport. The first visitor is the thread. It stays for tea and accidentally stitches the country to a cushion. The constitution is amended to allow a nation to be comfortable.',
-        callback: '{name} stamps the passport before visiting the other end of the shelf.' }
+        text: '{name} opens all four borders. The thread enters one hole and leaves through another, stitching the country to a cushion. The button keeps issuing passports. Nobody can leave. The queue has become upholstery.',
+        callback: '{name} carries scissors when visiting the button.' }
     ]
   },
   {
@@ -67,11 +67,11 @@ export const ESCAPADES = [
     ],
     endings: [
       { id: 'bottle', label: 'Rent it a little bottle', keepsake: 'rain-bottle', title: 'The Bottled Bedsit',
-        text: '{name} finds a glass bottle with a cork roof. The rain moves in and hangs a tiny curtain. On fine evenings it fogs the window so it can pretend the weather is terrible outside. The receipts dry out. One continues to bloom, out of loyalty.',
-        callback: '{name} taps the bottle before looking in. A home is a home.' },
+        text: '{name} bottles the rain and corks it. Each morning the waterline is higher. The bottle is dry outside. They move it away from the beds and stop asking why everybody wakes up thirsty.',
+        callback: '{name} counts the sleeping residents before checking the bottle.' },
       { id: 'boat', label: 'Build it a boat instead', keepsake: 'rain-boat', title: 'The Drizzle Packet',
-        text: '{name} folds a boat from a receipt and points it towards the windowsill. The rain becomes its own sea, which saves enormously on travel. It sends back a damp paper flag from the far side of the saucer. The message is simply: “Room to stretch.”',
-        callback: '{name} keeps the paper boat ready in case the rain wants to visit.' }
+        text: '{name} folds the rain a receipt boat. It sets out across a saucer and comes back towing a drowned fly. The fly gets up. The rain pushes it back under with a careful little wave. The boat is kept on dry wood.',
+        callback: '{name} shakes the paper boat before putting it down. Sometimes a leg falls out.' }
     ]
   },
   {
@@ -85,17 +85,17 @@ export const ESCAPADES = [
     ],
     endings: [
       { id: 'years', label: 'Celebrate all the unknown years', keepsake: 'ever-candle', title: 'The Candle with No Number',
-        text: '{name} lights one candle for every year nobody can remember. Fortunately, one will do. It refuses to burn down until someone makes a wish, so the committee wishes for more time to think. The flame settles into a comfortable glow. Nobody is late for anything.',
-        callback: '{name} calls the candle “about the right number”.' },
-      { id: 'here', label: 'Celebrate being here together', keepsake: 'unbirthday-rosette', title: 'The Glad-You-Are-Here Ribbon',
-        text: '{name} crosses “birthday” off the invitation and writes “here”. A ribbon is awarded for attending, including to the table. They sing so loudly a tooth falls into the icing. The table wins Best Smile and is immediately accused of nepotism.',
-        callback: '{name} keeps the ribbon where it can be seen on completely ordinary days.' }
+        text: '{name} lights the candle and asks everyone to make a wish. The flame leans towards each mouth in turn. By midnight it has grown an inch. They stop wishing. The wick keeps whispering the unfinished ones.',
+        callback: '{name} snuffs the candle with a cup. It has learned not to blow.' },
+      { id: 'here', label: 'Celebrate being here together', keepsake: 'unbirthday-rosette', title: 'The Still-Here Ribbon',
+        text: '{name} awards a ribbon for still being here. The table is eligible. During the song a tooth lands in the icing; the table takes it through a crack. They award it Best Smile before anybody sees the rest.',
+        callback: '{name} leaves the ribbon on the table. The crack opens if anyone tries to move it.' }
     ]
   },
   {
     id: 'midnight-post',
     title: 'The Midnight Post Office',
-    pitch: 'A letter addressed to Nobody in Particular has arrived for {name} to sort. It weighs slightly more than paper should. Inside, someone asks whether there is room in the world for one more peculiar thing.',
+    pitch: 'A letter addressed to Nobody in Particular has arrived for {name} to sort. It weighs slightly more than paper should. Something inside presses against the envelope when the room gets quiet. The return address is underneath the shelf.',
     care: { need: 'fuss', label: 'A moment for the postmaster', line: 'Give {name} some personal fuss before answering a question that deserves a careful answer.' },
     approaches: [
       { id: 'sender', activity: 'alibi', label: 'Learn to read between the lines', line: 'Finish The Alibi. Whatever you deduce, {name} will have practised listening to an unlikely account.' },
@@ -103,11 +103,11 @@ export const ESCAPADES = [
     ],
     endings: [
       { id: 'deliver', label: 'Let the whole shelf answer', keepsake: 'nobody-stamp', title: 'The Stamp for Nobody',
-        text: '{name} carries the letter along the shelf and collects a small yes from every quiet corner. The reply is stamped with a button dipped in ink. By morning, a new envelope waits beside it: “Thank you. I thought so, but it helped to ask.” Nobody signs either letter.',
-        callback: '{name} checks the quiet corners for outgoing post.' },
+        text: '{name} carries the letter along the shelf. Every quiet corner says yes. The reply is stamped and posted. That night each corner is occupied by an elbow. There are more elbows than corners. Nobody will say which ones belong together.',
+        callback: '{name} addresses outgoing letters to the elbows separately.' },
       { id: 'reply', label: 'Write a personal reply', keepsake: 'reply-envelope', title: 'The First Letter Back',
-        text: '{name} writes: “There is room beside me. You may be peculiar quietly or loudly; we have both.” The letter disappears into the crack behind the shelf. An answer emerges smelling faintly of distant rain. A correspondence begins. Neither writer asks the other to be less strange.',
-        callback: '{name} leaves a little space beside the inkpot for the next letter.' }
+        text: '{name} writes, “There is room beside me.” An envelope arrives with a strip of measuring tape inside. Then another, containing one damp inch of something. It is a long correspondence. The promised space is getting wider.',
+        callback: '{name} leaves new envelopes sealed until it has moved the bowl.' }
     ]
   },
   {
@@ -121,29 +121,29 @@ export const ESCAPADES = [
     ],
     endings: [
       { id: 'solo', label: 'Give the spoon its great solo', keepsake: 'silver-baton', title: 'The Needle Baton',
-        text: '{name} raises a needle baton. The spoon sings its one note until a distant kettle answers in harmony. The fork withdraws its review. For a moment the whole cupboard rings like a cathedral, and even the cups stand a little straighter. The interval snacks receive a separate curtain call.',
-        callback: '{name} keeps the baton wrapped in felt. Even a conductor needs quiet.' },
+        text: '{name} raises the needle baton. The spoon holds its note until the kettle screams and something drops out of the spout. The fork turns its review face down. They keep the baton, but rehearse with the kettle lid tied shut.',
+        callback: '{name} wraps the baton in felt. The kettle still flinches.' },
       { id: 'chorus', label: 'Invite everyone into the chorus', keepsake: 'choir-ticket', title: 'The Everyone Ticket',
-        text: '{name} hands a programme to every object willing to make a noise. The spoon leads, the fork hums, and the drawer contributes one exceptionally moving creak. The audience becomes the chorus. Afterwards, nobody can agree what the opera was about. Everyone remembers their part.',
-        callback: '{name} has kept one ticket. It says “Admit all”.' }
+        text: '{name} gives every object a ticket. The drawer supplies a creak, the fork a rattle, and the spoon a note that will not stop. They shut the drawer on the chorus. It carries on for three days. The remaining ticket says “Admit all”. Nobody is tearing it.',
+        callback: '{name} listens at the drawer before opening it.' }
     ]
   },
   {
     id: 'drawer-dragon',
     title: 'The Last Drawer Dragon',
-    pitch: '{name} has been summoned to deal with a dragon in the sewing box. It is mostly lint, but it has collected three pins and developed the appropriate attitude. Its roar is a tiny, embarrassed sneeze.',
+    pitch: '{name} has been summoned to deal with a dragon in the sewing box. It is mostly lint, but it has collected three pins and developed the appropriate attitude. Its sneeze drives a pin through the drawer lining.',
     care: { need: 'food', label: 'A snack before dragon business', line: 'Give {name} a personal snack. Nobody should negotiate with a dragon while thinking about lunch.' },
     approaches: [
-      { id: 'mystery', activity: 'alibi', label: 'Investigate the missing treasure', line: 'Finish The Alibi. {name} would like some detective practice before questioning anything with imaginary flames.' },
+      { id: 'mystery', activity: 'alibi', label: 'Investigate the missing treasure', line: 'Finish The Alibi. {name} would like some detective practice before questioning anything with pins in its mouth.' },
       { id: 'claim', activity: 'court', label: 'Hear the dragon’s claim', line: 'Finish a case in Shelf Court. Even a difficult hearing gives {name} something to bring to the sewing box.' }
     ],
     endings: [
       { id: 'keeper', label: 'Appoint it keeper of small treasures', keepsake: 'dragon-key', title: 'The Treasury Key',
-        text: '{name} names the dragon Keeper of Things Too Small to Find Again. It takes the job extremely seriously and sorts its hoard into pins, nearly pins, and emotionally significant fluff. A brass key is issued to {name}. It opens nothing, but the dragon recognises the authority.',
-        callback: '{name} shows the treasury key before borrowing even a little bit of thread.' },
+        text: '{name} appoints the lint dragon keeper of small treasures. It sorts the pins, the teeth and the things that used to be attached to the teeth. The brass key opens nothing. It is for prising the dragon’s mouth apart when someone needs a pin.',
+        callback: '{name} wipes the treasury key after every use.' },
       { id: 'gifts', label: 'Show it how presents work', keepsake: 'dragon-parcel', title: 'The Dragon’s First Present',
-        text: '{name} explains that a treasure can become larger by belonging to someone else. The dragon thinks for a long time, then wraps its best pin in velvet. Inside is also a scale made of lint. It keeps the other two pins. Generosity, it decides, is something to practise.',
-        callback: '{name} has never opened the velvet wrapping without folding it neatly afterwards.' }
+        text: '{name} asks the dragon for a present. It wraps its sharpest pin in velvet, point out. The parcel keeps closing when anyone tries to unwrap it. The dragon has given away one of its mouths. It seems to miss that one.',
+        callback: '{name} feeds a thread through the velvet before opening it.' }
     ]
   }
 ];

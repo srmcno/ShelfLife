@@ -1,0 +1,11 @@
+# Rug room art — September 19 follow-through
+
+Final asset: assets/rooms/play-rug.webp, 1536×1024, WebP quality85, 378910 bytes. Also used by the cabinet backdrop. Built-in image generation produced the artwork; cwebp encoded the selected PNG. No saved creature artwork was recolored or replaced.
+
+The previous published image was a photographic-looking ochre parlor with a round rug. The first new generated candidate was still too realistic. The selected second iteration has stronger ink edges, simplified gouache masses, mould-green wood, an irregular oxblood rug, a gutted armchair and a hand-shaped damp mark. Desktop and phone review used the actual mounted resident, controls and toy geometry rather than the asset alone.
+
+Exact final edit prompt (the first generated candidate was the input reference):
+
+> Repaint this environment as a strongly stylized 2D hand-drawn adult gothic cartoon game background. Current image is far too realistic, texture-heavy and too dark. KEEP the general layout, furniture at edges, central worn red rug and open game area. CHANGE the medium and forms completely: bold uneven charcoal outlines, angular crooked architecture, flat gouache color blocks with sparse brush grain, exaggerated sagging chair with dangling stitches, longer bent spindly lamp, mismatched teeth in a chipped dish, a clear long-fingered damp stain reaching from behind the chair (a stain, not a character), dark empty doorway. Thick intentional drawn outlines on every large object. Broad pale tobacco-green wall, stronger desaturated bone light across the central rug; central floor must be visibly lighter. Macabre eccentric handmade theatre illustration for adults with vicious little domestic details; unsettling, dry and grubby. NO photorealism, no detailed photographic textures, no painterly realism, no cozy cute children's book. Simplify the rug pattern heavily to frayed strips and scuffed patches so it reads well on phones. Preserve no characters/no text/no UI/no ball. Landscape 1536x1024.
+
+Runtime details: stage keeps its 5:3 ratio, crops around center56%, and preserves the open floor around the collision ground. New foreground aftermath props remain DOM/CSS illustrations so they can reflect actual saved events and respect reduced motion independently of the bitmap.

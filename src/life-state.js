@@ -15,12 +15,12 @@ export function normalizeLife(raw, established=false) {
   for (const k of ['xp','serial','outings','courtWins','courtPlays','courtBest','lastSeen','marketSerial','marketRuns','marketBest','marketErrandBest','marketErrandBestV4']) s[k]=number(s[k],k==='lastSeen'?1e14:1e9);
   s.marketErrandBestV5=[0,1,2].map(tier=>number(Array.isArray(s.marketErrandBestV5)?s.marketErrandBestV5[tier]:0,1000000));
   s.day=typeof s.day==='string'?s.day.slice(0,10):'';
-  s.trailPages=[...new Set((Array.isArray(s.trailPages)?s.trailPages:[]).filter(id=>typeof id==='string'&&/^(drawer|fridge|cupboard):[0-7]$/.test(id)))].slice(0,24);
+  s.trailPages=[...new Set((Array.isArray(s.trailPages)?s.trailPages:[]).filter(id=>typeof id==='string'&&/^(drawer|fridge|cupboard):[0-7](:detour)?$/.test(id)))].slice(0,48);
   s.projects=[...new Set((Array.isArray(s.projects)?s.projects:[]).filter(id=>['drawer','fridge','cupboard'].includes(id)))];
   s.projectParts=Object.fromEntries(['drawer','fridge','cupboard'].map(id=>[id,[...new Set((Array.isArray(s.projectParts?.[id])?s.projectParts[id]:[]).filter(i=>Number.isInteger(i)&&i>=0&&i<3))]]));
   for (const k of ['daily','awards','relics','displayed']) s[k]=[...new Set((Array.isArray(s[k])?s[k]:[]).filter(x=>typeof x==='string'&&/^[a-z0-9:_-]{1,80}$/i.test(x)))].slice(0,k==='displayed'?3:200);
   s.scenes=(Array.isArray(s.scenes)?s.scenes:[]).filter(x=>obj(x)&&typeof x.title==='string'&&typeof x.text==='string')
-    .slice(0,18).map(x=>({id:number(x.id),at:number(x.at,1e14),title:x.title.slice(0,100),text:x.text.slice(0,1200),kind:typeof x.kind==='string'?x.kind.slice(0,40):'story',cast:(Array.isArray(x.cast)?x.cast:[]).filter(id=>typeof id==='string').slice(0,2),...(obj(x.stage)?{stage:Object.fromEntries(['key','branch','object','guest'].filter(k=>typeof x.stage[k]==='string'&&/^[a-z0-9:_-]{1,60}$/i.test(x.stage[k])).map(k=>[k,x.stage[k]]))}:{})}));
+    .slice(0,18).map(x=>({id:number(x.id),at:number(x.at,1e14),title:x.title.slice(0,100),text:x.text.slice(0,1200),kind:typeof x.kind==='string'?x.kind.slice(0,40):'story',cast:(Array.isArray(x.cast)?x.cast:[]).filter(id=>typeof id==='string').slice(0,2),...(obj(x.stage)?{stage:Object.fromEntries(['key','branch','object','guest','endingId'].filter(k=>typeof x.stage[k]==='string'&&/^[a-z0-9:_-]{1,60}$/i.test(x.stage[k])).map(k=>[k,x.stage[k]]).concat(x.stage.contentVersion===2?[['contentVersion',2]]:[]))}:{})}));
   s.recap=(Array.isArray(s.recap)?s.recap:[]).filter(x=>typeof x==='number').slice(0,3);
   s.visitorEpisodes=Object.fromEntries(Object.entries(obj(s.visitorEpisodes)?s.visitorEpisodes:{}).filter(([k])=>/^[a-z0-9_-]+$/.test(k)).map(([k,v])=>[k,number(v,3)]));
   if (!obj(s.outing)||!Array.isArray(s.outing.cast)||!Number.isInteger(s.outing.step)||s.outing.step<0||s.outing.step>3) s.outing=null;
@@ -37,7 +37,8 @@ export function normalizeLife(raw, established=false) {
     }else s.outing.choices=s.outing.choices.filter(x=>x===0||x===1);
     if(obj(o.result)&&typeof o.result.relic==='string'){
       s.outing.result={relic:o.result.relic.slice(0,30),fresh:o.result.fresh===true};
-      if(typeof o.result.page==='string'&&/^(drawer|fridge|cupboard):[0-7]$/.test(o.result.page))Object.assign(s.outing.result,{page:o.result.page,pageFresh:o.result.pageFresh===true});
+      if(Number.isInteger(o.result.masteryUnlocked)&&o.result.masteryUnlocked===o.masteryTier+1&&o.result.masteryUnlocked<=2)s.outing.result.masteryUnlocked=o.result.masteryUnlocked;
+      if(typeof o.result.page==='string'&&/^(drawer|fridge|cupboard):[0-7](:detour)?$/.test(o.result.page))Object.assign(s.outing.result,{page:o.result.page,pageFresh:o.result.pageFresh===true});
       if(['drawer','fridge','cupboard'].includes(o.result.project))Object.assign(s.outing.result,{project:o.result.project,built:o.result.built===true,found:(Array.isArray(o.result.found)?o.result.found:[]).filter(i=>[0,1,2].includes(i)).slice(0,3)});
     }
   }

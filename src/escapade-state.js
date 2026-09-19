@@ -1,4 +1,5 @@
 import { ESCAPADES, escapadeById } from './content/escapades.js';
+import { ESCAPADE_CONTENT_VERSION } from './content/escapades-legacy.js';
 
 const record = value => value && typeof value === 'object' && !Array.isArray(value);
 const safeId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value)
@@ -28,7 +29,7 @@ export function normalizeEscapades(raw, state = {}, now = Date.now()) {
     if (seen.has(key)) continue;
     seen.add(key);
     out.album.push({ key, episodeId: episode.id, endingId: ending.id, approachId: approach.id,
-      petId: item.petId, petName, at });
+      petId: item.petId, petName, at, ...(item.contentVersion === ESCAPADE_CONTENT_VERSION ? { contentVersion: ESCAPADE_CONTENT_VERSION } : {}) });
     if (out.album.length === endingCount()) break;
   }
   out.album.sort((a, b) => a.at - b.at);
