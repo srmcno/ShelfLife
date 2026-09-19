@@ -169,11 +169,53 @@ test('adventure keepsakes and replays give only their actual resident a grounded
     return finishEscapade(s,'discovery',at+3);
   }
   assert.equal(complete(a,NOW).fresh,true);
-  assert.match(residentMemories(s,a,NOW+5)[0].text,/A insists/);
+  assert.match(residentMemories(s,a,NOW+5)[0].text,/A keeps a thumb over the telescope/);
   assert.equal(residentMemories(s,b,NOW+5).some(m=>m.key.startsWith('escapade:')),false);
   assert.equal(complete(b,NOW+10).fresh,false);
   assert.equal(s.escapades.album[0].petId,a.id);
-  assert.match(residentMemories(s,b,NOW+15)[0].text,/B insists/);
+  assert.match(residentMemories(s,b,NOW+15)[0].text,/B keeps a thumb over the telescope/);
   a.name='Captain $&';
-  assert.match(residentMemories(s,a,NOW+15)[0].text,/Captain \$& insists/);
+  assert.match(residentMemories(s,a,NOW+15)[0].text,/Captain \$& keeps a thumb over the telescope/);
+});
+
+test('unversioned adventure albums preserve the earned story and renamed-resident callback after normalization', async()=>{
+ const {escapadeView}=await import('../src/engine/escapades.js');
+ const a=pet('A'),s=shelf([a]);a.name='Captain $&';
+ s.escapades={version:1,active:null,completions:1,album:[{episodeId:'crumb-observatory',endingId:'discovery',approachId:'orbit',petId:a.id,petName:'First $& Name',at:NOW-100}]};
+ const restored=normalizeState(s),album=escapadeView(restored,NOW).album[0];
+ assert.match(album.text,/First \$& Name builds a telescope/);assert.match(album.text,/The Great Maybe/);
+ assert.doesNotMatch(album.text,/scratching|eight legs/);
+ assert.match(album.callback,/First \$& Name insists/);
+ assert.match(residentMemories(restored,restored.pets[0],NOW)[0].text,/Captain \$& insists/);
+ assert.equal(album.contentVersion,undefined);assert.equal(restored.escapades.completions,1);
+});
+
+test('new replay uses its own edition while the legacy album and one-time discoveries remain untouched', async()=>{
+ const {escapadeView,startEscapade,finishEscapade}=await import('../src/engine/escapades.js');
+ const {recordEscapadeEvent}=await import('../src/escapade-state.js');
+ const a=pet('A'),s=shelf([a]);
+ s.escapades={version:1,active:null,completions:1,album:[{episodeId:'crumb-observatory',endingId:'discovery',approachId:'orbit',petId:a.id,petName:'First Name',at:NOW-100}]};
+ assert.ok(startEscapade(s,{episodeId:'crumb-observatory',approachId:'orbit',petId:a.id},NOW));
+ recordEscapadeEvent(s,{kind:'care',need:'food',petIds:[a.id]},NOW+1);
+ recordEscapadeEvent(s,{kind:'play',activity:'chase',petIds:[a.id]},NOW+2);
+ const result=finishEscapade(s,'discovery',NOW+3);
+ assert.equal(result.fresh,false);assert.equal(result.discoveries,0);assert.match(result.text,/scratches at the label/);
+ const restored=normalizeState(s),album=escapadeView(restored,NOW+5).album[0];
+ assert.match(album.text,/First Name builds a telescope/);assert.equal(album.contentVersion,undefined);
+ assert.match(restored.life.scenes.find(scene=>scene.kind==='escapade').text,/scratches at the label/);
+ assert.match(residentMemories(restored,restored.pets[0],NOW+5)[0].text,/A keeps a thumb over the telescope/);
+ assert.equal(restored.life.scenes.find(scene=>scene.kind==='escapade').stage.contentVersion,2);
+ restored.pets[0].name='New $& Name';
+ assert.match(residentMemories(restored,restored.pets[0],NOW+5)[0].text,/New \$& Name keeps a thumb/);
+});
+
+test('legacy replay scene remains legacy and wins over an older album without acquiring a new ending', async()=>{
+ const {LEGACY_ESCAPADES}=await import('../src/content/escapades-legacy.js');
+ const a=pet('A'),s=shelf([a]);
+ s.escapades={version:1,active:null,completions:1,album:[{episodeId:'crumb-observatory',endingId:'discovery',approachId:'orbit',petId:a.id,petName:'A',at:NOW-100}]};
+ const ending=LEGACY_ESCAPADES['small-haunting'].endings.find(e=>e.id==='home');
+ s.life.scenes=[{id:1,kind:'escapade',title:ending.title,text:ending.text.replaceAll('{name}','A'),cast:[a.id],at:NOW-10,stage:{key:'escapade',branch:'small-haunting',object:'ghost-bed'}}];
+ const restored=normalizeState(s);
+ assert.match(residentMemories(restored,restored.pets[0],NOW)[0].text,/guest dislikes draughts/);
+ assert.doesNotMatch(residentMemories(restored,restored.pets[0],NOW)[0].text,/Two things answer/);
 });

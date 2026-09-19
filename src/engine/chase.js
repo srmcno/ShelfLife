@@ -156,7 +156,7 @@ export function newChase(pet, { gentle = false, rng = Math.random, seed = null, 
     leftCaught: 0, rightCaught: 0, highCatches: 0, rushCatches: 0, safeCrossings: 0,
     kind: 'chase', seed, format: campaign ? 'campaign' : format === 'run' ? 'run' : 'quick', venue: campaign ? stage.venue : format === 'run' ? 'shelf' : CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, frameRemainder: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
     wave: 0, waveBaseline: { caught: 0, biscuits: 0, finaleCaught: 0, airCatches: 0 }, waveResults: [], contracts: ['house', 'house', 'house'], upgrades: [], pendingUpgrade: null, pendingContract: null, awaitingChoice: false, nextBroom: 4.5, broomsMade: 0,
-    rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { id: objective, ...CHASE_OBJECTIVES[objective], done: false } : null,
+    rescued: 0, objective: !campaign && objective && CHASE_OBJECTIVES[objective] ? { id: objective, ...CHASE_OBJECTIVES[objective], done: false } : null,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
     dashes: 0, dashSmashes: 0, finaleWarned: false, finaleStarted: false, finaleCaught: 0, finaleComplete: false,
     goal: campaign ? (stage.requirements.find(r => r.stat === 'caught')?.target || 0) : format === 'run' ? (gentle ? 18 : 22) : gentle ? 6 : 8, complete: false, finished: false, claimed: false, gentle, stars: 0,
@@ -451,7 +451,7 @@ function step(game, input, dt, events) {
   game.time = Math.min(end, game.time + dt);
   const previousZ = stepPlayer(game, input, dt, events);
   spawnAll(game, events);
-  const finaleAt = game.format === 'campaign' ? Infinity : game.format === 'run' ? 2 * RUN_WAVE_SECONDS + 11.5 : FINALE_AT;
+  const finaleAt = game.format === 'campaign' ? (game.schedule.find(entry => entry.finale)?.at ?? Infinity) : game.format === 'run' ? 2 * RUN_WAVE_SECONDS + 11.5 : FINALE_AT;
   if (!game.finaleWarned && game.time >= finaleAt - FINALE_WARNING_SECONDS) {
     game.finaleWarned = true; events.push({ type: 'finaleWarning', seconds: FINALE_WARNING_SECONDS });
   }

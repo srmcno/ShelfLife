@@ -354,7 +354,7 @@ export function accuseCourt(state,game,choice,now=Date.now()) {
   // Stage and remember the actual culprit with the participating host. A
   // stand-in cannot silently give the first resident a criminal history.
   const cast=[...new Set([culprit.id,p.id])].filter(id=>state.pets.some(p=>p.id===id));
-  recordScene(state,'court',game.title,text,cast,now,{key:'court',branch:'guilty',object:'gavel'});addNote(state,text,'Shelf Court','scheme');
+  recordScene(state,'court',game.title,text,cast,now,{key:'court',branch:state.pets.some(resident=>resident.id===culprit.id)?'convicted':'witness',object:'gavel'});addNote(state,text,'Shelf Court','scheme');
  }
  const dialogue=[{speaker:'Judge',text:correct?game.trial.conviction:game.trial.acquittal},
   {speaker:'Prosecutor',text:culprit.name+' is the only suspect who survives all '+game.clues.length+' exhibits.'},

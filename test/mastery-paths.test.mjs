@@ -83,3 +83,76 @@ test('combined Alibi feedback identifies both necessary records and no unrelated
 
 test('active Market folds help away and labels the saved route rather than household mastery',()=>{const s=fixture();mastery(s,'market').tier=2;startMarket(s,{errands:true,learning:true,practice:true});let html=marketMarkup(s,marketSnapshot(s),'',null,'','');assert.match(html,/<details class="market-lesson"><summary>Lesson 1\/3 · One household errand<\/summary>/);assert.doesNotMatch(html,/<details class="market-lesson" open/);s.life.market=null;startMarket(s,{errands:true});html=marketMarkup(s,marketSnapshot(s),'',null,'','');assert.match(html,/<summary>Saved shopping route · 8 stalls<\/summary>/);assert.doesNotMatch(html,/Lesson 1\/3 · One household errand/);});
 test('v5 Market bests stay separate for each tier and never overwrite legacy v4 scores',()=>{let s=fixture();s.life.marketErrandBestV4=91;for(let tier=0;tier<3;tier++){mastery(s,'market').tier=tier;startMarket(s,{errands:true,learning:true});let m=marketSnapshot(s);while(m.step<m.stalls.length){chooseMarket(s,null);m=marketSnapshot(s);}leaveMarket(s);const result=claimMarket(s,now);s=normalizeState(s);assert.equal(s.life.marketErrandBestV4,91);assert.equal(s.life.marketErrandBestV5[tier],result.score.total);assert.match(marketMarkup(s,marketSnapshot(s),'',null,'',''),new RegExp('Your best with these rules: '+result.score.total+'\\.'));}assert.deepEqual(s.life.marketErrandBestV5,[10,10,10]);s.life.marketErrandBestV5=[Infinity,-1,3.9,9999999];s=normalizeState(s);assert.deepEqual(s.life.marketErrandBestV5,[0,0,3]);});
+
+test('explicit Alibi practice keeps history without unlocking a lesson and rejects restored duplicate claims',()=>{
+ let s=fixture();const g=newAlibi(s,s.pets[0],()=>.3,{mode:'quick',practice:true});
+ for(const r of g.rounds){answerAlibi(g,r.lie);advanceAlibi(g);}
+ const replay=JSON.parse(JSON.stringify(g));assert.ok(rewardAlibi(s,g,now).clean);
+ assert.equal(mastery(s.pets[0],'alibi').tier,0);assert.equal(mastery(s.pets[0],'alibi').wins,0);
+ assert.equal(s.pets[0].alibis,1);s=normalizeState(s);
+ assert.equal(rewardAlibi(s,replay,now+600000).practice,true);assert.equal(s.pets[0].alibis,1);
+});
+test('Handshake practice consumes a completion receipt even when it earns no mastery',()=>{
+ let s=fixture();const g=newHandshake(s.pets[0],()=>.4,{practice:true});
+ while(!g.complete)for(const n of handshakePattern(g))tapHandshake(g,n);
+ const replay=JSON.parse(JSON.stringify(g));rewardHandshake(s,g,now);s=normalizeState(s);
+ rewardHandshake(s,replay,now+600000);
+ assert.equal(s.pets[0].handshakes,1);assert.equal(s.pets[0].handshakeRituals.echo.completions,1);
+ assert.equal(mastery(s.pets[0],'handshake').wins,0);
+});
+test('combined Alibi notes distinguish a failed proof from believing a true statement',()=>{
+ const s=fixture();const g=newAlibi(s,s.pets[0],()=>.3,{mode:'combine'});
+ for(const r of g.rounds){answerAlibi(g,r.lie,[0,1,2].filter(i=>i!==r.proofs[0]));advanceAlibi(g);}
+ rewardAlibi(s,g,now);
+ assert.equal(g.correct,g.rounds.length);assert.equal(g.proved,0);
+ assert.match(s.notes[0].text,/evidence did not hold up/);
+});
+
+import {expeditionView,projectBoard} from '../src/ui/expeditions.js';
+import {missionStops} from '../src/content/project-encounters.js';
+test('advanced expedition explains its branch and archives only the encounters actually visited',()=>{
+ let s=fixture();mastery(s,'expedition').tier=2;
+ startOuting(s,'drawer','thread',['a'],{learning:true,mission:true,edition:0});
+ const before=outingSnapshot(s);
+ assert.match(expeditionView(s,before).html,/Opens a different route for stops 2 and 3/);
+ for(const choice of [1,0,1])chooseOuting(s,choice,now);
+ assert.deepEqual(s.life.trailPages,['drawer:0:detour']);
+ s=normalizeState(s);const completed=outingSnapshot(s);
+ assert.equal(completed.result.page,'drawer:0:detour');
+ const board=projectBoard(s.life);
+ for(const stop of completed.steps)assert.ok(board.includes(stop.title));
+ assert.ok(!board.includes(missionStops('drawer',0,2)[1].title),'unvisited main-route encounter is not filed');
+ assert.match(board,/Route edition 1 · detour/);
+ assert.ok(retryOuting(s));for(const choice of [1,0,1])chooseOuting(s,choice,now);
+ assert.equal(outingSnapshot(s).result.pageFresh,false);assert.equal(s.life.trailPages.length,1);
+});
+test('expedition homecoming preserves exact mastery unlock after reload and hides it on practice replay',()=>{
+ let s=fixture();startOuting(s,'drawer','thread',['a'],{learning:true,mission:true,edition:0});
+ for(const choice of [1,0,1])chooseOuting(s,choice,now);
+ s=normalizeState(s);assert.match(expeditionView(s,outingSnapshot(s)).html,/Unlocked: Crew expertise/);
+ assert.ok(retryOuting(s));for(const choice of [1,0,1])chooseOuting(s,choice,now);
+ assert.doesNotMatch(expeditionView(s,outingSnapshot(s)).html,/Unlocked:/);
+});
+
+test('all original and detour field notes coexist through normalization without dropping old history',()=>{
+ let s=fixture();const pages=['drawer','fridge','cupboard'].flatMap(route=>Array.from({length:8},(_,i)=>route+':'+i));
+ s.life.trailPages=[...pages,...pages.map(id=>id+':detour'),'drawer:8:detour','drawer:0:invented'];
+ s=normalizeState(s);assert.equal(s.life.trailPages.length,48);assert.deepEqual(s.life.trailPages.slice(0,24),pages);
+ assert.match(projectBoard(s.life),/8\/8 main routes · 8\/8 detours/);
+});
+
+test('Court aftermath identifies a real convicted resident separately from a host witnessing a stand-in conviction',()=>{
+ const seen=new Set();
+ for(let seed=1;seed<=80&&seen.size<2;seed++){
+  const s=fixture(),g=startCourt(s,{reworked:true,caseIndex:1},()=>seed/100);
+  const culprit=g.suspects[g.answer],resident=s.pets.some(p=>p.id===culprit.id);
+  g.sceneEvidence.forEach((_,evidence)=>courtAction(s,{type:'inspect',evidence}));
+  courtAction(s,{type:'question',suspect:g.answer});const statement=currentCourt(s).witnesses[g.answer].falseStatement;
+  courtAction(s,{type:'present',suspect:g.answer,statement,evidence:statement});finishCourt(s,g.answer,now);
+  const scene=s.life.scenes.find(row=>row.kind==='court'),variant=resident?'convicted':'witness';
+  assert.equal(scene.stage.branch,variant);assert.equal(scene.cast[0],resident?culprit.id:s.pets[0].id);
+  assert.equal(normalizeState(s).life.scenes.find(row=>row.kind==='court').stage.branch,variant);
+  seen.add(variant);
+ }
+ assert.deepEqual([...seen].sort(),['convicted','witness']);
+});

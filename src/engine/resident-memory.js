@@ -1,7 +1,7 @@
 // Read the record before writing the callback. These selectors never create
 // history, infer a missed promise, or treat the household's win as this pet's.
 import { normalizeEscapades } from '../escapade-state.js';
-import { escapadeById } from '../content/escapades.js';
+import { escapadeAtVersion } from '../content/escapades-legacy.js';
 const traits = (pet, list) => list.some(id => pet.traits?.includes(id));
 const count = n => Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 const pairKey = (a, b) => [a, b].sort().join('|');
@@ -25,9 +25,15 @@ export function residentMemories(state, pet, now = Date.now()) {
   if (!pet || !state.pets?.some(p => p.id === pet.id)) return [];
   const out = [], add = (key, text, evidence) => out.push({ key, text, evidence });
   const kept = normalizeEscapades(state.escapades, state, now).album.filter(r => r.petId === pet.id).at(-1);
-  const replay = (state.life?.scenes || []).find(scene => scene.kind === 'escapade' && scene.cast?.includes(pet.id) && scene.at <= now);
-  const episode = escapadeById(replay?.stage?.branch || kept?.episodeId);
-  const ending = episode?.endings.find(e => replay ? e.keepsake === replay.stage?.object : e.id === kept?.endingId);
+  // The album holds the first earned ending. A later replay is a new event,
+  // possibly in a new authored edition, without rewriting that old keepsake.
+  const replay = (state.life?.scenes || []).filter(scene => scene.kind === 'escapade' && scene.cast?.includes(pet.id)
+    && Number.isFinite(scene.at) && scene.at <= now && (!kept || scene.at >= kept.at)
+    && escapadeAtVersion(scene.stage?.branch, scene.stage?.contentVersion)?.endings.some(e =>
+      scene.stage?.endingId ? e.id === scene.stage.endingId : e.keepsake === scene.stage?.object))
+    .sort((a, b) => b.at - a.at)[0];
+  const episode = escapadeAtVersion(replay?.stage?.branch || kept?.episodeId, replay ? replay.stage?.contentVersion : kept?.contentVersion);
+  const ending = episode?.endings.find(e => replay ? (replay.stage?.endingId ? e.id === replay.stage.endingId : e.keepsake === replay.stage?.object) : e.id === kept?.endingId);
   if (ending) add('escapade:' + episode.id + ':' + ending.id, ending.callback.replaceAll('{name}', () => pet.name),
     ending.title + ' was made during a completed adventure with this resident.');
   const old = Array.isArray(pet.names) ? pet.names.slice(0, -1).reverse().find(n => typeof n?.name === 'string' && n.name !== pet.name) : null;

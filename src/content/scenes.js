@@ -1,7 +1,7 @@
 import { SCHEMES } from './schemes.js';
 import { CASES, VISITORS } from './stories.js';
 import { RELICS } from './life.js';
-import { escapadeById } from './escapades.js';
+import { escapadeAtVersion } from './escapades-legacy.js';
 
 // These directions reconstruct what was recorded. They do not roll a second
 // outcome, invent an award, or replace the original written account.
@@ -300,26 +300,26 @@ function reading(scene, key = 'record') {
 // These are a presentation of the earned object and its written ending. The
 // director does not reconstruct unseen ghosts, dragons, or other residents.
 const KEEPSAKE_RECOLLECTIONS = {
-  'crumb-telescope': ['A telescope for The Great Maybe', 'The floor joins the constellation'],
-  'orbit-saucer': ['A place is set for the comet', 'A wire model keeps its orbit'],
-  'ghost-bed': ['A matchbox guest room', 'The pillow is one degree colder'],
-  'holiday-bell': ['A bell for when company is wanted', 'A tiny sunset in the clapper'],
-  'button-crown': ['A bottle cap becomes a crown', 'The thread is foreign minister'],
-  'button-passport': ['Four borders are opened', 'A country stitched to a cushion'],
-  'rain-bottle': ['A bottle with a cork roof', 'A curtain for the rain'],
-  'rain-boat': ['A boat folded from a receipt', 'The rain becomes its own sea'],
-  'ever-candle': ['One candle for the unknown years', 'More time to think'],
-  'unbirthday-rosette': ['The invitation simply says “here”', 'A ribbon for being here'],
-  'nobody-stamp': ['A small yes from every quiet corner', 'Nobody signs either letter'],
-  'reply-envelope': ['There is room beside me', 'A correspondence begins'],
-  'silver-baton': ['A needle baton is raised', 'The cupboard rings like a cathedral'],
-  'choir-ticket': ['The audience becomes the chorus', 'One ticket: “Admit all”'],
-  'dragon-key': ['Keeper of things too small to find again', 'It opens nothing. The dragon understands.'],
-  'dragon-parcel': ['A pin wrapped in velvet', 'Generosity takes practice']
+  'crumb-telescope': ["The paper telescope is brought out", "A thumb steadies the tube"],
+  'orbit-saucer': ["The comet’s saucer is brought out", "The rim is inspected"],
+  'ghost-bed': ["The matchbox guest room is brought out", "The lid is left ajar"],
+  'holiday-bell': ["The bell is brought out", "The clapper hangs still"],
+  'button-crown': ["The bottle-cap crown is brought out", "The edge catches the light"],
+  'button-passport': ["The button’s passport is brought out", "The pages are opened"],
+  'rain-bottle': ["The rain bottle is brought out", "The cork stays in place"],
+  'rain-boat': ["The receipt boat is brought out", "The paper hull is examined"],
+  'ever-candle': ["The candle is brought out", "The wick is inspected"],
+  'unbirthday-rosette': ["The ribbon is brought out", "The knot is straightened"],
+  'nobody-stamp': ["The postal stamp is brought out", "The inked face is shown"],
+  'reply-envelope': ["The reply envelope is brought out", "The flap stays closed"],
+  'silver-baton': ["The needle baton is brought out", "The point is kept away"],
+  'choir-ticket': ["The opera ticket is brought out", "The printed side is shown"],
+  'dragon-key': ["The treasury key is brought out", "The teeth are inspected"],
+  'dragon-parcel': ["The velvet parcel is brought out", "The wrapping is held carefully"]
 };
 
 function escapadeScene(scene) {
-  const episode = escapadeById(scene.stage?.branch);
+  const episode = escapadeAtVersion(scene.stage?.branch,scene.stage?.contentVersion);
   const ending = episode?.endings.find(item => item.keepsake === scene.stage?.object);
   if (!ending) return null;
   const labels = KEEPSAKE_RECOLLECTIONS[ending.keepsake];

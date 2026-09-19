@@ -14,14 +14,14 @@ const BUNNY = '<svg viewBox="0 0 40 34" aria-hidden="true"><path d="M7 18C-1 3 8
 const MOTH = '<svg viewBox="0 0 40 30" aria-hidden="true"><path d="M19 15C12 2 2 4 3 12c1 7 8 10 16 6Z" fill="#cdb98f"/><path d="M21 15c7-13 17-11 16-3-1 7-8 10-16 6Z" fill="#cdb98f"/><path d="M19 15c-6 3-9 8-6 12 3 1 6 0 7-4Z" fill="#b39f78"/><path d="M21 15c6 3 9 8 6 12-3 1-6 0-7-4Z" fill="#b39f78"/><ellipse cx="20" cy="17" rx="3" ry="8" fill="#5a4a3c"/><path d="m18 10-4-6m8 6 4-6" stroke="#5a4a3c" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="11" r="2" fill="#5a4a3c"/><circle cx="31" cy="11" r="2" fill="#5a4a3c"/></svg>';
 const BISCUIT = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#c98f4c"/><circle cx="16" cy="16" r="11" fill="none" stroke="#e2b276" stroke-width="2" stroke-dasharray="3 3"/><circle cx="11" cy="13" r="1.6" fill="#7a4a22"/><circle cx="19" cy="11" r="1.6" fill="#7a4a22"/><circle cx="21" cy="19" r="1.6" fill="#7a4a22"/><circle cx="13" cy="21" r="1.6" fill="#7a4a22"/><circle cx="27" cy="7" r="5" fill="#2a2230"/></svg>';
 const SUGAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8l8-4 8 4-8 4Z" fill="#fbf8ff"/><path d="M4 8v9l8 4v-9Z" fill="#d9d0ec"/><path d="M20 8v9l-8 4v-9Z" fill="#bfb2dd"/><path d="m7 6 2-1M9 15v3m6-3v3" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".7"/></svg>';
-const BROOM = '<svg viewBox="0 0 152 54" aria-hidden="true"><path d="m20 7 119 0" stroke="#b9957d" stroke-width="7" stroke-linecap="round"/><path d="m14 5 6 39h42L51 5Z" fill="#c9a661"/><path d="m24 13 3 27m8-27 3 27m7-27 5 27" stroke="#806042" stroke-width="3"/></svg><span>BROOM · HOP OR CROSS</span>';
+const BROOM = '<svg viewBox="0 0 152 54" aria-hidden="true"><path d="m20 7 119 0" stroke="#b9957d" stroke-width="7" stroke-linecap="round"/><path d="m14 5 6 39h42L51 5Z" fill="#c9a661"/><path d="m24 13 3 27m8-27 3 27m7-27 5 27" stroke="#806042" stroke-width="3"/></svg><span>BROOM · HOP, DASH OR CROSS</span>';
 const ART = { crumb: CRUMB, bunny: BUNNY, moth: MOTH, biscuit: BISCUIT, sugar: SUGAR, broom: BROOM };
 // Deadpan end-screen copy. Short, dry, four inches tall.
 const QUIPS = {
-  lost: ['The crumbs remain at large.', 'Immortal. Outrun by bread.', 'It has requested a smaller floor.', 'It maintains the floor moved.', 'Nothing was lost except the crumbs. And the round.'],
-  two: ['Adequate. It will not say so.', 'Serious work, four inches tall.', 'It will accept praise now. Briefly.'],
-  three: ['Flawless. It will be unbearable about this.', 'Three stars. Nobody saw. It knows.', 'The dust has requested a meeting.', 'The dust bunny left a tiny will. You ate it.'],
-  best: ['A new record. The pride was already there.', 'The old best has been quietly disowned.', 'It scratched the score into the wood. With a tooth.', 'It would like this noted in the museum.']
+  lost: ['It ate the consolation prize before you could explain.', 'The floor has eaten better than the resident.', 'A tooth came loose. It kept chasing.'],
+  two: ['It separates the crumbs from the teeth. The teeth go in its pocket.', 'Enough for dinner. The thing under the boards can starve.'],
+  three: ['Nothing left on the floor but a wet outline.', 'It has licked the floor clean. Something underneath licked back.'],
+  best: ['It scratches the score into the wood with a loose tooth.', 'The last resident’s score is crossed out. So is its name.']
 };
 
 // Immediate touch feedback with native-click and assistive-input fallback.
@@ -338,10 +338,10 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
   const pick = list => list[(game.score + game.caught) % list.length];
   function quipFor(rating, newBest) {
     const traits = pet.traits || [];
-    if (traits.some(id => ['clingy', 'sugar', 'lifecoach', 'porcelain'].includes(id))) return game.complete ? pet.name + ' pushes the best crumb toward you, then sits on it so you have to stay.' : pet.name + ' leans against you. Apparently the important part was having an accomplice.';
-    if (traits.some(id => ['spiteful', 'bitey', 'feral', 'napoleon'].includes(id))) return game.complete ? pet.name + ' bites the winning crumb into smaller losing crumbs.' : pet.name + ' stares at the carpet until it becomes awkward for the carpet.';
-    if (traits.some(id => ['haunted', 'cult', 'undertaker', 'cryptid'].includes(id))) return game.complete ? pet.name + ' saves one crumb for whatever lives behind the wall. Something taps thank you.' : pet.name + ' lays a crumb-shaped shadow beside you. It appears to be a consolation prize.';
-    if (traits.some(id => ['damp', 'fungal'].includes(id))) return game.complete ? pet.name + ' sits on the haul. The biscuits are becoming a single damp biscuit.' : pet.name + ' leaves a damp trail spelling something unkind about traction.';
+    if (traits.some(id => ['clingy', 'sugar', 'lifecoach', 'porcelain'].includes(id))) return game.complete ? pet.name + ' saves you a crumb in its cheek. You decline. It saves it anyway.' : pet.name + ' presses its cold face into your palm. A tooth stays behind.';
+    if (traits.some(id => ['spiteful', 'bitey', 'feral', 'napoleon'].includes(id))) return game.complete ? pet.name + ' eats the dust as well. There is a small crunch that dust should not make.' : pet.name + ' bites the floor. The floor bleeds through an old stain.';
+    if (traits.some(id => ['haunted', 'cult', 'undertaker', 'cryptid'].includes(id))) return game.complete ? pet.name + ' pushes a crumb through the crack. A fingernail slides back as payment.' : pet.name + ' waits for the crumbs to move again. Its last meal did.';
+    if (traits.some(id => ['damp', 'fungal'].includes(id))) return game.complete ? pet.name + ' lets the haul soften under its skin. Dinner will be ready when it stops moving.' : pet.name + ' sheds a patch of mould over the crumbs. It can eat them later.';
     if (!game.complete) return newBest ? 'A personal best, technically. The bar was on the floor.' : pick(QUIPS.lost);
     return pick(newBest ? QUIPS.best : rating === 3 ? QUIPS.three : QUIPS.two);
   }
@@ -417,16 +417,16 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     else if (event.type === 'shield') { puppet.gesture('shield'); message(event.source === 'horns' ? 'Horn block! Unbothered.' : 'Trust shield! It took that one for you.', 'good'); }
     else if (event.type === 'dodge') { spark('float', p.x, p.z + 40, '+' + event.points); message('Clean jump! +' + event.points, 'good'); }
     else if (event.type === 'land') { puppet.gesture('land'); spark('puff', event.x, 0); }
-    else if (event.type === 'steal') { spark('puff', event.x, event.z); message('Moth theft. No witnesses with spines.', 'bad'); }
-    else if (event.type === 'crumble') { spark('puff', event.x, 0); message('Biscuit deceased. Crumbs inherited nothing.', ''); }
-    else if (event.type === 'miss') message('Crumb escaped. Streak −2. It had dependants.', '');
+    else if (event.type === 'steal') { spark('puff', event.x, event.z); message('Moth stole a crumb. Streak broken.', 'bad'); }
+    else if (event.type === 'crumble') { spark('puff', event.x, 0); message('Biscuit broke on the floor.', ''); }
+    else if (event.type === 'miss') message('Crumb lost. Streak −2.', '');
     else if (event.type === 'melt') spark('puff', event.x, 0);
     else if (event.type === 'broomWarning') { message('Broom on the ' + event.side + '! Hop, Dash or cross.', 'bad'); onStatus('Broom approaching the ' + event.side + ' half. Hop over it, Dash through it, or move to the other side.'); }
     else if (event.type === 'powerup') onPowerUp(event);
-    else if (event.type === 'objective') { spark('float', p.x, p.z + 60, 'Quest +40'); playStar({step:1}); onStatus('Side quest complete! Forty extra points. The paperwork has been eaten in celebration.'); }
+    else if (event.type === 'objective') { spark('float', p.x, p.z + 60, 'Quest +40'); playStar({step:1}); onStatus('Side quest complete. Forty extra points.'); }
     else if (event.type === 'finaleWarning') { message('Gold soon! Get near either edge.', 'good'); onStatus('The gold sweep is about to appear. Move near either edge, then hop toward the middle. It stays until time runs out.'); }
     else if (event.type === 'finale') { playPowerUp(); message('Last call! Sweep all 5 gold for +60', 'good'); onStatus('Last call! Five golden crumbs form an arc. Hop and dash to sweep all five for 60 bonus points. These extras never break your streak.'); }
-    else if (event.type === 'finaleComplete') { playStar({step:3}); spark('float', p.x, p.z + 60, 'Gold sweep +60'); message('Gold sweep! +60. Bread has fallen.', 'good'); onStatus('Gold sweep complete! Sixty bonus points.'); }
+    else if (event.type === 'finaleComplete') { playStar({step:3}); spark('float', p.x, p.z + 60, 'Gold sweep +60'); message('Gold sweep complete! +60', 'good'); onStatus('Gold sweep complete! Sixty bonus points.'); }
   }
   function intermission() {
     stopFrame(); disabled(true); paint();
@@ -512,8 +512,8 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     screen('paused');
     title.textContent = 'The crumbs can wait.';
     const remaining = Math.ceil((game.format === 'run' ? RUN_WAVE_SECONDS : chaseDuration(game)) - chaseWaveTime(game));
-    description.textContent = (explanation ? explanation + ' ' : '') + 'Paused at ' + game.caught + '/' + game.goal + ' crumbs and ' + game.score + ' points. ' + remaining + ' seconds remain' + (game.format === 'run' ? ' in act ' + (game.wave + 1) : '') + '. Resume when you are ready.';
-    pauseCaption.textContent = pet.name + [' is on a very small union break.', ' is negotiating with the biscuit.', ' insists this was a strategic pause.'][(game.caught + game.bumps) % 3];
+    description.textContent = (explanation ? explanation + ' ' : '') + 'Paused at ' + (game.format === 'campaign' ? campaignProgress(game).text : game.caught + '/' + game.goal + ' crumbs') + ' · ' + game.score + ' points. ' + remaining + ' seconds remain' + (game.format === 'run' ? ' in act ' + (game.wave + 1) : '') + '. Resume when you are ready.';
+    pauseCaption.textContent = pet.name + [' is counting its teeth with its tongue.', ' keeps one eye on the crack under the door.', ' has stopped chewing. The sound has not.'][(game.caught + game.bumps) % 3];
     restart.textContent = game.format === 'run' ? 'Restart whole run' : 'Restart this course';
     go.textContent = 'Resume chase'; go.hidden = false; upgrades.hidden = true; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; go.focus({ preventScroll: true });
     onStatus(explanation || 'Paused. Resume whenever you are ready.');

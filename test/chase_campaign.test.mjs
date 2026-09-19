@@ -164,3 +164,42 @@ test('all twelve mirrored replays remain physically winnable with normal control
     }
   }
 });
+
+test('campaign replays cannot inherit hidden free-play side quests or their bonus points', () => {
+  for (const objective of ['combo', 'air', 'biscuit']) {
+    const p = pet();
+    const base = newChase(p, { format: 'campaign', gentle: true });
+    const inherited = newChase(p, { format: 'campaign', gentle: true, objective });
+    assert.equal(inherited.objective, null);
+    // Same visible route and movement must produce the same recorded score,
+    // regardless of a challenge left selected in advanced free play.
+    while (!base.finished) {
+      const targetX = base.items.find(item => item.kind === 'crumb')?.x ?? 160;
+      updateChase(base, { targetX }, 1 / 60);
+      updateChase(inherited, { targetX }, 1 / 60);
+    }
+    assert.equal(inherited.score, base.score);
+    assert.equal(inherited.caught, base.caught);
+    assert.equal(inherited.complete, true);
+  }
+  assert.equal(newChase(pet(), { objective: 'combo' }).objective.id, 'combo');
+});
+
+test('the final campaign arc gives one actionable advance warning on either replay route', () => {
+  for (const mirror of [false, true]) {
+    const p = pet();
+    p.chaseCampaign = { records: Object.fromEntries(CHASE_STAGES.map(stage => [stage.id, { won: true }])) };
+    const game = newChase(p, { format: 'campaign', stageId: 'last-inventory', mirror });
+    const warningTimes = [], finaleTimes = [];
+    while (!game.finished) {
+      for (const event of updateChase(game, {}, 1 / 60)) {
+        if (event.type === 'finaleWarning') warningTimes.push(game.time);
+        if (event.type === 'finale') finaleTimes.push(game.time);
+      }
+    }
+    assert.equal(warningTimes.length, 1);
+    assert.equal(finaleTimes.length, 1);
+    assert.ok(finaleTimes[0] - warningTimes[0] >= 1.48);
+    assert.ok(finaleTimes[0] - warningTimes[0] <= 1.52);
+  }
+});

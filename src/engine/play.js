@@ -63,15 +63,15 @@ export function handshakeReaction(pet, phase = 'watch') {
   const style = (pet?.traits || []).map(id => TRAIT_GESTURES[id]).find(Boolean) || 'tender';
   const lines = {
     menace: ['It moves its teeth out of the way. This is an intimate concession.', '“Wrong. Again. I moved my teeth for this.”', 'It offers one very careful touch, then counts your fingers. It remembers a different number.'],
-    feral: ['It pats the floor for you, then bites the floor for listening.', 'It patiently demonstrates. The floor receives another bite.', 'It leans against you without asking. You appear to belong to it now.'],
-    tender: ['It leaves a space beside itself that is exactly your finger wide.', '“We can do it again. I had not finished being near you.”', 'It holds the last touch slightly too long. You are both pretending this is required.'],
+    feral: ['It pats the floor for you, then bites the floor for listening.', 'It patiently demonstrates. The floor receives another bite.', 'It bites its own palm before offering it. A handshake is a meal neither of you finishes.'],
+    tender: ['It opens its fist. Your finger fits the hollow inside rather too well.', '“Again. The joint only went back halfway.”', 'It lets go. One finger does not. It retrieves the finger before you can decide whose it was.'],
     gothic: ['It closes one eye. Something behind it closes the other.', '“Again. Whatever is under the shelf was watching.”', 'It makes room for you in its shadow. The shadow objects; it insists.'],
     theatre: ['It checks your eyeline, moves its good side into view, then begins.', '“A rehearsal. Obviously. The actual moment is still coming.”', 'It bows so low something falls out. It kicks it under the rug before accepting applause.'],
-    damp: ['It wipes a small dry place for you. It is immediately damp again.', '“Slipped. Entirely the moisture. Let us try the less wet finger.”', 'It leaves a wet print against you and looks absurdly pleased that it stuck.'],
-    formal: ['It straightens your imaginary cuff before allowing the first move.', '“Nearly. You may retain the finger and try again.”', 'It offers a precise little nod, then follows you for one unnecessary step.'],
-    clerical: ['It tests the distance between you twice. The third time is just touching.', '“That version is still between us. We can improve it.”', 'It tidies the place where your hand was. Then untidies it to keep the shape.'],
+    damp: ['It wipes a small dry place for you. It is immediately damp again.', '“Slipped. Entirely the moisture. Let us try the less wet finger.”', 'It wrings its hand out over a cup. Something in the cup starts doing the handshake.'],
+    formal: ['It straightens your imaginary cuff before allowing the first move.', '“Nearly. You may retain the finger and try again.”', 'It kisses its own knuckle, inspects the tooth left in it, and offers you the other hand.'],
+    clerical: ['It sets four teeth in a row. One for each move. You can hear it counting the gaps.', '“No. That was the tooth we agreed to keep.”', 'It collects the four teeth. There are five. It counts your fingers without looking up.'],
     clinical: ['It examines your finger, decides to overlook your construction, and begins.', '“Both subjects remain intact. Repeat the experiment.”', 'It checks your pulse and looks disappointed. It had already priced the jar.'],
-    ancient: ['It makes the first move very slowly. For once, it wants company in the present.', '“We have time. An embarrassing amount. Again?”', 'It stays close after the last move. Some things are worth remembering on purpose.']
+    ancient: ['It works the stiffness out of one wrist. Dust falls from the wrong end.', '“Again. We used to do it before rigor set in.”', 'It folds its hands across its chest. You wait. One eye opens: “That is the end. You may stop digging.”']
   };
   return (lines[style] || lines.tender)[phase === 'retry' ? 1 : phase === 'complete' ? 2 : 0];
 }
@@ -103,8 +103,8 @@ export function handshakePattern(game) {
   if (game.ritual === 'duet') return moves.filter((_, i) => i % 2 === 1);
   return moves;
 }
-export function restartHandshake(game) {
-  return { ...game, receipt:null, sequence: game.sequence.slice(), names: game.names.slice(), round: 0, cursor: 0, mistakes: 0, replays: 0, complete: false, claimed: false };
+export function restartHandshake(game, pet = null) {
+  return { ...game, practice: true, receipt: pet ? masteryTicket(pet, 'handshake') : null, sequence: game.sequence.slice(), names: game.names.slice(), round: 0, cursor: 0, mistakes: 0, replays: 0, complete: false, claimed: false };
 }
 export function replayHandshake(game) {
   if (!game || game.complete) return false;
@@ -149,14 +149,14 @@ export function rewardHandshake(state, game, now = Date.now()) {
   if (!pet || !game.complete || game.claimed) return null;
   if (game.format === 'campaign' && !claimChaseCampaign(pet, game, now, {consume:false})) { game.claimed = true; return {practice:true,fuss:0,bond:0}; }
   game.claimed = true;
-  if (game.kind !== 'chase' && !game.practice && game.receipt && !completeMastery(pet, 'handshake', game.masteryTier, game.receipt)) return {practice:true,fuss:0,bond:0};
+  if (game.kind !== 'chase' && game.receipt && !completeMastery(pet, 'handshake', game.masteryTier, game.receipt, { success: !game.practice })) return {practice:true,fuss:0,bond:0};
   if (game.kind !== 'chase') recordEscapadeEvent(state, { kind: 'play', petIds: [pet.id], activity: 'memory' }, now);
   if (game.kind !== 'chase') {
     const ritual = Object.hasOwn(HANDSHAKE_RITUALS, game.ritual) ? game.ritual : 'echo';
     const previousMemory = handshakeMemory(pet, ritual);
     pet.handshakeRituals ||= {};
     pet.handshakeRituals[ritual] = { opening: previousMemory ? previousMemory.opening.slice() : game.sequence.slice(0, ritual === 'duet' ? 4 : 2), completions: Math.min(100000, (previousMemory?.completions || 0) + 1), clean: Math.min(100000, (previousMemory?.clean || 0) + (game.mistakes ? 0 : 1)), at: now };
-    if (!previousMemory) recordScene(state, 'celebration', 'Something only you two know', pet.name + ' chose a shared ' + HANDSHAKE_RITUALS[ritual].name + ' opening: ' + pet.handshakeRituals[ritual].opening.map(move => GESTURES[move]).join(', ') + '. ' + handshakeReaction(pet, 'complete'), [pet.id], now);
+    if (!previousMemory) recordScene(state, 'celebration', 'The hand remembers', pet.name + ' chose a shared ' + HANDSHAKE_RITUALS[ritual].name + ' opening: ' + pet.handshakeRituals[ritual].opening.map(move => GESTURES[move]).join(', ') + '. ' + handshakeReaction(pet, 'complete'), [pet.id], now);
     const key = handshakeRecordKey(game);
     pet.handshakeBest ||= {};
     const previous = pet.handshakeBest[key];

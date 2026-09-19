@@ -162,3 +162,21 @@
 
 /* Spin the paint around its centre, while the entity stays at the physics position. */
 .rug-ball svg{transform-origin:50% 50%}
+
+/* Illustrated materials belong to the stage; controls retain clear contrast. */
+.rug-stage { background-position: center 56%; }
+.rug-resident .sprite-figure { filter: drop-shadow(0 1px 0 #1c211c) drop-shadow(3px 6px 2px #19191180); }
+.rug-guest { transition: left .75s ease-out; }
+.rug-stage[data-outcome="miss"] .rug-guest { animation: none; }
+.woodlouse i { position:absolute; inset:6px -4px -4px; z-index:-1; background:repeating-linear-gradient(90deg,transparent 0 3px,#161a12 3px 5px,transparent 5px 8px); transform:skewY(-15deg); }
+.rug-memory-prop { position:absolute; right:10%; top:76%; width:42px; height:28px; z-index:2; pointer-events:none; filter:drop-shadow(2px 4px 1px #14180f88); }
+.rug-memory-prop[data-kind="bath"] { border:3px solid #272b21; border-radius:45% 45% 10% 10%; background:#b0b298; box-shadow:0 7px 0 -2px #6c7c40; animation:rug-cup-creep 8s ease-in-out infinite alternate; }
+.rug-memory-prop[data-kind="bath"]::before { content:''; position:absolute; right:-12px; top:5px; width:13px; height:13px; border:4px solid #b0b298; border-radius:50%; }
+.rug-memory-prop[data-kind="court"] { background:#20251d; width:35px; height:28px; border:2px solid #0e120c; border-radius:4px 4px 0 0; border-bottom:7px solid #4c5542; }
+.rug-memory-prop[data-kind="court"]::after { content:''; position:absolute; bottom:-10px; left:-12px; width:56px; height:7px; border-radius:50%; background:#151c12; }
+.rug-memory-prop[data-kind="market"] { width:36px; height:32px; border:3px solid #302b1c; border-radius:3px 3px 9px 9px; background:repeating-linear-gradient(82deg,#8f7951 0 9px,#645537 10px 11px); transform:rotate(9deg); }
+.rug-memory-prop[data-kind="market"]::before { content:''; position:absolute; top:-15px; left:7px; width:15px; height:17px; border:3px solid #8f7951; border-radius:50%; }
+.rug-memory-prop[data-kind="expedition"] { width:34px; height:12px; border-radius:50%; background:#302c1c; box-shadow:-14px 4px 0 -2px #45402a,15px 3px 0 -3px #302c1c; }
+@keyframes rug-cup-creep { 0%,35%{transform:translateX(0) rotate(0)} 45%{transform:translateX(-6px) rotate(-5deg)} 55%,100%{transform:translateX(-12px) rotate(0)} }
+@media(max-width:720px){.rug-memory-prop{scale:.72;transform-origin:bottom center}.rug-caption{font-size:17px;line-height:1.35;min-height:74px}}
+@media(prefers-reduced-motion:reduce){.rug-guest{transition:none}.rug-memory-prop{animation:none!important}}

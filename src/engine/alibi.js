@@ -140,13 +140,13 @@ export function statementsFor(state, pet, now = Date.now()) {
   }
   const incident = (state.life?.scenes || []).find(scene => scene.cast?.includes(pet.id) && typeof scene.title === 'string');
   if (incident) {
-    push(truths, 'incident', 'I am named in the saved household incident “' + incident.title + '”.');
-    push(lies, 'incident', 'I am not named in the saved household incident “' + incident.title + '”.');
+    push(truths, 'incident', 'I was involved in “' + incident.title + '”.');
+    push(lies, 'incident', 'I had nothing to do with “' + incident.title + '”.');
   }
   const shared = pets.filter(other => pets.filter(p => p.name === other.name).length === 1).map(other => ({ other, count: state.stories?.relationships?.[[pet.id, other.id].sort().join('|')]?.plots || 0 })).find(r => r.count > 0);
   if (shared) {
-    push(truths, 'company', shared.other.name + ' and I have ' + shared.count + ' shared adventure' + (shared.count === 1 ? '' : 's') + ' recorded together.');
-    push(lies, 'company', shared.other.name + ' and I have no shared adventures recorded together.');
+    push(truths, 'company', shared.other.name + ' and I have ' + shared.count + ' shared adventure' + (shared.count === 1 ? '' : 's') + ' behind us.');
+    push(lies, 'company', shared.other.name + ' and I have never been on an adventure together.');
   }
 
   void now;
@@ -155,9 +155,9 @@ export function statementsFor(state, pet, now = Date.now()) {
 
 /* Builds three rounds. Each is two truths and a lie, all about different facts,
    and no statement is reused across the whole game. */
-export function newAlibi(state, pet, rng = Math.random, { mode = 'quick' } = {}) {
+export function newAlibi(state, pet, rng = Math.random, { mode = 'quick', practice = false } = {}) {
   const tier = mastery(pet, 'alibi').tier;
-  mode ||= ['quick','prove','combine'][tier];
+  mode = practice ? 'quick' : mode || ['quick','prove','combine'][tier];
   const { truths, lies } = statementsFor(state, pet);
   const shuffle = list => {
     const a = list.slice();
@@ -206,7 +206,7 @@ export function newAlibi(state, pet, rng = Math.random, { mode = 'quick' } = {})
     round.proof = round.proofs[0];
     round.evidence = pair.map(need=>labels[need]+': '+(pet.careLog?.[need]||0)).join(' + ')+' = '+total+' care actions. Both records are needed to check the total.';
   });
-  return { masteryTier: mode === 'quick' ? 0 : mode === 'prove' ? 1 : 2, receipt: masteryTicket(pet, 'alibi'), kind: 'alibi', mode: ['prove','combine'].includes(mode) ? mode : 'quick', proved: 0, petId: pet.id, notebook: truths.map(t => t.text), rounds, round: 0, correct: 0, complete: !rounds.length, claimed: false };
+  return { practice, masteryTier: mode === 'quick' ? 0 : mode === 'prove' ? 1 : 2, receipt: masteryTicket(pet, 'alibi'), kind: 'alibi', mode: ['prove','combine'].includes(mode) ? mode : 'quick', proved: 0, petId: pet.id, notebook: truths.map(t => t.text), rounds, round: 0, correct: 0, complete: !rounds.length, claimed: false };
 }
 
 export function currentRound(game) {
@@ -252,7 +252,7 @@ export function rewardAlibi(state, game, now = Date.now()) {
   if (!pet || !game.complete || game.claimed) return null;
   game.claimed = true;
   const clean = game.correct === game.rounds.length && game.rounds.length > 0 && (!['prove','combine'].includes(game.mode) || game.proved === game.rounds.length);
-  if(game.receipt && !completeMastery(pet,'alibi',game.masteryTier,game.receipt,{success:clean}))return {practice:true,fuss:0,bond:0,clean};
+  if(game.receipt && !completeMastery(pet,'alibi',game.masteryTier,game.receipt,{success:clean && !game.practice}))return {practice:true,fuss:0,bond:0,clean};
   recordEscapadeEvent(state, { kind: 'play', petIds: [pet.id], activity: 'alibi' }, now);
   tick(state, now);
   pet.alibis = (pet.alibis || 0) + 1;
@@ -269,7 +269,7 @@ export function rewardAlibi(state, game, now = Date.now()) {
   pet.playedAt ||= {}; pet.playedAt.alibi = now;
   addNote(state, clean
     ? pet.name + ' gave its statements and you proved every lie. It has begun interviewing replacement witnesses.'
-    : game.mode === 'prove' && game.correct === game.rounds.length
+    : ['prove','combine'].includes(game.mode) && game.correct === game.rounds.length
     ? pet.name + ' was caught lying, but the evidence did not hold up. It left carrying your chair.'
     : pet.name + ' gave its statements. You believed ' + (game.rounds.length - game.correct) + ' of the false ones. It is not going to correct the record.',
     pet.name, 'note');
@@ -296,7 +296,8 @@ const ALIBI_REPLIES = {
   'kept-request': '“You did what I asked. I have been trying to ask for something smaller ever since.”',
   'refused-request': '“I remember the no. I have been warming it under my tongue.”',
   incident: '“We were there together. I was hoping you remembered it worse.”',
-  company: '“We have survived things together. Now we have to decide where to stand.”'
+  company: '“We agreed one of us would eat the other if it came to that. Neither of us said it was off.”',
+  'care-total': 'It counts on its fingers, finds the same answer, and folds one finger the other way.'
 };
 export function alibiReaction(round, pet = null) {
   const key = round?.keys?.[round.lie], traits = pet?.traits || [];

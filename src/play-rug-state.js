@@ -3,12 +3,12 @@ const safeId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.te
   && !['__proto__', 'prototype', 'constructor'].includes(value);
 
 export const RUG_TRICKS = Object.freeze([
-  { id: 'first-catch', label: 'A very good catch', hint: 'Let your resident catch a tossed ball.', line: 'caught the ball, then checked whether you had noticed. You had.' },
-  { id: 'high-catch', label: 'A little airborne', hint: 'Try a high toss. Catch it together with a jump.', line: 'left the ground for a ball. Gravity has filed a polite objection.' },
-  { id: 'bounce-catch', label: 'On the rebound', hint: 'Try a bounce pass and let your resident collect it.', line: 'caught a bouncing ball. The floor has requested partial credit.' },
-  { id: 'first-bubble', label: 'An important pop', hint: 'Pop a bubble, or let your resident investigate one.', line: 'discovered that bubbles are briefly excellent company. You stayed longer.' },
-  { id: 'group-burst', label: 'A small commotion', hint: 'Pop three bubbles yourself within a second and a half.', line: 'watched you pop three bubbles in a flurry. This is now an approved form of weather.' },
-  { id: 'five-catches', label: 'One more, please', hint: 'Share five catches during one visit to the rug.', line: 'brought the ball back five times. It had stopped pretending this was an accident.' }
+  { id: 'first-catch', label: 'Caught with something', hint: 'Let your resident catch a tossed ball.', line: 'caught the ball and held it while the woodlouse put the lid back on.' },
+  { id: 'high-catch', label: 'Loose from the floor', hint: 'Try a high toss. Catch it together with a jump.', line: 'left the ground for a ball. Something inside arrived a moment later.' },
+  { id: 'bounce-catch', label: 'On the rebound', hint: 'Try a bounce pass and let your resident collect it.', line: 'caught the rebound before the woodlouse could get the box underneath.' },
+  { id: 'first-bubble', label: 'No body to bury', hint: 'Pop a bubble, or let your resident investigate one.', line: 'watched a bubble disappear. The woodlouse examined the empty patch.' },
+  { id: 'group-burst', label: 'Three empty coffins', hint: 'Pop three bubbles yourself within a second and a half.', line: 'watched three bubbles burst. The woodlouse had brought three boxes.' },
+  { id: 'five-catches', label: 'Five returns', hint: 'Share five catches during one visit to the rug.', line: 'returned the ball five times. It checked its teeth after each one.' }
 ].map(trick => Object.freeze(trick)));
 
 export function blankRug() { return { version: 1, residents: [] }; }

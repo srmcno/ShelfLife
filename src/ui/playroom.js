@@ -137,7 +137,7 @@ export function initPlayroom(state) {
       const copy = cardCopy[a.id], resume = pet ? continueLabel(a.id, state.life) : '';
       const key={memory:'handshake',outing:'expedition',alibi:'alibi',court:'court',market:'market'}[a.id];
       const learning=key?masteryText(['memory','alibi'].includes(a.id)?pet||{}:state,key).split('. ')[0]:'';
-      const record = adventure?.petId === pet?.id && adventure.approach.activity === a.id && !adventure.playDone ? 'For our little adventure' : resume || shortRecord(a, state, pet);
+      const record = adventure && pet && adventure.petId === pet.id && adventure.approach.activity === a.id && !adventure.playDone ? 'For the current adventure' : resume || shortRecord(a, state, pet);
       return '<button type="button" class="activity-card activity-' + a.id + (resume ? ' activity-continue' : '') + '" data-activity="' + a.id + '" aria-label="' + esc((resume ? 'Continue ' : 'Play ') + copy.title + '. ' + activityTime(a.id, state.life) + '. ' + activityRecord(a, state, pet)) + '" ' + (!pet ? 'disabled' : '') + '>' +
         scene(a.id) + '<span class="activity-top"><span class="activity-kind">' + esc(a.kind) + '</span><span>' + esc(activityTime(a.id, state.life)) + '</span></span>' +
         '<strong>' + esc(copy.title) + '</strong><span class="activity-hook">' + esc(copy.hook) + '</span>'+(learning?'<span class="activity-hook">'+esc(learning)+'</span>':'') +

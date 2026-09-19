@@ -82,6 +82,13 @@ test('unknown, mismatched and unrecorded keepsakes preserve only the account', (
   for (const key of ['', 'missing', '__proto__', '<svg onload="alert(1)">']) assert.equal(scenePropSVG('keepsake:' + key), '');
 });
 
+test('old keepsake presentation retains its original title after the story rewrite', () => {
+  const old = {kind:'escapade',title:'The Glad-You-Are-Here Ribbon',text:'The old recorded ending.',cast:['protagonist'],stage:{key:'escapade',branch:'unbirthday',object:'unbirthday-rosette'}};
+  assert.equal(sceneDirection(old).props[0].label,'The Glad-You-Are-Here Ribbon');
+  assert.equal(sceneDirection({...old,stage:{...old.stage,contentVersion:2}}).props[0].label,'The Still-Here Ribbon');
+  assert.equal(old.text,'The old recorded ending.');
+});
+
 // A small DOM fixture exercises the real still-preview mounting and resident
 // sprite path. Timeline interruptions are covered by household_scene_lifecycle.
 function miniatureDOM(t) {

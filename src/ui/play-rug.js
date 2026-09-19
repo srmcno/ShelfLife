@@ -1,5 +1,5 @@
 import { rugReaction } from '../content/rug-comedy.js';
-import { rememberEcho, householdAftermath } from '../household-echoes.js';
+import { rememberEcho, rememberRugLine, rugMemoryFact, householdAftermath } from '../household-echoes.js';
 import { countRugChallenge, createRug, tossBall, tossPreset, spawnBubbles, popBubble, updateRug, pauseRug, recordRugEvents, rugProgress, setRugViewport, RUG_WORLD } from '../engine/play-rug.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { careFor, previewCare } from '../engine/care.js';
@@ -33,25 +33,50 @@ export function initPlayRug(state, refresh) {
     '<div class="sheet-head rug-head"><div><h2 id="rugTitle">The play rug</h2><p>No timer. Loose wrists. Questionable reflexes.</p></div><button class="btn btn-ghost btn-sm" id="rugClose">Back to the shelf</button></div>'+
     '<div class="rug-company"><label for="rugResident">On the rug</label><select id="rugResident"></select><div id="rugNeeds" class="rug-needs"></div></div>'+
     '<div class="rug-body"><div class="rug-play"><div class="rug-stage" id="rugStage" tabindex="0" role="group" aria-label="Interactive play rug. Tap to throw a ball, or use the toy controls." aria-describedby="rugInstructions">'+
-    '<div class="rug-world"><div class="rug-guest" aria-label="A visiting woodlouse undertaker"><span class="woodlouse"><i></i></span><span class="rug-coffin"></span></div><div class="rug-shadow" id="rugShadow"></div><div class="rug-resident" id="rugPet" data-sl-theatre="1"></div><div class="rug-entities" id="rugEntities"></div><div class="rug-sparkles" id="rugSparkles" aria-hidden="true"></div><svg class="rug-aim" id="rugAim" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true" hidden><path/></svg></div>'+
+    '<div class="rug-world"><div class="rug-memory-prop" id="rugMemoryProp" role="img" hidden></div><div class="rug-guest" aria-label="A visiting woodlouse undertaker"><span class="woodlouse"><i></i></span><span class="rug-coffin"></span></div><div class="rug-shadow" id="rugShadow"></div><div class="rug-resident" id="rugPet" data-sl-theatre="1"></div><div class="rug-entities" id="rugEntities"></div><div class="rug-sparkles" id="rugSparkles" aria-hidden="true"></div><svg class="rug-aim" id="rugAim" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true" hidden><path/></svg></div>'+
     '<div class="rug-discovery" id="rugDiscovery" role="status" hidden></div><div class="rug-pause" id="rugPause" hidden><span>The rug is waiting.</span><p id="rugPauseReason"></p><button class="btn btn-primary" id="rugResume">Resume playing</button></div></div>'+
     '<p id="rugOutcome" class="rug-outcome" role="status"></p><p class="rug-caption" id="rugCaption" aria-live="polite">Pick up a toy. See what happens.</p></div>'+
     '<aside class="rug-tools" aria-label="Toys and care"><div class="rug-toy-picker" role="group" aria-label="Choose a toy"><button class="rug-toy" type="button" data-rug-toy="ball" aria-pressed="true">'+BALL+'<span>Patchwork ball</span></button><button class="rug-toy" type="button" data-rug-toy="bubbles" aria-pressed="false">'+BUBBLE+'<span>Soap bubbles</span></button></div>'+
     '<p id="rugInstructions" class="rug-instructions">Tap to aim. Drag farther for a harder throw. Let it return the ball before tossing again.</p>'+
     '<div class="rug-throw-style" id="rugThrowStyle"><label for="rugThrow">Try a throw</label><select id="rugThrow"><option value="soft">Soft toss</option><option value="high">Sky high</option><option value="bounce">Bounce pass</option><option value="long">Across the room · hard</option></select></div>'+
     '<button class="btn btn-primary rug-launch" id="rugAction">Toss a ball</button><button class="btn" id="rugPop" hidden>Pop a bubble</button>'+
-    '<div class="rug-care"><span>A little care, too</span><div>'+['food','fuss','clean'].map((key,i)=>'<button class="btn" type="button" data-rug-care="'+key+'">'+careIcon(key)+'<span>'+['Snack','Fuss','Wash'][i]+'</span></button>').join('')+'</div></div>'+
-    '<details class="rug-challenges"><summary>Try a trick challenge</summary><p>Untimed. Misses are allowed. Practice never costs trust.</p><button class="btn" id="rugChallenge">Start: three clean catches</button><p id="rugChallengeProgress"></p></details><details class="rug-tricks" id="rugTricks"><summary><span>Little tricks</span><b id="rugTally">0 / 6</b></summary><p>Each new trick earns one discovery. Every resident has their own little repertoire.</p><ol id="rugTrickList"></ol></details><p class="rug-next" id="rugNext"></p></aside></div></div>';
+    '<div class="rug-care"><span>Keep it fed.<br>Watch your fingers.</span><div>'+['food','fuss','clean'].map((key,i)=>'<button class="btn" type="button" data-rug-care="'+key+'">'+careIcon(key)+'<span>'+['Snack','Fuss','Wash'][i]+'</span></button>').join('')+'</div></div>'+
+    '<details class="rug-challenges"><summary>Try a trick challenge</summary><p>Untimed. Misses are allowed. Practice never costs trust.</p><button class="btn" id="rugChallenge">Start: three clean catches</button><p id="rugChallengeProgress"></p></details><details class="rug-tricks" id="rugTricks"><summary><span>Tricks kept</span><b id="rugTally">0 / 6</b></summary><p>Each new trick earns one discovery. Each resident keeps their own discoveries.</p><ol id="rugTrickList"></ol></details><p class="rug-next" id="rugNext"></p></aside></div></div>';
   document.body.appendChild(veil);
   const el = id => veil.querySelector('#'+id);
   const stage = el('rugStage'), host = el('rugPet'), entities = el('rugEntities'), caption = el('rugCaption');
   const residentPicker = el('rugResident'), nodes = new Map();
-  let usedLines = [], challenge = null, lastCaptionAt = 0;
+  let usedLines = [], challenge = null, lastCaptionAt = 0, captionTimer = 0, pendingReaction = null, linesDirty=false;
   let pet = null, game = null, toy = 'ball', frame = 0, last = 0, active = false, paused = false, gesture = null;
   let celebrationTimer = 0, captionCount = 0, lastSound = 0, lastInput = 0, progressKey = '', selectorKey = '', pauseReturn = null;
   const isOpen = () => active && veil.classList.contains('open');
   const available = () => isOpen() && !paused && !document.hidden && state.pets.includes(pet);
   const setCaption = text => { if (caption.textContent !== text) caption.textContent = text; };
+  function clearReaction() { clearTimeout(captionTimer); captionTimer=0; pendingReaction=null; }
+  function flushLines() { if(linesDirty&&save())linesDirty=false; }
+  function speakReaction(reaction) {
+    if(!available())return;
+    const line=rugReaction(reaction,pet,state.householdEchoes?.events||[],usedLines);
+    if(!line)return;
+    setCaption(pet.name+': '+line.text);usedLines.push(line.id);usedLines=usedLines.slice(-36);
+    rememberRugLine(state,pet.id,line.id);linesDirty=true;lastCaptionAt=performance.now();
+  }
+  function queueReaction(reaction) {
+    // Give a physical beat time to land. Keep one pending beat, never a backlog
+    // of old commentary, and do not let a burst of bubbles erase a missed throw.
+    const rank={recover:4,miss:4,refuse:3,fumble:3,catch:2,return:1,pop:0,jump:0};
+    const wait=3000-(performance.now()-lastCaptionAt);
+    if(wait<=0){clearReaction();speakReaction(reaction);return;}
+    if(!pendingReaction||rank[reaction.type]>=rank[pendingReaction.type])pendingReaction=reaction;
+    if(!captionTimer)captionTimer=setTimeout(()=>{const next=pendingReaction;clearReaction();if(next)speakReaction(next);},wait);
+  }
+  function syncRoomProp() {
+    const fact=rugMemoryFact(state.householdEchoes?.events||[],pet?.id);
+    const prop=el('rugMemoryProp');prop.hidden=!fact;
+    if(!fact)return;
+    const labels={bath:'The cup placed over the bathwater. It is moving.',court:'The mourning hat brought home after the conviction.',market:'The shopping bag, turned inside out for inspection.',expedition:'Dirt shaken out of the returning resident’s soles.'};
+    prop.dataset.kind=fact.kind;prop.setAttribute('aria-label',labels[fact.kind]);prop.title=labels[fact.kind];
+  }
   function syncProgress() {
     if (!pet) return;
     const progress = rugProgress(state, pet.id);
@@ -59,7 +84,7 @@ export function initPlayRug(state, refresh) {
     if (key === progressKey) return; progressKey = key;
     el('rugTally').textContent = progress.earned+' / '+progress.total;
     el('rugTrickList').innerHTML = progress.tricks.map(trick=>'<li class="'+(trick.earned?'earned':'')+'">'+(trick.earned?BADGE:'<span class="rug-unlearned" aria-hidden="true">✧</span>')+'<div><b>'+esc(trick.label)+'</b><span>'+esc(trick.hint)+'</span></div></li>').join('');
-    el('rugNext').textContent = progress.next ? 'Something to try: '+progress.next.hint : 'A full repertoire. It is available for very small bookings.';
+    el('rugNext').textContent = progress.next ? 'Something to try: '+progress.next.hint : 'All six tricks kept. Try harder throws or a challenge.';
   }
   function syncCare() {
     if (!pet) return;
@@ -77,7 +102,7 @@ export function initPlayRug(state, refresh) {
     if (button) { button.disabled = !state.pets.length; button.title = state.pets.length?'Toys, small tricks and a little time together':'Make a resident to play together'; }
     if (!isOpen()) return;
     if (!state.pets.includes(pet)) { close(); return; }
-    syncCare(); syncProgress();
+    syncCare(); syncProgress(); syncRoomProp();
   };
   function clearGesture() {
     if (gesture) { try { stage.releasePointerCapture(gesture.id); } catch { /* already released */ } }
@@ -87,7 +112,7 @@ export function initPlayRug(state, refresh) {
   function pause(reason) {
     if (!isOpen()) return;
     if (!paused) pauseReturn=veil.contains(document.activeElement)?document.activeElement:stage;
-    paused=true;stop();clearGesture();
+    paused=true;stop();clearGesture();clearReaction();flushLines();
     pauseRug(game);veil.querySelector('.rug-tools').inert=true;
     el('rugPause').hidden=false;el('rugPauseReason').textContent=reason;
     if(!document.hidden)el('rugResume').focus();
@@ -99,18 +124,18 @@ export function initPlayRug(state, refresh) {
     pauseReturn=null;
   }
   function close() {
-    active=false;stop();clearGesture();clearTimeout(celebrationTimer);pauseReturn=null;
+    active=false;stop();clearGesture();clearReaction();clearTimeout(celebrationTimer);pauseReturn=null;
     el('rugDiscovery').hidden=true;veil.classList.remove('open');
     nodes.clear();entities.replaceChildren();el('rugSparkles').replaceChildren();host.replaceChildren();game=null;pet=null;
-    save();refresh();
+    if(save())linesDirty=false;refresh();
   }
   function chooseResident(id) {
-    stop();clearGesture();
+    stop();clearGesture();clearReaction();flushLines();lastCaptionAt=0;
     pet=state.pets.find(p=>p.id===id) || state.pets[0];if(!pet){close();return;}
-    game=createRug(pet);setRugViewport(game,stage.getBoundingClientRect().width);usedLines=[];challenge=null;el('rugChallengeProgress').textContent='';el('rugOutcome').textContent='';residentPicker.value=pet.id;host.replaceChildren(renderPetSprite(pet));
+    game=createRug(pet);setRugViewport(game,stage.getBoundingClientRect().width);usedLines=(state.householdEchoes?.callbacks||[]).filter(key=>key.startsWith(pet.id+':')).map(key=>key.slice(pet.id.length+1));challenge=null;el('rugChallengeProgress').textContent='';el('rugOutcome').textContent='';residentPicker.value=pet.id;host.replaceChildren(renderPetSprite(pet));
     host.setAttribute('aria-label',pet.name);progressKey='';nodes.clear();entities.replaceChildren();el('rugSparkles').replaceChildren();
     el('rugDiscovery').hidden=true;clearTimeout(celebrationTimer);
-    const aftermath=householdAftermath(state,pet.id);setCaption(aftermath?aftermath.text:pet.name+' eyes the woodlouse measuring the coffin. “That had better be for the ball.”');syncCare();syncProgress();paint();resume();
+    const aftermath=householdAftermath(state,pet.id);setCaption(aftermath?aftermath.text:pet.name+' eyes the woodlouse measuring the coffin. “That had better be for the ball.”');syncCare();syncProgress();syncRoomProp();paint();resume();
   }
   function open(id) {
     if (document.querySelector('.veil.open,#moreTray.open') || !state.pets.length) return;
@@ -132,11 +157,7 @@ export function initPlayRug(state, refresh) {
     const priority=['recover','miss','refuse','fumble','catch','pop','return','jump'];
     const reaction=priority.map(type=>events.find(e=>e.type===type)).find(Boolean);
     if(reaction){
-      const facts=state.householdEchoes?.events || [];
-      const line=rugReaction(reaction,pet,facts,usedLines);
-      if(line && (performance.now()-lastCaptionAt>1800 || ['miss','fumble','recover','refuse'].includes(reaction.type))){
-        setCaption(pet.name+': '+line.text);usedLines.push(line.id);if(usedLines.length>36)usedLines.shift();lastCaptionAt=performance.now();
-      }
+      queueReaction(reaction);
       const labels={catch:reaction.recovered?'Recovered catch':'Clean catch',fumble:'Fumble: catch the rebound',recover:'Recovered',miss:'Miss: try a nearer or slower throw',refuse:'Refused: let it finish the previous throw',return:'Ball returned'};
       if(labels[reaction.type])el('rugOutcome').textContent=labels[reaction.type];
       if(['miss','fumble','recover','catch'].includes(reaction.type)&&rememberEcho(state,reaction.type,pet.id,reaction.id))save();
@@ -156,6 +177,7 @@ export function initPlayRug(state, refresh) {
     if(!game)return;
     const p=game.pet;
     host.style.left=p.x/10+'%';host.style.top=p.y/6+'%';host.dataset.pose=p.pose;stage.dataset.outcome=p.pose;
+    veil.querySelector('.rug-guest').style.left=p.pose==='miss'?clamp(p.x-105,40,850)/10+'%':'8%';
     const sprite=host.firstElementChild;
     sprite.style.setProperty('--sl-face',p.facing||1);sprite.classList.toggle('rug-moving',Math.abs(p.vx)>5);
     el('rugShadow').style.left=p.x/10+'%';el('rugShadow').style.opacity=String(clamp(1-(RUG_WORLD.ground-p.y)/250,.15,.65));
@@ -183,7 +205,7 @@ export function initPlayRug(state, refresh) {
   function input(){lastInput=performance.now();start();}
   function presetThrow() {
     if(!available())return;
-    if(!tossPreset(game,el('rugThrow').value))setCaption('Three balls. The rug has reached peak ambition.');
+    if(!tossPreset(game,el('rugThrow').value))setCaption('Three balls already. Wait for one to return.');
     input();paint();
   }
   function blow(x=game?.pet.x||500,y=game?.pet.y-120||360) {
@@ -241,17 +263,23 @@ export function initPlayRug(state, refresh) {
   veil.querySelectorAll('[data-rug-toy]').forEach(b=>b.addEventListener('click',()=>selectToy(b.dataset.rugToy)));
   veil.querySelectorAll('[data-rug-care]').forEach(button=>button.addEventListener('click',()=>{
     if(!available())return;const need=button.dataset.rugCare,result=careFor(state,pet,need);
-    setCaption(result.message);({food:playFeed,fuss:playFuss,clean:playClean}[need])();
+    clearReaction();lastCaptionAt=performance.now();setCaption(result.message);({food:playFeed,fuss:playFuss,clean:playClean}[need])();
     host.classList.remove('rug-care-food','rug-care-fuss','rug-care-clean');void host.offsetWidth;host.classList.add('rug-care-'+need);
-    checkUnlocks(state);checkAchievements(state);refresh();syncCare();input();
+    checkUnlocks(state);checkAchievements(state);refresh();syncCare();syncRoomProp();input();
   }));
   residentPicker.addEventListener('change',()=>chooseResident(residentPicker.value));
   el('rugClose').addEventListener('click',close);el('rugResume').addEventListener('click',()=>resume(true));
+  // Safari does not focus a button after a touch/click. Remember the actual
+  // control by focusing it before its action, so a pause can return there.
+  veil.addEventListener('click',e=>{
+    const control=e.target.closest('.rug-tools button');
+    if(control&&!control.disabled)control.focus({preventScroll:true});
+  },true);
   veil.addEventListener('click',e=>{if(e.target===veil)close();});
   window.addEventListener('shelflife:rug',e=>open(e.detail?.petId));
   document.getElementById('hangoutBtn')?.addEventListener('click',()=>open());
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&isOpen())pause('Come back whenever you like. Nothing here is on a timer.');else if(isOpen()&&paused)el('rugResume').focus();});
-  window.addEventListener('pagehide',stop);
+  window.addEventListener('pagehide',()=>{stop();clearReaction();flushLines();});
   stage.addEventListener('keydown',e=>{if(e.target!==stage||![' ','Enter'].includes(e.key)||e.repeat)return;e.preventDefault();toy==='ball'?presetThrow():blow();});
   sync(state);
 }
