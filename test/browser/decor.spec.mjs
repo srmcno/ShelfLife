@@ -9,6 +9,9 @@ async function household(page){
  await page.goto('/');await page.getByRole('button',{name:'Shelf',exact:true}).click();
 }
 test('every room, wood and wallpaper changes the shelf and agrees with the live preview',async({page})=>{
+ // This exercises the entire catalog plus reload persistence in one journey.
+ // Linux WebKit needs more than the default 30 seconds for all these UI choices.
+ test.setTimeout(90_000);
  await household(page);await open(page);
  for(const [group,target] of [['roomOpts','#cabinet'],['woodOpts','#cabinet .plank'],['wallOpts','#cabinet']]){
   const appearances=new Set();
