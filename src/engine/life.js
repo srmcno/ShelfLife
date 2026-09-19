@@ -1,3 +1,5 @@
+import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
+import { rememberEcho } from '../household-echoes.js';
 import { errandSnapshot, applyErrandMove, bestErrandScore } from './market-errands.js';
 import { normalizeLife } from '../life-state.js';
 import { OUTINGS, OUTING_TRAIL_SCENES, OUTING_ALTERNATES, GEAR, RELICS, FRAMES, MARKET_ITEMS, MARKET_REQUESTS, MARKET_RARITIES, visitorActFor } from '../content/life.js';
@@ -31,6 +33,8 @@ export function recordScene(state, kind, title, text, cast=[], now=Date.now(), s
   if(stage && typeof stage==='object')scene.stage={...stage};
   l.scenes.unshift(scene); l.scenes.length=Math.min(18,l.scenes.length);
   fileScene(state, scene);
+  const echoKind = ({court:'court',market:'market',outing:'expedition'})[kind] || (stage?.key==='game:chase'?'chase':null);
+  if(echoKind&&cast[0])rememberEcho(state,echoKind,cast[0],'scene:'+scene.id,now);
   return scene;
 }
 export function recordGameLife(state, pet, kind, now=Date.now(), victory=true) {
@@ -75,7 +79,9 @@ export function outingSnapshot(state) {
   // crew before rendering choices, while retaining already completed reports.
   if(o&&o.step<3&&!state.pets.some(p=>o.cast.includes(p.id))){l.outing=null;return null;}
   if(!o||o.version!==2)return o;
-  const steps=outingTrail(o.route,o.edition,o.mission,o.missionRevision);
+  const branchEdition = o.masteryTier>=2 && o.choices?.[0]===1 ? (o.edition ^ 6) : o.edition;
+  const steps=outingTrail(o.route,branchEdition,o.mission,o.missionRevision);
+  if(steps && branchEdition!==o.edition)steps[0]=outingTrail(o.route,o.edition,o.mission,o.missionRevision)[0];
   if(!steps||!GEAR.some(g=>g.id===o.gear))return null;
   const expertise=Array.isArray(o.expertise)?o.expertise:[],choices=[],log=[];
   let nerve=2,score=0,toolUsed=false;
@@ -94,7 +100,7 @@ export function outingSnapshot(state) {
   const dare=OUTING_DARES.find(d=>d.id===o.dare),dareMet=!!dare&&trailDareMet(dare.id,o.missionRevision>=2&&o.returnedAt?choices.slice(0,o.returnedAt):choices,nerve,toolUsed),dareBonus=choices.length===3&&dareMet?2:0;
   const baseScore=score;score+=dareBonus;
   Object.assign(o,{choices,log,nerve,score,toolUsed,step:choices.length});
-  const search=(i,n,used,path=[])=>i===3?(dare&&trailDareMet(dare.id,path,n,used)?2:0):Math.max(...[0,1,2].map(c=>{if(o.mission&&c===2&&steps[i].good!==o.gear)return -Infinity;const m=trailMove(steps[i],o.gear,expertise,n,used,c);return m?m.points+search(i+1,m.nerve,m.toolUsed,[...path,c]):-Infinity;}));
+  const search=(i,n,used,path=[])=>i===3?(dare&&trailDareMet(dare.id,path,n,used)?2:0):Math.max(...[0,1,2].map(c=>{const searchSteps=outingTrail(o.route,o.masteryTier>=2&&path[0]===1?o.edition^6:o.edition,o.mission,o.missionRevision);if(o.mission&&c===2&&searchSteps[i].good!==o.gear)return -Infinity;const m=trailMove(i===0?outingTrail(o.route,o.edition,o.mission,o.missionRevision)[0]:searchSteps[i],o.gear,expertise,n,used,c);return m?m.points+search(i+1,m.nerve,m.toolUsed,[...path,c]):-Infinity;}));
   const step=steps[o.step];
   const recovered=o.mission?choices.flatMap((c,i)=>c===1||c===2&&steps[i].good===o.gear?[i]:[]):[];
   const stored=lifeState(state).projectParts[o.route]||[],parts=[...new Set([...stored,...recovered])];
@@ -103,7 +109,7 @@ export function outingSnapshot(state) {
     const part=PROJECTS.find(p=>p.id===o.route)?.parts[o.step],pickup=stored.includes(o.step)?'Already stored · earn trail points':'Recover: '+part;
     const missionHint=choice===0?'Leave the part · restore 2 nerve':choice===1?pickup+' · spend '+cost+' nerve':toolUsed?'Equipment already used':step.good===o.gear?pickup+' · use tool · no nerve cost':'Your packed tool fits another stop';
     const available=!!move&&(!o.mission||choice!==2||step.good===o.gear);
-    return {choice,available,preview:available?{nerve:move.nerve,toolUsed:move.toolUsed,points:move.points,partIndex:o.mission&&choice!==0?o.step:null,partNew:!!(o.mission&&choice!==0&&!stored.includes(o.step))}:null,label:choice===0?(o.mission?'Leave this part & recover':'Take the quiet way around'):choice===1?step.options[1]:step.good===o.gear?step.options[0]:o.mission?'Save the tool for another stop':'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:o.mission?missionHint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
+    return {choice,available,preview:available?{nerve:move.nerve,toolUsed:move.toolUsed,points:move.points,partIndex:o.mission&&choice!==0?o.step:null,partNew:!!(o.mission&&choice!==0&&!stored.includes(o.step))}:null,label:choice===0?(o.mission?'Leave this part & recover':'Take the quiet way around'):choice===1?step.options[1]:step.good===o.gear?step.options[0]:o.mission?'Save the tool for another stop':'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:o.masteryTier>=2&&o.step===0&&choice===1?missionHint+' · opens a different route for stops 2 and 3':o.mission?missionHint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
   }):[]};
 }
 export function outingPreview(state, routeId, gearId, cast) {
@@ -115,15 +121,26 @@ export function outingPreview(state, routeId, gearId, cast) {
 export function startOuting(state, routeId, gearId, cast, options={}) {
   const l=lifeState(state);
   if(l.outing||!Array.isArray(cast))return false;
+  const learning = options.learning ? (options.practice ? 0 : mastery(state,'expedition').tier) : null;
   const ids=[...new Set(cast)].filter(id=>state.pets.some(p=>p.id===id)).slice(0,2);
   if(!outingPreview(state,routeId,gearId,ids))return false;
   const crew=state.pets.filter(p=>ids.includes(p.id));
   const edition=Number.isInteger(options.edition)&&options.edition>=0&&options.edition<8?options.edition:l.outings%8;
-  const expertise=['cute','menace','damp','mystique'].filter(stat=>crew.some(p=>(p.stats?.[stat]||0)>=7));
-  l.outing={version:2,edition,expertise,route:routeId,gear:gearId,cast:ids,step:0,score:0,log:[],choices:[],nerve:2,toolUsed:false};
+  const expertise=learning===0?[]:['cute','menace','damp','mystique'].filter(stat=>crew.some(p=>(p.stats?.[stat]||0)>=7));
+  l.outing={...(learning!==null?{masteryTier:learning,practice:options.practice===true,receipt:masteryTicket(state,'expedition')}:{}),version:2,edition,expertise,route:routeId,gear:gearId,cast:ids,step:0,score:0,log:[],choices:[],nerve:2,toolUsed:false};
   if(options.mission===true){l.outing.mission=true;if(options.missionRevision!==1)l.outing.missionRevision=2;}
   if(OUTING_DARES.some(d=>d.id===options.dare))l.outing.dare=options.dare;
   return true;
+}
+// Replay the same route rules with a fresh completion receipt. Mastery may
+// have advanced since this route began; it must not rewrite the replay.
+export function retryOuting(state) {
+  const previous=outingSnapshot(state);
+  if(!previous||previous.version!==2||previous.step!==3||!finishOuting(state))return false;
+  const learning=Number.isInteger(previous.masteryTier);
+  const started=startOuting(state,previous.route,previous.gear,previous.cast,{edition:previous.edition,dare:previous.dare,mission:previous.mission===true,missionRevision:previous.missionRevision||1,learning,practice:previous.practice===true});
+  if(started){const next=lifeState(state).outing;next.expertise=previous.expertise.slice();if(learning)next.masteryTier=previous.masteryTier;}
+  return started;
 }
 export function chooseOuting(state, choice, now=Date.now()) {
   const l=lifeState(state), o=l.outing, route=OUTINGS.find(x=>x.id===o?.route);
@@ -155,6 +172,7 @@ export function chooseOuting(state, choice, now=Date.now()) {
   const text=crew.map(p=>p.name).join(' and ')+' returned with '+relic.name.toLowerCase()+'. '+relic.line+' '+line;
   recordScene(state,'outing',route.name,text,crew.map(p=>p.id),now,{key:'outing',branch:route.id,object:relic.id});addNote(state,text,'beyond the shelf','scheme');
   o.result={relic:relic.id,fresh};
+  if(o.receipt && !o.practice && !o.returnedAt && o.score>=3) completeMastery(state,'expedition',o.masteryTier,o.receipt);
   recordEscapadeEvent(state, { kind: 'play', petIds: crew.map(p => p.id), activity: 'outing' }, now);
   if(o.mission){
     const after=outingSnapshot(state),builtBefore=l.projects.includes(o.route);
@@ -275,15 +293,15 @@ export function marketSnapshot(state){
  snapshot.score=scoreMarket(snapshot.bag,snapshot.buttons,snapshot.requests,snapshot.secret);
  return snapshot;
 }
-export function startMarket(state,{replay=false,expanded=false,errands=false,petId=null}={}){
+export function startMarket(state,{replay=false,expanded=false,errands=false,petId=null,practice=false,learning=false}={}){
  const l=lifeState(state);if(!state.pets.length||l.market&&!l.market.claimed)return false;
- const previous=l.market?.seed,version=replay&&previous?(l.market.version||1):(errands?4:expanded?2:1);
+ const previous=l.market?.seed,version=replay&&previous?(l.market.version||1):(errands?(learning?5:4):expanded?2:1);
  if(!replay||!previous)l.marketSerial++;
  // Stable market numbers let players retry an identical planning puzzle.
  const seed=replay&&previous?previous:(Math.imul(l.marketSerial,2654435761)>>>0)||1;
  const lead=state.pets.find(p=>p.id===petId),crew=(lead?[lead,...state.pets.filter(p=>p.id!==petId)]:state.pets).slice(0,3);
  const patrons=replay&&previous?l.market.patrons:crew.map(p=>p.name);
- l.market={seed,moves:[],claimed:false,...(version>=2?{version}: {}),...(version>=3?{patrons}: {}),...(version>=4?{patronIds:replay&&previous?l.market.patronIds:crew.map(p=>p.id)}:{})};return true;
+ l.market={...(version===5?{practice:replay&&previous?l.market.practice===true:practice,tier:replay&&previous?l.market.tier:practice?0:mastery(state,'market').tier}:{}),seed,moves:[],claimed:false,...(version>=2?{version}: {}),...(version>=3?{patrons}: {}),...(version>=4?{patronIds:replay&&previous?l.market.patronIds:crew.map(p=>p.id)}:{})};return true;
 }
 export function chooseMarket(state,pick,trade=null,{secret=false}={}){
  const l=lifeState(state),snapshot=marketSnapshot(state),move={pick,trade,...(secret?{secret:true}: {})};
@@ -303,15 +321,16 @@ export function leaveMarket(state){
 export function claimMarket(state,now=Date.now()){
  const l=lifeState(state),snapshot=marketSnapshot(state);
  if(!snapshot?.complete||snapshot.claimed)return null;
- const score=snapshot.score,done=score.fulfilled.filter(Boolean).length,tier=snapshot.version>=3?(done===3?2:done===2?1:0):score.total===bestMarketScore(snapshot.seed,{version:snapshot.version})?2:score.total>=17?1:0,relic=RELICS.find(r=>r.id==='market:'+tier);
+ const score=snapshot.score,done=score.fulfilled.filter(Boolean).length,tier=snapshot.version>=3?(done===snapshot.requests.length?2:done===2?1:0):score.total===bestMarketScore(snapshot.seed,{version:snapshot.version})?2:score.total>=17?1:0,relic=RELICS.find(r=>r.id==='market:'+tier);
  l.market.claimed=true;l.marketRuns++;
+ if(snapshot.version===5 && !l.market.practice && done===snapshot.requests.length){const before=mastery(state,'market').tier;completeMastery(state,'market',snapshot.tier,'market:'+snapshot.seed);const after=mastery(state,'market').tier;if(after>before)l.market.masteryUnlocked=after;}
  if(snapshot.version>=4)recordEscapadeEvent(state,{kind:'play',petIds:(snapshot.patronIds||[]).filter(id=>state.pets.some(p=>p.id===id)),activity:'market'},now);
- if(snapshot.version===4)l.marketErrandBestV4=Math.max(l.marketErrandBestV4||0,score.total);else if(snapshot.version===3)l.marketErrandBest=Math.max(l.marketErrandBest||0,score.total);else l.marketBest=Math.max(l.marketBest,score.total);
+ if(snapshot.version===5)l.marketErrandBestV5[snapshot.tier]=Math.max(l.marketErrandBestV5[snapshot.tier]||0,score.total);else if(snapshot.version===4)l.marketErrandBestV4=Math.max(l.marketErrandBestV4||0,score.total);else if(snapshot.version===3)l.marketErrandBest=Math.max(l.marketErrandBest||0,score.total);else l.marketBest=Math.max(l.marketBest,score.total);
  const fresh=!l.relics.includes(relic.id);
  if(fresh){l.relics.push(relic.id);l.xp+=4;if(l.displayed.length<3)l.displayed.push(relic.id);}
  const first=awardDiscovery(state,'game:market',3,now);dailyActivity(state,'market',now);l.introDone=true;
  const cast=(snapshot.version>=4?(snapshot.patronIds||[]):state.pets.slice(0,2).map(p=>p.id)).filter(id=>state.pets.some(p=>p.id===id)).slice(0,2),names=cast.map(id=>state.pets.find(p=>p.id===id).name).join(' and ')||'The household';
- const text=snapshot.version>=3?names+' delivered '+done+' of 3 household errands and brought home '+snapshot.buttons+' buttons. '+(done===3?'Everyone got what they asked for. They are meeting to decide what they meant.':done?'The completed errands are pleased. The others have requested your manager.':'They brought the list back. The list was not one of the errands.')+(snapshot.score.premiumPoints?' Special deliveries earned '+snapshot.score.premiumPoints+' points.':''):names+' returned from the night market with '+snapshot.bag.length+' questionable purchase'+(snapshot.bag.length===1?'':'s')+' and '+score.fulfilled.filter(Boolean).length+' of 3 requests filled. '+(tier===2?'The vendors applauded. One of them checked for missing buttons.':tier===1?'The household calls this careful budgeting. The receipt calls it three objects in a bag.':'The bag has been presented as an artistic statement. This is why nobody lets the bag speak.')+' '+relic.line;
+ const text=snapshot.version>=3?names+' delivered '+done+' of '+snapshot.requests.length+' household errands and brought home '+snapshot.buttons+' buttons. '+(done===snapshot.requests.length?'Everyone got what they asked for. They are meeting to decide what they meant.':done?'The completed errands are pleased. The others have requested your manager.':'They brought the list back. The list was not one of the errands.')+(snapshot.score.premiumPoints?' Special deliveries earned '+snapshot.score.premiumPoints+' points.':''):names+' returned from the night market with '+snapshot.bag.length+' questionable purchase'+(snapshot.bag.length===1?'':'s')+' and '+score.fulfilled.filter(Boolean).length+' of 3 requests filled. '+(tier===2?'The vendors applauded. One of them checked for missing buttons.':tier===1?'The household calls this careful budgeting. The receipt calls it three objects in a bag.':'The bag has been presented as an artistic statement. This is why nobody lets the bag speak.')+' '+relic.line;
  recordScene(state,'market','The Unlicensed Night Market',text,cast,now,{key:'market',object:relic.id});addNote(state,text,'the night market','scheme');
  return {score,relic,fresh,first};
 }

@@ -81,3 +81,15 @@ test('a full first shelf explains the missing space and recovers when a compatib
   s.props=s.props.filter(p=>p.id!=='blocked1');s.slots[1]=null;assert.equal(unpackWelcome(s,noon),true);
   assert.equal(welcomeView(s,noon).reason,'');
 });
+
+test('all opening callbacks preserve the chosen guest and action through reload',async()=>{
+ const {householdAftermath}=await import('../src/household-echoes.js');
+ for(const asleep of [false,true])for(const choice of ['share','keep']){
+  const s=fresh(asleep?['nocturnal']:[]);unpackWelcome(s,noon);chooseWelcome(s,choice,noon);
+  const loaded=roundTrip(s),after=householdAftermath(loaded);
+  assert.equal(after.kind,'welcome');assert.equal(after.variant,(asleep?'sleep-':'')+choice);
+  assert.match(after.text,/Madam Moth/);assert.doesNotMatch(after.text,/woodlouse/);
+  assert.equal(loaded.householdEchoes.openingDone,true);
+  assert.match(after.text,asleep?(choice==='share'?/spoonful/:/sleeve/):(choice==='share'?/mourners/:/doubled/));
+ }
+});

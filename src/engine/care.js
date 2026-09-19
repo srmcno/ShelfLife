@@ -1,3 +1,4 @@
+import { rememberEcho } from '../household-echoes.js';
 import { dailyActivity, recordScene } from './life.js';
 import { contextualCare } from './observations.js';
 import { TRAIT_CARE } from '../content/care.js';
@@ -46,6 +47,8 @@ export function careFor(state, pet, need, now = Date.now()) {
   // and how long you kept fussing. Read back by the state-aware notes in loop.js.
   recordCare(state, pet, need, now);
   recordEscapadeEvent(state, { kind: 'care', petIds: [pet.id], need }, now);
+  if (gain > 0 && need === 'food' && !state.householdEchoes?.openingDone && rememberEcho(state,'opening',pet.id,'opening:'+pet.id,now)) line += ' It spits one crumb into a matchbox coffin. A visiting woodlouse measures the crumb, then starts measuring it. “I am still eating, you little bastard.”';
+  else if (gain > 0 && need === 'clean') rememberEcho(state,'bath',pet.id,'bath:'+pet.id+':'+now,now);
   if(gain>0 && dailyActivity(state,'care',now)) recordScene(state,'care','A small kindness',pet.name+': '+line,[pet.id],now);
   let bondGained = false;
   if (before < 72) {

@@ -1,4 +1,6 @@
-import { createRug, tossBall, tossPreset, spawnBubbles, popBubble, updateRug, pauseRug, recordRugEvents, rugProgress, RUG_WORLD } from '../engine/play-rug.js';
+import { rugReaction } from '../content/rug-comedy.js';
+import { rememberEcho, householdAftermath } from '../household-echoes.js';
+import { countRugChallenge, createRug, tossBall, tossPreset, spawnBubbles, popBubble, updateRug, pauseRug, recordRugEvents, rugProgress, setRugViewport, RUG_WORLD } from '../engine/play-rug.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { careFor, previewCare } from '../engine/care.js';
 import { checkUnlocks } from '../engine/unlocks.js';
@@ -9,7 +11,7 @@ import { playFeed, playFuss, playClean, playStar, playUnlock } from '../audio/so
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-const BALL = '<svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="33" fill="#df858e" stroke="#713f52" stroke-width="3"/><path d="M12 33q31 12 47-20M16 58q29-25 49-7M40 8q-9 33 12 62" fill="none" stroke="#f7c8b4" stroke-width="3"/><path d="m19 37 4-6m8 9 3-6m9 5 1-6m9 1-1-6m-30 22 5 4m3-9 5 5m4-8 3 6m6-7 2 7m8-6-1 7" stroke="#713f52" stroke-width="1.5"/><ellipse cx="29" cy="23" rx="9" ry="5" fill="#ffe7d6" opacity=".3" transform="rotate(-25 29 23)"/></svg>';
+const BALL = '<svg viewBox="6 6 68 68" aria-hidden="true"><circle cx="40" cy="40" r="33" fill="#df858e" stroke="#713f52" stroke-width="3"/><path d="M12 33q31 12 47-20M16 58q29-25 49-7M40 8q-9 33 12 62" fill="none" stroke="#f7c8b4" stroke-width="3"/><path d="m19 37 4-6m8 9 3-6m9 5 1-6m9 1-1-6m-30 22 5 4m3-9 5 5m4-8 3 6m6-7 2 7m8-6-1 7" stroke="#713f52" stroke-width="1.5"/><ellipse cx="29" cy="23" rx="9" ry="5" fill="#ffe7d6" opacity=".3" transform="rotate(-25 29 23)"/></svg>';
 const BUBBLE = '<svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="31" fill="#a8ddd924" stroke="#bbebe7" stroke-width="2"/><path d="M16 43a25 25 0 0 1 29-27" fill="none" stroke="#fff4d8" stroke-width="5" stroke-linecap="round"/><path d="M29 64a26 26 0 0 0 34-28" fill="none" stroke="#eda8d1" stroke-width="4" stroke-linecap="round"/><circle cx="22" cy="31" r="4" fill="#fff9e8"/></svg>';
 const BADGE = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="m20 39-5 21 17-8 17 8-5-22" fill="#628d89" stroke="#284f54" stroke-width="2"/><path d="m32 4 7 5 9 1 3 9 5 7-3 9-1 9-9 3-7 5-9-3-9-1-3-9-5-7 3-9 1-9 9-3Z" fill="#e7b96a" stroke="#714b36" stroke-width="2"/><path d="m30 17 4 9 10 1-8 7 2 10-9-5-9 4 2-10-7-7 11-1Z" fill="#fff0c9"/></svg>';
 const CARE_ICON = {
@@ -18,11 +20,7 @@ const CARE_ICON = {
   clean: '<path d="M16 3C12 10 6 15 6 21a10 10 0 0 0 20 0C26 15 20 10 16 3Zm-5 18q0 5 5 5"/>'
 };
 const careIcon = key => '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+CARE_ICON[key]+'</svg>';
-const captions = {
-  catch: ['An excellent catch. An unbearable ego.', 'It is keeping the ball. Briefly.', 'Very athletic. Please tell the shelf.'],
-  pop: ['One less bubble to worry about.', 'It had a short but colourful career.', 'The ceiling is safe again.'],
-  jump: ['A small departure from the floor.', 'Gravity has been politely challenged.']
-};
+
 
 let sync = () => {};
 export function renderPlayRug(state) { sync(state); }
@@ -32,22 +30,23 @@ export function renderPlayRug(state) { sync(state); }
 export function initPlayRug(state, refresh) {
   const veil = document.createElement('div'); veil.id = 'hangoutVeil'; veil.className = 'veil rug-veil';
   veil.innerHTML = '<div class="sheet rug-sheet">'+
-    '<div class="sheet-head rug-head"><div><h2 id="rugTitle">The play rug</h2><p>No timer. No trouble. Allegedly.</p></div><button class="btn btn-ghost btn-sm" id="rugClose">Back to the shelf</button></div>'+
+    '<div class="sheet-head rug-head"><div><h2 id="rugTitle">The play rug</h2><p>No timer. Loose wrists. Questionable reflexes.</p></div><button class="btn btn-ghost btn-sm" id="rugClose">Back to the shelf</button></div>'+
     '<div class="rug-company"><label for="rugResident">On the rug</label><select id="rugResident"></select><div id="rugNeeds" class="rug-needs"></div></div>'+
     '<div class="rug-body"><div class="rug-play"><div class="rug-stage" id="rugStage" tabindex="0" role="group" aria-label="Interactive play rug. Tap to throw a ball, or use the toy controls." aria-describedby="rugInstructions">'+
-    '<div class="rug-world"><div class="rug-shadow" id="rugShadow"></div><div class="rug-resident" id="rugPet" data-sl-theatre="1"></div><div class="rug-entities" id="rugEntities"></div><div class="rug-sparkles" id="rugSparkles" aria-hidden="true"></div><svg class="rug-aim" id="rugAim" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true" hidden><path/></svg></div>'+
+    '<div class="rug-world"><div class="rug-guest" aria-label="A visiting woodlouse undertaker"><span class="woodlouse"><i></i></span><span class="rug-coffin"></span></div><div class="rug-shadow" id="rugShadow"></div><div class="rug-resident" id="rugPet" data-sl-theatre="1"></div><div class="rug-entities" id="rugEntities"></div><div class="rug-sparkles" id="rugSparkles" aria-hidden="true"></div><svg class="rug-aim" id="rugAim" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true" hidden><path/></svg></div>'+
     '<div class="rug-discovery" id="rugDiscovery" role="status" hidden></div><div class="rug-pause" id="rugPause" hidden><span>The rug is waiting.</span><p id="rugPauseReason"></p><button class="btn btn-primary" id="rugResume">Resume playing</button></div></div>'+
-    '<p class="rug-caption" id="rugCaption" aria-live="polite">Pick up a toy. See what happens.</p></div>'+
+    '<p id="rugOutcome" class="rug-outcome" role="status"></p><p class="rug-caption" id="rugCaption" aria-live="polite">Pick up a toy. See what happens.</p></div>'+
     '<aside class="rug-tools" aria-label="Toys and care"><div class="rug-toy-picker" role="group" aria-label="Choose a toy"><button class="rug-toy" type="button" data-rug-toy="ball" aria-pressed="true">'+BALL+'<span>Patchwork ball</span></button><button class="rug-toy" type="button" data-rug-toy="bubbles" aria-pressed="false">'+BUBBLE+'<span>Soap bubbles</span></button></div>'+
-    '<p id="rugInstructions" class="rug-instructions">Tap anywhere to toss. Drag and release for your own throw.</p>'+
-    '<div class="rug-throw-style" id="rugThrowStyle"><label for="rugThrow">Try a throw</label><select id="rugThrow"><option value="soft">Soft toss</option><option value="high">Sky high</option><option value="bounce">Bounce pass</option></select></div>'+
+    '<p id="rugInstructions" class="rug-instructions">Tap to aim. Drag farther for a harder throw. Let it return the ball before tossing again.</p>'+
+    '<div class="rug-throw-style" id="rugThrowStyle"><label for="rugThrow">Try a throw</label><select id="rugThrow"><option value="soft">Soft toss</option><option value="high">Sky high</option><option value="bounce">Bounce pass</option><option value="long">Across the room · hard</option></select></div>'+
     '<button class="btn btn-primary rug-launch" id="rugAction">Toss a ball</button><button class="btn" id="rugPop" hidden>Pop a bubble</button>'+
     '<div class="rug-care"><span>A little care, too</span><div>'+['food','fuss','clean'].map((key,i)=>'<button class="btn" type="button" data-rug-care="'+key+'">'+careIcon(key)+'<span>'+['Snack','Fuss','Wash'][i]+'</span></button>').join('')+'</div></div>'+
-    '<details class="rug-tricks" id="rugTricks"><summary><span>Little tricks</span><b id="rugTally">0 / 6</b></summary><p>Each new trick earns one discovery. Every resident has their own little repertoire.</p><ol id="rugTrickList"></ol></details><p class="rug-next" id="rugNext"></p></aside></div></div>';
+    '<details class="rug-challenges"><summary>Try a trick challenge</summary><p>Untimed. Misses are allowed. Practice never costs trust.</p><button class="btn" id="rugChallenge">Start: three clean catches</button><p id="rugChallengeProgress"></p></details><details class="rug-tricks" id="rugTricks"><summary><span>Little tricks</span><b id="rugTally">0 / 6</b></summary><p>Each new trick earns one discovery. Every resident has their own little repertoire.</p><ol id="rugTrickList"></ol></details><p class="rug-next" id="rugNext"></p></aside></div></div>';
   document.body.appendChild(veil);
   const el = id => veil.querySelector('#'+id);
   const stage = el('rugStage'), host = el('rugPet'), entities = el('rugEntities'), caption = el('rugCaption');
   const residentPicker = el('rugResident'), nodes = new Map();
+  let usedLines = [], challenge = null, lastCaptionAt = 0;
   let pet = null, game = null, toy = 'ball', frame = 0, last = 0, active = false, paused = false, gesture = null;
   let celebrationTimer = 0, captionCount = 0, lastSound = 0, lastInput = 0, progressKey = '', selectorKey = '', pauseReturn = null;
   const isOpen = () => active && veil.classList.contains('open');
@@ -108,10 +107,10 @@ export function initPlayRug(state, refresh) {
   function chooseResident(id) {
     stop();clearGesture();
     pet=state.pets.find(p=>p.id===id) || state.pets[0];if(!pet){close();return;}
-    game=createRug(pet);residentPicker.value=pet.id;host.replaceChildren(renderPetSprite(pet));
+    game=createRug(pet);setRugViewport(game,stage.getBoundingClientRect().width);usedLines=[];challenge=null;el('rugChallengeProgress').textContent='';el('rugOutcome').textContent='';residentPicker.value=pet.id;host.replaceChildren(renderPetSprite(pet));
     host.setAttribute('aria-label',pet.name);progressKey='';nodes.clear();entities.replaceChildren();el('rugSparkles').replaceChildren();
     el('rugDiscovery').hidden=true;clearTimeout(celebrationTimer);
-    setCaption(pet.name+' has brought absolutely no responsibilities.');syncCare();syncProgress();paint();resume();
+    const aftermath=householdAftermath(state,pet.id);setCaption(aftermath?aftermath.text:pet.name+' eyes the woodlouse measuring the coffin. “That had better be for the ball.”');syncCare();syncProgress();paint();resume();
   }
   function open(id) {
     if (document.querySelector('.veil.open,#moreTray.open') || !state.pets.length) return;
@@ -130,11 +129,24 @@ export function initPlayRug(state, refresh) {
       if(!persisted)discovery.insertAdjacentHTML('beforeend','<p class="rug-save-warning">Back up from More before closing. This browser could not save.</p>');
       discovery.hidden=false;clearTimeout(celebrationTimer);celebrationTimer=setTimeout(()=>{discovery.hidden=true;},4200);playUnlock();
     }
-    const reaction=events.find(e=>e.type==='catch')||events.find(e=>e.type==='pop')||events.find(e=>e.type==='jump');
+    const priority=['recover','miss','refuse','fumble','catch','pop','return','jump'];
+    const reaction=priority.map(type=>events.find(e=>e.type===type)).find(Boolean);
     if(reaction){
-      setCaption(pet.name+': '+captions[reaction.type][captionCount++%captions[reaction.type].length]);
+      const facts=state.householdEchoes?.events || [];
+      const line=rugReaction(reaction,pet,facts,usedLines);
+      if(line && (performance.now()-lastCaptionAt>1800 || ['miss','fumble','recover','refuse'].includes(reaction.type))){
+        setCaption(pet.name+': '+line.text);usedLines.push(line.id);if(usedLines.length>36)usedLines.shift();lastCaptionAt=performance.now();
+      }
+      const labels={catch:reaction.recovered?'Recovered catch':'Clean catch',fumble:'Fumble: catch the rebound',recover:'Recovered',miss:'Miss: try a nearer or slower throw',refuse:'Refused: let it finish the previous throw',return:'Ball returned'};
+      if(labels[reaction.type])el('rugOutcome').textContent=labels[reaction.type];
+      if(['miss','fumble','recover','catch'].includes(reaction.type)&&rememberEcho(state,reaction.type,pet.id,reaction.id))save();
       if(performance.now()-lastSound>180){lastSound=performance.now();if(reaction.type==='catch')playFeed();else if(reaction.type==='pop')playStar();}
     }
+    if(countRugChallenge(challenge,events)){
+        el('rugChallengeProgress').textContent=challenge.count+' / 3 '+['clean catches','bounce catches','airborne catches'][challenge.level];
+        if(challenge.count>=3){el('rugChallengeProgress').textContent+=' · complete. The woodlouse eats the podium.';el('rugChallenge').textContent=challenge.level<2?'Next challenge':'Replay challenges';challenge={level:(challenge.level+1)%3,count:0,waiting:true};}
+      }
+
     for(const event of events.filter(e=>['catch','pop'].includes(e.type)).slice(0,6)) {
       const spark=document.createElement('span');spark.className='rug-spark';spark.textContent=event.type==='catch'?'✦':'✧';spark.style.left=event.x/10+'%';spark.style.top=event.y/6+'%';
       el('rugSparkles').append(spark);setTimeout(()=>spark.remove(),650);
@@ -143,7 +155,7 @@ export function initPlayRug(state, refresh) {
   function paint() {
     if(!game)return;
     const p=game.pet;
-    host.style.left=p.x/10+'%';host.style.top=p.y/6+'%';host.dataset.pose=p.pose;
+    host.style.left=p.x/10+'%';host.style.top=p.y/6+'%';host.dataset.pose=p.pose;stage.dataset.outcome=p.pose;
     const sprite=host.firstElementChild;
     sprite.style.setProperty('--sl-face',p.facing||1);sprite.classList.toggle('rug-moving',Math.abs(p.vx)>5);
     el('rugShadow').style.left=p.x/10+'%';el('rugShadow').style.opacity=String(clamp(1-(RUG_WORLD.ground-p.y)/250,.15,.65));
@@ -154,7 +166,7 @@ export function initPlayRug(state, refresh) {
         if(kind==='bubble'){node.type='button';node.dataset.bubble=String(item.id);node.setAttribute('aria-label','Pop bubble');node.tabIndex=-1;}
         nodes.set(key,node);entities.append(node);}
       node.style.left=item.x/10+'%';node.style.top=item.y/6+'%';node.style.setProperty('--diameter',((item.radius||item.r||24)*2/10)+'%');
-      if(kind==='ball')node.style.rotate=((item.x+item.y)*.6)+'deg';
+      if(kind==='ball'){node.dataset.state=item.state;node.firstElementChild.style.transform='rotate('+((item.x+item.y)*.6)+'deg)';}
     }
     for(const [key,node] of nodes)if(!current.has(key)){node.remove();nodes.delete(key);}
     el('rugPop').disabled=!game.bubbles.length;
@@ -182,7 +194,7 @@ export function initPlayRug(state, refresh) {
   function selectToy(next){
     toy=next;veil.querySelectorAll('[data-rug-toy]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.rugToy===toy)));
     el('rugAction').textContent=toy==='ball'?'Toss a ball':'Blow bubbles';el('rugThrowStyle').hidden=toy!=='ball';el('rugPop').hidden=toy!=='bubbles';
-    el('rugInstructions').textContent=toy==='ball'?'Tap anywhere to toss. Drag and release for your own throw.':'Tap the rug to blow bubbles. Pop them before your resident does.';
+    el('rugInstructions').textContent=toy==='ball'?'Tap to aim. Drag farther for a harder throw. Let it return the ball before tossing again.':'Tap the rug to blow bubbles. Pop them before your resident does.';
     stage.setAttribute('aria-label','Interactive play rug. '+el('rugInstructions').textContent+' The toy buttons work with a keyboard too.');
   }
   const position=e=>{const r=stage.getBoundingClientRect();return{x:clamp((e.clientX-r.left)/r.width*1000,25,975),y:clamp((e.clientY-r.top)/r.height*600,35,480)};};
@@ -222,6 +234,8 @@ export function initPlayRug(state, refresh) {
     // Detail-zero activation retains assistive-technology/keyboard support.
     if(e.detail===0)popButton(e.target.closest('[data-bubble]'));
   });
+  new ResizeObserver(()=>{if(game)setRugViewport(game,stage.getBoundingClientRect().width);}).observe(stage);
+  el('rugChallenge').addEventListener('click',()=>{const level=challenge?.waiting?challenge.level:0;challenge={level,count:0};el('rugChallenge').textContent='Restart challenge';el('rugChallengeProgress').textContent='0 / 3 '+['clean catches','bounce catches','airborne catches'][level];});
   el('rugAction').addEventListener('click',()=>toy==='ball'?presetThrow():blow());
   el('rugPop').addEventListener('click',()=>{if(!available()||!game.bubbles.length)return;feedback(popBubble(game,game.bubbles[0].id));input();paint();});
   veil.querySelectorAll('[data-rug-toy]').forEach(b=>b.addEventListener('click',()=>selectToy(b.dataset.rugToy)));

@@ -2,6 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { activityPassport, activityRecord } from '../src/content/activities.js';
 import { blankState, normalizeState } from '../src/state.js';
+import {recordChaseCampaign,CHASE_STAGES} from '../src/content/chase-campaign.js';
+
+test('a completed losing campaign attempt survives reload as tried, without inventing a win',()=>{
+  const s=blankState();s.pets=[{id:'novice',name:'Novice',art:{}}];s.slots[0]='novice';
+  recordChaseCampaign(s.pets[0],{format:'campaign',finished:true,complete:false,petId:'novice',stageId:CHASE_STAGES[0].id,score:0});
+  const loaded=normalizeState(s),before=structuredClone(loaded);
+  assert.equal(activityPassport(loaded).stamps.find(x=>x.id==='chase').earned,true);
+  assert.match(activityRecord({id:'chase'},loaded,loaded.pets[0]),/0\/12 lessons cleared/);
+  assert.equal(loaded.pets[0].chaseCampaign.unlocked,1);assert.deepEqual(loaded,before);
+});
 
 test('the household passport recognises completed practice and legacy history without changing saves', () => {
   const state = blankState();

@@ -1,3 +1,4 @@
+import { householdAftermath } from '../household-echoes.js';
 import { renderLife } from './life.js';
 import { renderWelcome } from './welcome.js';
 import { renderEscapades } from './escapades.js';
@@ -51,6 +52,7 @@ export function renderAll(state) {
     advanceStories(state);
     renderStatus(state);
     renderShelf(state);
+    renderAftermath(state);
     renderNotes(state);
     renderScheme(state);
     renderProgress(state);
@@ -585,3 +587,12 @@ setInterval(() => {
   if (briefState) syncRounds(briefState);
   if (needsState) tickNeeds();
 }, 1000);
+
+function renderAftermath(state) {
+  const node=document.getElementById('householdAftermath');if(!node)return;
+  const aftermath=householdAftermath(state);node.hidden=!aftermath;if(!aftermath)return;
+  node.dataset.kind=aftermath.kind;const pet=petById(state,aftermath.petId);
+  const changed=updateMarkup(node,'<div class="aftermath-stage" aria-hidden="true"><span class="aftermath-actor">'+(aftermath.kind==='court'?'♟':aftermath.kind==='bath'?'♧':'•')+'</span><span class="aftermath-object"></span><span class="aftermath-visitor"></span></div><div><b>'+escapeHtml(aftermath.title)+'</b><p>'+escapeHtml(aftermath.text)+'</p><button class="btn btn-sm" data-aftermath-rug>See them on the rug</button></div>',aftermath.id+'|'+pet.name);
+  if(changed||artForNode.get(node)!==pet.art){const actor=node.querySelector('.aftermath-actor');actor.replaceChildren(renderPetSprite(pet));artForNode.set(node,pet.art);}
+  const button=node.querySelector('[data-aftermath-rug]');button.onclick=()=>window.dispatchEvent(new CustomEvent('shelflife:rug',{detail:{petId:aftermath.petId}}));
+}

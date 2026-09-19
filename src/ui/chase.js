@@ -1,3 +1,4 @@
+import { CHASE_STAGES, CHASE_CHAPTERS, chaseStage, campaignProgress, normalizeChaseCampaign } from '../content/chase-campaign.js';
 import { CHASE_VENUES, chaseRecordKey, chaseStarTarget, chaseCoaching, newChase, updateChase, jumpChase, dashChase, recordChase, chaseStars, streakMultiplier, CHASE_WIDTH, CHASE_HEIGHT, CHASE_GROUND, RUN_WAVES, RUN_UPGRADES, RUN_WAVE_SECONDS, chaseDuration, chaseWaveTime, chaseWaveContract, selectChaseUpgrade, advanceChaseWave } from '../engine/chase.js';
 import { moodOf } from '../engine/tick.js';
 import { rewardSummary } from './reward-summary.js';
@@ -84,13 +85,27 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
   venuePicker.closest('label').after(practiceTools);
   const settings = document.createElement('details'), settingsSummary = document.createElement('summary');
   settings.className = 'chase-settings'; settingsSummary.textContent = 'Ground & side quest';
-  settings.open = window.matchMedia('(min-width: 721px)').matches;
+  settings.open = false;
   venuePicker.closest('label').before(settings);
   settings.append(settingsSummary, venuePicker.closest('label'), practiceTools);
   const formatPicker = document.createElement('div'); formatPicker.className = 'chase-formats'; formatPicker.setAttribute('role', 'group'); formatPicker.setAttribute('aria-label', 'Chase length');
-  formatPicker.innerHTML = '<button type="button" class="btn" data-chase-format="quick" aria-pressed="true"><b>Quick Chase</b><span>22 seconds</span></button><button type="button" class="btn" data-chase-format="run" aria-pressed="false"><b>Midnight Run</b><span>3 acts · choose your upgrades</span></button>';
+  formatPicker.innerHTML = '<button type="button" class="btn" data-chase-format="campaign" aria-pressed="true"><b>Household lessons</b><span>12 stages · 3 chapters</span></button><button type="button" class="btn" data-chase-format="quick" aria-pressed="false"><b>Quick Chase</b><span>22 seconds</span></button><button type="button" class="btn" data-chase-format="run" aria-pressed="false"><b>Midnight Run</b><span>3 acts · choose your upgrades</span></button>';
   settings.before(formatPicker); settings.after(waveBanner, loadout);
-  let format = 'quick';
+  let format = 'campaign', selectedStage = null;
+  const campaignSetup = document.createElement('div'); campaignSetup.className = 'chase-campaign-setup';
+  const stageLabel = document.createElement('label'); stageLabel.textContent = 'Lesson · replay any unlocked stage';
+  const stagePicker = document.createElement('select'); stagePicker.id = 'chaseStage'; stageLabel.append(stagePicker);
+  const campaignPace = document.createElement('label'); campaignPace.className = 'chase-campaign-pace';
+  const paceCheck = document.createElement('input'); paceCheck.type = 'checkbox'; paceCheck.checked = true;
+  campaignPace.append(paceCheck, document.createTextNode(' Gentle catches & longer warnings'));
+  const mirrorOption = document.createElement('label'); mirrorOption.className = 'chase-campaign-pace'; mirrorOption.hidden = true;
+  const mirrorCheck = document.createElement('input'); mirrorCheck.type = 'checkbox'; mirrorCheck.id = 'chaseMirror';
+  mirrorOption.append(mirrorCheck, document.createTextNode(' Mirror route on this replay'));
+  mirrorCheck.addEventListener('change', () => { if (pet) controller.prepare(pet, gentle); });
+  const campaignInfo = document.createElement('p'); campaignInfo.className = 'chase-campaign-info';
+  campaignSetup.append(stageLabel, campaignPace, mirrorOption, campaignInfo);
+  stagePicker.addEventListener('change', () => { selectedStage = stagePicker.value; if (pet) controller.prepare(pet, gentle); });
+  paceCheck.addEventListener('change', () => { if (pet) controller.prepare(pet, gentle); });
   formatPicker.addEventListener('click', e => {
     const button = e.target.closest('[data-chase-format]');
     if (!button || running || game?.awaitingChoice) return;
@@ -152,21 +167,23 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
   const mobileSetup = document.createElement('div'); mobileSetup.className = 'chase-mobile-setup';
   const mobileGuide = document.createElement('p'); mobileGuide.className = 'chase-mobile-guide'; mobileSetup.append(mobileGuide);
   overlayScroll.append(mobileSetup);
+  description.after(campaignSetup);
   const markers = new Map();
-  for (const element of [formatPicker, settings, overlay]) {
+  settings.append(formatPicker);
+  for (const element of [settings, overlay]) {
     const marker = document.createComment('chase original position'); element.before(marker); markers.set(element, marker);
   }
   const gentleOption = document.getElementById('gentleOption');
   if (gentleOption) { const marker = document.createComment('gentle original position'); gentleOption.before(marker); markers.set(gentleOption, marker); }
   const screen = value => {
-    root.dataset.chaseScreen = value; configure.hidden = value !== 'result'; mobileSetup.hidden = value !== 'setup';
+    root.dataset.chaseScreen = value; campaignSetup.hidden = value !== 'setup' || format !== 'campaign'; configure.hidden = value !== 'result'; mobileSetup.hidden = value !== 'setup';
     guide.hidden = !['setup', 'paused'].includes(value); coaching.hidden = value !== 'result';
     restart.hidden = value !== 'paused'; pausePortrait.hidden = value !== 'paused'; onPhase(value);
     contractPicker.hidden = value !== 'upgrade'; resultDetails.hidden = value !== 'result'; resultDetails.open = false;
   };
   function fitLayout() {
     if (mobileLayout.matches) {
-      mobileSetup.append(formatPicker, settings);
+      mobileSetup.append(settings);
       settings.open = false;
       if (gentleOption) settings.append(gentleOption);
       root.append(overlay);
@@ -273,11 +290,11 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     const stageSeconds = game.format === 'run' ? RUN_WAVE_SECONDS : chaseDuration(game);
     clockFill.style.transform = 'scaleX(' + Math.max(0, 1 - chaseWaveTime(game) / stageSeconds) + ')';
     const seconds = Math.max(0, Math.ceil(stageSeconds - chaseWaveTime(game)));
-    const record = pet?.chaseRecords?.[chaseRecordKey(game)];
+    const record = game.format === 'campaign' ? pet?.chaseCampaign?.records?.[game.stageId] : pet?.chaseRecords?.[chaseRecordKey(game)];
     const quest = game.objective, questProgress = quest ? Math.min(quest.target, game[quest.stat]) : 0;
     const recharge = Math.ceil(p.dashCooldown * 10) / 10;
     const contract = chaseWaveContract(game);
-    const key = [game.caught, game.score, seconds, game.combo, running, paused, record?.score, quest?.done, questProgress, recharge, p.direction, game.finaleCaught, game.finaleWarned, game.finaleStarted, game.wave, contract?.progress].join('|');
+    const key = [game.caught, game.score, seconds, game.combo, running, paused, record?.score, quest?.done, questProgress, recharge, p.direction, game.finaleCaught, game.finaleWarned, game.finaleStarted, game.wave, contract?.progress, game.airCatches, game.dashSmashes, game.biscuits, game.rescued, game.rushCatches, game.highCatches, game.safeCrossings, game.leftCaught, game.rightCaught, game.bumps].join('|');
     if (key !== hudKey) {
       hudKey = key;
       setText(count, game.caught + ' / ' + game.goal); count.classList.toggle('met', game.caught >= game.goal);
@@ -303,6 +320,14 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
       starTarget.textContent = target.stars === 2 ? '★★ Win: ' + target.crumbs + ' more crumbs' : target.crumbs || target.points || target.contracts
         ? '★★★ Next: ' + [target.crumbs ? target.crumbs + ' more crumbs' : '', target.points ? target.points + ' more points' : '', target.contracts ? target.contracts + ' contracts' : ''].filter(Boolean).join(' + ')
         : '★★★ Three-star target reached';
+      if (game.format === 'campaign') {
+        const progress = campaignProgress(game);
+        setText(count, progress.requirements.filter(r => r.done).length + '/' + progress.requirements.length + ' goals');
+        count.classList.toggle('met', progress.done);
+        setText(objective, progress.text); setText(mobileProgress, progress.text);
+        starTarget.textContent = progress.stage.lesson;
+        waveBanner.hidden = false; setText(waveBanner, (game.mirror ? 'MIRRORED REPLAY · ' : '') + 'CHAPTER ' + progress.stage.chapter + '/3 · LESSON ' + (progress.stage.index + 1) + '/12 · ' + progress.stage.name);
+      }
       if (game.finaleStarted) starTarget.textContent += game.finaleComplete ? ' · Gold sweep ✓ +60' : ' · Gold sweep ' + game.finaleCaught + '/5';
       else if (game.finaleWarned) starTarget.textContent += ' · Gold soon: get near either edge';
     }
@@ -343,20 +368,25 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     for (const button of formatPicker.children) button.disabled = false;
     stopFrame(); paused = false; root.dataset.finished = 'true'; disabled(true);
     screen('result');
-    const previous = pet.chaseRecords?.[chaseRecordKey(game)];
+    const previous = game.format === 'campaign' ? pet.chaseCampaign?.records?.[game.stageId] : pet.chaseRecords?.[chaseRecordKey(game)];
     const newBest = !previous || game.score > previous.score;
     recordChase(pet, game);
     const reward = onFinish(game), rating = chaseStars(game);
     paint();
     title.textContent = game.complete ? (newBest ? 'A new personal best!' : rating === 3 ? 'Three stars. Insufferable.' : 'Crumb bandit.') : 'One more chase?';
     description.textContent = summary(reward);
+    if (game.format === 'campaign') {
+      const stage = chaseStage(game.stageId), next = CHASE_STAGES[stage.index + 1];
+      title.textContent = (game.complete ? 'Lesson complete: ' : 'Try the lesson again: ') + stage.name;
+      description.textContent = campaignProgress(game).text + '. ' + (game.complete ? (reward?.practice ? (pet.chaseCampaign?.records?.[game.stageId]?.rewarded ? 'Practice recorded. This lesson’s mastery reward is already claimed. ' : 'Clear saved. Its mastery reward is still available on a later rested replay. ') : rewardSummary(reward) + ' ') + (next ? 'Unlocked next: ' + next.name + '. ' + next.lesson : 'All twelve lessons complete. Every course is open for practice.') : 'No progress lost. ' + stage.lesson);
+    }
     coaching.textContent = chaseCoaching(game);
     showStars(rating); quip.textContent = quipFor(rating, newBest); quip.hidden = false;
     overlay.classList.toggle('best', newBest);
     if (game.complete) { puppet.gesture('win'); playFuss(); playStar({ step: rating, delay: .3 }); }
     else if (newBest) playStar({ step: 1 });
     upgrades.hidden = true; go.hidden = false;
-    go.textContent = game.format === 'run' ? 'Another midnight run' : 'Chase again'; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; go.focus({ preventScroll: true });
+    go.textContent = game.format === 'campaign' ? (game.complete && chaseStage(game.stageId).index < 11 ? 'Next lesson' : 'Practise this lesson') : game.format === 'run' ? 'Another midnight run' : 'Chase again'; overlay.hidden = false; overlay.scrollTop = 0; overlayScroll.scrollTop = 0; go.focus({ preventScroll: true });
     onStatus(statusFor(rating, newBest) + ' ' + chaseCoaching(game));
   }
   function onCatch(event) {
@@ -366,7 +396,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     spark('float', event.x, event.z, '+' + event.points);
     spark('burst', event.x, event.z);
     message(label + '+' + event.points + (mult > 1 ? ' · streak ×' + mult : ''), 'good');
-    if (!goalCelebrated && game.caught >= game.goal) {
+    if (!goalCelebrated && (game.format === 'campaign' ? campaignProgress(game).done : game.caught >= game.goal)) {
       goalCelebrated = true; playStar({ step: 1 });
       spark('float', game.player.x, game.player.z + 65, 'Goal ✓');
       onStatus('Crumb goal reached! Keep playing for more stars. The floor has become a buffet with casualties.');
@@ -455,7 +485,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
     settings.open = false;
     measure(); lastTime = performance.now(); frameId = requestAnimationFrame(frame);
     field.focus({ preventScroll: true });
-    onStatus(game.format === 'run' ? chaseWaveContract(game).intro + ' Contract: ' + chaseWaveContract(game).target + ' ' + chaseWaveContract(game).goal + ' for +' + chaseWaveContract(game).bonus + '. Each act lasts 18 seconds; pauses stop the clock.' : 'Collect ' + game.goal + ' crumbs. Hop over dust or dash through it. Every catch recharges Dash sooner. Sweep the five gold crumbs at last call for a bonus.');
+    onStatus(game.format === 'campaign' ? chaseStage(game.stageId).lesson + ' Goal: ' + campaignProgress(game).text : game.format === 'run' ? chaseWaveContract(game).intro + ' Contract: ' + chaseWaveContract(game).target + ' ' + chaseWaveContract(game).goal + ' for +' + chaseWaveContract(game).bonus + '. Each act lasts 18 seconds; pauses stop the clock.' : 'Collect ' + game.goal + ' crumbs. Hop over dust or dash through it. Every catch recharges Dash sooner. Sweep the five gold crumbs at last call for a bonus.');
   }
   function start(keepCourse = false) {
     if (!pet || root.hidden) return;
@@ -466,7 +496,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
       if (!repeatCourse.checked || !courseObjective) courseObjective = nextObjective;
       runNumber++;
     }
-    stopFrame(); game = newChase(pet, { gentle, seed: courseSeed, venue:venuePicker.value, format, mood: moodOf(pet), objective: courseObjective });
+    stopFrame(); game = newChase(pet, { gentle: format === 'campaign' ? paceCheck.checked : gentle, stageId: selectedStage, mirror: mirrorCheck.checked, seed: courseSeed, venue:venuePicker.value, format, mood: moodOf(pet), objective: courseObjective });
     hudKey = ''; nodes.clear(); items.replaceChildren();
     goalCelebrated = false;
     venuePicker.disabled=true;
@@ -524,6 +554,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
       nodes.clear(); items.replaceChildren(); fx.replaceChildren(); hudKey = ''; paint(); run();
       message('ACT ' + (game.wave + 1) + ' · ' + RUN_WAVES[game.wave].name, 'good');
     } else if (paused) run();
+    else if (game?.format === 'campaign' && game.finished && game.complete && chaseStage(game.stageId).index < 11) { selectedStage = CHASE_STAGES[chaseStage(game.stageId).index + 1].id; controller.prepare(pet, gentle); }
     else start();
   });
   pauseButton.addEventListener('click', pause);
@@ -546,15 +577,27 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
   window.addEventListener('blur', pause);
   const controller = {
     prepare(resident, useGentle) {
+      if (pet?.id !== resident.id) selectedStage = null;
       if (pet?.id !== resident.id || gentle !== useGentle || game?.format === 'quick' && game.venue !== venuePicker.value) { courseSeed = null; courseObjective = null; }
       stopFrame(); puppet?.release(); paused = false; goalCelebrated = false; pet = resident; gentle = useGentle;
-      screen('setup');
+      if (format === 'campaign') {
+        const progress = normalizeChaseCampaign(pet.chaseCampaign);
+        if (!selectedStage || chaseStage(selectedStage).index >= progress.unlocked) selectedStage = CHASE_STAGES[progress.unlocked - 1].id;
+        stagePicker.replaceChildren(...CHASE_STAGES.map(stage => { const option = document.createElement('option'); option.value = stage.id; option.disabled = stage.index >= progress.unlocked; option.textContent = (stage.index + 1) + '. ' + stage.name + (progress.records[stage.id]?.won ? ' ✓ · practice' : stage.index >= progress.unlocked ? ' · locked' : ''); return option; }));
+        stagePicker.value = selectedStage;
+        mirrorOption.hidden = !progress.records[selectedStage]?.won;
+        if (mirrorOption.hidden) mirrorCheck.checked = false;
+        campaignInfo.textContent = progress.unlocked + '/12 lessons available. Clears unlock the next lesson; replay preserves your best. Handling never changes with affection.';
+      }
+      screen('setup'); settings.open = false;
       root.dataset.finished = 'false'; guide.open = false;
       const nextObjective = challengePicker.value === 'rotate' ? ['combo', 'air', 'biscuit'][runNumber % 3] : challengePicker.value;
-      game = newChase(pet, { gentle, venue:venuePicker.value, format, mood: moodOf(pet), objective: repeatCourse.checked && courseObjective ? courseObjective : nextObjective });
+      game = newChase(pet, { gentle: format === 'campaign' ? paceCheck.checked : gentle, stageId: selectedStage, mirror: mirrorCheck.checked, venue:venuePicker.value, format, mood: moodOf(pet), objective: repeatCourse.checked && courseObjective ? courseObjective : nextObjective });
       venuePicker.disabled=false;field.dataset.venue=game.venue;
       venuePicker.closest('label').hidden = format === 'run';
-      settingsSummary.textContent = format === 'run' ? 'Side quest & practice' : 'Ground & side quest';
+      settingsSummary.textContent = 'Advanced: free play, ground & side quests';
+      practiceTools.hidden = format === 'campaign';
+      venuePicker.closest('label').hidden = format !== 'quick';
       for (const button of formatPicker.children) button.disabled = false;
       challengePicker.disabled = false; repeatCourse.disabled = false;
       hudKey = ''; nodes.clear(); items.replaceChildren();
@@ -572,6 +615,13 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
       description.textContent += game.venue==='pantry'?' More falling biscuits, each worth 50 base points.':game.venue==='moon'?' The moon lends you longer, higher jumps.':'';
       tip.textContent = 'Drag or hold ← →. Hop: Space. Dash: X, in your steering direction. Catches recharge Dash sooner. Sweep all 5 gold at last call for +60. ' + trait + record;
       stars.hidden = true; quip.hidden = true; overlay.classList.remove('best'); fx.replaceChildren();
+      if (format === 'campaign') {
+        const stage = chaseStage(game.stageId);
+        title.textContent = 'Chapter ' + stage.chapter + ': ' + CHASE_CHAPTERS[stage.chapter - 1];
+        description.textContent = 'Lesson ' + (stage.index + 1) + '/12 · ' + stage.name + (game.mirror ? ' · Mirrored replay. ' : '. ') + stage.lesson + ' Goal: ' + campaignProgress(game).text + '. ' + stage.seconds + ' seconds.';
+        go.textContent = pet.chaseCampaign?.records?.[stage.id]?.won ? 'Practise lesson ' + (stage.index + 1) : 'Begin lesson ' + (stage.index + 1);
+        tip.textContent = stage.lesson + ' Hold ← → or drag. Hop: Space. Dash: X. Pause: P.';
+      }
       pop.textContent = ''; paint();
     },
     stop() { stopFrame(); paused = false; popAnimation?.cancel(); fx.replaceChildren(); puppet?.release(); },

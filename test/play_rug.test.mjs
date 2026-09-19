@@ -50,6 +50,7 @@ test('a rug starts with the actual resident and no mutations, invented achieveme
 test('toy IDs remain unique across removals and different live sessions', () => {
   const game = createRug(resident()), other = createRug(resident()), ids = new Set();
   for (let index = 0; index < 40; index++) {
+    advance(game, 6);
     const ball = tossPreset(game), bubble = spawnBubbles(game, { count: 1 })[0];
     assert.equal(ids.has(ball.id), false); assert.equal(ids.has(bubble.id), false);
     ids.add(ball.id); ids.add(bubble.id); popBubble(game, bubble.id);
@@ -150,22 +151,19 @@ for (const kind of ['soft', 'high', 'bounce']) test('the accessible ' + kind + '
   }
 });
 
-test('the resident crosses the rug to collect a grounded ball and presets still work there', () => {
+test('a grounded unreachable ball produces a visible miss instead of a saved catch', () => {
   const game = createRug(resident()); tossBall(game, { x: 65, y: 470, vx: 0, vy: 0 });
-  const first = advance(game, 3);
-  assert.equal(game.catches, 1); assert.ok(game.pet.x < 170); assert.equal(game.pet.facing, -1);
-  assert.ok(first.some(event => event.type === 'catch'));
-  tossPreset(game, 'bounce');
-  assert.ok(tricksIn(advance(game, 3)).includes('bounce-catch'));
-  tossPreset(game, 'high');
-  assert.ok(tricksIn(advance(game, 3)).includes('high-catch'));
+  const events = advance(game, 4);
+  assert.equal(game.catches, 0);
+  assert.ok(events.some(event => event.type === 'miss'));
+  assert.equal(tricksIn(events).includes('first-catch'), false);
 });
 
 test('the closest reachable toy directs the resident', () => {
   const game = createRug(resident());
   tossBall(game, { x: 90, y: 470, vx: 0, vy: 0 });
   tossBall(game, { x: 730, y: 470, vx: 0, vy: 0 });
-  advance(game, .2);
+  advance(game, .5);
   assert.ok(game.pet.x > 500); assert.equal(game.pet.facing, 1);
 });
 

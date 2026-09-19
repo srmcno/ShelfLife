@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="css/phone.css">
 <link rel="stylesheet" href="css/animation.css">
 <link rel="stylesheet" href="css/arcade.css">
+<link rel="stylesheet" href="css/chase.css">
 <link rel="stylesheet" href="css/parlour.css">
 <link rel="stylesheet" href="css/market.css">
 <link rel="stylesheet" href="css/scenes.css">
@@ -62,16 +63,17 @@
 
 <main class="app room-app">
   <section class="pane pane-shelf" id="paneShelf" aria-label="Your residents">
-    <div class="shelf-heading"><div><span class="eyebrow">A very small world</span><h1>The household</h1></div><span class="room-live"><i></i> Alive &amp; opinionated</span></div>
+    <div class="shelf-heading"><div><span class="eyebrow">Nobody here stays buried</span><h1>The household</h1></div><span class="room-live"><i></i> Alive &amp; opinionated</span></div>
     <div class="stage">
       <div class="cabinet-wrap" id="cabinetWrap">
         <div class="cabinet" id="cabinet" tabindex="-1" aria-label="Your creature shelf"></div>
       </div>
-      <div class="cabinet-sign" aria-hidden="true"><span>EST.</span> SMALL &amp; SLIGHTLY DIFFICULT <span>NOW</span></div>
+      <div class="cabinet-sign" aria-hidden="true"><span>EST.</span> IMMORTAL. UNWASHED. IN ARREARS. <span>NOW</span></div>
     </div>
     <div class="shelf-framing"><span>Tap a resident. The neighbours are listening.</span><div class="framing-tools"><button class="btn btn-ghost btn-sm" id="shelfFocus" type="button" aria-pressed="false" hidden>Focus occupied shelves</button><button class="btn btn-icon snap-btn" id="snapBtn" type="button" aria-label="Send a postcard of the shelf" title="Send a postcard">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5H7l1.2-1.6h3.6L13 6h2.5A1.5 1.5 0 0 1 17 7.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="11" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
       </button></div></div>
+    <section id="householdAftermath" class="household-aftermath" aria-label="Aftermath at home" hidden></section>
     <div id="shelfBrief" class="shelf-brief"></div>
     <div class="actions" id="actions">
       <button class="btn btn-primary rug-launch" id="hangoutBtn" type="button" aria-haspopup="dialog" aria-controls="hangoutVeil"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="17" rx="9" ry="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 15l-2-2m4 7-1 2m13-7 2-2m-4 7 1 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m9 7 6 6" stroke="currentColor" stroke-width="1.4"/></svg><span>Play rug</span><small>Toys, bubbles &amp; company</small></button>
@@ -81,7 +83,7 @@
       </button>
       <button class="btn" id="newPetBtn">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-        <span>New resident</span><small>Grow or draw a friend</small>
+        <span>New resident</span><small>Make something questionable</small>
       </button>
     </div>
     <section id="shelfTheatre" class="shelf-theatre-controls" aria-labelledby="theatreHeading" hidden>

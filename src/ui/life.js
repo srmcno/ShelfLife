@@ -1,4 +1,5 @@
-import { lifeState, useProject, returnFromMission, favoriteFor, outingSnapshot, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, deliverMarket, leaveMarket, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
+import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
+import { lifeState, useProject, returnFromMission, favoriteFor, outingSnapshot, startOuting, retryOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, deliverMarket, leaveMarket, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
 import { OUTINGS, RELICS, FRAMES } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
 import { startCourt, currentCourt, courtAction, finishCourt } from '../engine/court.js';
@@ -14,6 +15,8 @@ import { checkUnlocks } from '../engine/unlocks.js';
 import { save } from '../state.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const button=(label,action,extra='')=>'<button class="btn" data-life="'+action+'" '+extra+'>'+label+'</button>';
+export function sceneHistoryMarkup(scenes,pets,filter=''){const cast=pets.filter(p=>scenes.some(s=>s.cast?.includes(p.id)));const visible=filter?scenes.filter(s=>s.cast?.includes(filter)):scenes;return '<h3>Household memories</h3><div class="life-links" aria-label="Filter memories by resident">'+button('Everyone','scene-filter','data-id="" aria-pressed="'+!filter+'"')+cast.map(p=>button(esc(p.name),'scene-filter','data-id="'+esc(p.id)+'" aria-pressed="'+(filter===p.id)+'"')).join('')+'</div><p>'+visible.length+' saved scene'+(visible.length===1?'':'s')+'</p><div class="scene-history">'+visible.map(s=>button(esc(s.title),'scene-select','data-id="'+s.id+'"')).join('')+'</div>'; }
+export function projectHomeTarget(o){return ['drawer','fridge','cupboard'].includes(o?.route)?'.project-'+o.route+' [data-life="'+(o.parts?.length>=2?'use-project':'project-mission')+'"]':'.household-workshop';}
 export function curioDetails(id) {const r=RELICS.find(x=>x.id===id),g=VISITORS.find(x=>x.id===id);return r?{name:r.name,line:r.line,shape:r.shape}:g?{name:g.gift,line:g.name,shape:g.id}:null;}
 function art(id){const d=curioDetails(id);return curioSVG(d?.shape||id);}
 export function renderLife(state) {
@@ -30,7 +33,7 @@ export function renderLife(state) {
   hub.innerHTML='<div class="chapter-intro"><span class="eyebrow">Getting acquainted · '+(cared?'2':'1')+' of 3</span><h2>'+esc(cared?'Make your first shared memory.':'Someone small is counting on you.')+'</h2><p>'+esc(cared?'Play a game together. Your first completed game opens the door to visitors, mysteries and expeditions.':'Start with a little individual care for '+first.name+'. Then try a game together.')+'</p>'+button(cared?'Play together':'Meet '+esc(first.name),cared?'play':'care')+button('Explore everything','skip')+'</div>';
   return;
  }
- hub.innerHTML='<div class="life-heading"><div><span class="eyebrow">Your small world</span><h2>Something worth coming back for.</h2></div><span class="discovery-count">'+l.xp+' discoveries</span></div><div class="life-links">'+button('Play with a resident','play')+button(l.outing?'Continue expedition':'Go beyond the shelf','outing')+button('Shelf Court','court')+button(l.market&&!l.market.claimed?'Continue night market':'Visit the night market','market')+'</div><div class="display-cabinet frame-'+l.frame+'" aria-label="Your displayed curiosities">'+(l.displayed.length?l.displayed.map(id=>{const d=curioDetails(id);return d?'<button class="display-curio" data-life="curio" data-id="'+id+'" aria-label="Inspect '+esc(d.name)+'">'+art(id)+'<span>'+esc(d.name)+'</span></button>':'';}).join(''):'<div class="display-empty"><p>'+((l.relics.length||(state.stories?.collection||[]).length)?'You have keepsakes ready to display.<br><small>Choose Arrange display below to place up to three in this cabinet.</small>':'Your first curiosity belongs here.<br><small>Finish an expedition or welcome a visitor to earn a keepsake. Then choose Arrange display to put it here.</small>')+'</p></div>')+'</div><div class="display-footer"><span>'+esc(next?next.name+' at '+next.at+' discoveries · '+(next.at-l.xp)+' to go':'Every display finish unlocked. The velvet is impressed.')+'</span>'+button('Arrange display','display')+'</div>'+(scene?'<article class="scene-preview"><div class="scene-mini" id="sceneMini"></div><div><span class="eyebrow">'+(l.recap.length?'While you were out':'Latest household scene')+'</span><h3>'+esc(scene.title)+'</h3><p>'+esc(scene.text)+'</p>'+button(l.recap.length?'Read the recap':'Watch the scene','scene')+'</div></article>':'<div class="scene-empty">Your shared memories will play here. Finish a game, help a visitor or return from an expedition to create the first scene.</div>')+'<p class="life-footnote">Discoveries come from new games, keepsakes and visitor chapters, plus your first care, play, outing, market and visitor activity each day. No streak to lose.</p>';
+ hub.innerHTML='<div class="life-heading"><div><span class="eyebrow">Your small world</span><h2>Something worth coming back for.</h2></div><span class="discovery-count">'+l.xp+' discoveries</span></div><div class="life-links">'+button('Open the playroom','play')+(l.outing?button('Continue expedition','outing'):'')+(l.market&&!l.market.claimed?button('Continue night market','market'):'')+'</div><div class="display-cabinet frame-'+l.frame+'" aria-label="Your displayed curiosities">'+(l.displayed.length?l.displayed.map(id=>{const d=curioDetails(id);return d?'<button class="display-curio" data-life="curio" data-id="'+id+'" aria-label="Inspect '+esc(d.name)+'">'+art(id)+'<span>'+esc(d.name)+'</span></button>':'';}).join(''):'<div class="display-empty"><p>'+((l.relics.length||(state.stories?.collection||[]).length)?'You have keepsakes ready to display.<br><small>Choose Arrange display below to place up to three in this cabinet.</small>':'Your first curiosity belongs here.<br><small>Finish an expedition or welcome a visitor to earn a keepsake. Then choose Arrange display to put it here.</small>')+'</p></div>')+'</div><div class="display-footer"><span>'+esc(next?next.name+' at '+next.at+' discoveries · '+(next.at-l.xp)+' to go':'Every display finish unlocked. The velvet is impressed.')+'</span>'+button('Arrange display','display')+'</div>'+(scene?'<article class="scene-preview"><div class="scene-mini" id="sceneMini"></div><div><span class="eyebrow">'+(l.recap.length?'While you were out':'Latest household scene')+'</span><h3>'+esc(scene.title)+'</h3><p>'+esc(scene.text)+'</p>'+button(l.recap.length?'Read the recap':'Watch the scene','scene')+'</div></article>':'<div class="scene-empty">Your shared memories will play here. Finish a game, help a visitor or return from an expedition to create the first scene.</div>')+'<p class="life-footnote">Discoveries come from new games, keepsakes and visitor chapters, plus your first care, play, outing, market and visitor activity each day. No streak to lose.</p>';
  hub.querySelector('.display-cabinet').insertAdjacentHTML('beforebegin',projectBoard(l));
  hub.querySelectorAll('.project-occupant').forEach(holder=>holder.appendChild(renderPetSprite(first)));
  if(scene)mountHouseholdScene(hub.querySelector('#sceneMini'),state,scene,{mini:true});
@@ -42,7 +45,7 @@ export function visitorActivityHTML(state) {
 export function residentLifeHTML(pet){const fav=favoriteFor(pet);return '<details class="resident-habits"><summary>Little habits & shared history</summary><p><b>'+esc(fav.name)+'</b> · '+esc(fav.line)+'</p><p>'+(pet.expeditions||0)+' expeditions · '+(pet.handshakes||0)+' handshakes · '+(pet.chases||0)+' chases. Completed practice counts too.</p></details>';}
 export function initLife(state,refresh) {
  const veil=document.getElementById('lifeVeil'),content=document.getElementById('lifeContent'),title=document.getElementById('lifeTitle');
- let leadId='',companionId='',scenePlayback=null;
+ let leadId='',companionId='',scenePlayback=null,sceneFilter='';
  let court=null,selectedRoute='drawer',selectedGear='thread',interlude=false,marketTrade='',selectedDare='',marketAction=null,marketSelection='',marketPanel='';
  function open(name){scenePlayback?.destroy();scenePlayback=null;document.querySelectorAll('.veil.open').forEach(v=>{if(v!==veil)v.classList.remove('open');});title.textContent=name;veil.classList.toggle('court-mode',name==='Shelf Court');const outing=['Beyond the shelf','An expedition in progress'].includes(name),market=name==='The Unlicensed Night Market';veil.classList.toggle('life-game-mode',outing||market);veil.classList.toggle('outing-mode',outing);veil.classList.toggle('market-mode',market);veil.querySelector('.court-announcement')?.replaceChildren();veil.classList.add('open');content.replaceChildren();}
  function close(){scenePlayback?.destroy();scenePlayback=null;veil.classList.remove('open','court-mode','life-game-mode','outing-mode','market-mode');court=null;veil.querySelector('.court-announcement')?.replaceChildren();}
@@ -51,7 +54,7 @@ export function initLife(state,refresh) {
  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
  function drawScene(scene){
   open(scene.title);scenePlayback=mountHouseholdScene(content,state,scene);
-  content.insertAdjacentHTML('beforeend','<p class="scene-script">'+esc(scene.text)+'</p><div class="life-links">'+button('Back to the shelf','close')+'</div><h3>Household memories</h3><div class="scene-history">'+lifeState(state).scenes.slice(0,8).map(s=>button(esc(s.title),'scene-select','data-id="'+s.id+'"')).join('')+'</div>');
+  content.insertAdjacentHTML('beforeend','<p class="scene-script">'+esc(scene.text)+'</p><div class="life-links">'+button('Back to the shelf','close')+button('Museum & case archive','scene-museum')+(scene.cast||[]).map(id=>state.pets.find(p=>p.id===id)).filter(Boolean).map(p=>button('Notes about '+esc(p.name),'scene-notes','data-id="'+p.id+'"')).join('')+'</div><section id="sceneHistory">'+sceneHistoryMarkup(lifeState(state).scenes,state.pets,sceneFilter)+'</section>');
   content.closest('.sheet')?.scrollTo({top:0});title.tabIndex=-1;title.focus({preventScroll:true});
   const l=lifeState(state);l.recap=[];save();
  }
@@ -96,9 +99,9 @@ export function initLife(state,refresh) {
   content.querySelector('.market-heading h3,.market-results h3')?.focus({preventScroll:true});
  }
 
- let courtLevel=1,courtHostId='';
+ let courtLevel=undefined,courtHostId='';
  function courtAnnounce(text){let node=veil.querySelector('.court-announcement');if(!node){node=document.createElement('span');node.className='court-announcement sr-only';node.setAttribute('role','status');node.setAttribute('aria-live','polite');node.setAttribute('aria-atomic','true');veil.querySelector('.sheet').appendChild(node);}node.textContent=text;}
- function courtStart(level=courtLevel,fresh=false){
+ function courtStart(level=undefined,fresh=false){
   const options={level,reworked:true,petId:courtHostId||state.pets[0]?.id};court=fresh?startCourt(state,options):currentCourt(state)||startCourt(state,options);if(!court)return;
   courtLevel=court.level;open('Shelf Court');save();courtPaint('#courtCaseTitle,#courtVerdictTitle');courtAnnounce(courtHearing(court).line);
  }
@@ -138,7 +141,10 @@ export function initLife(state,refresh) {
   if(action==='close'){close();return;}
   if(action==='skip'){l.introDone=true;refresh();return;}
   if(action==='care'){window.dispatchEvent(new CustomEvent('shelflife:care',{detail:{petId:state.pets[0]?.id}}));return;}
-  if(action==='play'){open('Choose your accomplice');content.innerHTML='<p>Every game keeps its own reward rest. Completed practice always counts in your history.</p><div class="play-roster">'+state.pets.map(p=>button(esc(p.name),'play-pet','data-id="'+p.id+'"')).join('')+'</div>';return;}
+  if(action==='play'){close();document.getElementById('playroomBtn')?.click();return;}
+  if(action==='scene-filter'){sceneFilter=b.dataset.id||'';const history=document.getElementById('sceneHistory');history.innerHTML=sceneHistoryMarkup(l.scenes,state.pets,sceneFilter);[...history.querySelectorAll('[data-life="scene-filter"]')].find(el=>el.dataset.id===sceneFilter)?.focus({preventScroll:true});return;}
+  if(action==='scene-museum'){close();document.getElementById('museumBtn')?.click();return;}
+  if(action==='scene-notes'){const pet=state.pets.find(p=>p.id===b.dataset.id);if(pet){close();import('./render.js').then(({setPetFilter})=>{setPetFilter(state,pet.name);document.querySelector('[data-filter="all"]')?.click();window.dispatchEvent(new CustomEvent('shelflife:goto',{detail:{tab:'notes',target:'#noteFilters'}}));});}return;}
   if(action==='play-pet'){close();window.dispatchEvent(new CustomEvent('shelflife:play',{detail:{petId:b.dataset.id}}));return;}
   if(action==='scene'||action==='scene-select'){const s=action==='scene'?l.scenes[0]:l.scenes.find(x=>x.id===Number(b.dataset.id));if(s)drawScene(s);return;}
   if(action==='curio'){const d=curioDetails(b.dataset.id);if(!d)return;open(d.name);content.innerHTML='<div class="expedition-prize">'+art(b.dataset.id)+'<p>'+esc(d.line)+'</p></div>'+button('Arrange display','display');return;}
@@ -147,29 +153,26 @@ export function initLife(state,refresh) {
   if(action==='frame'){selectFrame(state,b.dataset.id);refresh();display();return;}
   if(action==='outing'){interlude=false;outing();return;}
   if(action==='project-mission'){selectedRoute=b.dataset.id;interlude=false;outing();focusOutingProgress();return;}
-  if(action==='project-home'){finishOuting(state);close();save();refresh();window.dispatchEvent(new CustomEvent('shelflife:goto',{detail:{tab:'shelf',target:'.household-workshop'}}));return;}
+  if(action==='project-home'){const target=projectHomeTarget(outingSnapshot(state));finishOuting(state);close();save();refresh();window.dispatchEvent(new CustomEvent('shelflife:goto',{detail:{tab:'shelf',target}}));return;}
   if(action==='use-project'){
    const result=useProject(state,b.dataset.id);if(!result)return;save();refresh();
    const card=document.querySelector('.project-'+b.dataset.id);if(card){card.classList.remove('project-in-use');void card.offsetWidth;card.classList.add('project-in-use');}
-   const line=card?.querySelector('.project-reaction');if(line)line.textContent=result.text+(result.fresh?' Daily care delivered.':' Today’s care already delivered. Play again whenever you like.');playStomp();return;
+   const line=card?.querySelector('.project-reaction');if(line)line.textContent=result.text+(result.fresh?' Daily care delivered.':' Today’s care already delivered. Play again whenever you like.');card?.querySelector('[data-life="use-project"]')?.focus({preventScroll:true});playStomp();return;
   }
   if(action==='route'){selectedRoute=b.dataset.id;repaintOutingSetup('',selectedRoute);return;}
-  if(action==='set-out'){const cast=[document.getElementById('outingLead').value,document.getElementById('outingCompanion').value];if(startOuting(state,selectedRoute,selectedGear,cast,{dare:selectedDare,mission:true})){save();interlude=false;outing();refresh();focusOutingProgress();}return;}
+  if(action==='set-out'||action==='outing-practice'){const cast=[document.getElementById('outingLead').value,document.getElementById('outingCompanion').value];if(startOuting(state,selectedRoute,selectedGear,cast,{dare:selectedDare,mission:true,learning:true,practice:action==='outing-practice'})){save();interlude=false;outing();refresh();focusOutingProgress();}return;}
   if(action==='outing-choice'){const result=chooseOuting(state,Number(b.dataset.choice));if(result){interlude=!result.complete;refresh();outing();focusOutingProgress();}return;}
   if(action==='outing-return'){if(returnFromMission(state)){interlude=false;save();refresh();outing();focusOutingProgress();}return;}
   if(action==='continue-outing'){interlude=false;outing();focusOutingProgress();return;}
   if(action==='outing-retry'||action==='outing-next'){
    const previous=outingSnapshot(state);if(!previous||previous.step!==3)return;
    selectedRoute=previous.route;selectedGear=previous.gear;selectedDare=previous.dare||'';[leadId,companionId='']=previous.cast;
-   finishOuting(state);
-   if(action==='outing-retry'){
-    if(startOuting(state,selectedRoute,selectedGear,previous.cast,{edition:previous.edition,dare:previous.dare,mission:previous.mission===true,missionRevision:previous.missionRevision||1}))lifeState(state).outing.expertise=previous.expertise.slice();
-   }
+   if(action==='outing-retry')retryOuting(state);else finishOuting(state);
    interlude=false;save();refresh();outing();focusOutingProgress();return;
   }
   if(action==='finish-outing'){finishOuting(state);refresh();display();return;}
   if(action==='market'){marketTrade='';marketAction=null;marketSelection='';marketPanel='';market();focusMarketProgress();return;}
-  if(action==='market-start'||action==='market-retry'){if(startMarket(state,{replay:action==='market-retry',errands:true,petId:leadId})){marketTrade='';marketAction=null;marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
+  if(action==='market-start'||action==='market-retry'||action==='market-practice'){if(startMarket(state,{replay:action==='market-retry',practice:action==='market-practice',learning:true,errands:true,petId:leadId})){marketTrade='';marketAction=null;marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
   if(action==='market-select'){const m=marketSnapshot(state);if(!m||m.complete||!m.stalls[m.step].some(item=>item.id===b.dataset.id))return;const scroll=content.querySelector('.adventure-scroll')?.scrollTop||0;marketSelection=b.dataset.id;market();const pane=content.querySelector('.adventure-scroll');if(pane)pane.scrollTop=scroll;content.querySelector('[data-life="market-select"][data-id="'+marketSelection+'"]')?.focus({preventScroll:true});return;}
   if(action==='market-panel'){const panel=b.dataset.panel||'';if(!['','requests','bag','route'].includes(panel))return;marketPanel=panel===marketPanel?'':panel;market();content.querySelector('.adventure-scroll')?.scrollTo({top:0});(content.querySelector('.market-context-panel')||content.querySelector('.market-heading h3'))?.focus({preventScroll:true});return;}
   if(action==='market-deliver'||action==='market-leave'){
@@ -178,7 +181,7 @@ export function initLife(state,refresh) {
   }
   if(action==='market-buy'||action==='market-pass'||action==='market-secret'){const before=marketSnapshot(state);if(chooseMarket(state,action==='market-buy'?b.dataset.id:null,action==='market-buy'?marketTrade||null:null,{secret:action==='market-secret'})){marketAction={kind:action.slice(7),step:before.step,item:before.stalls[before.step].find(item=>item.id===b.dataset.id)};marketTrade='';marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
   if(action==='court'){courtStart();return;}
-  if(action==='court-new'){courtStart(courtLevel,true);return;}
+  if(action==='court-new'){courtStart(undefined,true);return;}
   if(action==='court-clue'){
    if(!court||court.claimed)return;const clue=Number(b.dataset.clue),rule=court.rules[clue];if(!rule)return;
    courtAction(state,{type:'focus',statement:clue,evidence:rule.first.axis});

@@ -1,7 +1,8 @@
+import { CHASE_STAGES, chaseStage, campaignSchedule, campaignProgress, normalizeChaseCampaign, recordChaseCampaign } from '../content/chase-campaign.js';
 import { artPersonality } from './personality.js';
 
 export const CHASE_VENUES = { shelf:{name:'The Floorboards',biscuitEvery:9,gravity:1}, pantry:{name:'The Pantry',biscuitEvery:5,gravity:1}, moon:{name:'The Moonlit Sill',biscuitEvery:9,gravity:.72} };
-export const chaseRecordKey = game => (game.format === 'run' ? 'run:' : game.venue && game.venue !== 'shelf' ? game.venue+':' : '')+(game.gentle?'gentle':'standard');
+export const chaseRecordKey = game => (game.format === 'campaign' ? 'campaign:' + game.stageId + ':' : game.format === 'run' ? 'run:' : game.venue && game.venue !== 'shelf' ? game.venue+':' : '')+(game.gentle?'gentle':'standard');
 export const CHASE_WIDTH = 320;
 export const CHASE_HEIGHT = 230;
 export const CHASE_GROUND = 20;
@@ -44,7 +45,7 @@ export function selectChaseContract(game, id) {
   game.pendingContract = id;
   return true;
 }
-export const chaseDuration = game => game.format === 'run' ? RUN_WAVE_SECONDS * RUN_WAVES.length : CHASE_SECONDS;
+export const chaseDuration = game => game.format === 'campaign' ? chaseStage(game.stageId).seconds : game.format === 'run' ? RUN_WAVE_SECONDS * RUN_WAVES.length : CHASE_SECONDS;
 export const chaseWaveTime = game => game.format === 'run' ? game.time - game.wave * RUN_WAVE_SECONDS : game.time;
 export function chaseWaveContract(game) {
   if (game.format !== 'run') return null;
@@ -104,6 +105,7 @@ export function chaseStarTarget(game) {
 }
 
 export function chaseCoaching(game) {
+  if (game.format === 'campaign') return campaignProgress(game).text + '. ' + chaseStage(game.stageId).lesson;
   if (game.caught < game.goal) return 'Follow the lowest crumbs first. ' + (game.goal - game.caught) + ' more would have reached your goal.';
   if (game.format === 'run') {
     const missed = game.waveResults.find(result => !result.bonus);
@@ -139,21 +141,30 @@ export const TEMPER = {
 
 export function temperOf(mood) { return TEMPER[mood] || TEMPER.fine; }
 
-export function newChase(pet, { gentle = false, rng = Math.random, seed = null, mood = 'fine', objective = null, venue = 'shelf', format = 'quick' } = {}) {
+const CHASE_STAGE_NEXT = progress => CHASE_STAGES[progress.unlocked - 1].id;
+
+export function newChase(pet, { gentle = false, rng = Math.random, seed = null, mood = 'fine', objective = null, venue = 'shelf', format = 'quick', stageId = null, mirror = false } = {}) {
   const art = artPersonality(pet);
-  const temper = temperOf(mood);
+  const campaign = format === 'campaign';
+  const progress = normalizeChaseCampaign(pet.chaseCampaign);
+  const requested = chaseStage(stageId || CHASE_STAGE_NEXT(progress));
+  const stage = requested.index < progress.unlocked ? requested : chaseStage(CHASE_STAGE_NEXT(progress));
+  const mirrored = campaign && mirror === true && progress.records[stage.id]?.won === true;
+  const temper = temperOf(campaign ? 'fine' : mood);
   return {
-    kind: 'chase', seed, format: format === 'run' ? 'run' : 'quick', venue: format === 'run' ? 'shelf' : CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, frameRemainder: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
+    mirror: mirrored, stageId: campaign ? stage.id : null, schedule: campaign ? campaignSchedule(stage.id, gentle, mirrored) : null, scheduleCursor: 0,
+    leftCaught: 0, rightCaught: 0, highCatches: 0, rushCatches: 0, safeCrossings: 0,
+    kind: 'chase', seed, format: campaign ? 'campaign' : format === 'run' ? 'run' : 'quick', venue: campaign ? stage.venue : format === 'run' ? 'shelf' : CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, frameRemainder: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
     wave: 0, waveBaseline: { caught: 0, biscuits: 0, finaleCaught: 0, airCatches: 0 }, waveResults: [], contracts: ['house', 'house', 'house'], upgrades: [], pendingUpgrade: null, pendingContract: null, awaitingChoice: false, nextBroom: 4.5, broomsMade: 0,
     rescued: 0, objective: objective && CHASE_OBJECTIVES[objective] ? { id: objective, ...CHASE_OBJECTIVES[objective], done: false } : null,
     dodged: 0, bumps: 0, airCatches: 0, stomps: 0, moths: 0, stolen: 0, biscuits: 0, powerups: 0,
     dashes: 0, dashSmashes: 0, finaleWarned: false, finaleStarted: false, finaleCaught: 0, finaleComplete: false,
-    goal: format === 'run' ? (gentle ? 18 : 22) : gentle ? 6 : 8, complete: false, finished: false, claimed: false, gentle, stars: 0,
+    goal: campaign ? (stage.requirements.find(r => r.stat === 'caught')?.target || 0) : format === 'run' ? (gentle ? 18 : 22) : gentle ? 6 : 8, complete: false, finished: false, claimed: false, gentle, stars: 0,
     wings: art.motion.canFlap, horns: art.horns, halo: art.halo, tail: art.motion.tails > 0,
     mood, speedScale: temper.speed, grip: temper.grip,
     // Horns are a shield. So, once, is a resident that genuinely trusts you: it
     // will take one knock on your behalf before it starts blaming you for them.
-    shield: (art.horns ? 1 : 0) + ((pet.bond || 0) >= 15 ? 1 : 0), rush: 0,
+    shield: (art.horns ? 1 : 0) + (!campaign && (pet.bond || 0) >= 15 ? 1 : 0), rush: 0,
     player: { x: 160, z: 0, vy: 0, direction: 1, moving: false, glided: false, invincible: 0, dash: 0, dashCooldown: 0, jumpBuffer: 0 },
     items: [], serial: 0, crumbsMade: 0, nextCrumb: .15, nextBunny: 3.2,
     nextMoth: gentle ? 11 : 8, nextBiscuit: gentle ? 6 : 5, nextSugar: gentle ? 7 : 8, rng: seed === null ? rng : chaseCourseRng(seed)
@@ -237,6 +248,15 @@ const EARLY = 12;
 // For the first EARLY seconds only one hazard type is on screen at a time; the other waits half a second and retries.
 const hazardClear = (game, other) => game.time >= EARLY || !game.items.some(i => i.kind === other);
 function spawnAll(game, events) {
+  if (game.format === 'campaign') {
+    while (game.scheduleCursor < game.schedule.length && game.time >= game.schedule[game.scheduleCursor].at) {
+      const entry = game.schedule[game.scheduleCursor++];
+      game.items.push({ id: ++game.serial, age: 0, floorTime: 0, vy: -10, threatenedAtWarning: entry.kind === 'broom' && Math.abs(game.player.x - entry.x) < 76, ...entry });
+      if (entry.kind === 'broom') events.push({type:'broomWarning',side:entry.x < 160 ? 'left' : 'right'});
+      if (entry.finale && !game.finaleStarted) { game.finaleStarted=true; events.push({type:'finale',count:5,bonus:FINALE_BONUS}); }
+    }
+    return;
+  }
   const t = chaseWaveTime(game), end = game.format === 'run' ? RUN_WAVE_SECONDS : CHASE_SECONDS;
   while (t >= game.nextCrumb && t < end - 1.8) spawnCrumb(game);
   if (t >= game.nextBunny && t < end - 2) { if (hazardClear(game, 'moth')) spawnBunny(game); else game.nextBunny += .5; }
@@ -292,6 +312,8 @@ function award(game, item, base, events) {
   extendStreak(game);
   const points = base * streakMultiplier(game.combo) + (air ? CHASE_POINTS.air + (game.upgrades?.includes('spring') ? 15 : 0) : 0)
     + (item.kind === 'crumb' && item.z === FLOOR && game.upgrades?.includes('salvage') ? 8 : 0);
+  if (item.kind === 'crumb') { if (item.x < 130) game.leftCaught++; if (item.x > 190) game.rightCaught++; if (item.z >= 115) game.highCatches++; }
+  if (game.rush > 0) game.rushCatches++;
   game.score += points; if (air) game.airCatches++;
   // Good steering buys the next burst sooner; waiting also recharges it fully.
   p.dashCooldown = Math.max(0, p.dashCooldown - .16);
@@ -308,7 +330,7 @@ function award(game, item, base, events) {
 
 function stepCrumb(game, item, dt, events) {
   const p = game.player;
-  if (!item.finale && (!item.gold || item.age > 1.2)) { item.vy -= 225 * dt; item.z = Math.max(FLOOR, item.z + item.vy * dt); }
+  if (!item.finale && !item.hover && (!item.gold || item.age > 1.2)) { item.vy -= 225 * dt; item.z = Math.max(FLOOR, item.z + item.vy * dt); }
   if (item.z === FLOOR) item.floorTime += dt;
   const distance = Math.hypot(item.x - p.x, item.z - (p.z + CHEST));
   if ((game.halo || game.rush > 0) && distance < 70) item.x += (p.x - item.x) * Math.min(1, dt * 3);
@@ -316,7 +338,7 @@ function stepCrumb(game, item, dt, events) {
   // Leave the advertised final sweep available until the buzzer, including the
   // longer moon act. A missed first pass still leaves time to turn back.
   else if (item.finale && game.time >= item.expiresAt) item.remove = true;
-  else if (!item.finale && item.floorTime > (game.gentle ? 2.3 : 1.4) + (game.upgrades?.includes('salvage') ? 1.2 : 0)) {
+  else if (item.hover && item.age > item.life || !item.finale && item.floorTime > (item.life || (game.gentle ? 2.3 : 1.4)) + (game.upgrades?.includes('salvage') ? 1.2 : 0)) {
     item.remove = true;
     // Losing one target trims two catches, instead of erasing the whole run.
     // Dust collisions and moth theft still reward careful play by breaking it.
@@ -378,7 +400,7 @@ function stepMoth(game, item, dt, events) {
     }
   } else {
     item.x += item.vx * dt;
-    item.z = clamp(item.z + (item.carrying ? 80 : Math.cos(item.age * 4) * 60) * dt, FLOOR + 5, 200);
+    item.z = clamp(item.z + (item.campaignCarrier ? 0 : item.carrying ? 80 : Math.cos(item.age * 4) * 60) * dt, FLOOR + 5, 200);
   }
   if (touching(game, item)) {
     game.moths++;
@@ -406,6 +428,7 @@ function stepSugar(game, item, dt, events) {
 function stepBroom(game, item, dt, events) {
   if (item.warning > 0) { item.warning = Math.max(0, item.warning - dt); return; }
   const p = game.player;
+  if (game.format === 'campaign' && !item.resolved && Math.abs(item.x - p.x) >= 76) { if (item.threatenedAtWarning) game.safeCrossings++; item.resolved = true; }
   if (!item.resolved && Math.abs(item.x - p.x) < 76) {
     if (p.dash > 0 && p.z <= 30) {
       const points = CHASE_POINTS.stomp + (game.upgrades.includes('boots') ? 10 : 0);
@@ -424,15 +447,15 @@ function stepBroom(game, item, dt, events) {
 const STEPPERS = { crumb: stepCrumb, bunny: stepBunny, moth: stepMoth, biscuit: stepBiscuit, sugar: stepSugar, broom: stepBroom };
 
 function step(game, input, dt, events) {
-  const end = game.format === 'run' ? (game.wave + 1) * RUN_WAVE_SECONDS : CHASE_SECONDS;
+  const end = game.format === 'run' ? (game.wave + 1) * RUN_WAVE_SECONDS : chaseDuration(game);
   game.time = Math.min(end, game.time + dt);
   const previousZ = stepPlayer(game, input, dt, events);
   spawnAll(game, events);
-  const finaleAt = game.format === 'run' ? 2 * RUN_WAVE_SECONDS + 11.5 : FINALE_AT;
+  const finaleAt = game.format === 'campaign' ? Infinity : game.format === 'run' ? 2 * RUN_WAVE_SECONDS + 11.5 : FINALE_AT;
   if (!game.finaleWarned && game.time >= finaleAt - FINALE_WARNING_SECONDS) {
     game.finaleWarned = true; events.push({ type: 'finaleWarning', seconds: FINALE_WARNING_SECONDS });
   }
-  if (!game.finaleStarted && (game.format === 'run' ? game.wave === 2 && chaseWaveTime(game) >= 11.5 : game.time >= FINALE_AT)) spawnFinale(game, events);
+  if (game.format !== 'campaign' && !game.finaleStarted && (game.format === 'run' ? game.wave === 2 && chaseWaveTime(game) >= 11.5 : game.time >= FINALE_AT)) spawnFinale(game, events);
   for (const item of game.items) {
     if (item.remove) continue;
     item.age += dt;
@@ -454,7 +477,7 @@ function step(game, input, dt, events) {
     }
   }
   if (game.time >= chaseDuration(game)) {
-    game.finished = true; game.complete = game.caught >= game.goal; game.stars = chaseStars(game);
+    game.finished = true; game.complete = game.format === 'campaign' ? campaignProgress(game).done : game.caught >= game.goal; game.stars = chaseStars(game);
     events.push({ type: 'finish', won: game.complete, stars: game.stars });
   }
 }
@@ -481,6 +504,7 @@ export function updateChase(game, input = {}, elapsed = 0) {
 
 // One star for turning up, two for the goal, three for the goal with room to spare and a real score.
 export function chaseStars(game) {
+  if (game.format === 'campaign') return campaignProgress(game).done ? (game.bumps === 0 ? 3 : 2) : 1;
   if (game.caught < game.goal) return 1;
   if (game.format === 'run') {
     const target = chaseStarTarget(game);
@@ -491,6 +515,7 @@ export function chaseStars(game) {
 
 // A higher score replaces the record; best streak and best star rating only ever climb.
 export function recordChase(pet, game, now = Date.now()) {
+  if (game.format === 'campaign') return recordChaseCampaign(pet, game, now);
   if (!game.finished || game.petId !== pet.id) return false;
   pet.chaseRecords ||= {};
   const mode = chaseRecordKey(game), modeBest = pet.chaseRecords[mode];

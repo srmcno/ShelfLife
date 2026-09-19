@@ -1,3 +1,4 @@
+import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
 import { COURT_BANTER } from '../content/court-banter.js';
 import { addNote, clamp, grantBonusTrust } from '../state.js';
 import { playWait } from './play.js';
@@ -126,7 +127,7 @@ const ALL_FACTS=Array.from({length:27},(_,i)=>[Math.floor(i/9),Math.floor(i/3)%3
 export function newCourt(state,rng=Math.random,options={}) {
  const l=lifeState(state),caseIndex=Number.isInteger(options.caseIndex)?clamp(options.caseIndex,0,COURT_CASES.length-1):l.courtPlays%COURT_CASES.length,d=COURT_CASES[caseIndex],trial=COURT_TRANSCRIPTS[caseIndex];
  // Challenge is a player choice, never a punishment for doing well.
- const level=Number.isInteger(options.level)?clamp(options.level,0,2):0;
+ const level=Number.isInteger(options.level)?clamp(options.level,0,2):mastery(state,'court').tier;
  const rules=makeRules(level,rng,options.reworked),valid=ALL_FACTS.filter(f=>rules.every(r=>courtRuleFits(f,r)));
  const answerFacts=valid[draw(rng,valid.length)].slice();
  // One innocent fails each distinct exhibit while fitting every other one.
@@ -269,7 +270,7 @@ function replayCourt(saved) {
 }
 export function startCourt(state,options={},rng=Math.random) {
  const l=lifeState(state);if(!state.pets.length)return null;
- const level=Number.isInteger(options.level)?clamp(options.level,0,2):0;
+ const level=Number.isInteger(options.level)?clamp(options.level,0,2):mastery(state,'court').tier;
  const caseIndex=Number.isInteger(options.caseIndex)?clamp(options.caseIndex,0,COURT_CASES.length-1):l.courtPlays%COURT_CASES.length;
  const host=state.pets.find(p=>p.id===options.petId)||state.pets[0],cast=[host,...state.pets.filter(p=>p!==host)].slice(0,4).map(p=>({id:p.id,name:p.name,...(courtPersonalAside(state,p)?{memory:courtPersonalAside(state,p)}:{})}));
  l.court={version:options.reworked?3:2,seed:1+draw(rng,4294967295),level,caseIndex,cast,petId:host.id,moves:[],claimed:false,ui:{chapter:'investigation',witness:null,statement:null,exhibit:null}};
@@ -278,7 +279,7 @@ export function startCourt(state,options={},rng=Math.random) {
 export function currentCourt(state) {
  const l=lifeState(state),saved=l.court;if(!saved)return null;
  if(!state.pets.some(p=>p.id===saved.petId)){l.court=null;return null;}
- return replayCourt(saved);
+ const game=replayCourt(saved);game.masteryLabel=masteryText(state,'court');game.masteryTier=mastery(state,'court').tier;if(game.claimed&&Number.isInteger(saved.reward?.masteryUnlocked))game.masteryUnlocked=saved.reward.masteryUnlocked;return game;
 }
 export function courtAction(state,action) {
  const game=currentCourt(state),saved=lifeState(state).court;if(!game||game.claimed||!action||typeof action!=='object')return null;
@@ -321,7 +322,8 @@ export function finishCourt(state,suspect,now=Date.now()) {
  // Use the established reward boundary once, after a legal completed hearing.
  // Reconstruction only restores display state and never calls this function.
  const result=accuseCourt(state,game,suspect,now);if(!result)return null;
- saved.moves.push({type:'file',suspect});saved.claimed=true;saved.reward={bond:result.bond,fuss:result.fuss,reason:result.rewardReason};
+ const before=mastery(state,'court').tier;
+ saved.moves.push({type:'file',suspect});saved.claimed=true;completeMastery(state,'court',game.level,'court:'+saved.seed);saved.reward={bond:result.bond,fuss:result.fuss,reason:result.rewardReason};if(mastery(state,'court').tier>before)saved.reward.masteryUnlocked=mastery(state,'court').tier;
  const finished=currentCourt(state);l.courtBest=Math.max(l.courtBest,finished.result.score);return finished.result;
 }
 // An assistance button explains one rule at a time, without identifying the

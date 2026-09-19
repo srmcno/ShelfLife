@@ -367,11 +367,11 @@ test('each archetype teaches the handshake in its own words, and unknown traits 
   Object.keys(TRAIT_GESTURES).forEach(id => assert.ok(ids.has(id), `${id} is not a trait`));
 });
 
-test('the handshake grows a fourth round once a resident really trusts you', () => {
+test('the handshake grows through explicit mastery, never trust', () => {
   assert.equal(handshakeRounds(makePet('a', { bond: 0 })), 3);
-  assert.equal(handshakeRounds(makePet('a', { bond: LONG_HANDSHAKE_AT })), 4);
+  assert.equal(handshakeRounds(makePet('a', { bond: LONG_HANDSHAKE_AT })), 3);
   const shy = newHandshake(makePet('a', { bond: 0 }));
-  const close = newHandshake(makePet('b', { bond: 20 }));
+  const close = newHandshake(makePet('b', { bond: 20, mastery:{handshake:{tier:1}} }));
   assert.equal(shy.sequence.length, 4);
   assert.equal(close.sequence.length, 5, 'a longer handshake needs a longer pattern');
   // Play the long one through: it must take four rounds, not three.

@@ -1,3 +1,4 @@
+import { rememberEcho } from '../household-echoes.js';
 import { lifeState, awardDiscovery, recordScene } from './life.js';
 import { addNote, clamp } from '../state.js';
 import { depleteProp, isSpent } from './behavior.js';
@@ -51,7 +52,8 @@ export function chooseWelcome(state, choice, now = Date.now()) {
   const servings = state.behavior.props[v.bowl.id] ||= { uses: 0, emptyUntil: 0, touched: {} };
   servings.uses = (Number.isFinite(servings.uses) ? servings.uses : 0) + 1;
   if (servings.uses >= 2) depleteProp(state, v.bowl.id, now);
-  const text = v.asleep ? pet.name + ' accepts a sleepy feeding. Madam Moth ' + (choice === 'share' ? 'takes her half and curls up beside the bowl. For once, neither of them needs to say anything.' : 'stares at the empty spoon, then quietly eats a loose thread from her sleeve.') : choice === 'share' ? pet.name + ' offers half a crumb. Madam Moth takes the bigger half, notices the stare, and pushes a flake back. Neither calls it affection.' : pet.name + ' eats the first serving while maintaining eye contact. Madam Moth tries looking abandoned. It chews more slowly to give her time.';
+  const text = v.asleep ? pet.name + ' accepts a sleepy feeding. Madam Moth ' + (choice === 'share' ? 'lays her half in the empty spoon and hums a funeral march. The corpse is then eaten.' : 'stares at the empty spoon, then quietly eats a loose thread from her sleeve.') : choice === 'share' ? pet.name + ' offers half a crumb. Madam Moth lays it out like a body, folds its imaginary arms, then eats the mourners first.' : pet.name + ' eats the first serving while maintaining eye contact. Madam Moth measures the bowl for a coffin. It spits one crumb back. She doubles the quote.';
+  rememberEcho(state,'welcome',pet.id,'welcome:'+pet.id,now,(v.asleep?'sleep-':'')+choice);
   const l = lifeState(state);
   Object.assign(l.welcome, { choice, text, asleep: v.asleep }); l.introDone = true;
   const discovery = awardDiscovery(state, 'welcome:first-bite', 1, now) ? 1 : 0;

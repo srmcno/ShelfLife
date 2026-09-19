@@ -54,8 +54,8 @@ async function choose(page,choice){
  await expect(page.locator('.expedition-heading h3')).toBeFocused();return after;
 }
 
-test('pack a real crew, finish all three choices, resume a save and reopen one earned homecoming',async({page})=>{
- test.setTimeout(60_000);const fixture=await household(page);await open(page);
+test('an established crew lesson finishes all three choices, resumes a save and uses one earned project at home',async({page})=>{
+ test.setTimeout(60_000);const fixture=await household(page,s=>{s.mastery={expedition:{tier:1}};});await open(page);
  await page.locator('#outingLead').selectOption('qa2');await page.locator('#outingCompanion').selectOption('qa0');
  await expect(page.locator('.expedition-packed-resident').first()).toContainText('Pip');
  await expect(page.locator('.expedition-packed-resident').last()).toContainText('1-nerve detours at stops 1 & 3');
@@ -81,8 +81,9 @@ test('pack a real crew, finish all three choices, resume a save and reopen one e
  expect(restored.life.xp).toBe(completed.life.xp);expect(restored.life.outings).toBe(completed.life.outings);expect(restored.life.outing.result).toEqual(completed.life.outing.result);
  expect(restored.paperwork.entries.filter(e=>e.title.startsWith('Expedition report'))).toHaveLength(1);await fits(page,2);
  await page.locator('[data-life="project-home"]').click();await expect(page.locator('#lifeVeil')).not.toBeVisible();
- await expect(page.locator('#playroomVeil')).not.toBeVisible();await expect(page.locator('.household-workshop')).toBeFocused();
+ await expect(page.locator('#playroomVeil')).not.toBeVisible();await expect(page.locator('[data-life="use-project"][data-id="drawer"]')).toBeFocused();
  await expect(page.locator('[data-life="use-project"][data-id="drawer"]')).toBeVisible();expect((await saved(page)).life.outing).toBeNull();
+ const use=page.locator('[data-life="use-project"][data-id="drawer"]');await use.click();await expect(use).toBeFocused();await expect(page.locator('.project-drawer .project-reaction')).toContainText('Daily care delivered');const used=await saved(page);await use.click();expect((await saved(page)).pets.map(p=>p.needs.fuss)).toEqual(used.pets.map(p=>p.needs.fuss));await expect(use).toBeFocused();
 });
 
 test('a 320px saved trip shows stored parts, blocked moves and a truthful early return',async({page})=>{

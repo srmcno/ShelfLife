@@ -1,0 +1,55 @@
+# Activity mastery repair evidence
+
+Implemented all five paths using `src/mastery-state.js`. Saves contain version 1 bounded tier, win count, issued/claimed lesson serials and recent receipts. Legacy affection, wins, images, names, trips and records are not used to infer learning tier. Pet-scoped Handshake/Alibi and household-scoped Court/Market/Expedition normalize additively. Reward rest does not suppress learning. Replayed receipt serials remain consumed after the recent list rolls over.
+
+## Playable paths
+
+- Handshake: short Echo (2–4 moves), Long Echo (2–5), Mirror reversal, Duet alternating beats. Current lesson is the default; completing the lesson unlocks its successor. Echo beginner practice remains selectable. Slow demonstrations, replay, untimed entry and five-round encores remain separate. Next-lesson launch refreshes the visible rule, not only the sequence. Existing shared openings and bests remain saved.
+- Alibi: spot a lie, support it with one true record, combine two true records. The last lesson asks for aggregate totals of two care types and requires both corresponding independently recorded counts. Neither one fact nor exact sentence matching supplies the proof. Three exhibits are true; two must be selected, including via A–C keyboard toggles. Full correct interviews advance mastery, including during reward rest. Existing mode-less reward objects retain legacy behavior.
+- Court: default fresh hearing automatically selects Cozy, Curious or Tangled from mastery. Correct filed verdicts advance once. Existing unique-culprit clue solver, investigation, objections and help remain intact. Current tier/next condition and difficulty buttons appear outside Case file. Beginner practice remains accessible; unearned advanced UI choices are visibly locked.
+- Market: new UI trips opt into version 5. First lesson has one affordable pair, one errand and two stalls. Second has three errands, six stalls, three-space capacity and budget/delivery pressure. Third has eight stalls, alternative merchant offers and premium delivery decisions. All tier layouts use the legal transaction engine and exhaustive attainable-score solver. A complete list advances once. One-errand practice is always offered. Versions 1–4, active transaction prefixes, names, prices, rewards and retry seeds remain unchanged. Existing direct legacy engine calls retain their previous version unless `learning:true` is requested.
+- Expeditions: new UI trips explicitly save mastery tier and receipt. Survey has no crew cost discount; next lesson enables crew expertise; final lesson makes the first detour open different subsequent authored stops. Branch reconstruction and optimal-score search use actual branch decisions. First-step points remain identical before and after the branch/reload. Full return with at least 3 points advances learning. Safe partial return saves recovered project parts and never grants unvisited points or mastery. Existing active trips without these fields retain their rules. Beginner survey practice remains available.
+
+## Verification
+
+TDD: new tests first failed on trust-driven Handshake length and three-errand beginner Market; implemented against those failures. `test/mastery-paths.test.mjs` now has 9 focused progression, feasibility and restore tests:
+
+- bounded migration, affection independence, persisted duplicate receipt rejection;
+- longer/reversed/alternating Handshake mechanics and beginner practice;
+- market feasibility for 12 seeds at each of three tiers;
+- every Alibi tier, including two-record proof, reworded records and duplicate claims;
+- every Court tier with exactly one consistent culprit and persisted file boundary;
+- version-5 Market restore after each transaction, one-time progression and version-4 compatibility;
+- Expedition crew discount, real branch change, reload and safe partial return;
+- old receipt rejection after more than 64 later lessons;
+- all eight Expedition editions retain advertised first-choice points after branch/reload.
+
+Focused combined regression run: 88/88 passed (new mastery plus Handshake, life, household, expansion, trail, old errands and flexible market suites). Final full npm run after all changes: 823/823 passed. The 9 focused mastery tests also passed independently. Root runs final whole-tree release gates and browser verification. JavaScript syntax checks passed for changed gameplay/UI modules.
+
+Legacy test intent updates: the old affection-driven Handshake test now asserts explicit learning; old reward/story helpers explicitly request beginner practice so those tests exercise their original reward/story concern rather than inadvertently entering longer lessons.
+
+## Integration and limitations
+
+New offline import: `src/mastery-state.js` (root owns service-worker manifest). Preserved root's campaign claim gate, macabre handshake lines, `rememberEcho` integration and additive state fields. Applied requested Chase hook correction: campaign entitlement is checked with `{consume:false}`; actual reward consumes it only after nonzero fuss/trust is granted.
+
+No browser control was used by this worker, per task ownership. Root must verify real dialog layout, mobile two-record selection, next-lesson transitions, and publication. Mastery uses authored three/four-tier paths rather than unbounded escalation; cosmetic legacy records remain independent. Accessibility does not lower mastery rewards or increase difficulty.
+
+## Final independent-review corrections
+
+Addressed the Market P2 and teaching feedback in `final-review.md`: beginner return dock now says 1/1, and its saved scene uses the complete-list success prose. Market and Court rewards persist a display-only `masteryUnlocked` tier only when this completion actually advanced mastery; result screens announce that exact lesson and its next condition after reload. Beginner replays do not claim a new unlock. Combined Alibi verdict feedback marks both necessary count records as jointly disproving the total.
+
+Added three focused tests through real Market purchases/delivery/JSON restore and generated dock/result markup, real Court investigation/verdict/JSON restore and result markup, and two-record Alibi feedback including exclusion of the unrelated exhibit. All 12 focused mastery tests pass.
+
+Post-review full npm suite: 826/826 passed (`/tmp/mastery-review-all.log`).
+
+## Navigation and workshop follow-through
+
+Implemented small gaps using existing surfaces: the household hub now opens the central Playroom instead of maintaining its own pet/game launcher (active expedition and market resume links remain); scene history shows all retained entries, supports a stable resident-ID filter, and links to the existing museum/case archive and the existing resident-filtered notes board. Stored histories are unchanged. Existing scene title focus and live actor/caption playback were retained.
+
+Homecoming now focuses and scrolls to the returned project's actual use/recovery button rather than the entire three-project workshop. Using an installed project restores focus after refresh, and today's completed care status is reconstructed on ordinary redraw/restore. Existing real project effects, once-daily resource grants, installation, actor artwork and action animation were validated rather than reimplemented. Also corrected novice expedition planning text to show the actual 2-nerve survey costs; crew discounts appear only after the crew lesson is learned.
+
+Four focused navigation/workshop/preview tests pass. Full domain suite: 832/832. Updated browser contracts to exercise novice Alibi/Market defaults, keep the explicitly saved legacy v4 market path, and mark the advanced crew fixture honestly as an established mastery lesson. Added a real single-errand Market completion/reload browser scenario and strengthened the installed-project focus/double-use assertions. Root owns executing those browser scenarios; no browser pass is claimed here.
+
+## Phone Market review
+
+Active Market help now sits in a closed details element. Its concise summary identifies the saved lesson for v5 (including beginner practice at a higher household mastery), or identifies an older trip as a saved shopping route. Unlock explanations remain available inside. Scores now use a separately normalized, bounded three-entry `marketErrandBestV5` array; v5 completions update only their own tier, and the result screen compares against that tier. Existing v3/v4 best fields are preserved. Two new regressions cover rendered route identity, all three tier score boundaries, JSON restore and malformed best-array normalization. Focused Market/mastery suites: 24/24. Full domain suite: 834/834. No CSS edits.

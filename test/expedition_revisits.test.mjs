@@ -34,7 +34,7 @@ test('field notes are bounded, survive reload, name visited encounters and never
  const board=projectBoard(s.life);assert.match(board,/Read field notes · 8\/8/);assert.ok(board.includes(missionStops('drawer',7,2)[0].title));
 });
 test('crew and tool previews name the actual advantages and capped attention',()=>{
- const s=fixture(),plan=expeditionView(s,null,{route:'drawer',gear:'thread',lead:'p',companion:'q'}).html;
+ const s=fixture();s.mastery={expedition:{tier:1}};const plan=expeditionView(s,null,{route:'drawer',gear:'thread',lead:'p',companion:'q'}).html;
  assert.match(plan,/Quill/);assert.match(plan,/Reduces detour cost to 1 nerve/);assert.match(plan,/Can gain 3 attention/);assert.match(plan,/Can gain 0 attention/);assert.match(plan,/at stop 2 without spending nerve/);
  startOuting(s,'drawer','thread',['p','q'],{mission:true});assert.match(outingSnapshot(s).options[1].hint,/spend 1 nerve/);
  s.pets[1].stats.menace=1;assert.match(outingSnapshot(normalizeState(s)).options[1].hint,/spend 1 nerve/);

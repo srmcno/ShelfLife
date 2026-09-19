@@ -22,10 +22,11 @@ jobs:
       - run: python3 -m unittest discover -s test -p '*_test.py'
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:browser
-      - name: Keep browser failure evidence
-        if: failure()
+      - name: Keep browser review evidence
+        if: always()
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: browser-failure-evidence
+          name: browser-review-evidence
           path: test-results/
+          if-no-files-found: ignore
           retention-days: 7

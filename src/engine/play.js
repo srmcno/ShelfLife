@@ -1,3 +1,5 @@
+import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
+import { claimChaseCampaign } from '../content/chase-campaign.js';
 import { recordGameLife, recordScene } from './life.js';
 // A short, untimed memory game. Wrong taps cost nothing; rewards are per pet,
 // rate limited, and only awarded after all three sequences are completed.
@@ -60,25 +62,24 @@ export function handshakeMemory(pet, ritual = 'echo') {
 export function handshakeReaction(pet, phase = 'watch') {
   const style = (pet?.traits || []).map(id => TRAIT_GESTURES[id]).find(Boolean) || 'tender';
   const lines = {
-    menace: ['It moves its teeth out of the way. This is an intimate concession.', '“Wrong. Again. I moved my teeth for this.”', 'It offers one very careful touch. Then checks nobody saw.'],
+    menace: ['It moves its teeth out of the way. This is an intimate concession.', '“Wrong. Again. I moved my teeth for this.”', 'It offers one very careful touch, then counts your fingers. It remembers a different number.'],
     feral: ['It pats the floor for you, then bites the floor for listening.', 'It patiently demonstrates. The floor receives another bite.', 'It leans against you without asking. You appear to belong to it now.'],
     tender: ['It leaves a space beside itself that is exactly your finger wide.', '“We can do it again. I had not finished being near you.”', 'It holds the last touch slightly too long. You are both pretending this is required.'],
     gothic: ['It closes one eye. Something behind it closes the other.', '“Again. Whatever is under the shelf was watching.”', 'It makes room for you in its shadow. The shadow objects; it insists.'],
-    theatre: ['It checks your eyeline, moves its good side into view, then begins.', '“A rehearsal. Obviously. The actual moment is still coming.”', 'It bows, then peeks up to make sure you stayed for its tiny good moment.'],
+    theatre: ['It checks your eyeline, moves its good side into view, then begins.', '“A rehearsal. Obviously. The actual moment is still coming.”', 'It bows so low something falls out. It kicks it under the rug before accepting applause.'],
     damp: ['It wipes a small dry place for you. It is immediately damp again.', '“Slipped. Entirely the moisture. Let us try the less wet finger.”', 'It leaves a wet print against you and looks absurdly pleased that it stuck.'],
     formal: ['It straightens your imaginary cuff before allowing the first move.', '“Nearly. You may retain the finger and try again.”', 'It offers a precise little nod, then follows you for one unnecessary step.'],
     clerical: ['It tests the distance between you twice. The third time is just touching.', '“That version is still between us. We can improve it.”', 'It tidies the place where your hand was. Then untidies it to keep the shape.'],
-    clinical: ['It examines your finger, decides to overlook your construction, and begins.', '“Both subjects remain intact. Repeat the experiment.”', 'It checks your pulse, then rests against it. Purely observational.'],
+    clinical: ['It examines your finger, decides to overlook your construction, and begins.', '“Both subjects remain intact. Repeat the experiment.”', 'It checks your pulse and looks disappointed. It had already priced the jar.'],
     ancient: ['It makes the first move very slowly. For once, it wants company in the present.', '“We have time. An embarrassing amount. Again?”', 'It stays close after the last move. Some things are worth remembering on purpose.']
   };
   return (lines[style] || lines.tender)[phase === 'retry' ? 1 : phase === 'complete' ? 2 : 0];
 }
 
-// A handshake gets longer as a resident actually trusts you: three rounds to
-// begin with, a fourth once it has decided you are worth the extra move.
+// Mastery length is explicit; legacy trust and accessibility never set it.
 export const LONG_HANDSHAKE_AT = 12;
 export function handshakeRounds(pet) {
-  return (pet && (pet.bond || 0) >= LONG_HANDSHAKE_AT) ? 4 : 3;
+  return mastery(pet || {}, 'handshake').tier >= 1 ? 4 : 3;
 }
 export function playWait(pet, now = Date.now(), kind = null) {
   const last = kind ? pet.playedAt?.[kind] || 0 : pet.lastPlayed;
@@ -103,7 +104,7 @@ export function handshakePattern(game) {
   return moves;
 }
 export function restartHandshake(game) {
-  return { ...game, sequence: game.sequence.slice(), names: game.names.slice(), round: 0, cursor: 0, mistakes: 0, replays: 0, complete: false, claimed: false };
+  return { ...game, receipt:null, sequence: game.sequence.slice(), names: game.names.slice(), round: 0, cursor: 0, mistakes: 0, replays: 0, complete: false, claimed: false };
 }
 export function replayHandshake(game) {
   if (!game || game.complete) return false;
@@ -111,14 +112,17 @@ export function replayHandshake(game) {
   game.replays = (game.replays || 0) + 1;
   return true;
 }
-export function newHandshake(pet, rng = Math.random, { encore = false, ritual = 'echo' } = {}) {
-  const rounds = encore ? 5 : handshakeRounds(pet);
+export function newHandshake(pet, rng = Math.random, { encore = false, ritual = null, practice = false } = {}) {
+  const tier = practice ? 0 : mastery(pet, 'handshake').tier;
+  const lessonTier = ritual == null ? tier : ritual === 'duet' ? 3 : ritual === 'mirror' ? 2 : Math.min(tier,1);
+  ritual ||= ['echo','echo','mirror','duet'][tier];
+  const rounds = encore ? 5 : practice ? 3 : handshakeRounds(pet);
   ritual = Object.hasOwn(HANDSHAKE_RITUALS, ritual) ? ritual : 'echo';
   const sequence = Array.from({ length: (rounds + 1) * (ritual === 'duet' ? 2 : 1) }, () => Math.min(3, Math.max(0, Math.floor(rng() * 4))));
   const memory = handshakeMemory(pet, ritual);
   if (memory) sequence.splice(0, memory.opening.length, ...memory.opening);
   return {
-    petId: pet.id, rounds, encore, ritual: Object.hasOwn(HANDSHAKE_RITUALS, ritual) ? ritual : 'echo', mistakes: 0, replays: 0,
+    practice, masteryTier: lessonTier, receipt: masteryTicket(pet, 'handshake'), petId: pet.id, rounds, encore, ritual: Object.hasOwn(HANDSHAKE_RITUALS, ritual) ? ritual : 'echo', mistakes: 0, replays: 0,
     names: gesturesFor(pet),
     // One more gesture than there are rounds: round 1 asks for two, and the last
     // round asks for the lot.
@@ -143,7 +147,9 @@ export function rewardHandshake(state, game, now = Date.now()) {
     recordEscapadeEvent(state, { kind: 'play', petIds: [pet.id], activity: 'chase' }, now);
   }
   if (!pet || !game.complete || game.claimed) return null;
+  if (game.format === 'campaign' && !claimChaseCampaign(pet, game, now, {consume:false})) { game.claimed = true; return {practice:true,fuss:0,bond:0}; }
   game.claimed = true;
+  if (game.kind !== 'chase' && !game.practice && game.receipt && !completeMastery(pet, 'handshake', game.masteryTier, game.receipt)) return {practice:true,fuss:0,bond:0};
   if (game.kind !== 'chase') recordEscapadeEvent(state, { kind: 'play', petIds: [pet.id], activity: 'memory' }, now);
   if (game.kind !== 'chase') {
     const ritual = Object.hasOwn(HANDSHAKE_RITUALS, game.ritual) ? game.ritual : 'echo';
@@ -170,6 +176,7 @@ export function rewardHandshake(state, game, now = Date.now()) {
   const fuss = Math.min(24, 100 - pet.needs[need]);
   pet.needs[need] = clamp(pet.needs[need] + fuss, 0, 100);
   const bond = grantBonusTrust(pet, 1, now);
+  if(game.format==='campaign' && (fuss>0 || bond>0)) claimChaseCampaign(pet,game,now);
   pet.lastPlayed = now;
   pet.playedAt ||= {}; pet.playedAt[kind] = now;
   addNote(state, pet.name + (game.kind === 'chase' ? ' chased down ' + game.caught + ' crumbs and dodged ' + game.dodged + (game.dodged === 1 ? ' dust bunny.' : ' dust bunnies.') + ' It insists this was serious work.' : ' finished a ' + HANDSHAKE_RITUALS[game.ritual || 'echo'].name + ' handshake with you. ' + handshakeReaction(pet, 'complete')), pet.name, 'note');
