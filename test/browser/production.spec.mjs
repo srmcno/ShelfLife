@@ -196,7 +196,8 @@ for (const activity of activities) {
       await page.locator('#playStart').click();
       await expect(page.locator('#alibiStatements button')).toHaveCount(3);
       await page.locator('#alibiStatements button').first().click();
-      await expect(page.locator('.alibi-exhibits button')).toHaveCount(3);
+      await expect(page.locator('.alibi-exhibits button')).toHaveCount(0);
+      await expect(page.locator('.alibi-accuse')).toBeEnabled();
     } else if (activity.id === 'outing') {
       await page.locator('[data-life="set-out"]').click();
       await expect(page.locator('[data-life="outing-choice"]')).toHaveCount(3);
@@ -210,8 +211,8 @@ for (const activity of activities) {
       await expect.poll(async () => (await savedShelf(page)).life.court.moves[0]?.type).toBe('inspect');
     } else if (activity.id === 'market') {
       await page.locator('[data-life="market-start"]').click();
-      await expect(page.locator('[data-life="market-select"]')).toHaveCount(2);
-      expect((await savedShelf(page)).life.market.version).toBe(4);
+      await expect(page.locator('[data-life="market-select"]')).toHaveCount(1);
+      expect((await savedShelf(page)).life.market.version).toBe(5);
     }
     await noHorizontalOverflow(page);
     const close = page.locator(activity.dialog + ' .sheet-head button');
@@ -357,7 +358,7 @@ test('a fourth resident leads their own market adventure and imperfect play coun
   await page.locator('#escapadeContent [data-escapade="play"]').click();
   await page.locator('[data-life="market-start"]').click();
   expect((await savedShelf(page)).life.market.patronIds[0]).toBe('qa3');
-  for (let stall = 0; stall < 8; stall++) await page.locator('[data-life="market-pass"]').click();
+  for (let stall = 0; stall < 2; stall++) await page.locator('[data-life="market-pass"]').click();
   expect((await savedShelf(page)).escapades.active.playAt).toBeNull();
   await page.locator('[data-life="market-leave"]').click();
   await expect.poll(async () => (await savedShelf(page)).escapades.active.playAt).not.toBeNull();
@@ -458,4 +459,25 @@ test('a long browser frame gap pauses Chase without consuming the remaining game
   await expect(page.locator('#chaseArea')).toHaveAttribute('data-running', 'true');
   await page.locator('#chasePause').click();
   await expect(page.locator('#chaseGo')).toHaveText('Resume chase');
+});
+
+test('a novice completes the single market errand and sees the next lesson after reload', async ({page}) => {
+  await openHousehold(page);
+  await page.locator('#tabPlay').click();
+  await page.locator('#playroomVeil [data-activity="market"]').click();
+  await page.locator('[data-life="market-start"]').click();
+  for(let stop=0;stop<2;stop++) {
+    await expect(page.locator('[data-life="market-select"]')).toHaveCount(1);
+    await page.locator('[data-life="market-buy"]').click();
+  }
+  await page.locator('[data-life="market-deliver"]').click();
+  await expect(page.locator('[data-life="market-leave"]')).toHaveText('Return home · 1/1 delivered');
+  await page.locator('[data-life="market-leave"]').click();
+  await expect(page.locator('.mastery-unlock')).toContainText('Unlocked: Three errands');
+  const completed=await savedShelf(page);
+  expect(completed.mastery.market.tier).toBe(1);
+  await page.reload();
+  expect((await savedShelf(page)).mastery.market.tier).toBe(1);
+  expect((await savedShelf(page)).life.market.claimed).toBe(true);
+  await noHorizontalOverflow(page);
 });

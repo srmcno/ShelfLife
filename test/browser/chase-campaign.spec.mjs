@@ -31,3 +31,76 @@ test('320px campaign setup and its advanced free play have no horizontal clippin
   await expect(page.locator('#chaseDescription')).toContainText('22 seconds');
   await expect(page.locator('.chase-campaign-setup')).toBeHidden();
 });
+
+// Read only the same arena objects the player sees. Drive the actual keyboard
+// handlers; never import the engine, access game objects, seed victories, change
+// physics time, or write progression after the ordinary household fixture.
+async function collectVisibleCrumbs(page, deadlineMs) {
+  const deadline=Date.now()+deadlineMs;
+  let held=null;
+  try {
+    while(Date.now()<deadline){
+      const view=await page.evaluate(()=>{
+        const area=document.querySelector('#chaseArea');
+        const xOf=el=>Number(el?.style.transform.match(/translate3d\(([-\d.]+)px/)?.[1]);
+        const crumb=document.querySelector('#chaseItems .chase-item.crumb:not(.squashed)');
+        return {screen:area.dataset.chaseScreen,x:xOf(document.querySelector('#chaseResident')),target:crumb?xOf(crumb):null};
+      });
+      if(view.screen==='result')return;
+      if(view.screen!=='play')throw new Error('Unexpected Chase screen during keyboard play: '+view.screen);
+      const delta=view.target===null?0:view.target-view.x;
+      const next=Math.abs(delta)>8?(delta<0?'ArrowLeft':'ArrowRight'):null;
+      if(next!==held){
+        if(held)await page.keyboard.up(held);
+        held=next;
+        if(held)await page.keyboard.down(held);
+      }
+      await page.waitForTimeout(80);
+    }
+    throw new Error('Chase did not reach its result within the real-time deadline');
+  } finally { if(held)await page.keyboard.up(held); }
+}
+async function storedCampaign(page) {
+  return page.evaluate(()=>{
+    const state=JSON.parse(localStorage.getItem('shelflife.v4'));
+    return state.pets.find(p=>p.chaseCampaign?.records?.['first-crumbs']?.won)?.chaseCampaign||null;
+  });
+}
+test('real keyboard clears the first two lessons, advances through briefing and survives reload',async({page},testInfo)=>{
+  test.skip(testInfo.project.name!=='desktop-chromium','Desktop keyboard progression slice; mobile controls have separate coverage.');
+  test.setTimeout(90_000);
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await openChase(page);
+  await expect(page.locator('#chaseGo')).toHaveText('Begin lesson 1');
+  await page.locator('#chaseGo').click();
+  await collectVisibleCrumbs(page,25_000);
+  await expect(page.locator('#chaseHeading')).toContainText('Lesson complete: The breakfast remains');
+  await expect(page.locator('#chaseGo')).toHaveText('Next lesson');
+  await expect.poll(async()=> (await storedCampaign(page))?.unlocked).toBe(2);
+  const first=await storedCampaign(page);
+  expect(first.records['first-crumbs'].won).toBe(true);
+  expect(first.records['first-crumbs'].score).toBeGreaterThan(0);
+  await page.locator('#chaseGo').click();
+  await expect(page.locator('#chaseGo')).toHaveText('Begin lesson 2');
+  await expect(page.locator('#chaseDescription')).toContainText('Both cupboards');
+  await expect(page.locator('#chaseStage')).toHaveValue('both-cupboards');
+  // Reload uses the app's actual persistence. The fixture script only seeds once.
+  await page.reload();
+  await page.locator('#playroomBtn:visible, #tabPlay:visible').first().click();
+  await page.locator('[data-activity="chase"]').click();
+  await expect(page.locator('#chaseGo')).toHaveText('Begin lesson 2');
+  await expect(page.locator('#chaseStage option:disabled')).toHaveCount(10);
+  await page.locator('#chaseGo').click();
+  await collectVisibleCrumbs(page,30_000);
+  await expect(page.locator('#chaseHeading')).toContainText('Lesson complete: Both cupboards');
+  await expect.poll(async()=> (await storedCampaign(page))?.unlocked).toBe(3);
+  const second=await storedCampaign(page);
+  expect(second.records['both-cupboards'].won).toBe(true);
+  expect(second.records['both-cupboards'].score).toBeGreaterThan(0);
+  expect(second.records['first-crumbs']).toEqual(first.records['first-crumbs']);
+  await page.locator('#chaseGo').click();
+  await expect(page.locator('#chaseGo')).toHaveText('Begin lesson 3');
+  await expect(page.locator('#chaseDescription')).toContainText('Borrowed knees');
+  expect(errors).toEqual([]);
+  await testInfo.attach('earned-campaign-records',{body:JSON.stringify(second,null,2),contentType:'application/json'});
+});

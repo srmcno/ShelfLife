@@ -41,3 +41,11 @@ Addressed the Market P2 and teaching feedback in `final-review.md`: beginner ret
 Added three focused tests through real Market purchases/delivery/JSON restore and generated dock/result markup, real Court investigation/verdict/JSON restore and result markup, and two-record Alibi feedback including exclusion of the unrelated exhibit. All 12 focused mastery tests pass.
 
 Post-review full npm suite: 826/826 passed (`/tmp/mastery-review-all.log`).
+
+## Navigation and workshop follow-through
+
+Implemented small gaps using existing surfaces: the household hub now opens the central Playroom instead of maintaining its own pet/game launcher (active expedition and market resume links remain); scene history shows all retained entries, supports a stable resident-ID filter, and links to the existing museum/case archive and the existing resident-filtered notes board. Stored histories are unchanged. Existing scene title focus and live actor/caption playback were retained.
+
+Homecoming now focuses and scrolls to the returned project's actual use/recovery button rather than the entire three-project workshop. Using an installed project restores focus after refresh, and today's completed care status is reconstructed on ordinary redraw/restore. Existing real project effects, once-daily resource grants, installation, actor artwork and action animation were validated rather than reimplemented. Also corrected novice expedition planning text to show the actual 2-nerve survey costs; crew discounts appear only after the crew lesson is learned.
+
+Four focused navigation/workshop/preview tests pass. Full domain suite: 832/832. Updated browser contracts to exercise novice Alibi/Market defaults, keep the explicitly saved legacy v4 market path, and mark the advanced crew fixture honestly as an established mastery lesson. Added a real single-errand Market completion/reload browser scenario and strengthened the installed-project focus/double-use assertions. Root owns executing those browser scenarios; no browser pass is claimed here.

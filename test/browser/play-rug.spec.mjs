@@ -34,6 +34,8 @@ test('real soft, high and bouncing throws persist three distinct tricks without 
   for(const [style,trick] of [['soft','first-catch'],['high','high-catch'],['bounce','bounce-catch']]){
     await page.locator('#rugThrow').selectOption(style);await page.locator('#rugAction').click();
     await expect.poll(()=>tricks(page)).toContain(trick);
+    // The resident visibly holds and returns the ball before another throw.
+    await expect(page.locator('.rug-ball')).toHaveCount(0,{timeout:12000});
   }
   expect((await saved(page)).life.xp).toBe(before.life.xp+3);
   await page.keyboard.press('Escape');await expect(page.locator('#hangoutVeil')).not.toBeVisible();

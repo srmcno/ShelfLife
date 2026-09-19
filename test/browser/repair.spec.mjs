@@ -7,6 +7,12 @@ test('shabby rug, readable ball, physical outcomes and saved aftermath at phone 
  await page.addInitScript(s=>{if(!sessionStorage.getItem('repair-fixture')){localStorage.setItem('shelflife.v4',JSON.stringify(s));sessionStorage.setItem('repair-fixture','1');}},snapshot);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');await page.getByRole('button',{name:'Shelf',exact:true}).click();
+ if(info.project.name==='desktop-chromium'){
+  await page.locator('#hangoutBtn').click();await page.locator('#rugAction').click();
+  await expect(page.locator('#rugOutcome')).toContainText(/catch/i);
+  await page.screenshot({path:'test-results/repair-rug-desktop.png',fullPage:true});
+  await page.locator('#rugClose').click();
+ }
  for(const width of [320,390,430]){
   await page.setViewportSize({width,height:844});await page.locator('#hangoutBtn').click();
   await page.locator('#rugThrow').selectOption('soft');await page.locator('#rugAction').click();
