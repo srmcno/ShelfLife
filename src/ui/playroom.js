@@ -39,17 +39,18 @@ const scenes = {
 };
 const scene = id => '<span class="activity-scene" aria-hidden="true"><svg viewBox="0 0 200 88" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><ellipse class="scene-shadow" cx="100" cy="78" rx="83" ry="5"/>' + scenes[id] + '</svg></span>';
 const cardCopy = {
-  chase: { title:'Crumb Chase', time:'22s or 3 acts', hook:'Dodge the broom. Get the crumbs.' },
+  chase: { title:'Crumb Chase', time:'12 lessons', hook:'Learn the route. Outwit the broom.' },
   memory: { title:'Handshake', time:'Your pace', hook:'Copy a secret. Or reverse it.' },
   alibi: { title:'The Alibi', time:'No timer', hook:'Spot the lie. Find the proof.' },
   outing: { title:'Expeditions', time:'3 stops', hook:'Find parts. Build a better home.' },
   court: { title:'Shelf Court', time:'No timer', hook:'Follow the clues. Name a suspect.' },
-  market: { title:'Night Market', time:'8 stalls', hook:'Find a pair. Send the shopping home.' }
+  market: { title:'Night Market', time:'2–8 stalls', hook:'Find a pair. Send the shopping home.' }
 };
 
 function activityTime(id, life = {}) {
   // Saves retain the route seed and rules version, not the generated stalls.
   if(id==='market'&&life.market?.version===5)return [2,6,8][life.market.tier||0]+' stalls';
+  if(id==='market'&&life.market?.version===4)return '8 stalls';
   if (id === 'market' && life.market && (life.market.version || 1) < 4) return '6 stalls';
   return cardCopy[id].time;
 }
