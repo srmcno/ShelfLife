@@ -36,3 +36,13 @@ Two review regressions were reproduced with failing tests before applying fixes.
 2. **Safe-side occupancy counted as crossing.** Each scheduled broom records whether the resident was in its threatened area when the warning began. An escape counts only if that resident has moved out by activation. Starting and remaining on the safe side earns no crossing. The vacant-half crumb cues now follow the warnings, supporting the taught crossing. A regression runs `targetX:240` throughout at both paces and verifies zero crossings and a loss.
 
 After coordinated reward-hook changes, the focused Chase suite passes **48/48 tests**. The existing real-controls feasibility test still completes **all 48 course/pace/body combinations**. No browser success is inferred from these engine/integration checks.
+
+## Optional replay route variation
+
+Cleared lessons now expose a native, labeled “Mirror route on this replay” checkbox. It supports focus and Space activation; uncleared lessons hide it and the engine independently rejects mirroring until that lesson has a saved win. The briefing and active chapter banner explicitly label a mirrored replay. No new menu or mastery counter is introduced.
+
+Mirroring reflects every scheduled x coordinate around the 320px arena and reverses every horizontal velocity. Timing, vertical trajectories, collision physics, goals, points and existing campaign/legacy records are unchanged. Rewards remain stage-based: choosing a different route cannot claim a second mastery reward.
+
+Failing-first tests confirmed the missing mirror transformation and missing replay eligibility flag. After implementation, focused Chase tests pass **51/51**. The real-control domain solver additionally clears all twelve mirrored lessons at both paces with plain and winged residents: **48 mirrored completions**, alongside the original **48 authored-route completions**. Mirrored replay tests also verify duplicate reward denial. This is mechanical domain evidence, not all-stage browser evidence.
+
+The desktop browser progression/reload slice now checks the mirror control only after earning lesson one through normal keyboard play, toggles it using keyboard Space, checks visible route labeling, and verifies it disappears when returning to uncleared lesson two. Browser spec syntax/discovery pass; execution remains deferred to CI because local browser executables are unavailable.

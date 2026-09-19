@@ -108,3 +108,10 @@ body[data-effects=light] .market-delivery-stage *{animation:none!important}
 .market-recipient{width:68px;height:76px}.market-recipient .sprite{--pet-h:70px}
 .market-delivery-objects{display:flex;gap:6px;animation:market-stock-reveal .7s both}.market-delivery-objects svg{width:40px;height:55px}
 .market-delivery-comedy{font:18px/1.4 var(--hand);color:var(--ink)}
+/* Keep the room visible at play size; older compact rules must not flatten it. */
+#lifeVeil .market-workspace .market-theatre{height:160px}
+.market-mastery{margin:0 0 8px;border-bottom:1px solid var(--hair-lit)}
+.market-mastery summary{cursor:pointer;min-height:36px;padding:6px 0;font-size:12px;line-height:1.4}
+.market-mastery p{font-size:12px;line-height:1.5}
+@media(max-width:720px){#lifeVeil .market-workspace .market-theatre{height:120px}#lifeVeil .market-workspace .market-vendor{width:70px;height:80px}}
+@media(max-width:720px) and (max-height:650px){#lifeVeil .market-workspace.phase-playing .market-theatre{height:90px}#lifeVeil .market-workspace.phase-playing .market-vendor{width:58px;height:67px}}

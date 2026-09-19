@@ -98,8 +98,12 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
   const campaignPace = document.createElement('label'); campaignPace.className = 'chase-campaign-pace';
   const paceCheck = document.createElement('input'); paceCheck.type = 'checkbox'; paceCheck.checked = true;
   campaignPace.append(paceCheck, document.createTextNode(' Gentle catches & longer warnings'));
+  const mirrorOption = document.createElement('label'); mirrorOption.className = 'chase-campaign-pace'; mirrorOption.hidden = true;
+  const mirrorCheck = document.createElement('input'); mirrorCheck.type = 'checkbox'; mirrorCheck.id = 'chaseMirror';
+  mirrorOption.append(mirrorCheck, document.createTextNode(' Mirror route on this replay'));
+  mirrorCheck.addEventListener('change', () => { if (pet) controller.prepare(pet, gentle); });
   const campaignInfo = document.createElement('p'); campaignInfo.className = 'chase-campaign-info';
-  campaignSetup.append(stageLabel, campaignPace, campaignInfo);
+  campaignSetup.append(stageLabel, campaignPace, mirrorOption, campaignInfo);
   stagePicker.addEventListener('change', () => { selectedStage = stagePicker.value; if (pet) controller.prepare(pet, gentle); });
   paceCheck.addEventListener('change', () => { if (pet) controller.prepare(pet, gentle); });
   formatPicker.addEventListener('click', e => {
@@ -322,7 +326,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
         count.classList.toggle('met', progress.done);
         setText(objective, progress.text); setText(mobileProgress, progress.text);
         starTarget.textContent = progress.stage.lesson;
-        waveBanner.hidden = false; setText(waveBanner, 'CHAPTER ' + progress.stage.chapter + '/3 · LESSON ' + (progress.stage.index + 1) + '/12 · ' + progress.stage.name);
+        waveBanner.hidden = false; setText(waveBanner, (game.mirror ? 'MIRRORED REPLAY · ' : '') + 'CHAPTER ' + progress.stage.chapter + '/3 · LESSON ' + (progress.stage.index + 1) + '/12 · ' + progress.stage.name);
       }
       if (game.finaleStarted) starTarget.textContent += game.finaleComplete ? ' · Gold sweep ✓ +60' : ' · Gold sweep ' + game.finaleCaught + '/5';
       else if (game.finaleWarned) starTarget.textContent += ' · Gold soon: get near either edge';
@@ -492,7 +496,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
       if (!repeatCourse.checked || !courseObjective) courseObjective = nextObjective;
       runNumber++;
     }
-    stopFrame(); game = newChase(pet, { gentle: format === 'campaign' ? paceCheck.checked : gentle, stageId: selectedStage, seed: courseSeed, venue:venuePicker.value, format, mood: moodOf(pet), objective: courseObjective });
+    stopFrame(); game = newChase(pet, { gentle: format === 'campaign' ? paceCheck.checked : gentle, stageId: selectedStage, mirror: mirrorCheck.checked, seed: courseSeed, venue:venuePicker.value, format, mood: moodOf(pet), objective: courseObjective });
     hudKey = ''; nodes.clear(); items.replaceChildren();
     goalCelebrated = false;
     venuePicker.disabled=true;
@@ -581,12 +585,14 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
         if (!selectedStage || chaseStage(selectedStage).index >= progress.unlocked) selectedStage = CHASE_STAGES[progress.unlocked - 1].id;
         stagePicker.replaceChildren(...CHASE_STAGES.map(stage => { const option = document.createElement('option'); option.value = stage.id; option.disabled = stage.index >= progress.unlocked; option.textContent = (stage.index + 1) + '. ' + stage.name + (progress.records[stage.id]?.won ? ' ✓ · practice' : stage.index >= progress.unlocked ? ' · locked' : ''); return option; }));
         stagePicker.value = selectedStage;
+        mirrorOption.hidden = !progress.records[selectedStage]?.won;
+        if (mirrorOption.hidden) mirrorCheck.checked = false;
         campaignInfo.textContent = progress.unlocked + '/12 lessons available. Clears unlock the next lesson; replay preserves your best. Handling never changes with affection.';
       }
       screen('setup'); settings.open = false;
       root.dataset.finished = 'false'; guide.open = false;
       const nextObjective = challengePicker.value === 'rotate' ? ['combo', 'air', 'biscuit'][runNumber % 3] : challengePicker.value;
-      game = newChase(pet, { gentle: format === 'campaign' ? paceCheck.checked : gentle, stageId: selectedStage, venue:venuePicker.value, format, mood: moodOf(pet), objective: repeatCourse.checked && courseObjective ? courseObjective : nextObjective });
+      game = newChase(pet, { gentle: format === 'campaign' ? paceCheck.checked : gentle, stageId: selectedStage, mirror: mirrorCheck.checked, venue:venuePicker.value, format, mood: moodOf(pet), objective: repeatCourse.checked && courseObjective ? courseObjective : nextObjective });
       venuePicker.disabled=false;field.dataset.venue=game.venue;
       venuePicker.closest('label').hidden = format === 'run';
       settingsSummary.textContent = 'Advanced: free play, ground & side quests';
@@ -612,7 +618,7 @@ export function createChaseUI(root, onFinish, reportStatus, onPhase = () => {}) 
       if (format === 'campaign') {
         const stage = chaseStage(game.stageId);
         title.textContent = 'Chapter ' + stage.chapter + ': ' + CHASE_CHAPTERS[stage.chapter - 1];
-        description.textContent = 'Lesson ' + (stage.index + 1) + '/12 · ' + stage.name + '. ' + stage.lesson + ' Goal: ' + campaignProgress(game).text + '. ' + stage.seconds + ' seconds.';
+        description.textContent = 'Lesson ' + (stage.index + 1) + '/12 · ' + stage.name + (game.mirror ? ' · Mirrored replay. ' : '. ') + stage.lesson + ' Goal: ' + campaignProgress(game).text + '. ' + stage.seconds + ' seconds.';
         go.textContent = pet.chaseCampaign?.records?.[stage.id]?.won ? 'Practise lesson ' + (stage.index + 1) : 'Begin lesson ' + (stage.index + 1);
         tip.textContent = stage.lesson + ' Hold ← → or drag. Hop: Space. Dash: X. Pause: P.';
       }

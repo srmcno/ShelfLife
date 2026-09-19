@@ -57,9 +57,9 @@ test('every campaign win requires its authored conditions and a stopped stage cl
 
 // Drive real controls at 60 Hz: no teleports, score injection, or skipped physics.
 import { jumpChase, dashChase } from '../src/engine/chase.js';
-function playLesson(p,stage,gentle,stamps=[]) {
+function playLesson(p,stage,gentle,stamps=[],mirror=false) {
   p.art={stamps:stamps.map(kind=>({kind}))};
-  const g=newChase(p,{format:'campaign',stageId:stage.id,gentle});
+  const g=newChase(p,{format:'campaign',stageId:stage.id,gentle,mirror});
   while(!g.finished){
     const broom=g.items.find(i=>i.kind==='broom');
     let target=g.items.filter(i=>['crumb','biscuit','moth','sugar'].includes(i.kind)).sort((a,b)=>a.age>b.age?-1:1)[0];
@@ -134,4 +134,33 @@ test('cooldown clear survives normalized reload and receives its pending reward 
   assert.ok(reward.fuss>0||reward.bond>0);assert.equal(resident.chaseCampaign.records[first.stageId].rewarded,true);
   const again=playLesson(resident,CHASE_STAGES[0],true);
   assert.equal(rewardHandshake(restored,again,now+2*PLAY_COOLDOWN+2).practice,true);
+});
+
+test('mirrored replay reflects every scheduled route and horizontal direction without changing timing or points', () => {
+  for(const s of CHASE_STAGES)for(const gentle of [false,true]){
+    const original=campaignSchedule(s.id,gentle), mirrored=campaignSchedule(s.id,gentle,true);
+    assert.deepEqual(mirrored,original.map(e=>({...e,x:320-e.x,...(e.vx===undefined?{}:{vx:-e.vx})})));
+    assert.notDeepEqual(mirrored,original,s.id);
+  }
+});
+test('mirror is replay-only and cannot change an uncleared lesson', () => {
+  const p=pet(),fresh=newChase(p,{format:'campaign',mirror:true});
+  assert.equal(fresh.mirror,false);assert.deepEqual(fresh.schedule,campaignSchedule('first-crumbs'));
+  p.chaseCampaign={records:{'first-crumbs':{won:true,score:120,rewarded:true}}};
+  p.chaseBest={score:1234};p.chaseRecords={standard:{score:1234}};
+  const before=JSON.stringify(p),replay=newChase(p,{format:'campaign',stageId:'first-crumbs',mirror:true});
+  assert.equal(replay.mirror,true);assert.equal(JSON.stringify(p),before);
+});
+
+
+test('all twelve mirrored replays remain physically winnable with normal controls at either pace', () => {
+  for(const gentle of [false,true])for(const stamps of [[],['wing']]){
+    const p=pet();p.chaseCampaign={records:Object.fromEntries(CHASE_STAGES.map(s=>[s.id,{won:true,rewarded:true}]))};
+    for(const stage of CHASE_STAGES){
+      const g=playLesson(p,stage,gentle,stamps,true);
+      assert.equal(g.mirror,true);
+      assert.equal(g.complete,true,stage.id+' mirrored '+JSON.stringify({gentle,stamps,progress:campaignProgress(g).text}));
+      assert.equal(claimChaseCampaign(p,g),false,'mirroring never grants a duplicate mastery reward');
+    }
+  }
 });

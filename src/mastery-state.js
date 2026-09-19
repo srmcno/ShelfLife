@@ -24,6 +24,7 @@ export function completeMastery(owner,key,tier,receipt,{success=true}={}){
  m.receipts.push(receipt);m.receipts=m.receipts.slice(-64);if(success)m.wins++;
  if(success&&tier===m.tier)m.tier=Math.min(m.tier+1,MASTERY_PATHS[key].length-1);return true;
 }
-export function masteryText(owner,key){const m=mastery(owner,key),path=MASTERY_PATHS[key];return 'Mastery '+(m.tier+1)+'/'+path.length+': '+path[m.tier]+'. '+(m.tier<path.length-1?'Complete this lesson successfully to unlock '+path[m.tier+1]+'.':'All lessons unlocked.')+' Beginner practice and untimed help remain available.';}
+const MASTERY_GOALS={handshake:'Finish every round',alibi:'Solve all three rounds',court:'Reach the correct verdict',market:'Deliver every errand',expedition:'Finish all three stops with at least 3 points'};
+export function masteryText(owner,key){const m=mastery(owner,key),path=MASTERY_PATHS[key];return 'Mastery '+(m.tier+1)+'/'+path.length+': '+path[m.tier]+'. '+(m.tier<path.length-1?MASTERY_GOALS[key]+' to unlock '+path[m.tier+1]+'.':'All lessons unlocked.')+' Beginner practice and untimed help remain available.';}
 
-export function masteryUnlockText(key,tier){const path=MASTERY_PATHS[key];if(!path||!Number.isInteger(tier)||tier<1||tier>=path.length)return '';return 'Unlocked: '+path[tier]+'. '+(tier<path.length-1?'Complete this lesson successfully to unlock '+path[tier+1]+'.':'All lessons unlocked.');}
+export function masteryUnlockText(key,tier){const path=MASTERY_PATHS[key];if(!path||!Number.isInteger(tier)||tier<1||tier>=path.length)return '';return 'Unlocked: '+path[tier]+'. '+(tier<path.length-1?MASTERY_GOALS[key]+' to unlock '+path[tier+1]+'.':'All lessons unlocked.');}

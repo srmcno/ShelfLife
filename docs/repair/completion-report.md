@@ -6,7 +6,7 @@ Reviewed baseline: `e77b69bf0736d616ada031806742ca7f82e6e80c`. Implementation: P
 
 | Area | Classification from review | Implementation / evidence |
 |---|---|---|
-| Repeated Quick Chase schedule | Design limitation | 12 authored campaign stages, three chapters, versioned per-resident mastery/records, unlocked replay and independent gentle pace. 48 stage/pace/body combinations completed using control inputs in deterministic engine tests. See chase-report.md and chase-review.md. |
+| Repeated Quick Chase schedule | Design limitation | 12 authored campaign stages, three chapters, versioned per-resident mastery/records, unlocked replay with optional mirrored routes and independent gentle pace. 96 orientation/stage/pace/body combinations completed using control inputs in deterministic engine tests. See chase-report.md and chase-review.md. |
 | Guaranteed preset catches | Reproduced design limitation | Finite reaction/acceleration/reach, physical grip, recoverable drop, visible miss/refusal, held ball and return. Settled easy presets remain forgiving; hard placement produces misses. 120 easy catches versus 99 hard catches/21 misses across positions/traits/widths; impossible remote throws miss. |
 | Tiny ball | Rendering defect | Shared rendered/collision radius targets 32px on narrow phones. Browser measurements at 320/390/430 are part of the release gate. |
 | Cozy room | Art-direction mismatch | New decayed room and Market paintings, shelf material alignment, early coffin furniture. Existing custom appearance stays intact. Before image: evidence/before-rug.jpg. Final screenshots reviewed separately. |
@@ -18,13 +18,17 @@ Reviewed baseline: `e77b69bf0736d616ada031806742ca7f82e6e80c`. Implementation: P
 
 ## Verification checkpoint
 
-- Local domain: 832/832 passing after review fixes.
+- Local domain: 837/837 passing after review fixes.
 - Python: 4/4 passing; production build passes.
 - Independent Chase review fixed stationary-safe-side crossing and reward consumption during cooldown.
 - Whole-branch review fixed multi-event rug challenge receipts, novice Market wording and exact opening callbacks. Targeted re-review approved; 30 focused checks passed.
-- GitHub browser gates and live Pages inspection pending at this checkpoint. No live-release success claimed yet.
-- Normal UI on original published edition: completed all three Alibi rounds and the Curious funeral Court case (The Beadle, 125 points, no individually cleared innocents); inspected rug and original room. User-supplied baseline review supplies the broader six-game play record. Automated isolated households remain separate from normal UI play evidence.
+- Browser checkpoint: 117 passed and 3 intentional skips on the second run. The six failures reproduced rotation-envelope and long-name overflow issues; fixes are on the following branch revision. That run earned Chase lessons 1–2 via actual keyboard play and restored progression after reload. Final exact-revision gates and live Pages inspection remain pending at this checkpoint.
+- Normal UI on original published edition: completed all three Alibi rounds and the Curious funeral Court case (The Beadle, 125 points, no individually cleared innocents); completed Handshake (3 rounds, no errors), Market (1/3 errands, 9 buttons, 19 points), and Chase (6/8 crumbs, 60 points, one-star loss); inspected rug and original room. User-supplied baseline review supplies the broader six-game play record. Automated isolated households remain separate from normal UI play evidence.
 
 ## Product limits
 
 This restores concrete mechanics and presentation; it does not establish a numeric improvement in humor or prove every trait/ending over multi-day play. Consequences are bounded, harmless aftermath and callbacks, not a new simulation of permanent household damage. Existing project behavior is retained and surfaced. No framework, account service, or Mature mode was added.
+
+## Screenshot-driven corrections
+
+The first retained screenshots exposed two rendering defects: the spinning ball rotated its outer positioned element, changing its bounding envelope and shifting it from the physics centre; the rotation now belongs to the centred SVG paint. Long resident names in aftermath could widen the document behind an expedition dialog; the text flex item now shrinks and wraps. Market-specific older CSS flattened the new painted setting into a narrow strip; explicit responsive heights and a compact saved-lesson summary now give the scene room without hiding unlock details. Legacy shopping routes keep their own labels and scores, while v5 bests are recorded separately for each lesson.

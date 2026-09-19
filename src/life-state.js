@@ -3,7 +3,7 @@ export function blankLife() {
   return { v:1, introDone:false, introStarted:false, xp:0, day:'', daily:[], awards:[], scenes:[], serial:0,
     relics:[], displayed:[], frame:'wood', visitorEpisodes:{}, outing:null, outings:0, projects:[], projectParts:{}, trailPages:[],
     court:null, courtWins:0, courtPlays:0, courtBest:0, lastSeen:0, recap:[], blueprints:[],
-    market:null, marketSerial:0, marketRuns:0, marketBest:0, marketErrandBest:0, marketErrandBestV4:0 };
+    market:null, marketSerial:0, marketRuns:0, marketBest:0, marketErrandBest:0, marketErrandBestV4:0, marketErrandBestV5:[0,0,0] };
 }
 const obj = x => x && typeof x === 'object' && !Array.isArray(x);
 const number = (x, max=1e9) => Number.isFinite(x) ? Math.max(0,Math.min(max,Math.floor(x))) : 0;
@@ -13,6 +13,7 @@ export function normalizeLife(raw, established=false) {
   s.v=1; s.introStarted=s.introStarted===true;
   s.welcome=obj(s.welcome)&&typeof s.welcome.petId==='string'?{petId:s.welcome.petId.slice(0,80),bowlId:typeof s.welcome.bowlId==='string'?s.welcome.bowlId.slice(0,80):'',at:number(s.welcome.at,1e14),choice:['share','keep'].includes(s.welcome.choice)?s.welcome.choice:'',text:typeof s.welcome.text==='string'?s.welcome.text.slice(0,800):'',asleep:s.welcome.asleep===true,dismissed:s.welcome.dismissed===true}:null;
   for (const k of ['xp','serial','outings','courtWins','courtPlays','courtBest','lastSeen','marketSerial','marketRuns','marketBest','marketErrandBest','marketErrandBestV4']) s[k]=number(s[k],k==='lastSeen'?1e14:1e9);
+  s.marketErrandBestV5=[0,1,2].map(tier=>number(Array.isArray(s.marketErrandBestV5)?s.marketErrandBestV5[tier]:0,1000000));
   s.day=typeof s.day==='string'?s.day.slice(0,10):'';
   s.trailPages=[...new Set((Array.isArray(s.trailPages)?s.trailPages:[]).filter(id=>typeof id==='string'&&/^(drawer|fridge|cupboard):[0-7]$/.test(id)))].slice(0,24);
   s.projects=[...new Set((Array.isArray(s.projects)?s.projects:[]).filter(id=>['drawer','fridge','cupboard'].includes(id)))];

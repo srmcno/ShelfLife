@@ -10,3 +10,5 @@
 .chase-settings .chase-formats { display:grid; grid-template-columns:1fr; margin-top:.5rem; }
 .chase-settings .chase-formats button { min-width:0; }
 @media(max-width:720px) { .chase-campaign-setup { gap:.3rem; } .chase-campaign-info { font-size:.74rem; } }
+
+.chase-campaign-setup .chase-campaign-pace[hidden] { display:none; }

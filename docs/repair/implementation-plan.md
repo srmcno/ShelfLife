@@ -5,13 +5,13 @@ Authority: Steve's September 19 review and successor prompt, supplied with expli
 Architecture: Retain static ES modules, existing renderers, local saves and normal release workflow. Add bounded versioned progression and consequence records; retain all legacy records.
 
 ## Acceptance checklist
-- [ ] Baseline revision e77b69bf0736d616ada031806742ca7f82e6e80c, normal UI play, synthetic saves retained.
-- [ ] Twelve authored Chase stages in three mechanically different chapters, visible lesson/goal/next stage, replay/practice and independent gentle controls, versioned records.
-- [ ] Rug: bounded reaction/acceleration/reach, contact-based catches, fumbles/recovery/misses/refusals, held ball and return, phone-readable ball, optional challenges, no duplicate rewards.
-- [ ] Neglected room artwork and coherent market/household surfaces, readable controls and preserved resident art.
-- [ ] Mastery paths for Handshake, Alibi, Court, Market and Expeditions with mechanical changes and visible unlock conditions.
-- [ ] Structured varied rug writing and truthful cross-activity callbacks; early ensemble macabre incident, visible harmless consequences and workshop effects.
-- [ ] Navigation, actor focus, archive links and five destinations preserved.
+- [x] Baseline revision e77b69bf0736d616ada031806742ca7f82e6e80c, normal UI play, synthetic saves retained.
+- [x] Twelve authored Chase stages in three mechanically different chapters, visible lesson/goal/next stage, replay/practice and independent gentle controls, versioned records.
+- [x] Rug: bounded reaction/acceleration/reach, contact-based catches, fumbles/recovery/misses/refusals, held ball and return, phone-readable ball, optional challenges, no duplicate rewards.
+- [x] Neglected room artwork and coherent market/household surfaces, readable controls and preserved resident art.
+- [x] Mastery paths for Handshake, Alibi, Court, Market and Expeditions with mechanical changes and visible unlock conditions.
+- [x] Structured varied rug writing and truthful cross-activity callbacks; early ensemble macabre incident, visible harmless consequences and workshop effects.
+- [x] Navigation, actor focus, archive links and five destinations preserved.
 - [ ] Domain, Python, browser, mobile, migration, backup, interruption and release verification.
 
 ## Task 1: Chase campaign

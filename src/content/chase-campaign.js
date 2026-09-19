@@ -17,7 +17,7 @@ export const CHASE_STAGES = [
   ['last-inventory',3,'The last inventory','First Dash a broom, then save two biscuits. Finish by hopping across the gold arc.',30,[need('dashSmashes',1,'dash smash'),need('biscuits',2,'whole biscuits'),need('finaleCaught',3,'final gold crumbs')],'moon']
 ].map(([id,chapter,name,lesson,seconds,requirements,venue],index)=>Object.freeze({id,index,chapter,name,lesson,seconds,requirements,venue}));
 export const chaseStage = id => CHASE_STAGES.find(s=>s.id===id) || CHASE_STAGES[0];
-export function campaignSchedule(id, gentle = false) {
+export function campaignSchedule(id, gentle = false, mirror = false) {
   const s=chaseStage(id), out=[];
   const add=(at,kind,x,z=182,extra={})=>out.push({at,kind,x,z,...extra});
   const crumbs=(at,xs,spacing=1.6,z=182,extra={})=>xs.forEach((x,i)=>add(at+i*spacing,'crumb',x,z,extra));
@@ -38,7 +38,7 @@ export function campaignSchedule(id, gentle = false) {
     case 10: crumbs(.5,[235,235,85,85,235,235,85,85,235,85],2.3,110,{life:1});broom(1,true);broom(6,false);broom(11,true);broom(16,false);broom(21,true);break;
     case 11: broom(2,true);broom(5,false);biscuits(7,[90,230,160]);[[52,42],[106,70],[160,94],[214,70],[268,42]].forEach(([x,z])=>add(20,'crumb',x,z,{gold:true,finale:true,expiresAt:30}));break;
   }
-  return out.sort((a,b)=>a.at-b.at);
+  return out.sort((a,b)=>a.at-b.at).map(entry=>mirror?{...entry,x:320-entry.x,...(entry.vx===undefined?{}:{vx:-entry.vx})}:entry);
 }
 const bounded = (v,max=1000000) => Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 export function normalizeChaseCampaign(value) {

@@ -11,9 +11,10 @@ test('campaign begins with an accessible gentle lesson and keeps optional setup 
   const errors=[];page.on('pageerror',e=>errors.push(e.message));await openChase(page);
   await expect(page.locator('#chaseHeading')).toContainText('Chapter 1');
   await expect(page.locator('#chaseGo')).toHaveText('Begin lesson 1');
-  await expect(page.locator('.chase-campaign-pace input')).toBeChecked();
+  await expect(page.getByLabel('Gentle catches & longer warnings')).toBeChecked();
   await expect(page.locator('.chase-settings')).not.toHaveAttribute('open','');
   await expect(page.locator('#chaseStage option:disabled')).toHaveCount(11);
+  await expect(page.getByLabel('Mirror route on this replay')).toBeHidden();
   await page.locator('#chaseGo').click();await expect(page.locator('#chaseArea')).toHaveAttribute('data-running','true');
   await page.locator('#chaseHop').click();await page.locator('#chasePause').click();
   await expect(page.locator('#chaseGo')).toHaveText('Resume chase');
@@ -84,6 +85,16 @@ test('real keyboard clears the first two lessons, advances through briefing and 
   await expect(page.locator('#chaseGo')).toHaveText('Begin lesson 2');
   await expect(page.locator('#chaseDescription')).toContainText('Both cupboards');
   await expect(page.locator('#chaseStage')).toHaveValue('both-cupboards');
+  await expect(page.getByLabel('Mirror route on this replay')).toBeHidden();
+  await page.locator('#chaseStage').selectOption('first-crumbs');
+  const mirror=page.getByLabel('Mirror route on this replay');
+  await expect(mirror).toBeVisible();
+  await mirror.focus(); await page.keyboard.press('Space');
+  await expect(mirror).toBeChecked();
+  await expect(page.locator('#chaseDescription')).toContainText('Mirrored replay');
+  await page.locator('#chaseStage').selectOption('both-cupboards');
+  await expect(mirror).toBeHidden();
+  await expect(page.locator('#chaseGo')).toHaveText('Begin lesson 2');
   // Reload uses the app's actual persistence. The fixture script only seeds once.
   await page.reload();
   await page.locator('#playroomBtn:visible, #tabPlay:visible').first().click();

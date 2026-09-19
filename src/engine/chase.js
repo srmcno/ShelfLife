@@ -143,15 +143,16 @@ export function temperOf(mood) { return TEMPER[mood] || TEMPER.fine; }
 
 const CHASE_STAGE_NEXT = progress => CHASE_STAGES[progress.unlocked - 1].id;
 
-export function newChase(pet, { gentle = false, rng = Math.random, seed = null, mood = 'fine', objective = null, venue = 'shelf', format = 'quick', stageId = null } = {}) {
+export function newChase(pet, { gentle = false, rng = Math.random, seed = null, mood = 'fine', objective = null, venue = 'shelf', format = 'quick', stageId = null, mirror = false } = {}) {
   const art = artPersonality(pet);
   const campaign = format === 'campaign';
   const progress = normalizeChaseCampaign(pet.chaseCampaign);
   const requested = chaseStage(stageId || CHASE_STAGE_NEXT(progress));
   const stage = requested.index < progress.unlocked ? requested : chaseStage(CHASE_STAGE_NEXT(progress));
+  const mirrored = campaign && mirror === true && progress.records[stage.id]?.won === true;
   const temper = temperOf(campaign ? 'fine' : mood);
   return {
-    stageId: campaign ? stage.id : null, schedule: campaign ? campaignSchedule(stage.id, gentle) : null, scheduleCursor: 0,
+    mirror: mirrored, stageId: campaign ? stage.id : null, schedule: campaign ? campaignSchedule(stage.id, gentle, mirrored) : null, scheduleCursor: 0,
     leftCaught: 0, rightCaught: 0, highCatches: 0, rushCatches: 0, safeCrossings: 0,
     kind: 'chase', seed, format: campaign ? 'campaign' : format === 'run' ? 'run' : 'quick', venue: campaign ? stage.venue : format === 'run' ? 'shelf' : CHASE_VENUES[venue] ? venue : 'shelf', petId: pet.id, time: 0, frameRemainder: 0, score: 0, caught: 0, combo: 0, bestCombo: 0,
     wave: 0, waveBaseline: { caught: 0, biscuits: 0, finaleCaught: 0, airCatches: 0 }, waveResults: [], contracts: ['house', 'house', 'house'], upgrades: [], pendingUpgrade: null, pendingContract: null, awaitingChoice: false, nextBroom: 4.5, broomsMade: 0,
