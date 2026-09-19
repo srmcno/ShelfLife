@@ -12,7 +12,7 @@ Architecture: Retain static ES modules, existing renderers, local saves and norm
 - [x] Mastery paths for Handshake, Alibi, Court, Market and Expeditions with mechanical changes and visible unlock conditions.
 - [x] Structured varied rug writing and truthful cross-activity callbacks; early ensemble macabre incident, visible harmless consequences and workshop effects.
 - [x] Navigation, actor focus, archive links and five destinations preserved.
-- [ ] Domain, Python, browser, mobile, migration, backup, interruption and release verification.
+- [x] Domain, Python, browser, mobile, migration, backup, interruption and release verification. Initial repair release 2d4513f passed all gates and live desktop/mobile/offline checks; final catalogue corrections and release identity are tracked in the release PRs.
 
 ## Task 1: Chase campaign
 Own src/engine/chase.js, src/ui/chase.js, new src/content/chase-campaign.js, css/chase.css, campaign-specific tests. Introduce per-pet chaseCampaign versioned progress and records without deleting chaseRecords/chaseBest. Root integrates state normalization if necessary. Test stage schedule distinctions, advancement after wins only, replay, losses, reload, rewards. Add visible chapter/lesson/goal and hide advanced setup for first play. Use existing controls and stable movement.

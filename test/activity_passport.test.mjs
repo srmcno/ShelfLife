@@ -80,3 +80,12 @@ test('legacy completed Chase results remain visible even with zero points and no
   assert.equal(activityPassport(state).stamps.find(s => s.id === 'chase').earned,true);
   assert.equal(activityPassport(state).next,'memory');
 });
+
+test('Market catalogue reports the completed route’s score rules without comparing legacy and lesson bests',()=>{
+ const pet={id:'a'},state={life:{marketRuns:2,marketBest:7,marketErrandBest:31,marketErrandBestV4:38,marketErrandBestV5:[18,0,0],market:{version:4,claimed:true}}};
+ assert.equal(activityRecord({id:'market'},state,pet),'2 trips · eight-stall best 38');
+ state.life.market={version:5,tier:0,claimed:true};
+ assert.equal(activityRecord({id:'market'},state,pet),'2 trips · lesson 1 best 18');
+ state.life.market={version:3,claimed:true};assert.match(activityRecord({id:'market'},state,pet),/six-stall best 31/);
+ state.life.market={version:1,claimed:true};assert.match(activityRecord({id:'market'},state,pet),/legacy best 7/);
+});

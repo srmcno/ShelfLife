@@ -47,6 +47,10 @@ export function activityRecord(activity, state, pet) {
   if (activity.id === 'alibi') return count(pet.alibiWins || 0, 'clean win') + ' · ' + count(pet.alibis || 0, 'game') + ' completed';
   if (activity.id === 'outing') return life.outing ? 'Expedition in progress · resume anytime' : count(life.outings || 0, 'expedition') + ' completed';
   if (activity.id === 'court') return life.court && !life.court.claimed ? 'Case in progress · resume anytime' : count(life.courtWins || 0, 'case') + ' solved' + (life.courtBest ? ' · best ' + life.courtBest : '');
-  return life.market && !life.market.claimed ? 'Shopping trip in progress · resume anytime' :
-    (life.marketRuns ? count(life.marketRuns, 'trip') + (life.marketErrandBest ? ' · errand best ' + life.marketErrandBest : ' · legacy best ' + (life.marketBest || 0)) : 'Your first questionable purchase awaits');
+  if(life.market && !life.market.claimed)return 'Shopping trip in progress · resume anytime';
+  if(!life.marketRuns)return 'Your first questionable purchase awaits';
+  const saved=life.market,version=saved?.version||(life.marketErrandBestV4?4:life.marketErrandBest?3:1);
+  const best=version===5?'lesson '+((saved.tier||0)+1)+' best '+(life.marketErrandBestV5?.[saved.tier||0]||0):
+    version===4?'eight-stall best '+(life.marketErrandBestV4||0):version===3?'six-stall best '+(life.marketErrandBest||0):'legacy best '+(life.marketBest||0);
+  return count(life.marketRuns,'trip')+' · '+best;
 }
