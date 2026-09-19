@@ -12,7 +12,7 @@ export function pairFits(items, request) {
     (items[0].tags.includes(request.tags[0])&&items[1].tags.includes(request.tags[1]) ||
      items[1].tags.includes(request.tags[0])&&items[0].tags.includes(request.tags[1]));
 }
-export function errandLayout(seed, {version=3}={}) {
+export function errandLayout(seed, {version=3,tier=2}={}) {
   const random=randomFor(seed);
   // Plant a legal three-delivery route before adding alternatives. Each pair
   // costs at most six, so ten starting buttons plus four per delivery suffice.
@@ -28,14 +28,14 @@ export function errandLayout(seed, {version=3}={}) {
     return {...request,template:request.id,id:'errand-'+i};
   });
   const stalls=plan.map((item,i)=>shuffled([item,alternatives[i]],random));
-  if(version>=4){
+  if(version>=4 && !(version===5 && tier<2)){
     // Two genuine alternate stops leave room to pass or replace a mistake.
     // Keep the six affordable planted objects in order, with delivery windows.
     const stocked=new Set(stalls.flat().map(item=>item.id));
     const extras=shuffled([...MARKET_ITEMS,...MARKET_RARITIES].filter(item=>!stocked.has(item.id)),random).slice(0,4);
     stalls.splice(2,0,extras.slice(0,2));stalls.splice(5,0,extras.slice(2));
   }
-  return {stalls,requests};
+  return version===5 && tier===0 ? {stalls:stalls.slice(0,2).map(stock=>stock.filter(i=>plan.includes(i))),requests:requests.slice(0,1)} : {stalls,requests};
 }
 export function deliveryOptions(snapshot, request) {
   if(snapshot.delivered.includes(request.id))return [];
@@ -105,22 +105,22 @@ export function applyErrandMove(s, move) {
   s.lastReceipt=item?'Bought '+item.name+' for '+item.cost+' buttons.'+(trade?' Returned '+trade.name+' for 1 button.':'')+' '+ERRAND_VENDOR_LINES[s.step].bought:ERRAND_VENDOR_LINES[s.step].passed;
   s.step++;return true;
 }
-export function initialErrands(seed, patrons=[], {version=3}={}) {
-  return {...errandLayout(seed,{version}),version,seed,patrons,step:0,buttons:10,bag:[],delivered:[],receipts:[],traded:false,complete:false,claimed:false,lastReceipt:''};
+export function initialErrands(seed, patrons=[], {version=3,tier=2}={}) {
+  return {...errandLayout(seed,{version,tier}),...(version===5?{tier}:{}),version,seed,patrons,step:0,buttons:10,bag:[],delivered:[],receipts:[],traded:false,complete:false,claimed:false,lastReceipt:''};
 }
 export function errandSnapshot(saved) {
-  const snapshot=initialErrands(saved.seed,saved.patrons,{version:saved.version===4?4:3});
+  const snapshot=initialErrands(saved.seed,saved.patrons,{version:saved.version===5?5:saved.version===4?4:3,tier:saved.tier});
   if(snapshot.version>=4)snapshot.patronIds=(saved.patronIds||[]).slice();
   let count=0;for(const move of saved.moves){if(!applyErrandMove(snapshot,move))break;count++;}
   if(count!==saved.moves.length){saved.moves=saved.moves.slice(0,count);saved.claimed=false;}
-  snapshot.claimed=snapshot.complete&&saved.claimed===true;snapshot.score=errandScore(snapshot);
+  snapshot.claimed=snapshot.complete&&saved.claimed===true;if(snapshot.claimed&&Number.isInteger(saved.masteryUnlocked))snapshot.masteryUnlocked=saved.masteryUnlocked;snapshot.score=errandScore(snapshot);
   return snapshot;
 }
 // Search legal transactions, including deliveries between stalls. Show the
 // attainable score only after returning home. Kept separate from live play.
 const bestCache=new Map();
-export function bestErrandScore(seed, {version=3}={}) {
-  const cacheKey=seed+':'+version;
+export function bestErrandScore(seed, {version=3,tier=2}={}) {
+  const cacheKey=seed+':'+version+':'+tier;
   if(bestCache.has(cacheKey))return bestCache.get(cacheKey);
   const seen=new Map();let best=0;
   function visit(s){
@@ -133,6 +133,6 @@ export function bestErrandScore(seed, {version=3}={}) {
     if(s.step===s.stalls.length){best=Math.max(best,errandScore(s).total);return;}
     for(const pick of [null,...s.stalls[s.step].map(i=>i.id)])for(const trade of [null,...(!s.traded&&pick?s.bag.map(i=>i.id):[])])next({pick,trade});
   }
-  visit(initialErrands(seed,[],{version}));
+  visit(initialErrands(seed,[],{version,tier}));
   if(bestCache.size>=20)bestCache.delete(bestCache.keys().next().value);bestCache.set(cacheKey,best);return best;
 }

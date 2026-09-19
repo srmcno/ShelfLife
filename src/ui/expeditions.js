@@ -1,3 +1,4 @@
+import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
 import { capabilitiesOf } from '../engine/behavior.js';
 import { curioSVG } from '../art/curios.js';
 import { renderPetSprite } from '../art/sprite.js';
@@ -140,7 +141,7 @@ export function expeditionView(state,outing,{route='drawer',gear='thread',lead='
   if(!state.pets.some(p=>p.id===lead))lead=state.pets[0]?.id||'';
   if(companion===lead||!state.pets.some(p=>p.id===companion))companion='';
   const crew=crewFor(state,[lead,companion]),built=state.life.projects.includes(route);
-  return makeView('Beyond the shelf','planning',crew,planningMarkup(state,route,gear,lead,companion,dare),'<p class="expedition-departure"><b>2 nerve</b> · one tool · no time limit</p>'+actionButton(built?'Explore this route':'Set out for parts','set-out',{primary:true,extra:crew.length?'':'disabled'})+'<small class="expedition-dock-note">Your journey saves after every choice.</small>');
+  return makeView('Beyond the shelf','planning',crew,'<p>'+esc(masteryText(state,'expedition'))+'</p><p>Finish with at least 3 trail points to learn the next lesson. Crew skills reduce detour costs after the survey. At the final tier, the first detour opens a different route for stops 2 and 3. Recover a part to return safely early.</p>'+planningMarkup(state,route,gear,lead,companion,dare),'<p class="expedition-departure"><b>2 nerve</b> · one tool · no time limit</p>'+actionButton(built?'Explore this route':'Set out for parts','set-out',{primary:true,extra:crew.length?'':'disabled'})+actionButton('Beginner survey practice','outing-practice')+'<small class="expedition-dock-note">Your journey saves after every choice.</small>');
  }
  const o=outing,crew=crewFor(state,o.cast||[]),modern=o.version===2;
  const phase=o.step===3?'result':interlude&&o.step>0?'report':'playing';

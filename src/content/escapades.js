@@ -16,7 +16,7 @@ export const ESCAPADES = [
         text: '{name} builds a telescope from a paper tube and names the crumb The Great Maybe. Its orbit ends when someone opens a window. The star chart is adjusted: the constellation now includes the floor. Nobody has proved that the floor is not part of space.',
         callback: '{name} insists that a clear view of the carpet is excellent seeing conditions.' },
       { id: 'supper', label: 'Invite the comet to supper', keepsake: 'orbit-saucer', title: 'A Saucer for a Comet',
-        text: '{name} sets a place for the crumb and gently untangles it. The comet lands on a saucer with no casualties and rather more butter than expected. A wire model preserves its famous orbit. Supper is warm; the universe is briefly smaller and much easier to talk to.',
+        text: '{name} sets a place for the crumb and gently untangles it. The comet lands on a saucer with no casualties and rather more butter than expected. A wire model preserves its famous orbit. The comet sheds a piece of crust. They bury it under the saucer. Breakfast is now a protected graveyard.',
         callback: '{name} reserves the little saucer for distinguished visitors from above.' }
     ]
   },
@@ -34,7 +34,7 @@ export const ESCAPADES = [
         text: '{name} lines a matchbox with cotton and calls it a guest room. The ghost spends its first evening haunting the pillow, then falls asleep halfway through “boo”. In the morning the pillow is one degree colder. The rent is one small shiver, payable whenever.',
         callback: '{name} leaves the matchbox open a crack. The guest dislikes draughts.' },
       { id: 'holiday', label: 'Give it some time off', keepsake: 'holiday-bell', title: 'The Off-Duty Bell',
-        text: '{name} excuses the ghost from haunting and lends it a bell to ring when it feels like company. It takes the bell for a long, inaudible walk. When it returns, there is a tiny sunset caught in the clapper. It has forgotten to be frightening.',
+        text: '{name} excuses the ghost from haunting and lends it a bell to ring when it feels like company. It takes the bell for a long, inaudible walk. When it returns, there is a tiny sunset caught in the clapper. The clapper is now a tooth. It was not a tooth when it left. The ghost refuses to say whose holiday this was.',
         callback: '{name} sometimes holds the bell to the light to see where the ghost went.' }
     ]
   },
@@ -88,7 +88,7 @@ export const ESCAPADES = [
         text: '{name} lights one candle for every year nobody can remember. Fortunately, one will do. It refuses to burn down until someone makes a wish, so the committee wishes for more time to think. The flame settles into a comfortable glow. Nobody is late for anything.',
         callback: '{name} calls the candle “about the right number”.' },
       { id: 'here', label: 'Celebrate being here together', keepsake: 'unbirthday-rosette', title: 'The Glad-You-Are-Here Ribbon',
-        text: '{name} crosses “birthday” off the invitation and writes “here”. A ribbon is awarded for attending, including to the table. There is a long, contented silence. Then someone asks whether being here entitles them to a second piece of cake. The committee votes unanimously.',
+        text: '{name} crosses “birthday” off the invitation and writes “here”. A ribbon is awarded for attending, including to the table. They sing so loudly a tooth falls into the icing. The table wins Best Smile and is immediately accused of nepotism.',
         callback: '{name} keeps the ribbon where it can be seen on completely ordinary days.' }
     ]
   },

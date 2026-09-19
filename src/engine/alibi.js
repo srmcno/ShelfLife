@@ -1,3 +1,4 @@
+import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
 import { recordGameLife } from './life.js';
 import { recordEscapadeEvent } from '../escapade-state.js';
 /* ================= THE ALIBI =================
@@ -155,6 +156,8 @@ export function statementsFor(state, pet, now = Date.now()) {
 /* Builds three rounds. Each is two truths and a lie, all about different facts,
    and no statement is reused across the whole game. */
 export function newAlibi(state, pet, rng = Math.random, { mode = 'quick' } = {}) {
+  const tier = mastery(pet, 'alibi').tier;
+  mode ||= ['quick','prove','combine'][tier];
   const { truths, lies } = statementsFor(state, pet);
   const shuffle = list => {
     const a = list.slice();
@@ -189,7 +192,21 @@ export function newAlibi(state, pet, rng = Math.random, { mode = 'quick' } = {})
       exhibits, proof: exhibits.findIndex(e => e.key === lie.key), submittedProof: null, verified: false,
       evidence: evidence.join(' ') || 'That claim does not match the shelf at the start of this statement.' });
   }
-  return { kind: 'alibi', mode: mode === 'prove' ? 'prove' : 'quick', proved: 0, petId: pet.id, notebook: truths.map(t => t.text), rounds, round: 0, correct: 0, complete: !rounds.length, claimed: false };
+  if (mode === 'combine') rounds.forEach((round, index) => {
+    // Neither count alone refutes a total. Two independent true records must
+    // be combined; word matching to a single contradictory sentence cannot win.
+    const pairs = [['food','clean'],['food','fuss'],['fuss','clean']];
+    const labels = {food:'feeding',clean:'cleaning',fuss:'fussing'};
+    const pair = pairs[index % pairs.length];
+    const total = pair.reduce((sum, need) => sum + (pet.careLog?.[need] || 0), 0);
+    round.statements[round.lie] = 'Across ' + pair.map(need=>labels[need]).join(' and ') + ', you have cared for me ' + (total + index + 1) + ' times in total.';
+    round.keys[round.lie] = 'care-total';
+    round.exhibits = shuffle(['food','clean','fuss'].map(need=>({key:'care-'+need,text:truths.find(t=>t.key==='care-'+need).text})));
+    round.proofs = pair.map(need=>round.exhibits.findIndex(e=>e.key==='care-'+need));
+    round.proof = round.proofs[0];
+    round.evidence = pair.map(need=>labels[need]+': '+(pet.careLog?.[need]||0)).join(' + ')+' = '+total+' care actions. Both records are needed to check the total.';
+  });
+  return { masteryTier: mode === 'quick' ? 0 : mode === 'prove' ? 1 : 2, receipt: masteryTicket(pet, 'alibi'), kind: 'alibi', mode: ['prove','combine'].includes(mode) ? mode : 'quick', proved: 0, petId: pet.id, notebook: truths.map(t => t.text), rounds, round: 0, correct: 0, complete: !rounds.length, claimed: false };
 }
 
 export function currentRound(game) {
@@ -209,10 +226,11 @@ export function answerAlibi(game, index, proofIndex = null) {
   const round = currentRound(game);
   if (!round || round.answered !== null || !Number.isInteger(index) || index < 0 || index >= round.statements.length) return 'ignored';
   if (game.mode === 'prove' && (!Number.isInteger(proofIndex) || proofIndex < 0 || proofIndex >= round.exhibits.length)) return 'ignored';
+  if (game.mode === 'combine' && (!Array.isArray(proofIndex) || proofIndex.length !== 2 || new Set(proofIndex).size !== 2 || proofIndex.some(i=>!Number.isInteger(i)||i<0||i>=round.exhibits.length))) return 'ignored';
   round.answered = index;
   round.submittedProof = game.mode === 'prove' ? proofIndex : null;
   const right = index === round.lie;
-  round.verified = right && (game.mode !== 'prove' || proofIndex === round.proof);
+  round.verified = right && (game.mode === 'combine' ? round.proofs.every(i=>proofIndex.includes(i)) : game.mode !== 'prove' || proofIndex === round.proof);
   if (round.verified) game.proved = (game.proved || 0) + 1;
   if (right) game.correct++;
   if (game.round >= game.rounds.length - 1) game.complete = true;
@@ -233,9 +251,10 @@ export function rewardAlibi(state, game, now = Date.now()) {
   const pet = state.pets.find(p => p.id === game.petId);
   if (!pet || !game.complete || game.claimed) return null;
   game.claimed = true;
+  const clean = game.correct === game.rounds.length && game.rounds.length > 0 && (!['prove','combine'].includes(game.mode) || game.proved === game.rounds.length);
+  if(game.receipt && !completeMastery(pet,'alibi',game.masteryTier,game.receipt,{success:clean}))return {practice:true,fuss:0,bond:0,clean};
   recordEscapadeEvent(state, { kind: 'play', petIds: [pet.id], activity: 'alibi' }, now);
   tick(state, now);
-  const clean = game.correct === game.rounds.length && game.rounds.length > 0 && (game.mode !== 'prove' || game.proved === game.rounds.length);
   pet.alibis = (pet.alibis || 0) + 1;
   if (state.stories) state.stories.alibis = (state.stories.alibis || 0) + 1;
   if (clean) { pet.alibiWins = (pet.alibiWins || 0) + 1; if (state.stories) state.stories.alibiWins = (state.stories.alibiWins || 0) + 1; recordGameLife(state,pet,'alibi',now); }
@@ -288,7 +307,7 @@ export function alibiReaction(round, pet = null) {
 }
 export function alibiRank(game) {
   const total = game?.rounds?.length || 0;
-  if (total && game.correct === total && (game.mode !== 'prove' || game.proved === total)) return 'Airtight';
+  if (total && game.correct === total && (!['prove','combine'].includes(game.mode) || game.proved === total)) return 'Airtight';
   if (game?.correct === total) return 'Right instinct, loose case';
   if (game?.correct > 0) return 'A few loose teeth';
   return 'Witness walks';

@@ -73,7 +73,7 @@ export const PROPS = {
   skull: { name: 'Uncle', at: 20, aura: {}, desc: 'A small skull. He came with the house.',
     lines: ['{p} has been telling Uncle about your day.', '{p} moved Uncle so he faces the door. Uncle prefers it.', '{p} says Uncle agrees with it. Uncle has no comment.', '{p} has been sleeping inside Uncle. It fits.'],
     ambient: ['Uncle is facing a different way.', 'Uncle was on the top shelf this morning.', 'Uncle has been dusted. Nobody dusts Uncle.', 'There is a tooth beside Uncle. Uncle has all of his.'] },
-  coffinbed: { name: 'Coffin Bed', at: 20, aura: { food: 0.85, fuss: 0.82, clean: 0.85 }, desc: 'Very comfortable. Slows everything down a little.',
+  coffinbed: { name: 'Coffin Bed', at: 0, aura: { food: 0.85, fuss: 0.82, clean: 0.85 }, desc: 'A drafty bed with handles. Try lying in it while a neighbour measures.',
     lines: ['{p} slept fourteen hours and woke up rude.', '{p} will not get out of the bed. It has been days.', '{p} has started charging the others to nap in it.', '{p} sleeps in it lengthways with four inches to spare at both ends.'],
     ambient: ['The bed was made this morning. Nobody makes the bed.', 'There is a dent in the pillow and everyone is accounted for.', 'The lid is propped open with a tooth.', 'The bed has been moved to face the door.'] },
   phone: { name: 'Rotary Phone', at: 20, aura: { fuss: 0.7 }, desc: 'Somebody to talk to. It is not connected to anything.',

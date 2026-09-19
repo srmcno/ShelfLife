@@ -27,6 +27,7 @@ export function normalizeLife(raw, established=false) {
     const o=s.outing,v2=o.version===2;
     s.outing={route:String(o.route).slice(0,20),gear:String(o.gear).slice(0,20),cast:[...new Set(o.cast.filter(x=>typeof x==='string'))].slice(0,2),step:o.step,score:number(o.score,10),log:(Array.isArray(o.log)?o.log:[]).filter(x=>typeof x==='string').map(x=>x.slice(0,1200)).slice(0,3),choices:(Array.isArray(o.choices)?o.choices:[]).slice(0,3)};
     if(v2){
+      if(Number.isInteger(o.masteryTier)&&o.masteryTier>=0&&o.masteryTier<=2)Object.assign(s.outing,{masteryTier:o.masteryTier,receipt:typeof o.receipt==='string'?o.receipt.slice(0,80):''});
       const choices=[];for(const choice of s.outing.choices){if(![0,1,2].includes(choice))break;choices.push(choice);}
       Object.assign(s.outing,{version:2,edition:number(o.edition,7),expertise:[...new Set((Array.isArray(o.expertise)?o.expertise:[]).filter(x=>['cute','menace','damp','mystique'].includes(x)))],choices,step:choices.length,nerve:number(o.nerve,3),toolUsed:o.toolUsed===true});
       if(['bold','thrifty','steady'].includes(o.dare))s.outing.dare=o.dare;
@@ -41,9 +42,9 @@ export function normalizeLife(raw, established=false) {
   }
   // Only the seed and choices are saved. Prices, bag contents and the score are
   // replayed by the market engine, so stale or edited counters cannot mint prizes.
-  if (!obj(s.market)||!Number.isInteger(s.market.seed)||s.market.seed<1||s.market.seed>4294967295||!Array.isArray(s.market.moves)||s.market.moves.length>(s.market.version===4?12:s.market.version===3?10:6)) s.market=null;
+  if (!obj(s.market)||!Number.isInteger(s.market.seed)||s.market.seed<1||s.market.seed>4294967295||!Array.isArray(s.market.moves)||s.market.moves.length>(s.market.version>=4?12:s.market.version===3?10:6)) s.market=null;
   else {
-    const moves=[],version=s.market.version===4?4:s.market.version===3?3:s.market.version===2?2:1;
+    const moves=[],version=s.market.version===5?5:s.market.version===4?4:s.market.version===3?3:s.market.version===2?2:1;
     for(const move of s.market.moves){
       if(!obj(move))break;
       if(version>=3&&move.type==='deliver'){
@@ -54,7 +55,7 @@ export function normalizeLife(raw, established=false) {
       if(move.type!==undefined||version>=3&&move.secret||!(move.pick===null||typeof move.pick==='string'&&/^[a-z-]{1,30}$/.test(move.pick))||!(move.trade===null||typeof move.trade==='string'&&/^[a-z-]{1,30}$/.test(move.trade)))break;
       moves.push({pick:move.pick,trade:move.trade,...(version===2&&move.secret===true?{secret:true}:{})});
     }
-    s.market={seed:s.market.seed,moves,claimed:s.market.claimed===true&&(version>=3?moves.at(-1)?.type==='leave':moves.length===6),...(version>=2?{version}:{}),...(version>=3?{patrons:(Array.isArray(s.market.patrons)?s.market.patrons:[]).filter(n=>typeof n==='string').slice(0,3).map(n=>n.slice(0,40))}:{}),...(version>=4?{patronIds:(Array.isArray(s.market.patronIds)?s.market.patronIds:[]).filter(id=>typeof id==='string').slice(0,3).map(id=>id.slice(0,80))}:{})};
+    s.market={...(version===5?{tier:number(s.market.tier,2),...(s.market.claimed===true&&Number.isInteger(s.market.masteryUnlocked)&&s.market.masteryUnlocked===s.market.tier+1&&s.market.masteryUnlocked<=2?{masteryUnlocked:s.market.masteryUnlocked}:{})}:{}),seed:s.market.seed,moves,claimed:s.market.claimed===true&&(version>=3?moves.at(-1)?.type==='leave':moves.length===6),...(version>=2?{version}:{}),...(version>=3?{patrons:(Array.isArray(s.market.patrons)?s.market.patrons:[]).filter(n=>typeof n==='string').slice(0,3).map(n=>n.slice(0,40))}:{}),...(version>=4?{patronIds:(Array.isArray(s.market.patronIds)?s.market.patronIds:[]).filter(id=>typeof id==='string').slice(0,3).map(id=>id.slice(0,80))}:{})};
   }
   // Court stores identity snapshots and a bounded legal-action log. Testimony,
   // evidence, guilt and ranks are reconstructed by the seeded engine on load.
@@ -77,6 +78,7 @@ export function normalizeLife(raw, established=false) {
       // Display-only reward totals are never paid by reconstruction.
       if(s.court.claimed&&obj(c.reward)){
         s.court.reward={bond:number(c.reward.bond,1),fuss:number(c.reward.fuss,16)};
+        if(Number.isInteger(c.reward.masteryUnlocked)&&c.reward.masteryUnlocked===c.level+1&&c.reward.masteryUnlocked<=2)s.court.reward.masteryUnlocked=c.reward.masteryUnlocked;
         if(['ready','rest','asleep'].includes(c.reward.reason))s.court.reward.reason=c.reward.reason;
       }
     }

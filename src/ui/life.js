@@ -1,3 +1,4 @@
+import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
 import { lifeState, useProject, returnFromMission, favoriteFor, outingSnapshot, startOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, deliverMarket, leaveMarket, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
 import { OUTINGS, RELICS, FRAMES } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
@@ -96,9 +97,9 @@ export function initLife(state,refresh) {
   content.querySelector('.market-heading h3,.market-results h3')?.focus({preventScroll:true});
  }
 
- let courtLevel=1,courtHostId='';
+ let courtLevel=undefined,courtHostId='';
  function courtAnnounce(text){let node=veil.querySelector('.court-announcement');if(!node){node=document.createElement('span');node.className='court-announcement sr-only';node.setAttribute('role','status');node.setAttribute('aria-live','polite');node.setAttribute('aria-atomic','true');veil.querySelector('.sheet').appendChild(node);}node.textContent=text;}
- function courtStart(level=courtLevel,fresh=false){
+ function courtStart(level=undefined,fresh=false){
   const options={level,reworked:true,petId:courtHostId||state.pets[0]?.id};court=fresh?startCourt(state,options):currentCourt(state)||startCourt(state,options);if(!court)return;
   courtLevel=court.level;open('Shelf Court');save();courtPaint('#courtCaseTitle,#courtVerdictTitle');courtAnnounce(courtHearing(court).line);
  }
@@ -154,7 +155,7 @@ export function initLife(state,refresh) {
    const line=card?.querySelector('.project-reaction');if(line)line.textContent=result.text+(result.fresh?' Daily care delivered.':' Today’s care already delivered. Play again whenever you like.');playStomp();return;
   }
   if(action==='route'){selectedRoute=b.dataset.id;repaintOutingSetup('',selectedRoute);return;}
-  if(action==='set-out'){const cast=[document.getElementById('outingLead').value,document.getElementById('outingCompanion').value];if(startOuting(state,selectedRoute,selectedGear,cast,{dare:selectedDare,mission:true})){save();interlude=false;outing();refresh();focusOutingProgress();}return;}
+  if(action==='set-out'||action==='outing-practice'){const cast=[document.getElementById('outingLead').value,document.getElementById('outingCompanion').value];if(startOuting(state,selectedRoute,selectedGear,cast,{dare:selectedDare,mission:true,learning:true,practice:action==='outing-practice'})){save();interlude=false;outing();refresh();focusOutingProgress();}return;}
   if(action==='outing-choice'){const result=chooseOuting(state,Number(b.dataset.choice));if(result){interlude=!result.complete;refresh();outing();focusOutingProgress();}return;}
   if(action==='outing-return'){if(returnFromMission(state)){interlude=false;save();refresh();outing();focusOutingProgress();}return;}
   if(action==='continue-outing'){interlude=false;outing();focusOutingProgress();return;}
@@ -169,7 +170,7 @@ export function initLife(state,refresh) {
   }
   if(action==='finish-outing'){finishOuting(state);refresh();display();return;}
   if(action==='market'){marketTrade='';marketAction=null;marketSelection='';marketPanel='';market();focusMarketProgress();return;}
-  if(action==='market-start'||action==='market-retry'){if(startMarket(state,{replay:action==='market-retry',errands:true,petId:leadId})){marketTrade='';marketAction=null;marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
+  if(action==='market-start'||action==='market-retry'||action==='market-practice'){if(startMarket(state,{replay:action==='market-retry',practice:action==='market-practice',learning:true,errands:true,petId:leadId})){marketTrade='';marketAction=null;marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
   if(action==='market-select'){const m=marketSnapshot(state);if(!m||m.complete||!m.stalls[m.step].some(item=>item.id===b.dataset.id))return;const scroll=content.querySelector('.adventure-scroll')?.scrollTop||0;marketSelection=b.dataset.id;market();const pane=content.querySelector('.adventure-scroll');if(pane)pane.scrollTop=scroll;content.querySelector('[data-life="market-select"][data-id="'+marketSelection+'"]')?.focus({preventScroll:true});return;}
   if(action==='market-panel'){const panel=b.dataset.panel||'';if(!['','requests','bag','route'].includes(panel))return;marketPanel=panel===marketPanel?'':panel;market();content.querySelector('.adventure-scroll')?.scrollTo({top:0});(content.querySelector('.market-context-panel')||content.querySelector('.market-heading h3'))?.focus({preventScroll:true});return;}
   if(action==='market-deliver'||action==='market-leave'){
@@ -178,7 +179,7 @@ export function initLife(state,refresh) {
   }
   if(action==='market-buy'||action==='market-pass'||action==='market-secret'){const before=marketSnapshot(state);if(chooseMarket(state,action==='market-buy'?b.dataset.id:null,action==='market-buy'?marketTrade||null:null,{secret:action==='market-secret'})){marketAction={kind:action.slice(7),step:before.step,item:before.stalls[before.step].find(item=>item.id===b.dataset.id)};marketTrade='';marketSelection='';marketPanel='';save();refresh();market();focusMarketProgress();}return;}
   if(action==='court'){courtStart();return;}
-  if(action==='court-new'){courtStart(courtLevel,true);return;}
+  if(action==='court-new'){courtStart(undefined,true);return;}
   if(action==='court-clue'){
    if(!court||court.claimed)return;const clue=Number(b.dataset.clue),rule=court.rules[clue];if(!rule)return;
    courtAction(state,{type:'focus',statement:clue,evidence:rule.first.axis});

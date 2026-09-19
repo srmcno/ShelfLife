@@ -1,3 +1,6 @@
+import { normalizeMastery } from './mastery-state.js';
+import { normalizeEchoes } from './household-echoes.js';
+import { normalizeChaseCampaign } from './content/chase-campaign.js';
 import { blankLife, normalizeLife } from './life-state.js';
 import { PROPS } from './content/props.js';
 import { normalizeTheatre } from './theatre-state.js';
@@ -240,6 +243,8 @@ export function normalizeState(raw) {
   const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(id) &&
     !['__proto__', 'constructor', 'prototype'].includes(id);
   if (s.pets.some(p => !record(p) || !validId(p.id))) return null;
+  s.mastery = normalizeMastery(s.mastery);
+  s.pets.forEach(p => { p.mastery = normalizeMastery(p.mastery); });
   s.props = Array.isArray(s.props) ? s.props : [];
   if (s.props.some(p => !record(p) || !validId(p.id) || typeof p.kind !== 'string')) return null;
   // Furniture this build no longer knows is put away rather than bricking the
@@ -398,6 +403,8 @@ export function normalizeState(raw) {
   s.theatre = normalizeTheatre(s.theatre, s, now);
   s.escapades = normalizeEscapades(s.escapades, s, now);
   s.rug = normalizeRug(s.rug, s, now);
+  s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
+  for (const pet of s.pets) pet.chaseCampaign = normalizeChaseCampaign(pet.chaseCampaign);
   return s;
 }
 

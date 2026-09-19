@@ -16,15 +16,15 @@ test('handshake grows 2/3/4 gestures, retries freely, and pays once after comple
  assert.equal(rewardHandshake(s,game,now),null);assert.equal(tapHandshake(game,1),'ignored');
 });
 test('practice never farms rewards, reload preserves cooldown, and later games reward again',()=>{
- const s=fixture(),p=s.pets[0],g=newHandshake(p);finish(g);rewardHandshake(s,g,now);
+ const s=fixture(),p=s.pets[0],g=newHandshake(p,Math.random,{practice:true});finish(g);rewardHandshake(s,g,now);
  const loaded=normalizeState(s);assert.equal(playWait(loaded.pets[0],now),PLAY_COOLDOWN);
- const practice=newHandshake(p);finish(practice);assert.equal(rewardHandshake(s,practice,now).practice,true);
- assert.equal(p.handshakes,2);const later=newHandshake(p);finish(later);rewardHandshake(s,later,now+PLAY_COOLDOWN);assert.equal(p.handshakes,3);
+ const practice=newHandshake(p,Math.random,{practice:true});finish(practice);assert.equal(rewardHandshake(s,practice,now).practice,true);
+ assert.equal(p.handshakes,2);const later=newHandshake(p,Math.random,{practice:true});finish(later);rewardHandshake(s,later,now+PLAY_COOLDOWN);assert.equal(p.handshakes,3);
 });
 test('sleeping pets permit practice but no reward; removed pets cannot receive rewards',()=>{
- const s=fixture(),p=s.pets[0];p.traits=['nocturnal'];const g=newHandshake(p);finish(g);
+ const s=fixture(),p=s.pets[0];p.traits=['nocturnal'];const g=newHandshake(p,Math.random,{practice:true});finish(g);
  assert.equal(rewardHandshake(s,g,now).practice,true);assert.equal(p.bond,0);
- const gone=newHandshake(p);finish(gone);s.pets=[];assert.equal(rewardHandshake(s,gone,now),null);
+ const gone=newHandshake(p,Math.random,{practice:true});finish(gone);s.pets=[];assert.equal(rewardHandshake(s,gone,now),null);
 });
 test('care previews match executed gains for saturation, sleep and full meters',()=>{
  for(const level of [0,50,79,99,100])for(const traits of [[],['nocturnal']]){

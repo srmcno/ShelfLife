@@ -1,3 +1,4 @@
+import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
 import { ACTIVITIES, activityRecord, activityPassport } from '../content/activities.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { escapadeView } from '../engine/escapades.js';
@@ -48,6 +49,7 @@ const cardCopy = {
 
 function activityTime(id, life = {}) {
   // Saves retain the route seed and rules version, not the generated stalls.
+  if(id==='market'&&life.market?.version===5)return [2,6,8][life.market.tier||0]+' stalls';
   if (id === 'market' && life.market && (life.market.version || 1) < 4) return '6 stalls';
   return cardCopy[id].time;
 }
@@ -132,10 +134,12 @@ export function initPlayroom(state) {
     }
     cards.innerHTML = ACTIVITIES.map(a => {
       const copy = cardCopy[a.id], resume = pet ? continueLabel(a.id, state.life) : '';
+      const key={memory:'handshake',outing:'expedition',alibi:'alibi',court:'court',market:'market'}[a.id];
+      const learning=key?masteryText(['memory','alibi'].includes(a.id)?pet||{}:state,key).split('. ')[0]:'';
       const record = adventure?.petId === pet?.id && adventure.approach.activity === a.id && !adventure.playDone ? 'For our little adventure' : resume || shortRecord(a, state, pet);
       return '<button type="button" class="activity-card activity-' + a.id + (resume ? ' activity-continue' : '') + '" data-activity="' + a.id + '" aria-label="' + esc((resume ? 'Continue ' : 'Play ') + copy.title + '. ' + activityTime(a.id, state.life) + '. ' + activityRecord(a, state, pet)) + '" ' + (!pet ? 'disabled' : '') + '>' +
         scene(a.id) + '<span class="activity-top"><span class="activity-kind">' + esc(a.kind) + '</span><span>' + esc(activityTime(a.id, state.life)) + '</span></span>' +
-        '<strong>' + esc(copy.title) + '</strong><span class="activity-hook">' + esc(copy.hook) + '</span>' +
+        '<strong>' + esc(copy.title) + '</strong><span class="activity-hook">' + esc(copy.hook) + '</span>'+(learning?'<span class="activity-hook">'+esc(learning)+'</span>':'') +
         '<span class="activity-bottom"><span>' + esc(record) + '</span><b class="activity-action" aria-hidden="true">' + (resume ? 'Resume' : 'Play') + '</b></span></button>';
     }).join('');
     guideBody.innerHTML = ACTIVITIES.map(a => '<article><h3>' + esc(a.title) + '</h3><p class="playroom-guide-joke">' + esc(a.line) + '</p><p>' + esc(activityDetail(a, state.life)) + '</p><small>' + esc(activityRecord(a, state, pet)) + '</small></article>').join('');
