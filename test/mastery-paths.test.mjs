@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {mastery,masteryTicket,completeMastery,normalizeMastery} from '../src/mastery-state.js';
-import {newHandshake,handshakePattern,tapHandshake} from '../src/engine/play.js';
+import {newHandshake,handshakePattern,tapHandshake,rewardHandshake} from '../src/engine/play.js';
 import {initialErrands,bestErrandScore} from '../src/engine/market-errands.js';
 test('learning is explicit, bounded and independent of affection; receipts survive reload',()=>{const p={bond:25};assert.equal(mastery(p,'handshake').tier,0);const id=masteryTicket(p,'handshake');assert.ok(completeMastery(p,'handshake',0,id));const loaded=JSON.parse(JSON.stringify(p));assert.equal(completeMastery(loaded,'handshake',0,id),false);assert.equal(mastery(loaded,'handshake').tier,1);assert.equal(normalizeMastery({court:{tier:Infinity}}).court.tier,0);});
 test('handshake mastery changes sequence length and ritual without making beginner unavailable',()=>{const p={id:'a',bond:25};let g=newHandshake(p,()=>.4);assert.equal(g.rounds,3);mastery(p,'handshake').tier=3;g=newHandshake(p,()=>.4);assert.equal(g.ritual,'duet');while(!g.complete)for(const n of handshakePattern(g))tapHandshake(g,n);assert.ok(g.complete);assert.equal(newHandshake(p,()=>.4,{practice:true}).rounds,3);});
@@ -12,6 +12,28 @@ import {startCourt,currentCourt,courtAction,finishCourt,courtEvidence} from '../
 import {startOuting,outingSnapshot,chooseOuting,returnFromMission,startMarket,marketSnapshot,chooseMarket,deliverMarket,leaveMarket,claimMarket} from '../src/engine/life.js';
 const now=new Date(2026,8,19,12).getTime();
 function fixture(){const s=blankState();s.lastTick=now;s.pets=[{id:'a',name:'Pip',traits:[],stats:{cute:8,damp:8,menace:8,mystique:8},bond:25,needs:{food:60,clean:60,fuss:60},art:{}}];s.slots[0]='a';return s;}
+test('fresh beginner Market practice and its replay never unlock lessons after reload',()=>{
+ let s=fixture();
+ for(const replay of [false,true]){
+  assert.ok(startMarket(s,{errands:true,learning:true,practice:!replay,replay}));
+  for(let i=0;i<2;i++){const m=marketSnapshot(s);chooseMarket(s,m.stalls[i][0].id);s=normalizeState(s);}
+  const m=marketSnapshot(s);deliverMarket(s,m.requests[0].id,m.bag.map(i=>i.id));leaveMarket(s);s=normalizeState(s);
+  assert.ok(claimMarket(s,now));s=normalizeState(s);
+  assert.equal(mastery(s,'market').tier,0);assert.equal(mastery(s,'market').wins,0);assert.equal(s.life.market.practice,true);
+ }
+});
+test('fresh beginner Handshake practice completes without advancing mastery',()=>{
+ const s=fixture(),g=newHandshake(s.pets[0],()=>.4,{practice:true});
+ while(!g.complete)for(const n of handshakePattern(g))tapHandshake(g,n);
+ assert.ok(rewardHandshake(s,g,now));assert.equal(mastery(s.pets[0],'handshake').tier,0);
+ assert.equal(s.pets[0].handshakes,1);assert.equal(rewardHandshake(s,g,now),null);
+});
+test('fresh Expedition practice preserves recovered parts through reload without advancing mastery',()=>{
+ let s=fixture();startOuting(s,'drawer','thread',['a'],{mission:true,learning:true,practice:true,edition:0});
+ for(const choice of [1,0,1]){assert.ok(chooseOuting(s,choice,now));s=normalizeState(s);}
+ assert.ok(outingSnapshot(s).score>=3);assert.ok(s.life.projectParts.drawer.length>0);
+ assert.equal(mastery(s,'expedition').tier,0);assert.equal(mastery(s,'expedition').wins,0);
+});
 test('Alibi progresses from detection through proof to combining two available true facts',()=>{let s=fixture();for(let tier=0;tier<3;tier++){const g=newAlibi(s,s.pets[0],()=>.3,{mode:null});assert.equal(g.mode,['quick','prove','combine'][tier]);for(const r of g.rounds){if(tier===2){assert.equal(answerAlibi(g,r.lie,[r.proof]),'ignored');r.exhibits.forEach(e=>e.text='Reworded true record');}assert.equal(answerAlibi(g,r.lie,tier===2?r.proofs:r.proof),'right');advanceAlibi(g);}assert.ok(rewardAlibi(s,g,now).clean);assert.equal(rewardAlibi(s,g,now),null);s=normalizeState(s);assert.equal(mastery(s.pets[0],'alibi').tier,Math.min(tier+1,2));}});
 test('Court automatically advances through uniquely solvable levels and preserves each reward boundary',()=>{let s=fixture();for(let tier=0;tier<3;tier++){const g=startCourt(s,{reworked:true},()=>.15+tier*.2);assert.equal(g.level,tier);assert.equal(g.suspects.filter((_,i)=>courtEvidence(g,i).every(Boolean)).length,1);g.sceneEvidence.forEach((_,evidence)=>courtAction(s,{type:'inspect',evidence}));courtAction(s,{type:'question',suspect:g.answer});const statement=currentCourt(s).witnesses[g.answer].falseStatement;courtAction(s,{type:'present',suspect:g.answer,statement,evidence:statement});assert.ok(finishCourt(s,g.answer,now).correct);s=normalizeState(s);assert.equal(finishCourt(s,g.answer,now),null);assert.equal(mastery(s,'court').tier,Math.min(tier+1,2));}});
 test('learning market saves one errand after every transaction, advances once and preserves legacy v4',()=>{let s=fixture();startMarket(s,{errands:true,learning:true});for(let i=0;i<2;i++){const m=marketSnapshot(s);assert.equal(m.version,5);assert.equal(m.requests.length,1);assert.ok(chooseMarket(s,m.stalls[i][0].id));s=normalizeState(s);}let m=marketSnapshot(s);assert.ok(deliverMarket(s,m.requests[0].id,m.bag.map(i=>i.id)));s=normalizeState(s);assert.ok(leaveMarket(s));assert.ok(claimMarket(s,now));s=normalizeState(s);assert.equal(claimMarket(s,now),null);assert.equal(mastery(s,'market').tier,1);startMarket(s,{errands:true});assert.equal(marketSnapshot(s).version,4);});

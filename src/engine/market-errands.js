@@ -110,6 +110,7 @@ export function initialErrands(seed, patrons=[], {version=3,tier=2}={}) {
 }
 export function errandSnapshot(saved) {
   const snapshot=initialErrands(saved.seed,saved.patrons,{version:saved.version===5?5:saved.version===4?4:3,tier:saved.tier});
+  if(snapshot.version===5)snapshot.practice=saved.practice===true;
   if(snapshot.version>=4)snapshot.patronIds=(saved.patronIds||[]).slice();
   let count=0;for(const move of saved.moves){if(!applyErrandMove(snapshot,move))break;count++;}
   if(count!==saved.moves.length){saved.moves=saved.moves.slice(0,count);saved.claimed=false;}

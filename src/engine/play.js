@@ -121,7 +121,7 @@ export function newHandshake(pet, rng = Math.random, { encore = false, ritual = 
   const memory = handshakeMemory(pet, ritual);
   if (memory) sequence.splice(0, memory.opening.length, ...memory.opening);
   return {
-    masteryTier: ritual==='duet'?3:ritual==='mirror'?2:rounds>=4?1:0, receipt: masteryTicket(pet, 'handshake'), petId: pet.id, rounds, encore, ritual: Object.hasOwn(HANDSHAKE_RITUALS, ritual) ? ritual : 'echo', mistakes: 0, replays: 0,
+    practice, masteryTier: ritual==='duet'?3:ritual==='mirror'?2:rounds>=4?1:0, receipt: masteryTicket(pet, 'handshake'), petId: pet.id, rounds, encore, ritual: Object.hasOwn(HANDSHAKE_RITUALS, ritual) ? ritual : 'echo', mistakes: 0, replays: 0,
     names: gesturesFor(pet),
     // One more gesture than there are rounds: round 1 asks for two, and the last
     // round asks for the lot.
@@ -148,7 +148,7 @@ export function rewardHandshake(state, game, now = Date.now()) {
   if (!pet || !game.complete || game.claimed) return null;
   if (game.format === 'campaign' && !claimChaseCampaign(pet, game, now, {consume:false})) { game.claimed = true; return {practice:true,fuss:0,bond:0}; }
   game.claimed = true;
-  if (game.kind !== 'chase' && game.receipt && !completeMastery(pet, 'handshake', game.masteryTier, game.receipt)) return {practice:true,fuss:0,bond:0};
+  if (game.kind !== 'chase' && !game.practice && game.receipt && !completeMastery(pet, 'handshake', game.masteryTier, game.receipt)) return {practice:true,fuss:0,bond:0};
   if (game.kind !== 'chase') recordEscapadeEvent(state, { kind: 'play', petIds: [pet.id], activity: 'memory' }, now);
   if (game.kind !== 'chase') {
     const ritual = Object.hasOwn(HANDSHAKE_RITUALS, game.ritual) ? game.ritual : 'echo';

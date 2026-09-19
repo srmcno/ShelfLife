@@ -127,7 +127,7 @@ export function startOuting(state, routeId, gearId, cast, options={}) {
   const crew=state.pets.filter(p=>ids.includes(p.id));
   const edition=Number.isInteger(options.edition)&&options.edition>=0&&options.edition<8?options.edition:l.outings%8;
   const expertise=learning===0?[]:['cute','menace','damp','mystique'].filter(stat=>crew.some(p=>(p.stats?.[stat]||0)>=7));
-  l.outing={...(learning!==null?{masteryTier:learning,receipt:masteryTicket(state,'expedition')}:{}),version:2,edition,expertise,route:routeId,gear:gearId,cast:ids,step:0,score:0,log:[],choices:[],nerve:2,toolUsed:false};
+  l.outing={...(learning!==null?{masteryTier:learning,practice:options.practice===true,receipt:masteryTicket(state,'expedition')}:{}),version:2,edition,expertise,route:routeId,gear:gearId,cast:ids,step:0,score:0,log:[],choices:[],nerve:2,toolUsed:false};
   if(options.mission===true){l.outing.mission=true;if(options.missionRevision!==1)l.outing.missionRevision=2;}
   if(OUTING_DARES.some(d=>d.id===options.dare))l.outing.dare=options.dare;
   return true;
@@ -162,7 +162,7 @@ export function chooseOuting(state, choice, now=Date.now()) {
   const text=crew.map(p=>p.name).join(' and ')+' returned with '+relic.name.toLowerCase()+'. '+relic.line+' '+line;
   recordScene(state,'outing',route.name,text,crew.map(p=>p.id),now,{key:'outing',branch:route.id,object:relic.id});addNote(state,text,'beyond the shelf','scheme');
   o.result={relic:relic.id,fresh};
-  if(o.receipt && !o.returnedAt && o.score>=3) completeMastery(state,'expedition',o.masteryTier,o.receipt);
+  if(o.receipt && !o.practice && !o.returnedAt && o.score>=3) completeMastery(state,'expedition',o.masteryTier,o.receipt);
   recordEscapadeEvent(state, { kind: 'play', petIds: crew.map(p => p.id), activity: 'outing' }, now);
   if(o.mission){
     const after=outingSnapshot(state),builtBefore=l.projects.includes(o.route);
@@ -291,7 +291,7 @@ export function startMarket(state,{replay=false,expanded=false,errands=false,pet
  const seed=replay&&previous?previous:(Math.imul(l.marketSerial,2654435761)>>>0)||1;
  const lead=state.pets.find(p=>p.id===petId),crew=(lead?[lead,...state.pets.filter(p=>p.id!==petId)]:state.pets).slice(0,3);
  const patrons=replay&&previous?l.market.patrons:crew.map(p=>p.name);
- l.market={...(version===5?{tier:replay&&previous?l.market.tier:practice?0:mastery(state,'market').tier}:{}),seed,moves:[],claimed:false,...(version>=2?{version}: {}),...(version>=3?{patrons}: {}),...(version>=4?{patronIds:replay&&previous?l.market.patronIds:crew.map(p=>p.id)}:{})};return true;
+ l.market={...(version===5?{practice:replay&&previous?l.market.practice===true:practice,tier:replay&&previous?l.market.tier:practice?0:mastery(state,'market').tier}:{}),seed,moves:[],claimed:false,...(version>=2?{version}: {}),...(version>=3?{patrons}: {}),...(version>=4?{patronIds:replay&&previous?l.market.patronIds:crew.map(p=>p.id)}:{})};return true;
 }
 export function chooseMarket(state,pick,trade=null,{secret=false}={}){
  const l=lifeState(state),snapshot=marketSnapshot(state),move={pick,trade,...(secret?{secret:true}: {})};
@@ -313,7 +313,7 @@ export function claimMarket(state,now=Date.now()){
  if(!snapshot?.complete||snapshot.claimed)return null;
  const score=snapshot.score,done=score.fulfilled.filter(Boolean).length,tier=snapshot.version>=3?(done===snapshot.requests.length?2:done===2?1:0):score.total===bestMarketScore(snapshot.seed,{version:snapshot.version})?2:score.total>=17?1:0,relic=RELICS.find(r=>r.id==='market:'+tier);
  l.market.claimed=true;l.marketRuns++;
- if(snapshot.version===5 && done===snapshot.requests.length){const before=mastery(state,'market').tier;completeMastery(state,'market',snapshot.tier,'market:'+snapshot.seed);const after=mastery(state,'market').tier;if(after>before)l.market.masteryUnlocked=after;}
+ if(snapshot.version===5 && !l.market.practice && done===snapshot.requests.length){const before=mastery(state,'market').tier;completeMastery(state,'market',snapshot.tier,'market:'+snapshot.seed);const after=mastery(state,'market').tier;if(after>before)l.market.masteryUnlocked=after;}
  if(snapshot.version>=4)recordEscapadeEvent(state,{kind:'play',petIds:(snapshot.patronIds||[]).filter(id=>state.pets.some(p=>p.id===id)),activity:'market'},now);
  if(snapshot.version===5)l.marketErrandBestV5[snapshot.tier]=Math.max(l.marketErrandBestV5[snapshot.tier]||0,score.total);else if(snapshot.version===4)l.marketErrandBestV4=Math.max(l.marketErrandBestV4||0,score.total);else if(snapshot.version===3)l.marketErrandBest=Math.max(l.marketErrandBest||0,score.total);else l.marketBest=Math.max(l.marketBest,score.total);
  const fresh=!l.relics.includes(relic.id);
