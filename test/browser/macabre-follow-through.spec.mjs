@@ -13,6 +13,10 @@ test('Play works before any resident is adopted',async({page})=>{
 
 test('rug aftermath belongs to its resident and captions get time to land',async({page})=>{
  test.setTimeout(45_000);
+ // Busy CI runners can trigger the real frame-stall pause. Resume through the
+ // visible control before continuing this caption/persistence journey; the
+ // dedicated stalled-frame test verifies the pause and locked controls.
+ await page.addLocatorHandler(page.locator('#rugResume'),()=>page.locator('#rugResume').click());
  const snapshot=householdFixture();snapshot.settings.theatreOn=false;snapshot.lastBackup=Date.now();
  snapshot.householdEchoes={version:1,openingDone:true,callbacks:[],events:[{id:'court-real',kind:'court',variant:'convicted',petId:'qa0',at:Date.now()-10000}]};
  await page.addInitScript(s=>{if(!sessionStorage.getItem('macabre-fixture')){localStorage.setItem('shelflife.v4',JSON.stringify(s));sessionStorage.setItem('macabre-fixture','1');}},snapshot);

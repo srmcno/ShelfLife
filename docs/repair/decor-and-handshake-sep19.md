@@ -12,4 +12,6 @@ A separate interruption path explains one legitimate locked state: losing focus 
 
 Browser CI now runs its three browser projects in separate jobs and retains separate evidence archives. Every existing test remains in the gate; no assertions or platform coverage were removed.
 
+The live upgrade check also exposed a first-visit notification defect: a tab that initially had no service worker never recorded its first controller, so a later update stayed silent until the page was reloaded. The controller-change handler now remembers that first installation and announces subsequent updates. Initial installation remains silent; the saved shelf stays in local storage across refresh.
+
 The final handoff records test results, the published revision and remaining uncertainty about the exact reported Handshake trigger.

@@ -464,9 +464,13 @@ if ('serviceWorker' in navigator) {
   // Listen from the first moment: a fresh worker can finish installing before
   // this page's own load event, and a controllerchange with nobody listening
   // is an update the player is never told about.
-  const wasControlled = !!navigator.serviceWorker.controller;
+  let wasControlled = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!navigator.serviceWorker.controller) return;
     if (wasControlled) document.getElementById('updateBanner').hidden = false;
+    // First installation is silent, but this tab is now eligible for later
+    // update notices even if the player has never reloaded it.
+    wasControlled = true;
   });
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js').then(registration => registration.update()).catch(() => {
