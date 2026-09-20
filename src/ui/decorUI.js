@@ -7,6 +7,7 @@ import { totalBond } from '../engine/unlocks.js';
 import { save, addNote, defaultDecor } from '../state.js';
 import { toast } from './toast.js';
 import { renderAll, escapeHtml } from './render.js';
+import { renderPetSprite } from '../art/sprite.js';
 import { SHELF_SCENES } from '../content/shelf-theatre.js';
 
 // Ported verbatim from ~/Documents/shelf-life.html's optButton (~line 1339).
@@ -29,6 +30,7 @@ export function applyDecor(state) {
   const wood = WOODS[d.wood] || WOODS.rosewood;
   root.setProperty('--wood', wood.wood);
   root.setProperty('--wood-lip', wood.lip);
+  root.setProperty('--shelf-ink', d.wood === 'bone' ? '#211a16' : '#F2E9DC');
   root.setProperty('--pink', (ACCENTS[d.accent] || ACCENTS.bubblegum).c);
   // Swap only the wall class. Assigning className here used to wipe body.night
   // (and anything else on the body) on every decor change and at boot.
@@ -60,26 +62,41 @@ export function placeProp(state, kind, { nearResident = false } = {}) {
 export function buildDecor(state) {
   const d = state.decor;
 
-  const rooms = document.getElementById('roomOpts');
-  rooms.innerHTML = '';
-  // Every room is a dark room; what changes is the colour of the darkness and
-  // of the one bulb in it, so the swatch shows both rather than a pale panel
-  // the room never actually paints.
-  Object.keys(ROOMS).forEach(k => rooms.appendChild(optButton(ROOMS[k].name, d.room === k,
-    'linear-gradient(135deg,' + ROOMS[k].vars['--room-b'] + ' 0 55%,' + ROOMS[k].vars['--room-key'] + ' 55% 100%)',
-    () => { d.room = k; applyDecor(state); save(); buildDecor(state); })));
-
-  const walls = document.getElementById('wallOpts');
-  walls.innerHTML = '';
-  Object.keys(WALLS).forEach(k => walls.appendChild(optButton(WALLS[k], d.wall === k, null, () => { d.wall = k; applyDecor(state); save(); buildDecor(state); })));
-
-  const woods = document.getElementById('woodOpts');
-  woods.innerHTML = '';
-  Object.keys(WOODS).forEach(k => woods.appendChild(optButton(WOODS[k].name, d.wood === k, WOODS[k].lip, () => { d.wood = k; applyDecor(state); save(); buildDecor(state); })));
-
-  const acc = document.getElementById('accentOpts');
-  acc.innerHTML = '';
-  Object.keys(ACCENTS).forEach(k => acc.appendChild(optButton(ACCENTS[k].name, d.accent === k, ACCENTS[k].c, () => { d.accent = k; applyDecor(state); save(); buildDecor(state); })));
+  const preview = document.getElementById('decorPreview');
+  const describe = () => preview.setAttribute('aria-label', [ROOMS[d.room]?.name, WALLS[d.wall] + ' walls', WOODS[d.wood]?.name + ' shelves', ACCENTS[d.accent]?.name + ' accents'].join(', '));
+  describe();
+  const residents = document.getElementById('decorPreviewResidents');
+  residents.replaceChildren(...state.pets.slice(0, 3).map(pet => renderPetSprite(pet)));
+  if (!state.pets.length) {
+    const empty = document.createElement('span'); empty.className = 'decor-preview-empty';
+    empty.textContent = 'Room for someone unpleasant.'; residents.appendChild(empty);
+  }
+  const status = document.getElementById('decorSaveStatus');
+  status.textContent = 'Changes save as you choose.';
+  delete status.dataset.failed;
+  const groups = [
+    ['room', 'roomOpts', ROOMS, value => value.name, value => value.swatch],
+    ['wall', 'wallOpts', WALLS, value => value, () => null],
+    ['wood', 'woodOpts', WOODS, value => value.name, value => value.lip],
+    ['accent', 'accentOpts', ACCENTS, value => value.name, value => value.c]
+  ];
+  for (const [field, id, options, label, swatch] of groups) {
+    const group = document.getElementById(id); group.replaceChildren();
+    for (const [key, value] of Object.entries(options)) {
+      const button = optButton(label(value), d[field] === key, swatch(value), () => {
+        d[field] = key; applyDecor(state);
+        const saved = save();
+        for (const option of group.children) option.setAttribute('aria-pressed', String(option.dataset.decorValue === key));
+        describe();
+        status.textContent = saved ? 'Saved.' : 'Not saved. Free browser storage, then choose again.';
+        status.toggleAttribute('data-failed', !saved);
+        // Keep the actual button in place: rebuilding this dialog discarded
+        // keyboard focus after every choice and made Tab restart at Close.
+      });
+      button.dataset.decorValue = key;
+      group.appendChild(button);
+    }
+  }
 
   const tray = document.getElementById('propTray');
   tray.innerHTML = '';

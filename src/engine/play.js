@@ -88,7 +88,7 @@ export function playWait(pet, now = Date.now(), kind = null) {
 export const HANDSHAKE_RITUALS = {
   echo: { name: 'Echo', rule: 'Repeat every move in the same order.' },
   mirror: { name: 'Mirror', rule: 'Repeat every move backwards, starting with the last.' },
-  duet: { name: 'Duet', rule: 'Remember only the moves marked YOUR BEAT. Skip their beats.' }
+  duet: { name: 'Duet', rule: 'After watching, repeat only the moves marked Remember. Skip their moves.' }
 };
 export function handshakeRecordKey(game) {
   return !game.ritual || game.ritual === 'echo' ? (game.encore ? 'encore' : 'standard') : game.ritual + (game.encore ? '-encore' : '');
