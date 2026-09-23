@@ -25,6 +25,11 @@ The cabinet also hosts small domestic scenes. Place appropriate furniture near r
 **Play a scene**, or let them improvise while you watch. Bowl servings, lamp switches, relationships,
 requests, case files and keepsakes persist. The residents remember how you treat them.
 
+Pairs can develop three-chapter household subplots. Let two compatible residents live
+together, share plots, then stage a scene to see the ending. Rivals tell a different
+story after a feud and a truce. Their case file stays in each resident's relationship
+card and the Memory museum even after the rolling note board fills up.
+
 ## The play rug
 
 Take any resident onto a lamplit rug with a patchwork ball and an improbable number of bubbles.

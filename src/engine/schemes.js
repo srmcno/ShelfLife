@@ -41,7 +41,7 @@ export function resolveScheme(state, option, now = Date.now()) {
   const choice = option === 'alone' ? null : plan.definition.choices[option];
   const preview = previewSchemeChoice(plan.pet, choice, now);
   for (const [need, delta] of Object.entries(preview.changes)) plan.pet.needs[need] += delta;
-  if (choice) recordSharedPlot(state, plan.petId);
+  if (choice) recordSharedPlot(state, plan.petId, now);
   const granted = choice ? grantBonusTrust(plan.pet, choice.bond, now) : 0;
   const text = (choice ? choice.outcome : plan.definition.autonomous).replaceAll('{p}', plan.pet.name);
   addNote(state, text, 'a small conspiracy', 'scheme');

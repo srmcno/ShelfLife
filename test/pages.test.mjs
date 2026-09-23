@@ -10,7 +10,7 @@ test('Pages package includes the full game, excludes development files, and vers
   const output = join(scratch, 'site');
   try {
     execFileSync('python3', ['-c', 'import sys; from scripts.build_site import build; build(sys.argv[1])', output], { cwd: resolve('.') });
-    for (const path of ['index.html', 'src/main.js', 'css/style.css', 'assets/fonts/caveat-500-normal.ttf', 'manifest.webmanifest', '.nojekyll']) {
+    for (const path of ['index.html', 'src/main.js', 'css/style.css', 'assets/fonts/caveat-500-normal.woff2', 'manifest.webmanifest', '.nojekyll']) {
       assert.ok(existsSync(join(output, path)), `Missing ${path}`);
     }
     for (const path of ['scripts', 'test', 'docs', '.git', '.github', 'README.md']) assert.ok(!existsSync(join(output, path)));

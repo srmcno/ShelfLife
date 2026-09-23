@@ -393,6 +393,7 @@ export function renderNotes(state) {
     notesEl.appendChild(d);
     return;
   }
+  const residentNames = new Set(state.pets.map(p => p.name));
   (expandedNotes ? list : list.slice(0, 6)).forEach((n, index) => {
     const key = n.at + '|' + n.text;
     const fresh = !firstRender && !shown.has(key);
@@ -404,10 +405,14 @@ export function renderNotes(state) {
     // is the one note on the board that nobody wrote down on purpose.
     d.className = 'note ' + n.kind + (n.form === 'doc' ? ' note--doc' : '') +
       (n.form === 'thought' ? ' note--thought' : '') + (fresh ? ' note--new' : '');
-    // The byline stays the bare name: tapping it filters the board to that
-    // resident, and that lookup is by textContent. The "not out loud" qualifier a
-    // thought carries is CSS generated content for exactly that reason.
-    d.innerHTML = (n.title ? '<h3 class="document-title">' + escapeHtml(n.title) + '</h3>' : '') + escapeHtml(n.text) + '<span class="from">' + escapeHtml(n.from) + '</span>';
+    // Resident bylines filter the board, so give them native button keyboard
+    // behavior. Other authors are labels, not controls. Keep the bare name in
+    // the button text because the thought qualifier is CSS generated content.
+    const residentAuthor = residentNames.has(n.from);
+    const byline = residentAuthor
+      ? '<button type="button" class="from" data-note-author aria-label="' + (petFilter === n.from ? 'Show all notes, remove ' + escapeHtml(n.from) + ' filter' : 'Show only notes about ' + escapeHtml(n.from)) + '" aria-pressed="' + (petFilter === n.from) + '">' + escapeHtml(n.from) + '</button>'
+      : '<span class="from">' + escapeHtml(n.from) + '</span>';
+    d.innerHTML = (n.title ? '<h3 class="document-title">' + escapeHtml(n.title) + '</h3>' : '') + escapeHtml(n.text) + byline;
     const time = document.createElement('time');
     const date = new Date(n.at);
     if (Number.isFinite(date.getTime())) {
@@ -432,13 +437,14 @@ export function renderNotes(state) {
   if (shown.size > 400) shown.clear();
 }
 
-// Tap a byline to keep only that resident's paper trail.
+// A resident byline keeps only that resident's paper trail.
 if (notesEl) notesEl.addEventListener('click', e => {
-  const from = e.target.closest('.note .from');
+  const from = e.target.closest('.note button.from[data-note-author]');
   if (!from || !notesState) return;
   const name = from.textContent;
-  if (!notesState.pets.some(p => p.name === name)) return;
   setPetFilter(notesState, petFilter === name ? null : name);
+  const next = [...notesEl.querySelectorAll('button.from[data-note-author]')].find(button => button.textContent === name);
+  (next || filterHost?.querySelector('[data-filter="' + noteFilter + '"]'))?.focus({ preventScroll: true });
 });
 
 export function escapeHtml(s) {

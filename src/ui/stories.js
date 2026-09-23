@@ -1,5 +1,7 @@
 import { visitorActivityHTML } from './life.js';
 import { curioSVG } from '../art/curios.js';
+import { pairSagaView } from '../engine/pair-sagas.js';
+import { PAIR_SAGAS } from '../content/pair-sagas.js';
 import { startNextCase, storyState, currentCase, caseText, caseGate, advanceCase, requestDescription, acceptRequest, relationship, brokerTruce, welcomeVisitor, inviteVisitor, farewellVisitor, INVITATION_REST, VISIT_LENGTH } from '../engine/stories.js';
 import { artPersonality } from '../engine/personality.js';
 import { VISITORS } from '../content/stories.js';
@@ -13,6 +15,19 @@ import { checkUnlocks } from '../engine/unlocks.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date = n => Number.isFinite(n) ? new Date(n).toLocaleDateString(undefined, { month:'short', day:'numeric' }) : 'Earlier';
 
+function pairSagaHTML(state, pet, other) {
+  const saga = pairSagaView(state, pet, other);
+  if (!saga) return '';
+  const latest = saga.chapters.at(-1);
+  const previous = saga.chapters.slice(0, -1);
+  return '<div class="pair-saga"><div class="pair-saga-heading"><span>HOUSEHOLD SUBPLOT</span><b>' + saga.count + ' / 3</b></div>' +
+    '<h4>' + esc(saga.name) + '</h4><strong>' + esc(latest.title) + '</strong><p>' + esc(latest.text) + '</p>' +
+    '<div class="pair-saga-track" role="img" aria-label="' + saga.count + ' of 3 chapters filed"><i class="filed"></i><i class="' + (saga.count >= 2 ? 'filed' : '') + '"></i><i class="' + (saga.count >= 3 ? 'filed' : '') + '"></i></div>' +
+    (previous.length ? '<details><summary>Earlier chapters</summary><ol>' + previous.map(chapter => '<li><b>' + esc(chapter.title) + '</b><p>' + esc(chapter.text) + '</p></li>').join('') + '</ol></details>' : '') +
+    '<small>' + esc(saga.next) + '</small>' +
+    (saga.canStage ? '<button class="btn btn-sm" type="button" data-pair-scene="' + esc(other.id) + '" data-pet="' + esc(pet.id) + '">Stage their next scene ↗</button>' : '') + '</div>';
+}
+
 export function residentStory(state, pet) {
   const request = requestDescription(state, pet), s = storyState(state);
   let html = '<div class="resident-request"><span class="eyebrow">A personal request</span>';
@@ -24,8 +39,9 @@ export function residentStory(state, pet) {
   const others = state.pets.filter(p => p.id !== pet.id);
   html += '<div class="card-section-title">Relationship cards</div><div class="relationship-list">';
   html += others.length ? others.map(other => {
-    const r = relationship(state, pet, other);
-    return '<article><span class="relationship-tag">' + esc(r.label) + '</span><b>' + esc(other.name) + '</b><p>' + esc(r.detail) + '</p>' + (r.label === 'Rivals' && Math.min(pet.bond,other.bond) >= 3 ? '<button class="btn btn-sm" data-truce="' + other.id + '" data-pet="' + pet.id + '">Broker a truce</button>' : '') + '</article>';
+    const r = relationship(state, pet, other, s);
+    const saga = pairSagaHTML(state, pet, other);
+    return '<article' + (saga ? ' class="has-saga"' : '') + '><span class="relationship-tag">' + esc(r.label) + '</span><b>' + esc(other.name) + '</b><p>' + esc(r.detail) + '</p>' + (r.label === 'Rivals' && Math.min(pet.bond,other.bond) >= 3 ? '<button class="btn btn-sm" data-truce="' + esc(other.id) + '" data-pet="' + esc(pet.id) + '">Broker a truce</button>' : '') + saga + '</article>';
   }).join('') : '<p class="hint">A solo shelf still gets visitors. Add another resident to grow lasting friendships and rivalries.</p>';
   return html + '</div>';
 }
@@ -99,6 +115,18 @@ export function renderMuseum(state) {
   host.innerHTML = '<p class="museum-intro">Nothing here is forgotten. Some of it has been mislabelled.</p><h3>Visiting curiosities <small>'+s.collection.length+' / '+VISITORS.length+'</small></h3><div class="collection-grid">'+VISITORS.map(v=>{
     const found=s.collection.find(x=>x.id===v.id); return '<article class="'+(found?'collected':'uncollected')+'"><span aria-hidden="true">'+(found?curioSVG(v.id):'◇')+'</span><b>'+esc(found?v.gift:'Unclaimed curiosity')+'</b><small>'+esc(found?v.name+' · hosted by '+found.host:'A future visitor carries this.')+'</small></article>';
   }).join('')+'</div><h3>Postcard album <small>Last six saved pictures</small></h3><div class="album">'+(s.postcards.length?s.postcards.map(p=>'<figure><img src="'+esc(p.image)+'" alt="'+esc(p.caption)+'"><figcaption>'+esc(p.caption)+'<small>'+date(p.at)+'</small></figcaption></figure>').join(''):'<p class="hint">Open today’s postcard and choose Keep in museum. A small picture is saved here; Back up preserves the album.</p>')+'</div><h3>Former residents</h3><div class="memorials">'+(memorials.length?memorials.map(p=>'<article><b>'+esc(p.name)+'</b><p>'+esc(p.grudges!=null?p.grudges+' grievances. '+(p.names||[]).map(n=>n.name).join(' → '):'Their old place is still on file.')+'</p><small>Left '+date(p.at)+'</small></article>').join(''):'<p class="hint">Nobody has left. This is not a suggestion.</p>')+'</div><h3>Names & grievances</h3>'+state.pets.map(p=>'<div class="memory-row"><b>'+esc(p.name)+'</b>'+((p.names||[]).length>1?'<span>'+esc(p.names.map(n=>n.name).join(' → '))+'</span>':'')+'<small>'+(p.grudges||0)+(p.grudges===1?' grievance · ':' grievances · ')+(p.handshakes||0)+' secret handshakes · '+(p.chases||0)+' chases'+(p.chaseBest?' · best '+p.chaseBest.score:'')+'</small></div>').join('')+'<h3>The case archive</h3><div class="memory-timeline">'+(s.archive.length?s.archive.map(m=>'<article><small>'+date(m.at)+' · '+esc(m.kind)+'</small><b>'+esc(m.title)+'</b><p>'+esc(m.text)+'</p></article>').join(''):'<p class="hint">Cases, promises, visitors and truces leave their evidence here.</p>')+'</div>';
+  // The ordinary archive has a 100-entry limit. Relationship chapters are kept
+  // with the pair, so their last act stays readable after those reports roll off.
+  const sagas = Object.values(s.relationships).filter(r => r.saga?.beats?.length && PAIR_SAGAS[r.saga.style])
+    .sort((a, b) => b.saga.beats.at(-1).at - a.saga.beats.at(-1).at);
+  if (sagas.length) {
+    const section = '<h3>Household subplots <small>' + sagas.length + ' on file</small></h3><div class="memory-timeline">' +
+      sagas.slice(0, 12).map(r => {
+        const beat = r.saga.beats.at(-1), title = PAIR_SAGAS[r.saga.style].chapters[r.saga.beats.length - 1].title;
+        return '<article><small>' + date(beat.at) + ' · ' + r.saga.beats.length + ' of 3 chapters</small><b>' + esc(PAIR_SAGAS[r.saga.style].name + ' · ' + title) + '</b><p>' + esc(beat.text) + '</p></article>';
+      }).join('') + '</div>' + (sagas.length > 12 ? '<p class="hint">Showing the twelve most recent subplots.</p>' : '');
+    host.querySelector('.memory-timeline').insertAdjacentHTML('beforebegin', section);
+  }
 }
 export function initStories(state, refresh, refreshPet) {
   document.addEventListener('click', e => {
