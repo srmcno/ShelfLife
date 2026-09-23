@@ -121,6 +121,26 @@ export const CONTEXT_EXCHANGES = {
     { turns: [['a', 'I am cultivating a protective crust.'], ['b', 'It just asked me for directions.']] },
     { turns: [['a', 'Do I smell alive?'], ['b', 'In several places.']] }
   ],
+  lonely: [
+    { turns: [['a', 'I kept your spot warm.'], ['b', 'You sat in it.'], ['a', 'It was a long wait.']] },
+    { turns: [['a', 'The hand passed over me again.'], ['b', 'It was moving the lamp.'], ['a', 'I have noted its priorities.']] },
+    { turns: [['a', 'I have been practising not needing anyone.'], ['b', 'How is it going?'], ['a', 'I keep needing an audience.']] }
+  ],
+  full: [
+    { turns: [['a', 'I have eaten enough.'], ['b', 'Then stop.'], ['a', 'I am waiting for the feeling to catch up.']] },
+    { turns: [['a', 'There is no room left.'], ['b', 'You are the size of a button.'], ['a', 'I was referring to the bowl.']] },
+    { turns: [['a', 'I hid the last crumb for later.'], ['b', 'You ate it.'], ['a', 'Later arrived early.']] }
+  ],
+  grudge: [
+    { turns: [['a', 'I forgave the hand.'], ['b', 'Did it apologise?'], ['a', 'I said I forgave it.']] },
+    { turns: [['a', 'I have stopped keeping score.'], ['b', 'The list is numbered.'], ['a', 'That is a filing system.']] },
+    { turns: [['a', 'I am ready to let it go.'], ['b', 'What is it?'], ['a', 'I will tell you when it is safe.']] }
+  ],
+  renamed: [
+    { turns: [['a', 'They used to call me {old}.'], ['b', 'Do you miss it?'], ['a', 'I still answer in the dark.']] },
+    { turns: [['a', 'I had a different name last week.'], ['b', 'Was it better?'], ['a', 'It had fewer witnesses.']] },
+    { turns: [['a', 'My old name is still on the shelf.'], ['b', 'Where?'], ['a', 'Under this one.']] }
+  ],
   promise: [
     { turns: [['a', 'The giant has promised.'], ['b', 'The last one promised too. We outlived the excuse.']] },
     { turns: [['a', 'I have their word.'], ['b', 'Keep asking for the thumb. Harder to forget.']] },

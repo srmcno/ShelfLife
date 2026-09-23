@@ -3,6 +3,7 @@ import { tick, moodOf, worstNeed, isAsleep, neighborProps, neighborPets } from '
 import { activeFeuds, feudPairKey, stepFeudArc, fileGrudge, checkinStreak, FEUD_STEP_MS } from './achievements.js';
 import { checkUnlocks } from './unlocks.js';
 import { runBehavior, behaviorState } from './behavior.js';
+import { recordResidentTenure } from './life.js';
 import { pickDialogue, dialogueText } from './dialogue.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { DRAWN_NOTES } from '../content/care.js';
@@ -416,6 +417,8 @@ export function checkShelf(state, now = Date.now()) {
     addNote(state, pick(EMPTY_SHELF_NOTES), 'the shelf', 'note');
     return;
   }
+
+  recordResidentTenure(state, now);
 
   // Every active feud steps (escalation and truces are rate-limited per pair in
   // achievements.js); only the pairs that have gone longest without a line get

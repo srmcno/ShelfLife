@@ -57,6 +57,11 @@ scene with the current resident; each different ending earns two discoveries onc
 Residents can recall the moments they actually shared. Collected memories survive renaming
 and rehoming, and their exact objects appear in the scene journal.
 
+Time on the shelf leaves its own small record. Residents earn keepsakes after a day, a week,
+a month, one hundred days and a year; these are dated from their move-in, never expire and
+carry no streak or care penalty. Their habits, old names and changing moods also shape what
+they say about the life they have had here.
+
 ## The Playroom
 
 | Activity | What you do |

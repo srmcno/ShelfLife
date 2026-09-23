@@ -49,8 +49,15 @@ export function contextualCare(state, pet, need, now = Date.now()) {
 export function contextualExchanges(state, a, now = Date.now()) {
   const keys = [];
   if (a.needs.food < 35) keys.push('hungry');
+  if (a.needs.food >= 90) keys.push('full');
+  if (a.needs.fuss < 35) keys.push('lonely');
   if (a.needs.clean < 35) keys.push('dirty');
+  if ((a.grudges || 0) >= 2) keys.push('grudge');
+  const previousName = a.names?.length > 1 ? a.names.at(-2)?.name : null;
+  if (previousName && previousName !== a.name) keys.push('renamed');
   if (promised(state, a, now)) keys.push('promise');
   if (a.bond >= 8) keys.push('trusted');
-  return keys.flatMap(key => CONTEXT_EXCHANGES[key]);
+  return keys.flatMap(key => CONTEXT_EXCHANGES[key].map(entry => key === 'renamed'
+    ? { ...entry, turns: entry.turns.map(([who, line]) => [who, line.replaceAll('{old}', previousName.replace(/[{}]/g, ''))]) }
+    : entry));
 }

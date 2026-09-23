@@ -1,6 +1,7 @@
 import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
-import { lifeState, useProject, returnFromMission, favoriteFor, outingSnapshot, startOuting, retryOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, deliverMarket, leaveMarket, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
+import { lifeState, useProject, returnFromMission, favoriteFor, residentTenureDays, outingSnapshot, startOuting, retryOuting, chooseOuting, finishOuting, visitorActivity, solveVisitorActivity, displayCurio, selectFrame, marketSnapshot, deliverMarket, leaveMarket, startMarket, chooseMarket, claimMarket } from '../engine/life.js';
 import { OUTINGS, RELICS, FRAMES } from '../content/life.js';
+import { RESIDENT_TENURE } from '../content/resident-life.js';
 import { VISITORS } from '../content/stories.js';
 import { startCourt, currentCourt, courtAction, finishCourt } from '../engine/court.js';
 import { courtMarkup, mountCourtArt, courtFinishedMarkup, courtHearing, courtView, courtResponse } from './court.js';
@@ -42,7 +43,13 @@ export function visitorActivityHTML(state) {
  const a=visitorActivity(state);if(!a)return '';
  return '<div class="visitor-activity"><span class="eyebrow">'+(a.complete?'Story complete': 'A small favour · chapter '+Math.min(3,a.chapter+1)+' of 3')+'</span><h3>'+esc(a.title)+'</h3><p>'+esc(a.done?a.response:a.complete?'Three shared chapters. A familiar face with a very long memory.':a.chapter?a.later:a.clue)+'</p>'+(!a.done&&!a.complete?button('Help with their predicament','visitor'):'')+'</div>';
 }
-export function residentLifeHTML(pet){const fav=favoriteFor(pet);return '<details class="resident-habits"><summary>Little habits & shared history</summary><p><b>'+esc(fav.name)+'</b> · '+esc(fav.line)+'</p><p>'+(pet.expeditions||0)+' expeditions · '+(pet.handshakes||0)+' handshakes · '+(pet.chases||0)+' chases. Completed practice counts too.</p></details>';}
+export function residentLifeHTML(pet,now=Date.now()){
+ const fav=favoriteFor(pet),days=residentTenureDays(pet,now);
+ const saved=Array.isArray(pet.lifeKeepsakes)?pet.lifeKeepsakes.length:0;
+ const next=RESIDENT_TENURE.find(mark=>mark.days>days);
+ const tenure=days+' '+(days===1?'day':'days')+' on the shelf · '+saved+' life keepsake'+(saved===1?'':'s')+(next?' · next at '+next.days+' days':'');
+ return '<details class="resident-habits"><summary>Little habits & shared history</summary><p><b>'+esc(fav.name)+'</b> · '+esc(fav.line)+'</p><p>'+esc(tenure)+'</p><p>'+(pet.expeditions||0)+' expeditions · '+(pet.handshakes||0)+' handshakes · '+(pet.chases||0)+' chases. Completed practice counts too.</p></details>';
+}
 export function initLife(state,refresh) {
  const veil=document.getElementById('lifeVeil'),content=document.getElementById('lifeContent'),title=document.getElementById('lifeTitle');
  let leadId='',companionId='',scenePlayback=null,sceneFilter='';
