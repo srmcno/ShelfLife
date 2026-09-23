@@ -1,5 +1,5 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v43';
+const CACHE_VERSION = 'shelflife-v44';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./assets/rooms/night-market.webp",
@@ -32,6 +32,8 @@ const SHELL = [
   "./src/ui/welcome.js",
   "./src/engine/resident-memory.js",
   "./src/content/resident-life.js",
+  "./src/content/pair-sagas.js",
+  "./src/engine/pair-sagas.js",
   "./src/content/project-encounters.js",
   "./css/household.css",
   "./src/theatre-state.js",
@@ -136,13 +138,13 @@ const SHELL = [
   "./src/ui/effects.js",
   "./src/ui/schemes.js",
   "./src/ui/toast.js",
-  "./assets/fonts/caveat-500-normal.ttf",
-  "./assets/fonts/caveat-600-normal.ttf",
-  "./assets/fonts/gloock-400-normal.ttf",
-  "./assets/fonts/karla-400-italic.ttf",
-  "./assets/fonts/karla-400-normal.ttf",
-  "./assets/fonts/karla-600-normal.ttf",
-  "./assets/fonts/karla-700-normal.ttf",
+  "./assets/fonts/caveat-500-normal.woff2",
+  "./assets/fonts/caveat-600-normal.woff2",
+  "./assets/fonts/gloock-400-normal.woff2",
+  "./assets/fonts/karla-400-italic.woff2",
+  "./assets/fonts/karla-400-normal.woff2",
+  "./assets/fonts/karla-600-normal.woff2",
+  "./assets/fonts/karla-700-normal.woff2",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];

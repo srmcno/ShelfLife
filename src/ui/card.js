@@ -20,7 +20,7 @@ import { buildDecor } from './decorUI.js';
 import { playFeed, playFuss, playClean } from '../audio/sound.js';
 import { petById, propById, pick, addNote, save, clamp } from '../state.js';
 import { SHELF_SCENES } from '../content/shelf-theatre.js';
-import { lampIsOn, toggleLamp, sceneAvailability } from '../engine/shelf-theatre.js';
+import { lampIsOn, toggleLamp, sceneAvailability, availableShelfScenes } from '../engine/shelf-theatre.js';
 
 const cardVeil = document.getElementById('cardVeil');
 const cardSheet = document.getElementById('cardSheet');
@@ -203,6 +203,24 @@ export function openCard(state, id, keepScroll) {
 
   document.getElementById('petMotion').disabled = asleep;
   document.getElementById('residentScene').addEventListener('click',()=>{closeCard();window.dispatchEvent(new CustomEvent('shelflife:scene',{detail:{petId:pet.id}}));});
+  cardSheet.querySelectorAll('[data-pair-scene]').forEach(button => button.addEventListener('click', () => {
+    const otherId = button.dataset.pairScene;
+    const pair = availableShelfScenes(state, Date.now(), { petId: pet.id })
+      .find(candidate => candidate.kind === 'pair' && candidate.actorIds.includes(otherId));
+    if (!pair) {
+      toast('Place both awake residents within two spaces on the same row, then try their scene.');
+      return;
+    }
+    if (document.getElementById('theatreStop')?.hidden === false) {
+      toast('Their stage is busy. Let the current scene finish first.');
+      return;
+    }
+    const unavailable = sceneAvailability(state, { kind: 'pair', actorIds: pair.actorIds, manual: true });
+    if (unavailable) { toast(unavailable); return; }
+    closeCard();
+    window.dispatchEvent(new CustomEvent('shelflife:scene',
+      { detail: { kind: 'pair', actorIds: pair.actorIds } }));
+  }));
   document.getElementById('petMotion').addEventListener('click', () => previewMotion(document.getElementById('cardPortraitHost')));
   wirePosition(state, pet.id, () => openCard(state, pet.id, true));
   if (pendingPosition != null) document.getElementById('residentPosition').value = pendingPosition;

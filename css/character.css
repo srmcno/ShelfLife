@@ -42,3 +42,29 @@
 @media(max-width:360px){
   .personality-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 }
+
+/* A pair's earned story reads like a little folded case file, not another stat. */
+.relationship-list article.has-saga{grid-column:1/-1;background:linear-gradient(150deg,#e6b6760d,transparent 55%),var(--night-2);border-color:#d5ad7047}
+.pair-saga{position:relative;min-width:0;margin-top:13px;padding:15px 16px 16px;border:1px solid #d5ad7047;border-radius:9px;background:linear-gradient(115deg,#d5ad700c,transparent 65%);box-shadow:inset 3px 0 #d5ad7080}
+.pair-saga-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--amber);font-size:9px;letter-spacing:.16em}
+.pair-saga-heading b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pair-saga h4{margin:10px 0 8px;color:var(--ink);font:21px/1.15 var(--display)}
+.pair-saga>strong{display:block;color:var(--mint);font-size:12px}
+.pair-saga>p{margin:7px 0 13px;color:var(--ink);font-size:13px;line-height:1.55;overflow-wrap:anywhere}
+.pair-saga-track{display:flex;gap:6px;margin:0 0 12px}
+.pair-saga-track i{height:4px;flex:1;border-radius:2px;background:var(--hair-lit)}
+.pair-saga-track i.filed{background:var(--amber)}
+.pair-saga>small{display:block;color:var(--ink-2);line-height:1.5;font-size:11px}
+.pair-saga>.btn{margin-top:12px;min-height:42px;white-space:normal}
+.pair-saga details{margin:11px 0;border-top:1px solid var(--hair-lit)}
+.pair-saga details summary{cursor:pointer;min-height:44px;padding:12px 0;color:var(--mint);font-size:12px}
+.pair-saga details summary:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.pair-saga ol{margin:0 0 12px;padding-left:19px}
+.pair-saga li{padding:3px 0 7px;color:var(--ink-2);font-size:12px}
+.pair-saga li b{color:var(--ink)}
+.pair-saga li p{margin:4px 0 0;line-height:1.5}
+@media(max-width:560px){
+  .relationship-list{grid-template-columns:minmax(0,1fr)}
+  .relationship-list article.has-saga{grid-column:auto}
+  .pair-saga{padding:13px 14px}
+}

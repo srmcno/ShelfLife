@@ -1,10 +1,10 @@
 import { lifeState, awardDiscovery, recordScene } from './life.js';
 import { CASES, VISITORS } from '../content/stories.js';
-import { addNote, clamp, grantBonusTrust } from '../state.js';
+import { addNote, clamp, grantBonusTrust, petById, ROW_WIDTH } from '../state.js';
 import { fileGrudge } from './achievements.js';
 import { neighborPets, neighborProps } from './tick.js';
-import { FEUDS } from '../content/feuds.js';
 import { PROPS } from '../content/props.js';
+import { areRivals, advancePairSaga, normalizePairSaga } from './pair-sagas.js';
 const DAY = 86400000;
 export const VISIT_LENGTH = 6 * 3600000;
 export const REQUEST_LENGTH = 12 * 3600000;
@@ -64,9 +64,14 @@ export function storyState(state) {
   s.lastVisit = cleanTime(s.lastVisit); s.visitCount = Math.max(0, Math.floor(Number(s.visitCount) || 0));
   s.lastRelations = cleanTime(s.lastRelations);
   s.careActions = cleanTime(s.careActions); s.handshakes = cleanTime(s.handshakes); s.chases = cleanTime(s.chases); s.alibiWins = cleanTime(s.alibiWins);
+  const currentTime = Date.now();
   for (const [key, r] of Object.entries(s.relationships)) {
     if (!safeRecord(r)) { delete s.relationships[key]; continue; }
     r.time = Math.max(0, Number(r.time) || 0); r.plots = Math.max(0, Math.floor(Number(r.plots) || 0));
+    r.lastPlotAt = Math.min(cleanTime(r.lastPlotAt), currentTime);
+    const saga = normalizePairSaga(r.saga, currentTime);
+    if (saga) r.saga = saga;
+    else delete r.saga;
   }
   if (s.case) {
     s.case.cast = s.case.cast.filter(x => safeRecord(x) && typeof x.id === 'string' && typeof x.name === 'string').slice(0, 2);
@@ -95,28 +100,28 @@ export function remember(state, title, text, now = Date.now(), kind = 'event') {
   s.highlight = { title, text, at: now };
 }
 export function pairKey(a, b) { return [a, b].sort().join('|'); }
-function incompatible(a, b) { return FEUDS.some(([x, y]) => a.traits.includes(x) && b.traits.includes(y) || a.traits.includes(y) && b.traits.includes(x)); }
-export function relationship(state, a, b) {
-  const key = pairKey(a.id, b.id), arc = state.feudArcs?.[key], rel = storyState(state).relationships[key];
+export function relationship(state, a, b, stories = storyState(state)) {
+  const key = pairKey(a.id, b.id), arc = state.feudArcs?.[key], rel = stories.relationships[key];
   if (arc?.truce) return { label: 'Uneasy allies', detail: 'A truce is on file. They can share a plank without reopening the feud.', appeal: 1 };
-  if (incompatible(a, b)) return { label: 'Rivals', detail: 'Conflicting traits. Separate them, or broker a truce after both reach 3 trust.', appeal: -2 };
+  if (areRivals(a, b)) return { label: 'Rivals', detail: 'Conflicting traits. Separate them, or broker a truce after both reach 3 trust.', appeal: -2 };
   if ((rel?.plots || 0) >= 2) return { label: 'Co-conspirators', detail: 'Two supervised plots shared as neighbours. They seek each other out.', appeal: 2 };
   if ((rel?.time || 0) >= 15 * 60000 && Math.min(a.bond, b.bond) >= 1) return { label: 'Friends', detail: 'At least 15 minutes as neighbours, with trust on both sides. Company is reassuring.', appeal: 1.5 };
   return { label: 'Getting acquainted', detail: 'Place them side by side and care for both. Friendship takes 15 minutes together.', appeal: 0 };
 }
 export function brokerTruce(state, aId, bId, now = Date.now()) {
   const a = state.pets.find(p => p.id === aId), b = state.pets.find(p => p.id === bId);
-  if (!a || !b || Math.min(a.bond, b.bond) < 3 || !incompatible(a, b) || state.feudArcs?.[pairKey(aId,bId)]?.truce) return false;
+  if (!a || !b || Math.min(a.bond, b.bond) < 3 || !areRivals(a, b) || state.feudArcs?.[pairKey(aId,bId)]?.truce) return false;
   state.feudArcs ||= {}; state.feudArcs[pairKey(aId,bId)] = { level: 0, truce: true };
   const text = a.name + ' and ' + b.name + ' have signed a truce on the underside of a crumb. Neither can read it from where they stand.';
   remember(state, 'A very small peace', text, now, 'relationship'); addNote(state, text, 'the mediator', 'note'); return true;
 }
-export function recordSharedPlot(state, petId) {
+export function recordSharedPlot(state, petId, now = Date.now()) {
   const s = storyState(state), pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   for (const other of neighborPets(state, state.slots.indexOf(petId))) {
     const key = pairKey(petId, other.id), r = s.relationships[key] ||= { time: 0, plots: 0 };
     r.plots = (r.plots || 0) + 1;
+    r.lastPlotAt = now;
   }
 }
 // The witnesses, read live: a rename shows up, and a case that opened on a
@@ -293,13 +298,28 @@ function advanceStoryTransaction(state, now, rng) {
   // Cap offline acquaintance at one hour; repeated renders add no elapsed time.
   const elapsed = s.lastRelations ? clamp(now - s.lastRelations, 0, 3600000) : 0;
   s.lastRelations = now;
+  const neighboringPairs = [];
   for (const a of state.pets) for (const b of neighborPets(state, state.slots.indexOf(a.id))) {
     if (a.id > b.id) continue;
+    neighboringPairs.push([a, b]);
     const key = pairKey(a.id, b.id), r = s.relationships[key] ||= { time: 0, plots: 0 };
-    const before = relationship(state, a, b).label;
+    const before = relationship(state, a, b, s).label;
     r.time = Math.max(0, Number(r.time) || 0) + elapsed;
-    const after = relationship(state, a, b).label;
+    const after = relationship(state, a, b, s).label;
     if (before !== after) remember(state, after, a.name + ' and ' + b.name + ' now share more than a plank.', now, 'relationship');
+  }
+  // Pair performances can reach over one empty slot. Their story must honour
+  // the same cast geometry, while acquaintance and plots still need neighbours.
+  const reachablePairs = neighboringPairs.slice();
+  for (let i = 0; i < state.slots.length - 2; i++) {
+    if (i % ROW_WIDTH > ROW_WIDTH - 3) continue;
+    const a = petById(state, state.slots[i]), b = petById(state, state.slots[i + 2]);
+    if (a && b) reachablePairs.push([a, b]);
+  }
+  const saga = advancePairSaga(state, reachablePairs, now);
+  if (saga) {
+    remember(state, saga.title, saga.text, now, 'relationship');
+    addNote(state, saga.text, 'the household register', 'note');
   }
   for (const pet of state.pets) {
     let r = s.requests[pet.id];
