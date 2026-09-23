@@ -63,7 +63,7 @@ test('friends earn a three-act subplot from time, two shared plots and a later c
   advanceStories(state, now + 21 * MINUTE, () => 0);
   assert.equal(saga(state).beats.length, 3, 'a staged pair scene can finish the story over a one-slot gap');
   assert.equal(pairSagaView(state, ...state.pets).count, 3);
-  assert.equal(state.life.scenes.filter(scene => scene.kind === 'saga').length, 3);
+  assert.equal(state.stories.archive.filter(entry => ['The department opens', 'The inquest', 'The pardon'].includes(entry.title)).length, 3);
 
   const restored = normalizeState(state);
   restored.life.scenes = [];

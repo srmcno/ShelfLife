@@ -318,8 +318,6 @@ function advanceStoryTransaction(state, now, rng) {
   }
   const saga = advancePairSaga(state, reachablePairs, now);
   if (saga) {
-    recordScene(state, 'saga', saga.title, saga.text, saga.cast, now,
-      { key: 'pair-saga:' + saga.style, branch: String(saga.chapter) });
     remember(state, saga.title, saga.text, now, 'relationship');
     addNote(state, saga.text, 'the household register', 'note');
   }
