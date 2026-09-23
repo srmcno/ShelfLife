@@ -2,6 +2,7 @@
 // history, infer a missed promise, or treat the household's win as this pet's.
 import { normalizeEscapades } from '../escapade-state.js';
 import { escapadeAtVersion } from '../content/escapades-legacy.js';
+import { RESIDENT_TENURE } from '../content/resident-life.js';
 const traits = (pet, list) => list.some(id => pet.traits?.includes(id));
 const count = n => Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 const pairKey = (a, b) => [a, b].sort().join('|');
@@ -32,6 +33,12 @@ export function residentMemories(state, pet, now = Date.now()) {
     && escapadeAtVersion(scene.stage?.branch, scene.stage?.contentVersion)?.endings.some(e =>
       scene.stage?.endingId ? e.id === scene.stage.endingId : e.keepsake === scene.stage?.object))
     .sort((a, b) => b.at - a.at)[0];
+  const latestTenureDay = Array.isArray(pet.lifeKeepsakes)
+    ? pet.lifeKeepsakes.filter(day => Number.isInteger(day)).sort((a, b) => b - a)[0]
+    : null;
+  const tenure = RESIDENT_TENURE.find(milestone => milestone.days === latestTenureDay);
+  if (tenure) add('tenure:' + tenure.days, tenure.callbacks[residentVoice(pet)] || tenure.callbacks.plain,
+    tenure.title + ' was recorded from this resident\'s move-in date.');
   const episode = escapadeAtVersion(replay?.stage?.branch || kept?.episodeId, replay ? replay.stage?.contentVersion : kept?.contentVersion);
   const ending = episode?.endings.find(e => replay ? (replay.stage?.endingId ? e.id === replay.stage.endingId : e.keepsake === replay.stage?.object) : e.id === kept?.endingId);
   if (ending) add('escapade:' + episode.id + ':' + ending.id, ending.callback.replaceAll('{name}', () => pet.name),

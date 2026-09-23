@@ -4,7 +4,7 @@ export const PAPERWORK_LIMIT = 120;
 export const blankPaperwork = () => ({ version: 1, entries: [] });
 const clean = (value, limit) => typeof value === 'string' ? value.slice(0, limit) : '';
 const hash = text => { let n = 2166136261; for (const c of text) n = Math.imul(n ^ c.charCodeAt(0), 16777619); return (n >>> 0).toString(36); };
-const sceneLabels = { court: 'Verdict', outing: 'Expedition report', market: 'Market receipt', visitor: 'Visitor record' };
+const sceneLabels = { court: 'Verdict', outing: 'Expedition report', market: 'Market receipt', visitor: 'Visitor record', residency: 'Resident milestone' };
 
 function entry(raw) {
   if (!raw || typeof raw !== 'object' || !Number.isFinite(raw.at) || raw.at < 0 || raw.at > 8640000000000000) return null;

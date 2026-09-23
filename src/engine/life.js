@@ -9,6 +9,7 @@ import { PROJECTS, PROJECT_STOPS } from '../content/projects.js';
 import { addNote, clamp } from '../state.js';
 import { recordEscapadeEvent } from '../escapade-state.js';
 import { fileScene } from '../paperwork-state.js';
+import { RESIDENT_TENURE } from '../content/resident-life.js';
 const checked = new WeakSet();
 export function lifeState(state) {
   if (!state.life || !checked.has(state.life)) { state.life=normalizeLife(state.life,state.pets.length>0); checked.add(state.life); }
@@ -36,6 +37,27 @@ export function recordScene(state, kind, title, text, cast=[], now=Date.now(), s
   const echoKind = ({court:'court',market:'market',outing:'expedition'})[kind] || (stage?.key==='game:chase'?'chase':null);
   if(echoKind&&cast[0])rememberEcho(state,echoKind,cast[0],'scene:'+scene.id,now,echoKind==='court'?stage?.branch:null);
   return scene;
+}
+export function residentTenureDays(pet, now=Date.now()) {
+  return Number.isFinite(pet?.born) ? Math.max(0, Math.floor((now - pet.born) / 86400000)) : 0;
+}
+// One resident earns one current life marker per shelf check. If time passed
+// while the game was closed, record only their highest reached marker and mark
+// earlier ones complete so a return never floods the corkboard.
+export function recordResidentTenure(state, now=Date.now()) {
+  for (const pet of state.pets || []) {
+    const completed = new Set(Array.isArray(pet.lifeMilestones) ? pet.lifeMilestones : []);
+    const due = RESIDENT_TENURE.filter(milestone => milestone.days <= residentTenureDays(pet, now) && !completed.has(milestone.days));
+    if (!due.length) continue;
+    const milestone = due.at(-1);
+    pet.lifeMilestones = [...new Set([...completed, ...due.map(item => item.days)])].sort((a, b) => a - b);
+    pet.lifeKeepsakes = [...new Set([...(Array.isArray(pet.lifeKeepsakes) ? pet.lifeKeepsakes : []), milestone.days])].sort((a, b) => a - b);
+    const text = pet.name + ' ' + milestone.report;
+    recordScene(state, 'residency', milestone.title, text, [pet.id], now, { key: 'resident-tenure', branch: String(milestone.days) });
+    addNote(state, text, pet.name, 'note');
+    return { petId: pet.id, days: milestone.days, title: milestone.title };
+  }
+  return null;
 }
 export function recordGameLife(state, pet, kind, now=Date.now(), victory=true) {
   const l=lifeState(state);

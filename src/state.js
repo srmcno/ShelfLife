@@ -7,6 +7,7 @@ import { normalizeTheatre } from './theatre-state.js';
 import { blankEscapades, normalizeEscapades } from './escapade-state.js';
 import { blankRug, normalizeRug } from './play-rug-state.js';
 import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.js';
+import { RESIDENT_TENURE } from './content/resident-life.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -338,6 +339,16 @@ export function normalizeState(raw) {
     p.name = typeof p.name === 'string' && p.name.trim() ? p.name.trim().slice(0, 22) : 'Someone';
     p.bio = typeof p.bio === 'string' ? p.bio.slice(0, 3000) : 'It arrived without references.';
     p.born = finite(p.born, s.started, 1, now);
+    const tenureDays = Math.max(0, Math.floor((now - p.born) / 86400000));
+    const tenureReached = RESIDENT_TENURE.filter(milestone => tenureDays >= milestone.days).map(milestone => milestone.days);
+    // An older save gets one retrospective keepsake for its highest reached
+    // marker, rather than replaying every missed anniversary at once.
+    p.lifeMilestones = Array.isArray(p.lifeMilestones)
+      ? [...new Set(p.lifeMilestones.filter(day => RESIDENT_TENURE.some(milestone => milestone.days === day)))].sort((a, b) => a - b)
+      : tenureReached.slice(0, -1);
+    p.lifeKeepsakes = Array.isArray(p.lifeKeepsakes)
+      ? [...new Set(p.lifeKeepsakes.filter(day => p.lifeMilestones.includes(day) && RESIDENT_TENURE.some(milestone => milestone.days === day)))].sort((a, b) => a - b)
+      : [];
     p.lastPlayed = finite(p.lastPlayed, 0, 0, now);
     p.lastMischiefAt = finite(p.lastMischiefAt, 0, 0, now);
     p.playedAt = Object.fromEntries(Object.entries(record(p.playedAt) ? p.playedAt : {}).filter(([k]) => ['memory','chase','alibi','court'].includes(k)).map(([k,v])=>[k,finite(v,0,0,now)]));
