@@ -202,6 +202,8 @@ function choose(html) {
     controls.hidden = false;
     onChoice = value => { onChoice = null; controls.hidden = true; resolve(value); };
     controls.querySelector('button:not([disabled])')?.focus({ preventScroll: true });
+    // On short phones the choices land below the fold; bring them up.
+    controls.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' });
   });
 }
 

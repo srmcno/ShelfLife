@@ -75,7 +75,7 @@
 .sc-ep-stars em{font-size:11.5px;color:var(--ink-3)}
 
 /* ---- the studio ---- */
-.sc-stage{position:relative;height:clamp(262px,66vw,360px);border-radius:14px 14px 0 0;overflow:hidden;isolation:isolate;cursor:pointer;
+.sc-stage{position:relative;height:clamp(262px,66vw,360px);height:clamp(220px,min(66vw,42dvh),360px);border-radius:14px 14px 0 0;overflow:hidden;isolation:isolate;cursor:pointer;
   -webkit-user-select:none;user-select:none;border:2px solid #1a0a11;border-bottom:0}
 .sc-set{position:absolute;inset:0;z-index:0;
   background:
