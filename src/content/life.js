@@ -19,58 +19,6 @@ export const RELICS = [
   {id:'cupboard:2',name:'The key to a smaller problem',shape:'key',line:'Opens something. Nobody has admitted what.'}
 ];
 
-// The market is a small planning game. Every price and future stall is visible;
-// a good basket comes from combining requests, not guessing concealed odds.
-export const MARKET_TAGS = {cozy:'Comfort',odd:'Strange',bright:'Shiny',snack:'Edible'};
-export const MARKET_ITEMS = [
- {id:'tea-sock',name:'A tea cosy for one toe',shape:'sock',cost:2,charm:2,tags:['cozy'],line:'The matching nine were sold separately. So was the owner.'},
- {id:'jam-button',name:'A jam-filled button',shape:'button',cost:3,charm:3,tags:['bright','snack'],line:'Fastens your coat. Slowly attracts a different coat.'},
- {id:'haunted-pea',name:'The haunted pea',shape:'pea',cost:3,charm:3,tags:['odd','snack'],line:'Contains the soul of a man who sent soup back. He can taste the soup from here.'},
- {id:'warm-moon',name:'A second-hand moon',shape:'moon',cost:4,charm:4,tags:['cozy','bright'],line:'Only used at night. One careful werewolf.'},
- {id:'tooth-pillow',name:'A tooth’s retirement pillow',shape:'tooth',cost:3,charm:3,tags:['cozy','odd'],line:'The tooth still expects something under it each morning. The fairy stopped coming after the finger.'},
- {id:'sugar-star',name:'A sugar constellation',shape:'sun',cost:4,charm:4,tags:['bright','snack'],line:'Each star is a dead relative. The packet says five a day.'},
- {id:'bedtime-biscuit',name:'A bedtime biscuit',shape:'medal',cost:2,charm:2,tags:['cozy','snack'],line:'Reads you a story. Becomes progressively harder to hear as you eat it.'},
- {id:'echo-jar',name:'A jar of last words',shape:'echo',cost:2,charm:2,tags:['odd'],line:'Mostly “watch this.” The deluxe jar contains “I know what I’m doing.”'},
- {id:'brass-sun',name:'The brass breakfast sun',shape:'sun',cost:3,charm:4,tags:['bright'],line:'Rises whenever somebody drops the toaster.'},
- {id:'rain-scarf',name:'The professional mourner’s scarf',shape:'rain',cost:4,charm:4,tags:['cozy','odd'],line:'Weeps on contact. Has attended seventeen funerals and cared at none of them.'},
- {id:'mirror-spoon',name:'A spoon that flatters you',shape:'spoon',cost:3,charm:3,tags:['bright','odd'],line:'“You haven’t aged a day.” It said that to the previous owner for six weeks before anyone checked.'},
- {id:'crumb-crown',name:'The shortbread crown',shape:'crown',cost:4,charm:4,tags:['bright','snack'],line:'Uneasy lies the head that smells this much like butter.'},
- {id:'pocket-rug',name:'The pocket-sized rug',shape:'sock',cost:2,charm:3,tags:['cozy'],line:'Excellent at hiding stains. The salesman refuses to turn it over.'},
- {id:'tiny-prophecy',name:'Tomorrow’s shopping receipt',shape:'receipt',cost:2,charm:3,tags:['odd'],line:'One shovel. One apology card. The vendor recommends buying the shovel first.'},
- {id:'glow-thread',name:'A spool of borrowed daylight',shape:'needle',cost:3,charm:3,tags:['bright','cozy'],line:'Removed from a tunnel just as somebody was approaching it.'},
- {id:'opera-raisin',name:'A raisin with formal training',shape:'pea',cost:3,charm:3,tags:['snack','odd'],line:'Sings for its supper. Is increasingly concerned about the wording.'},
- {id:'comfort-crumbs',name:'Emergency comfort crumbs',shape:'medal',cost:2,charm:2,tags:['snack','cozy'],line:'Left over from a wake. The deceased would have wanted them. They were quite greedy.'},
- {id:'button-comet',name:'A comet on a safety pin',shape:'button',cost:4,charm:4,tags:['bright','odd'],line:'A mass extinction you can wear to dinner. The smaller guests have asked you to take it off.'}
-];
-export const MARKET_REQUESTS = [
- {id:'tea',name:'Tea with the recently deceased',tags:['cozy','odd'],line:'Bring comfort and something strange. They keep asking what happened to their good china.'},
- {id:'midnight',name:'A midnight feast',tags:['snack','snack'],line:'Two edible objects. Calling the napkin a salad will not count.'},
- {id:'museum',name:'A deeply suspicious museum',tags:['bright','odd'],line:'One shiny exhibit and one inexplicable exhibit. The curator can be both.'},
- {id:'nest',name:'A nest with standards',tags:['cozy','cozy'],line:'Two comforts. It has started calling the empty nest a coffin, then looking at you.'},
- {id:'gala',name:'The crumb gala',tags:['bright','snack'],line:'Something to admire and something to eat. The guests need clear instructions.'},
- {id:'spectacle',name:'A very small coronation',tags:['bright','bright'],line:'Two shiny objects. The previous monarch is under the rug, which is why we need the distraction.'},
- {id:'sleepover',name:'A respectable sleepover',tags:['cozy','snack'],line:'Comfort and a snack. Bring your own pillow. The host has been using guests as stuffing.'},
- {id:'haunting',name:'A haunting with refreshments',tags:['odd','snack'],line:'Something strange and something edible. The ghost has been dead nine years and is still a terrible guest.'},
- {id:'cabinet',name:'A cabinet of bad ideas',tags:['odd','odd'],line:'Two separate peculiarities. One large peculiarity is still only one.'}
-];
-// Rare stock appears only in the expanded market. Old routes retain their exact
-// original layout and prices when resumed or replayed.
-export const MARKET_RARITIES = [
- {id:'last-breath',name:'A last breath in a snow globe',shape:'echo',cost:6,charm:8,tags:['cozy','odd'],line:'Shake for snow. Hold to your ear for a man discovering that this is what his children chose.'},
- {id:'extracted-halo',name:'A halo, forcibly removed',shape:'crown',cost:5,charm:7,tags:['bright','odd'],line:'There are fingernail marks on the rim. The vendor says the angel was being difficult about the deposit.'},
- {id:'funeral-cake',name:'The premature funeral cake',shape:'medal',cost:5,charm:7,tags:['snack','cozy'],line:'The guest of honour blew out the candles. Several relatives left before he could cut a slice.'},
- {id:'tooth-chandelier',name:'A chandelier of milk teeth',shape:'tooth',cost:6,charm:8,tags:['bright','odd'],line:'The fairy says she bought them all. Nobody asked why some of them have braces.'},
- {id:'saints-biscuit',name:'Saint Nobody’s finger biscuit',shape:'needle',cost:5,charm:7,tags:['snack','bright'],line:'The monks say it is a replica. The packet says one of five. A pilgrim is crying into his tea.'},
- {id:'future-heirloom',name:'Your future family heirloom',shape:'moon',cost:6,charm:8,tags:['cozy','bright'],line:'Your name is scratched underneath, followed by a date. The vendor offers a magnifying glass, then thinks better of it.'}
-];
-export const MARKET_STALLS = [
- {name:'The Sock Exchange',line:'“Pairs cost extra. Nobody here died together.”',prop:'sock',bought:'The sock wraps your purchase in a smaller sock. It is still warm. You decide against asking.',passed:'The sock calls after you that the previous owner barely used it. A small voice under the counter disagrees.',secret:'You describe the missing sock drawer. The vendor starts recognising names. Three buttons slide across the counter.'},
- {name:'Mother Needle’s Almost Antiques',line:'“I can remove a monogram. A blood group takes longer.”',prop:'needle',bought:'Mother Needle picks a hair off the object. “He won’t be needing that.” She puts it in her mouth.',passed:'“Come back when someone dies,” she says. Then, after looking you over: “Or a bit before.”',secret:'You mention who sleeps closest to the edge. Mother Needle pays three buttons and asks how heavily.'},
- {name:'The Pea’s Personal Effects',line:'“Dad wanted his things to go to a loving home. I wanted three buttons.”',prop:'pea',bought:'The pea takes your buttons. A portrait behind him starts crying. He turns it to face the wall.',passed:'The pea drops the price for his father’s urn. His father asks him to stop calling it that while he is still in it.',secret:'You reveal where the household hides the good food. The pea pays three buttons and asks whether the lid locks from inside.'},
- {name:'The Unlicensed Moon Shop',line:'“That dark patch? Previous owner. We tried bleach.”',prop:'moon',bought:'The vendor lifts the object with tongs. His assistant reaches for it with the hand he has left.',passed:'A moon rolls after you. The vendor catches it and apologises. “It remembers faces.”',secret:'You admit which window stays open. The vendor pays three buttons. Behind him, a moon develops teeth.'},
- {name:'Miss Afterbell’s Quiet Sale',line:'“I said I wanted to be remembered. Apparently that meant priced individually.”',prop:'echo',bought:'Miss Afterbell reaches for the keepsake, passes straight through it, and pretends she was pointing at the wrapping.',passed:'Miss Afterbell lowers the price again. Dying has done very little for her self-esteem.',secret:'You repeat the household’s last argument. Miss Afterbell pays three buttons. “Lovely. I shall use their voices.”'},
- {name:'Last Chance, Probably',line:'“Everything must go. They’re exhuming the landlord at six.”',prop:'key',bought:'The vendor tears up the receipt and eats it. From behind the stall comes the sound of someone digging up.',passed:'The vendor drops the awning. A finger comes through the soil and rings the service bell.',secret:'You tell the vendor what the landlord was buried with. He gives you three buttons and reaches for a second shovel.'}
-];
 export const GEAR = [{id:'thread',name:'Thread & safety pin',hint:'Bridges gaps; rescues things without a speech.'},{id:'lantern',name:'Pocket lantern',hint:'Reveals small print, warm routes, and things pretending to be furniture.'},{id:'biscuit',name:'Emergency biscuit',hint:'A bribe, a distraction, or a last-minute relative.'}];
 export const OUTINGS = [
  {id:'drawer',name:'The Lost Sock Drawer',tone:'lilac',intro:'Beyond the runners lies a nation of single socks. They have paired off politically.',steps:[

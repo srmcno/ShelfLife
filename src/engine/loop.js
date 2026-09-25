@@ -4,6 +4,7 @@ import { activeFeuds, feudPairKey, stepFeudArc, fileGrudge, checkinStreak, FEUD_
 import { checkUnlocks } from './unlocks.js';
 import { runBehavior, behaviorState } from './behavior.js';
 import { recordResidentTenure } from './life.js';
+import { rewardCheck } from './mayhem.js';
 import { pickDialogue, dialogueText } from './dialogue.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { DRAWN_NOTES } from '../content/care.js';
@@ -405,6 +406,7 @@ export function convene(state) {
 export function checkShelf(state, now = Date.now()) {
   tick(state, now);
   state.lastCheck = now;
+  rewardCheck(state, now);
   reconcile(state, now);
   const visit = recordVisit(state, now);
   const batch = { doc: 0 };

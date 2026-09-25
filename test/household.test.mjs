@@ -6,7 +6,7 @@ import { observationLines, contextualCare, contextualExchanges } from '../src/en
 import { VISITORS } from '../src/content/stories.js';
 import { OBSERVATIONS, CARE_CONTEXT } from '../src/content/observations.js';
 import { generateCreature, SLOTS } from '../src/art/creatures.js';
-import { rewardAlibi } from '../src/engine/alibi.js';
+import { finishRun } from '../src/engine/arcade.js';
 import { incidentProgress, checkAchievements } from '../src/engine/achievements.js';
 const now = new Date(2026,8,7,12).getTime();
 function fixture() {
@@ -63,24 +63,17 @@ test('every care request uses its own counter and pays only once',()=>{
   }
 });
 test('a new play promise accepts any game win and an old handshake promise migrates without a free reward',()=>{
-  for(const counter of ['handshakes','chases','alibiWins']){
+  for(const counter of ['handshakes','chases','alibiWins','arcadeRuns']){
     const s=fixture(),p=s.pets[0];p.chases=4;advanceStories(s,now);
     s.stories.requests.a={kind:'play',status:'accepted',at:now,baseline:0};
     advanceStories(s,now);assert.equal(p.bond,0);
     p[counter]=(p[counter]||0)+1;advanceStories(s,now);assert.equal(p.bond,1);
   }
 });
-test('Alibi clean wins, including practice, advance evidence; losing testimony does not',()=>{
-  for(const correct of [0,2,3]){
-    const s=fixture(),p=s.pets[0];advanceStories(s,now);advanceCase(s,'listen',now);
-    const game={petId:p.id,complete:true,correct,rounds:[{},{},{}]};
-    rewardAlibi(s,game,now);assert.equal(caseGate(s).ready,correct===3);
-    assert.equal(p.alibiWins||0,correct===3?1:0);
-    assert.equal(rewardAlibi(s,game,now),null);
-  }
-  const s=fixture(),p=s.pets[0];advanceStories(s,now);advanceCase(s,'listen',now);p.lastPlayed=now;p.playedAt={alibi:now};
-  assert.equal(rewardAlibi(s,{petId:'a',complete:true,correct:3,rounds:[{},{},{}]},now).practice,true);
-  assert.equal(caseGate(s).ready,true);
+test('a scoring arcade run advances case evidence; a scoreless warm-up does not',()=>{
+  const s=fixture(),p=s.pets[0];advanceStories(s,now);advanceCase(s,'listen',now);
+  finishRun(s,'whack',0,p.id,now);assert.equal(caseGate(s).ready,false);
+  finishRun(s,'whack',4,p.id,now);assert.equal(caseGate(s).ready,true);assert.equal(p.arcadeRuns,1);
 });
 test('contextual notes and dialogue only claim facts currently supported by the save',()=>{
   const s=fixture(),p=s.pets[0];assert.deepEqual(observationLines(s,p,now),[]);assert.deepEqual(contextualExchanges(s,p,now),[]);

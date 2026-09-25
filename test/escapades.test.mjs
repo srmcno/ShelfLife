@@ -5,11 +5,8 @@ import { ESCAPADES } from '../src/content/escapades.js';
 import { blankEscapades, normalizeEscapades, recordEscapadeEvent } from '../src/escapade-state.js';
 import { escapadeView, startEscapade, finishEscapade } from '../src/engine/escapades.js';
 import { careFor, doRounds } from '../src/engine/care.js';
-import { newHandshake, tapHandshake, handshakePattern, rewardHandshake } from '../src/engine/play.js';
-import { newChase, updateChase } from '../src/engine/chase.js';
-import { newAlibi, answerAlibi, advanceAlibi, currentRound, rewardAlibi } from '../src/engine/alibi.js';
-import { newCourt, accuseCourt } from '../src/engine/court.js';
-import { lifeState, awardDiscovery, startOuting, chooseOuting, startMarket, marketSnapshot, chooseMarket, leaveMarket, claimMarket } from '../src/engine/life.js';
+import { finishRun } from '../src/engine/arcade.js';
+import { lifeState, awardDiscovery, startOuting, chooseOuting } from '../src/engine/life.js';
 
 const now = new Date(2026, 8, 1, 12).getTime();
 function fixture(count = 1) {
@@ -19,21 +16,14 @@ function fixture(count = 1) {
   state.pets.forEach((pet, i) => { state.slots[i] = pet.id; });
   return state;
 }
-function start(state, activity = 'memory', petId = state.pets[0].id, at = now) {
+function start(state, activity = 'arcade:seance', petId = state.pets[0].id, at = now) {
   const episode = ESCAPADES.find(item => item.approaches.some(path => path.activity === activity));
   const approach = episode.approaches.find(path => path.activity === activity);
   assert.equal(startEscapade(state, { episodeId: episode.id, approachId: approach.id, petId }, at), true);
   return episode;
 }
-function finishMemory(state, pet = state.pets[0], at = now) {
-  const game = newHandshake(pet, () => .2);
-  while (!game.complete) for (const tap of handshakePattern(game)) tapHandshake(game, tap);
-  return { game, reward: rewardHandshake(state, game, at) };
-}
-function finishEmptyMarket(state, at = now) {
-  while (marketSnapshot(state).step < marketSnapshot(state).stalls.length) assert.equal(chooseMarket(state, null), true);
-  if (marketSnapshot(state).version >= 3) assert.equal(leaveMarket(state), true);
-  return claimMarket(state, at);
+function finishMemory(state, pet = state.pets[0], at = now, game = 'seance', score = 5) {
+  return finishRun(state, game, score, pet.id, at, () => 0);
 }
 function progress(state, at = now) {
   const active = escapadeView(state, at).active;
@@ -68,14 +58,14 @@ test('only the accepted resident, requested personal moment and chosen activity 
   for (const event of [
     { kind: 'care', petIds: ['pet-1'], need: episode.care.need },
     { kind: 'care', petIds: [id], need: ['food', 'clean'].find(need => need !== episode.care.need) },
-    { kind: 'play', petIds: [id], activity: 'chase' },
-    { kind: 'launch', petIds: [id], activity: 'memory' },
-    { kind: 'play', petIds: id, activity: 'memory' }
+    { kind: 'play', petIds: [id], activity: 'arcade:frenzy' },
+    { kind: 'launch', petIds: [id], activity: 'arcade:seance' },
+    { kind: 'play', petIds: id, activity: 'arcade:seance' }
   ]) assert.equal(recordEscapadeEvent(state, event, now), false);
-  assert.equal(recordEscapadeEvent(state, { kind: 'play', petIds: [id], activity: 'memory' }, now - 1), false);
+  assert.equal(recordEscapadeEvent(state, { kind: 'play', petIds: [id], activity: 'arcade:seance' }, now - 1), false);
   assert.equal(escapadeView(state, now).active.completedSteps, 0);
-  assert.equal(recordEscapadeEvent(state, { kind: 'play', petIds: [id], activity: 'memory' }, now), true);
-  assert.equal(recordEscapadeEvent(state, { kind: 'play', petIds: [id], activity: 'memory' }, now), false);
+  assert.equal(recordEscapadeEvent(state, { kind: 'play', petIds: [id], activity: 'arcade:seance' }, now), true);
+  assert.equal(recordEscapadeEvent(state, { kind: 'play', petIds: [id], activity: 'arcade:seance' }, now), false);
   assert.equal(escapadeView(state, now).active.completedSteps, 1);
 });
 
@@ -91,7 +81,7 @@ for (const asleep of [false, true]) test('personal care counts at full comfort w
 test('household rounds and unused game setup never substitute for a personal moment or a finished activity', () => {
   const state = fixture(), episode = start(state);
   doRounds(state, now);
-  assert.equal(rewardHandshake(state, newHandshake(state.pets[0]), now), null);
+  assert.equal(finishRun(state, 'seance', 0, state.pets[0].id, now).counted, false);
   assert.equal(escapadeView(state, now).active.completedSteps, 0);
   assert.equal(finishEscapade(state, episode.endings[0].id, now), null);
 });
@@ -124,7 +114,7 @@ test('replayed endings cannot mint discoveries even after the rolling award ledg
   for (let i = 0; i < 190; i++) awardDiscovery(state, 'test:' + i, 1, now);
   assert.equal(state.life.awards.includes('escapade:' + first.record.key), false);
   const before = state.life.xp;
-  state.pets[0].name = 'Renamed'; start(state, 'memory', state.pets[0].id, now + 1); progress(state, now + 1);
+  state.pets[0].name = 'Renamed'; start(state, 'arcade:seance', state.pets[0].id, now + 1); progress(state, now + 1);
   const replay = finishEscapade(state, episode.endings[0].id, now + 1);
   assert.equal(replay.fresh, false); assert.equal(replay.discoveries, 0); assert.equal(state.life.xp, before);
   assert.equal(state.escapades.completions, 2); assert.equal(state.escapades.album.length, 1);
@@ -160,7 +150,7 @@ test('no absence expires an accepted adventure or awards an unfinished one', () 
   const state = fixture(); start(state); const future = now + 365 * 86400000;
   assert.equal(escapadeView(state, future).active.completedSteps, 0);
   assert.equal(state.life.xp, 0);
-  assert.equal(recordEscapadeEvent(state, { kind: 'play', petIds: ['pet-0'], activity: 'memory' }, future), true);
+  assert.equal(recordEscapadeEvent(state, { kind: 'play', petIds: ['pet-0'], activity: 'arcade:seance' }, future), true);
   assert.equal(escapadeView(state, future).active.playDone, true);
 });
 
@@ -192,48 +182,22 @@ test('malformed imports are whitelisted, progress cannot predate acceptance, and
   }
 });
 
-test('finished practice handshakes advance without changing existing trust and duplicate-claim rules', () => {
-  const state = fixture(), pet = state.pets[0]; finishMemory(state);
-  const before = pet.bond; start(state);
-  const { game, reward } = finishMemory(state);
-  assert.equal(reward.practice, true); assert.equal(pet.bond, before); assert.equal(pet.handshakes, 2);
+test('an arcade run advances only the chosen game, only for its resident, and never as a scoreless warm-up', () => {
+  const state = fixture(2), episode = start(state, 'arcade:seance', 'pet-0');
+  finishRun(state, 'seance', 0, 'pet-0', now);
+  assert.equal(escapadeView(state, now).active.playDone, false, 'a warm-up is not a finished game');
+  finishRun(state, 'frenzy', 20, 'pet-0', now);
+  assert.equal(escapadeView(state, now).active.playDone, false, 'a different game does not count');
+  finishRun(state, 'seance', 6, 'pet-1', now);
+  assert.equal(escapadeView(state, now).active.playDone, false, 'another resident cannot play for them');
+  finishRun(state, 'seance', 6, 'pet-0', now);
   assert.equal(escapadeView(state, now).active.playDone, true);
-  assert.equal(rewardHandshake(state, game, now), null);
+  assert.ok(episode.approaches.some(path => path.activity === 'arcade:seance'));
 });
 
-test('a losing finished Chase advances the adventure without becoming a win or granting trust', () => {
-  const state = fixture(), episode = start(state, 'chase'), game = newChase(state.pets[0], { seed: 1 });
-  assert.equal(rewardHandshake(state, game, now), null);
-  assert.equal(escapadeView(state, now).active.playDone, false);
-  while (!game.finished) updateChase(game, { axis: -1 }, .25);
-  assert.equal(game.complete, false);
-  assert.equal(rewardHandshake(state, game, now), null);
-  assert.equal(escapadeView(state, now).active.playDone, true);
-  assert.equal(state.pets[0].chases || 0, 0); assert.equal(state.pets[0].bond, 0); assert.equal(state.life.xp, 0);
-  careFor(state, state.pets[0], episode.care.need, now); finishEscapade(state, episode.endings[0].id, now);
-  start(state, 'chase'); rewardHandshake(state, game, now);
-  assert.equal(escapadeView(state, now).active.playDone, false);
-});
-
-test('an imperfect Alibi finishes the objective while preserving its honest loss and practice rewards', () => {
-  const state = fixture(), pet = state.pets[0]; pet.traits = ['nocturnal']; start(state, 'alibi');
-  const game = newAlibi(state, pet, () => .2);
-  assert.equal(rewardAlibi(state, game, now), null);
-  while (!game.complete) { const round = currentRound(game); answerAlibi(game, (round.lie + 1) % round.statements.length); advanceAlibi(game); }
-  const result = rewardAlibi(state, game, now);
-  assert.equal(result.clean, false); assert.equal(result.practice, true);
-  assert.equal(escapadeView(state, now).active.playDone, true);
-  assert.equal(pet.alibiWins || 0, 0); assert.equal(pet.bond, 0);
-});
-
-test('Shelf Court reports the actual host only and counts a final imperfect legacy verdict', () => {
-  const state = fixture(2); start(state, 'court', 'pet-1');
-  let game = newCourt(state, () => .2);
-  accuseCourt(state, game, (game.answer + 1) % game.suspects.length, now);
-  assert.equal(escapadeView(state, now).active.playDone, false);
-  state.pets.reverse(); game = newCourt(state, () => .2);
-  assert.equal(accuseCourt(state, game, (game.answer + 1) % game.suspects.length, now).correct, false);
-  assert.equal(escapadeView(state, now).active.playDone, true); assert.equal(state.life.courtWins, 0);
+test('every adventure offers at least one playable approach', () => {
+  const playable = new Set(['arcade:frenzy', 'arcade:stack', 'arcade:seance', 'arcade:whack', 'outing']);
+  for (const episode of ESCAPADES) for (const path of episode.approaches) assert.ok(playable.has(path.activity), episode.id + '/' + path.id + ' uses ' + path.activity);
 });
 
 test('an expedition advances only at return and only for its real crew', () => {
@@ -247,35 +211,4 @@ test('an expedition advances only at return and only for its real crew', () => {
   assert.equal(escapadeView(state, now).active.playDone, false);
   assert.equal(chooseOuting(state, 0, now).complete, true);
   assert.equal(escapadeView(state, now).active.playDone, true);
-});
-
-test('Night Market includes a selected fourth resident and credits all actual current patrons at claim', () => {
-  const state = fixture(4); start(state, 'market', 'pet-3');
-  assert.equal(startMarket(state, { errands: true, petId: 'pet-3' }), true);
-  assert.deepEqual(state.life.market.patronIds, ['pet-3', 'pet-0', 'pet-1']);
-  assert.deepEqual(state.life.market.patrons, ['Tilly', 'Mabel', 'Pip']);
-  assert.equal(escapadeView(state, now).active.playDone, false);
-  const result = finishEmptyMarket(state);
-  assert.equal(result.score.fulfilled.filter(Boolean).length, 0);
-  assert.equal(escapadeView(state, now).active.playDone, true);
-  const before = state.life.xp; assert.equal(claimMarket(state, now), null); assert.equal(state.life.xp, before);
-  assert.equal(startMarket(state, { replay: true, errands: true, petId: 'pet-2' }), true);
-  assert.deepEqual(state.life.market.patronIds, ['pet-3', 'pet-0', 'pet-1']);
-});
-
-test('market saves without participant identities never assign an adventure to a matching display name', () => {
-  for (const version of [1, 3]) {
-    const state = fixture(); start(state, 'market');
-    startMarket(state, { errands: version === 3 });
-    if (version === 3) { state.life.market.version = 3; delete state.life.market.patronIds; }
-    finishEmptyMarket(state);
-    assert.equal(escapadeView(state, now).active.playDone, false);
-  }
-});
-
-test('a rehomed market patron cannot transfer credit to a replacement with the same name', () => {
-  const state = fixture(2); startMarket(state, { errands: true });
-  state.pets[0] = { ...state.pets[0], id: 'replacement' };
-  start(state, 'market', 'replacement'); finishEmptyMarket(state);
-  assert.equal(escapadeView(state, now).active.playDone, false);
 });

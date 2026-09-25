@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { blankState, addNote, normalizeState } from '../src/state.js';
 import { fileDocument, householdReport, normalizePaperwork, PAPERWORK_LIMIT } from '../src/paperwork-state.js';
 import { recordScene, startOuting, chooseOuting, finishOuting } from '../src/engine/life.js';
-import { newCourt, accuseCourt } from '../src/engine/court.js';
 const now = new Date(2026, 8, 13, 12).getTime();
 function shelf() {
   const s = blankState(); s.started = s.lastTick = now;
@@ -33,15 +32,6 @@ test('on-demand census uses real care and shelf positions, deduplicates unchange
   assert.match(changed.text,/Mabel · B2/);assert.ok(fileDocument(s,changed));
   assert.deepEqual({xp:s.life.xp,bond:s.pets[0].bond,notes:s.noteCount},before);assert.equal(s.paperwork.entries.length,2);
   assert.equal(householdReport(blankState()),null);
-});
-test('actual expedition completion and court verdict each file one outcome and cannot file again by claiming twice', () => {
-  const s=shelf();assert.ok(startOuting(s,'drawer','thread',['a']));
-  chooseOuting(s,0,now);chooseOuting(s,1,now);chooseOuting(s,0,now);
-  assert.equal(s.paperwork.entries.filter(d=>d.title.startsWith('Expedition report')).length,1);
-  const count=s.paperwork.entries.length;chooseOuting(s,0,now);assert.equal(s.paperwork.entries.length,count);finishOuting(s);
-  const court=newCourt(s,()=>.37);assert.ok(accuseCourt(s,court,court.answer,now));
-  assert.equal(s.paperwork.entries.filter(d=>d.title.startsWith('Verdict')).length,1);
-  const end=s.paperwork.entries.length;accuseCourt(s,court,court.answer,now);assert.equal(s.paperwork.entries.length,end);
 });
 test('the archive is bounded separately from the scene journal and malformed backup documents are rejected', () => {
   const s=shelf();for(let i=0;i<140;i++)recordScene(s,'outing','Journey '+i,'A recorded result.', ['a'],now+i);

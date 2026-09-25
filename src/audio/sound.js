@@ -694,3 +694,21 @@ export function initSoundNoteHook() {
     else playNoteArrive({ delay: i * 0.085, step: i });
   });
 }
+
+// A plain voice for the arcade: one pitched blip with a soft tail. The séance
+// candles each own a note, so the sequence can be remembered by ear as well.
+export function playTone(freq = 440, { duration = 0.22, type = 'triangle', gain = 0.12 } = {}) {
+  if (state.settings.muted || !audioAllowed()) return null;
+  const c = getCtx();
+  if (!c) return null;
+  const t0 = c.currentTime + 0.004;
+  const osc = c.createOscillator(), amp = c.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  amp.gain.setValueAtTime(0.0001, t0);
+  amp.gain.exponentialRampToValueAtTime(gain, t0 + 0.015);
+  amp.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+  osc.connect(amp).connect(c.destination);
+  osc.start(t0); osc.stop(t0 + duration + 0.02);
+  return { freq, at: t0 };
+}

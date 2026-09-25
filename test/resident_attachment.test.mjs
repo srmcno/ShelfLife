@@ -38,11 +38,11 @@ test('callbacks distinguish a kept promise, a declined request and an actual ren
 
 test('care patterns, games and visitor callbacks belong to the actual participant', () => {
   const a=pet('A'),b=pet('B'),s=shelf([a,b]);
-  a.careLog={food:7,fuss:2,clean:1};a.handshakes=3;a.chases=2;a.alibiWins=1;a.playedAt={court:NOW-1};
+  a.careLog={food:7,fuss:2,clean:1};a.handshakes=3;a.chases=2;a.alibiWins=1;a.arcadeRuns=2;
   s.stories.visitor={kind:'moth',welcomed:true,hostId:'A',choice:'crumbs'};
   s.life.scenes=[{kind:'outing',cast:['A'],title:'Trip',text:'Returned'}];
   const keys=residentMemories(s,a,NOW).map(m=>m.key);
-  for(const key of ['care-food','handshake','chase','alibi','court','visitor','outing'])assert.ok(keys.includes(key),key);
+  for(const key of ['care-food','handshake','chase','alibi','arcade','visitor','outing'])assert.ok(keys.includes(key),key);
   assert.deepEqual(residentMemories(s,b,NOW),[]);
 });
 
@@ -64,15 +64,6 @@ test('memory selection is read-only and different personalities respond differen
   assert.equal(JSON.stringify(s),before);
   const said=pickDirectAddress(s,a,{now:NOW,rng:()=>0});
   assert.equal(said.meta.memory,'promise-kept');assert.equal(said.turns[0].line,first[0].text);
-});
-
-test('a remembered ritual quotes only the saved learned opening', () => {
-  const a=pet('A'),s=shelf([a]);a.handshakes=20;
-  assert.ok(!residentMemories(s,a,NOW).some(m=>m.key.startsWith('ritual:')));
-  a.handshakeRituals={echo:{opening:[2,0,3],completions:1,clean:1,at:NOW}};
-  assert.match(residentMemories(s,a,NOW).find(m=>m.key==='ritual:echo').text,/Blink, Knock, Boop/);
-  a.handshakeRituals.echo.opening=[2,19];
-  assert.ok(!residentMemories(s,a,NOW).some(m=>m.key.startsWith('ritual:')));
 });
 
 test('actual pair scenes produce future exchanges and modest temporary social appeal without stacking', () => {
@@ -165,7 +156,7 @@ test('adventure keepsakes and replays give only their actual resident a grounded
   function complete(actor,at){
     assert.equal(startEscapade(s,{episodeId:'crumb-observatory',approachId:'orbit',petId:actor.id},at),true);
     recordEscapadeEvent(s,{kind:'care',need:'food',petIds:[actor.id]},at+1);
-    recordEscapadeEvent(s,{kind:'play',activity:'chase',petIds:[actor.id]},at+2);
+    recordEscapadeEvent(s,{kind:'play',activity:'arcade:frenzy',petIds:[actor.id]},at+2);
     return finishEscapade(s,'discovery',at+3);
   }
   assert.equal(complete(a,NOW).fresh,true);
@@ -197,7 +188,7 @@ test('new replay uses its own edition while the legacy album and one-time discov
  s.escapades={version:1,active:null,completions:1,album:[{episodeId:'crumb-observatory',endingId:'discovery',approachId:'orbit',petId:a.id,petName:'First Name',at:NOW-100}]};
  assert.ok(startEscapade(s,{episodeId:'crumb-observatory',approachId:'orbit',petId:a.id},NOW));
  recordEscapadeEvent(s,{kind:'care',need:'food',petIds:[a.id]},NOW+1);
- recordEscapadeEvent(s,{kind:'play',activity:'chase',petIds:[a.id]},NOW+2);
+ recordEscapadeEvent(s,{kind:'play',activity:'arcade:frenzy',petIds:[a.id]},NOW+2);
  const result=finishEscapade(s,'discovery',NOW+3);
  assert.equal(result.fresh,false);assert.equal(result.discoveries,0);assert.match(result.text,/scratches at the label/);
  const restored=normalizeState(s),album=escapadeView(restored,NOW+5).album[0];

@@ -1,8 +1,7 @@
 import { mastery, masteryTicket, completeMastery, masteryText } from '../mastery-state.js';
 import { rememberEcho } from '../household-echoes.js';
-import { errandSnapshot, applyErrandMove, bestErrandScore } from './market-errands.js';
 import { normalizeLife } from '../life-state.js';
-import { OUTINGS, OUTING_TRAIL_SCENES, OUTING_ALTERNATES, GEAR, RELICS, FRAMES, MARKET_ITEMS, MARKET_REQUESTS, MARKET_RARITIES, visitorActFor } from '../content/life.js';
+import { OUTINGS, OUTING_TRAIL_SCENES, OUTING_ALTERNATES, GEAR, RELICS, FRAMES, visitorActFor } from '../content/life.js';
 import { VISITORS } from '../content/stories.js';
 import { missionStops } from '../content/project-encounters.js';
 import { PROJECTS, PROJECT_STOPS } from '../content/projects.js';
@@ -10,6 +9,7 @@ import { addNote, clamp } from '../state.js';
 import { recordEscapadeEvent } from '../escapade-state.js';
 import { fileScene } from '../paperwork-state.js';
 import { RESIDENT_TENURE } from '../content/resident-life.js';
+import { rewardGame } from './mayhem.js';
 const checked = new WeakSet();
 export function lifeState(state) {
   if (!state.life || !checked.has(state.life)) { state.life=normalizeLife(state.life,state.pets.length>0); checked.add(state.life); }
@@ -62,8 +62,9 @@ export function recordResidentTenure(state, now=Date.now()) {
 export function recordGameLife(state, pet, kind, now=Date.now(), victory=true) {
   const l=lifeState(state);
   dailyActivity(state,'play',now);
+  if(victory!==false)rewardGame(state,now);
   const first=awardDiscovery(state,'game:'+kind,3,now);
-  if(first)recordScene(state,'celebration', ({memory:'The secret accomplice',chase:'The Ministry of Crumbs',alibi:'An inconveniently observant landlord',court:'The household takes the stand'})[kind] || 'A shared incident', pet.name+' '+({memory:'has taught you a secret handshake. It now looks for your hand before pretending it was looking for something else.',chase:'has appointed itself Minister of Crumbs. The ministry has one employee and considerable overhead.',alibi:'has discovered you can check its story. It has requested a less observant landlord.',court:'has attended court. It has kept the little hammer. This may prove unwise.'}[kind]||'has taken up a hobby.'),[pet.id],now,{key:'game:'+kind});
+  if(first)recordScene(state,'celebration', ({arcade:'After hours at the arcade',memory:'The secret accomplice',chase:'The Ministry of Crumbs',alibi:'An inconveniently observant landlord',court:'The household takes the stand'})[kind] || 'A shared incident', pet.name+' '+({arcade:'has discovered high scores. It now rates everything out of ten, including your face, which got a four.',memory:'has taught you a secret handshake. It now looks for your hand before pretending it was looking for something else.',chase:'has appointed itself Minister of Crumbs. The ministry has one employee and considerable overhead.',alibi:'has discovered you can check its story. It has requested a less observant landlord.',court:'has attended court. It has kept the little hammer. This may prove unwise.'}[kind]||'has taken up a hobby.'),[pet.id],now,{key:'game:'+kind});
   l.introDone=true;
   return first;
 }
@@ -192,7 +193,7 @@ export function chooseOuting(state, choice, now=Date.now()) {
   crew.forEach(p=>{p.needs.fuss=clamp(p.needs.fuss+8,0,100);p.expeditions=(p.expeditions||0)+1;});
   if(crew.length===2){state.stories||={};state.stories.relationships||={};const key=crew.map(p=>p.id).sort().join('|');const r=state.stories.relationships[key]||={time:0,plots:0};r.plots=(r.plots||0)+1;r.lastPlotAt=now;}
   const text=crew.map(p=>p.name).join(' and ')+' returned with '+relic.name.toLowerCase()+'. '+relic.line+' '+line;
-  recordScene(state,'outing',route.name,text,crew.map(p=>p.id),now,{key:'outing',branch:route.id,object:relic.id});addNote(state,text,'beyond the shelf','scheme');
+  recordScene(state,'outing',route.name,text,crew.map(p=>p.id),now,{key:'outing',branch:route.id,object:relic.id});addNote(state,text,'beyond the shelf','scheme');rewardGame(state,now);
   o.result={relic:relic.id,fresh};
   if(o.receipt && !o.practice && !o.returnedAt && o.score>=3) {
     const before=mastery(state,'expedition').tier;
@@ -273,112 +274,3 @@ export function welcomeBack(state, now=Date.now()) {
   return l.recap;
 }
 
-/* ================= The Unlicensed Night Market =================
-   Six stalls, one purchase per stall, ten buttons, three bag slots. All future
-   stock is visible. One trade-in returns one button and frees a slot before a
-   purchase. A finished basket scores charm + four per request + spare buttons.
-   A request always needs TWO DISTINCT items; items may serve other requests.
-   There is no real currency, clock, pet-stat advantage, or repeatable XP payout. */
-export const MARKET_BUDGET=10, MARKET_BAG_SIZE=3, MARKET_ROUNDS=6;
-function marketRandom(seed){let n=seed>>>0;return ()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};}
-function marketShuffle(values,random){const a=values.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-export function marketLayout(seed,{version=1}={}){
- const random=marketRandom(seed),items=marketShuffle(MARKET_ITEMS,random).slice(0,MARKET_ROUNDS*2);
- const layout={stalls:Array.from({length:MARKET_ROUNDS},(_,i)=>items.slice(i*2,i*2+2)),requests:marketShuffle(MARKET_REQUESTS,random).slice(0,3)};
- if(version===2){const first=(seed>>>2)%6,rare=(seed>>>5)%MARKET_RARITIES.length;layout.stalls[first][1]=MARKET_RARITIES[rare];layout.stalls[(first+3)%6][1]=MARKET_RARITIES[(rare+3)%MARKET_RARITIES.length];}
- return layout;
-}
-export function scoreMarket(bag,buttons,requests,secret=false){
- const fulfilled=requests.map(request=>bag.some((item,i)=>item.tags.includes(request.tags[0])&&bag.some((other,j)=>i!==j&&other.tags.includes(request.tags[1]))));
- const charm=bag.reduce((n,item)=>n+item.charm,0),requestPoints=fulfilled.filter(Boolean).length*4;
- const scandal=secret?3:0;
- return {charm,requestPoints,buttons,fulfilled,total:charm+requestPoints+buttons-scandal,...(scandal?{scandal}: {})};
-}
-function applyMarketMove(snapshot,move){
- if(snapshot.step>=MARKET_ROUNDS||!move||!(move.pick===null||typeof move.pick==='string')||!(move.trade===null||typeof move.trade==='string'))return false;
- if(move.secret===true){
-  if(snapshot.version!==2||snapshot.secret||move.pick!==null||move.trade!==null)return false;
-  snapshot.secret=true;snapshot.secretStall=snapshot.step;snapshot.buttons+=3;snapshot.step++;return true;
- }
- const item=snapshot.stalls[snapshot.step].find(x=>x.id===move.pick);
- if(move.pick!==null&&!item)return false;
- // Trading and buying happen as one move; rejected purchases keep the old item.
- const trade=move.trade===null?null:snapshot.bag.find(x=>x.id===move.trade);
- if(move.trade!==null&&(!trade||snapshot.traded||!item))return false;
- const bag=trade?snapshot.bag.filter(x=>x.id!==trade.id):snapshot.bag.slice(),buttons=snapshot.buttons+(trade?1:0);
- if(item&&(bag.length>=MARKET_BAG_SIZE||item.cost>buttons))return false;
- snapshot.bag=item?[...bag,item]:bag;snapshot.buttons=buttons-(item?.cost||0);snapshot.traded||=!!trade;snapshot.step++;
- return true;
-}
-export function marketSnapshot(state){
- const market=lifeState(state).market;if(!market)return null;
- if(market.version>=3)return errandSnapshot(market);
- const version=market.version===2?2:1,layout=marketLayout(market.seed,{version}),snapshot={...layout,seed:market.seed,version,step:0,buttons:MARKET_BUDGET,bag:[],traded:false,secret:false,complete:false,claimed:false};
- for(const move of market.moves){if(!applyMarketMove(snapshot,move))break;}
- // Damaged legacy/imported histories stop at the last legal decision.
- if(snapshot.step!==market.moves.length){market.moves=market.moves.slice(0,snapshot.step);market.claimed=false;}
- snapshot.complete=snapshot.step===MARKET_ROUNDS;snapshot.claimed=market.claimed;
- snapshot.score=scoreMarket(snapshot.bag,snapshot.buttons,snapshot.requests,snapshot.secret);
- return snapshot;
-}
-export function startMarket(state,{replay=false,expanded=false,errands=false,petId=null,practice=false,learning=false}={}){
- const l=lifeState(state);if(!state.pets.length||l.market&&!l.market.claimed)return false;
- const previous=l.market?.seed,version=replay&&previous?(l.market.version||1):(errands?(learning?5:4):expanded?2:1);
- if(!replay||!previous)l.marketSerial++;
- // Stable market numbers let players retry an identical planning puzzle.
- const seed=replay&&previous?previous:(Math.imul(l.marketSerial,2654435761)>>>0)||1;
- const lead=state.pets.find(p=>p.id===petId),crew=(lead?[lead,...state.pets.filter(p=>p.id!==petId)]:state.pets).slice(0,3);
- const patrons=replay&&previous?l.market.patrons:crew.map(p=>p.name);
- l.market={...(version===5?{practice:replay&&previous?l.market.practice===true:practice,tier:replay&&previous?l.market.tier:practice?0:mastery(state,'market').tier}:{}),seed,moves:[],claimed:false,...(version>=2?{version}: {}),...(version>=3?{patrons}: {}),...(version>=4?{patronIds:replay&&previous?l.market.patronIds:crew.map(p=>p.id)}:{})};return true;
-}
-export function chooseMarket(state,pick,trade=null,{secret=false}={}){
- const l=lifeState(state),snapshot=marketSnapshot(state),move={pick,trade,...(secret?{secret:true}: {})};
- if(!snapshot||snapshot.complete||snapshot.claimed||!(snapshot.version>=3?applyErrandMove(snapshot,move):applyMarketMove(snapshot,move)))return false;
- l.market.moves.push(move);return true;
-}
-export function deliverMarket(state,request,items){
- const l=lifeState(state),snapshot=marketSnapshot(state),move={type:'deliver',request,items};
- if(!(snapshot?.version>=3)||snapshot.claimed||!applyErrandMove(snapshot,move))return false;
- l.market.moves.push({type:'deliver',request,items:items.slice()});return true;
-}
-export function leaveMarket(state){
- const l=lifeState(state),snapshot=marketSnapshot(state),move={type:'leave'};
- if(!(snapshot?.version>=3)||snapshot.claimed||!applyErrandMove(snapshot,move))return false;
- l.market.moves.push(move);return true;
-}
-export function claimMarket(state,now=Date.now()){
- const l=lifeState(state),snapshot=marketSnapshot(state);
- if(!snapshot?.complete||snapshot.claimed)return null;
- const score=snapshot.score,done=score.fulfilled.filter(Boolean).length,tier=snapshot.version>=3?(done===snapshot.requests.length?2:done===2?1:0):score.total===bestMarketScore(snapshot.seed,{version:snapshot.version})?2:score.total>=17?1:0,relic=RELICS.find(r=>r.id==='market:'+tier);
- l.market.claimed=true;l.marketRuns++;
- if(snapshot.version===5 && !l.market.practice && done===snapshot.requests.length){const before=mastery(state,'market').tier;completeMastery(state,'market',snapshot.tier,'market:'+snapshot.seed);const after=mastery(state,'market').tier;if(after>before)l.market.masteryUnlocked=after;}
- if(snapshot.version>=4)recordEscapadeEvent(state,{kind:'play',petIds:(snapshot.patronIds||[]).filter(id=>state.pets.some(p=>p.id===id)),activity:'market'},now);
- if(snapshot.version===5)l.marketErrandBestV5[snapshot.tier]=Math.max(l.marketErrandBestV5[snapshot.tier]||0,score.total);else if(snapshot.version===4)l.marketErrandBestV4=Math.max(l.marketErrandBestV4||0,score.total);else if(snapshot.version===3)l.marketErrandBest=Math.max(l.marketErrandBest||0,score.total);else l.marketBest=Math.max(l.marketBest,score.total);
- const fresh=!l.relics.includes(relic.id);
- if(fresh){l.relics.push(relic.id);l.xp+=4;if(l.displayed.length<3)l.displayed.push(relic.id);}
- const first=awardDiscovery(state,'game:market',3,now);dailyActivity(state,'market',now);l.introDone=true;
- const cast=(snapshot.version>=4?(snapshot.patronIds||[]):state.pets.slice(0,2).map(p=>p.id)).filter(id=>state.pets.some(p=>p.id===id)).slice(0,2),names=cast.map(id=>state.pets.find(p=>p.id===id).name).join(' and ')||'The household';
- const text=snapshot.version>=3?names+' delivered '+done+' of '+snapshot.requests.length+' household errands and brought home '+snapshot.buttons+' buttons. '+(done===snapshot.requests.length?'Everyone got what they asked for. They are meeting to decide what they meant.':done?'The completed errands are pleased. The others have requested your manager.':'They brought the list back. The list was not one of the errands.')+(snapshot.score.premiumPoints?' Special deliveries earned '+snapshot.score.premiumPoints+' points.':''):names+' returned from the night market with '+snapshot.bag.length+' questionable purchase'+(snapshot.bag.length===1?'':'s')+' and '+score.fulfilled.filter(Boolean).length+' of 3 requests filled. '+(tier===2?'The vendors applauded. One of them checked for missing buttons.':tier===1?'The household calls this careful budgeting. The receipt calls it three objects in a bag.':'The bag has been presented as an artistic statement. This is why nobody lets the bag speak.')+' '+relic.line;
- recordScene(state,'market','The Unlicensed Night Market',text,cast,now,{key:'market',object:relic.id});addNote(state,text,'the night market','scheme');
- return {score,relic,fresh,first};
-}
-
-// A tiny exhaustive planner runs only on the result screen. It gives a truthful
-// attainable target for replay, considering skip, buy and the single trade-in.
-// No solution or advice is revealed before the player's first attempt ends.
-const marketBestCache=new Map();
-export function bestMarketScore(seed,{version=1}={}){
- if(version>=3)return bestErrandScore(seed,{version});
- const cacheKey=seed+':'+version;if(marketBestCache.has(cacheKey))return marketBestCache.get(cacheKey);
- const layout=marketLayout(seed,{version}),seen=new Map();let best=0;
- function visit(s){
-  if(s.step===MARKET_ROUNDS){best=Math.max(best,scoreMarket(s.bag,s.buttons,s.requests,s.secret).total);return;}
-  const key=[s.step,s.buttons,s.traded?1:0,s.secret?1:0,s.bag.map(i=>i.id).sort().join(',')].join('|');if(seen.has(key))return;seen.set(key,true);
-  if(version===2&&!s.secret){const next={...s,bag:s.bag.slice()};if(applyMarketMove(next,{pick:null,trade:null,secret:true}))visit(next);}
-  for(const pick of [null,...s.stalls[s.step].map(x=>x.id)])for(const trade of [null,...(!s.traded&&pick?s.bag.map(x=>x.id):[])]){
-   const next={...s,bag:s.bag.slice()};if(applyMarketMove(next,{pick,trade}))visit(next);
-  }
- }
- visit({...layout,version,step:0,buttons:MARKET_BUDGET,bag:[],traded:false,secret:false});
- if(marketBestCache.size>=20)marketBestCache.delete(marketBestCache.keys().next().value);marketBestCache.set(cacheKey,best);return best;
-}

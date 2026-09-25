@@ -33,7 +33,7 @@ function navigation({widePhone=false}={}) {
     getElementById: id => elements.get(id) || null,
     querySelector: selector => selector === '.household-workshop' ? workshop : selector === '#noteFilters' ? noteFilters :
       selector === '.veil.open,#moreTray.open' ? [playroom, play, life, tray].find(veil => veil.classList.contains('open')) || null : null,
-    querySelectorAll: selector => selector === '.tabbar .tab[data-tab]' ? tabs : selector === '.wordmark' ? [logo] : selector === '#playVeil, #lifeVeil' ? [play, life] : selector === '.veil.open' ? [playroom, play, life].filter(veil => veil.classList.contains('open')) : [],
+    querySelectorAll: selector => selector === '.tabbar .tab[data-tab]' ? tabs : selector === '.wordmark' ? [logo] : selector === '#lifeVeil' ? [life] : selector === '.veil.open' ? [playroom, play, life].filter(veil => veil.classList.contains('open')) : [],
     addEventListener(name, listener) { const list = events.get(name) || []; list.push(listener); events.set(name, list); }
   };
   const window = { scrollY: 0, matchMedia: query => ({ matches: !widePhone || query.includes('pointer:coarse'), addEventListener() {} }), addEventListener(name, listener) { windowEvents.set(name, listener); }, scrollTo({ top }) { this.scrollY = top; } };
@@ -72,24 +72,24 @@ test('the logo returns from a hidden notes pane to the shelf instead of followin
 });
 
 test('Back to games runs the game close handler once before reopening the catalogue', () => {
-  const nav = navigation(); nav.chooseGame();
-  assert.equal(nav.playClose.textContent, 'Back to games');
-  nav.playClose.click(); nav.flush();
+  const nav = navigation(); nav.chooseGame('outing');
+  assert.equal(nav.lifeClose.textContent, 'Back to games');
+  nav.lifeClose.click(); nav.flush();
   assert.equal(nav.cleaned, 1); assert.equal(nav.returned, 1);
-  assert.equal(nav.playroom.classList.contains('open'), true); assert.equal(nav.playClose.textContent, 'Close');
+  assert.equal(nav.playroom.classList.contains('open'), true); assert.equal(nav.lifeClose.textContent, 'Close');
   nav.flush(); assert.equal(nav.returned, 1);
 });
 
 test('wide phone landscape keeps the same return to games without switching the shelf panes', () => {
-  const nav=navigation({widePhone:true});nav.chooseGame();
-  assert.equal(nav.playClose.textContent,'Back to games');
-  nav.playClose.click();nav.flush();
+  const nav=navigation({widePhone:true});nav.chooseGame('outing');
+  assert.equal(nav.lifeClose.textContent,'Back to games');
+  nav.lifeClose.click();nav.flush();
   assert.equal(nav.cleaned,1);assert.equal(nav.returned,1);
 });
 
 test('a game opened directly from a resident closes normally without an invented return destination', () => {
-  const nav = navigation(); nav.play.classList.add('open'); nav.flush();
-  assert.equal(nav.playClose.textContent, 'Close'); nav.playClose.click(); nav.flush();
+  const nav = navigation(); nav.life.classList.add('open'); nav.flush();
+  assert.equal(nav.lifeClose.textContent, 'Close'); nav.lifeClose.click(); nav.flush();
   assert.equal(nav.cleaned, 1); assert.equal(nav.returned, 0);
 });
 

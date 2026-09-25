@@ -85,7 +85,7 @@ export function initDialogs({ onOpen } = {}) {
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'true');
     if (panel.id === 'hangoutVeil') panel.setAttribute('aria-labelledby', 'rugTitle');
-    panel.setAttribute('aria-label', ({ escapadeVeil: 'Little adventures', playroomVeil: 'The playroom', lifeVeil: 'Your small world', museumVeil: 'Memory museum', playVeil: 'Play together', studioVeil: 'Make a pet', cardVeil: 'Resident details', decorVeil: 'Decorate', voiceVeil: 'Narrator voice', incidentsVeil: 'Incidents', helpVeil: 'A small field guide', restoreVeil: 'Restore a shelf', transferVeil: 'Email or share your shelf', postcardVeil: 'A postcard', moreTray: 'Everything else' })[panel.id] || 'Dialog');
+    panel.setAttribute('aria-label', ({ escapadeVeil: 'Little adventures', playroomVeil: 'The playroom', lifeVeil: 'Your small world', museumVeil: 'Memory museum', playVeil: 'Play together', studioVeil: 'Make a pet', cardVeil: 'Resident details', decorVeil: 'Decorate', voiceVeil: 'Narrator voice', incidentsVeil: 'Incidents', mayhemVeil: 'Emergencies and curios', arcadeVeil: 'The arcade', helpVeil: 'A small field guide', restoreVeil: 'Restore a shelf', transferVeil: 'Email or share your shelf', postcardVeil: 'A postcard', moreTray: 'Everything else' })[panel.id] || 'Dialog');
     new MutationObserver(sync).observe(panel, { attributes: true, attributeFilter: ['class'] });
   });
   document.addEventListener('keydown', e => {

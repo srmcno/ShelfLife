@@ -34,12 +34,13 @@ try {
       const url=new URL(base);url.searchParams.set('verify',revision);
       await page.goto(url.href);await page.locator('[data-arrival="mabel"]').click();await page.locator('#quickAdopt').click();
       await expect(page.locator('#cabinet .pet')).toHaveCount(1);
-      await page.locator('#tabPlay').click();await page.locator('[data-activity="court"]').click();
-      await expect(page.locator('#toast')).not.toHaveClass(/show/);await expect(page.locator('#toast')).toBeEmpty();
-      await expect(page.locator('#courtCaseTitle')).toBeVisible();await page.locator('.court-clue-tabs [data-clue="0"]').click();
-      await page.screenshot({path:'live-check-results/'+label+'-court.png'});
-      assert.ok((await saved()).life.court.moves.length>0);await page.locator('#lifeClose').click();
-      await expect(page.locator('#playroomVeil')).toBeVisible();await page.locator('#playroomVeil [data-activity="outing"]').click();
+      await page.locator('#tabPlay').click();await page.locator('[data-game="stack"]').click();
+      await expect(page.locator('#toast')).not.toHaveClass(/show/);
+      await page.locator('#arcadeSheet [data-ar="play"]').click();await page.keyboard.press('Space');
+      await expect(page.locator('#arcadeSheet [data-ar-score]')).toHaveText('1');
+      await page.screenshot({path:'live-check-results/'+label+'-arcade.png'});
+      await page.locator('#arcadeSheet [data-ar="close"]').click();await expect(page.locator('#arcadeVeil')).not.toBeVisible();
+      await page.locator('#tabPlay').click();await expect(page.locator('#playroomVeil')).toBeVisible();await page.locator('#playroomVeil [data-activity="outing"]').click();
       await page.locator('[data-life="set-out"]').click();await page.locator('[data-life="outing-choice"][data-choice="0"]').click();
       await expect(page.locator('.expedition-cast')).toHaveCSS('opacity','1');
       await page.screenshot({path:'live-check-results/'+label+'-expedition.png'});
@@ -63,7 +64,7 @@ try {
       await page.locator('#hangoutBtn').click();await expect(page.locator('#rugTally')).toHaveText('1 / 6');
       const art = await page.evaluate(async()=>{const response=await fetch(new URL('assets/rooms/play-rug.webp',document.baseURI));return response.ok&&(await response.arrayBuffer()).byteLength>100000;});
       assert.ok(art,'The installed room artwork must be readable offline');assert.deepEqual(errors,[]);
-      console.log(JSON.stringify({viewport:label,revision,court:'saved clue',expedition:'saved first stop',paperwork:'persisted',rug:'real catch',offline:'saved game and artwork',errors}));
+      console.log(JSON.stringify({viewport:label,revision,arcade:'real drop',expedition:'saved first stop',paperwork:'persisted',rug:'real catch',offline:'saved game and artwork',errors}));
     } catch(error) {
       await page.screenshot({path:'live-check-results/'+label+'-failure.png',fullPage:true}).catch(()=>{});
       throw error;

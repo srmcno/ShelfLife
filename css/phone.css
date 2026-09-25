@@ -21,9 +21,7 @@
   .filter-chip,
   .chip,
   .opt,
-  .topbar .playroom-launch,
-  .play-modes .chip,
-  .chase-mode .play-modes .chip {
+  .topbar .playroom-launch{
     min-height: 44px;
     min-width: 44px;
   }
@@ -37,9 +35,7 @@
 
   .sheet-head h2,
   .sheet-head .eyebrow,
-  .activity-card,
-  .market-offer,
-  .suspect-card {
+  .activity-card{
     overflow-wrap: anywhere;
   }
 
@@ -48,114 +44,72 @@
   .activity-detail { font-size: 12px; }
   .sheet summary { min-height: 44px; padding-block: 12px; }
   .life-links .btn { white-space: normal; line-height: 1.4; }
-  .market-offer .btn { min-height: 48px; }
+  
 
   /* Suspects need enough width to read their evidence before choosing one. */
-  .suspect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .suspect-card { min-width: 0; padding: 12px 9px; }
-  .suspect-card b { font-size: 14px; }
-  .suspect-card span { font-size: 12px; }
+  
+  
+  
+  
 
   /* A paused game and a result use the same overlay. Long explanations scroll
      inside its visible bounds, with the next-play button kept reachable. */
-  .chase-overlay {
-    inset: 8px 8px auto;
-    max-height: calc(100% - 16px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    touch-action: pan-y;
-    padding: 12px;
-    scroll-padding-bottom: 56px;
-  }
+  
   /* Touch action intersects with ancestors: allow result scrolling on the
      field as well, then restore gesture steering when the overlay is hidden. */
-  .chase-field:has(.chase-overlay:not([hidden])) { touch-action: pan-y; }
-  .chase-overlay p { font-size: 12px; }
-  .chase-overlay #chaseGo {
-    position: sticky;
-    bottom: 0;
-    min-height: 48px;
-    z-index: 1;
-    box-shadow: 0 0 0 5px #201822;
-  }
+  
+  
+  
 
-  .chase-mode .sheet-play { padding-top: 0; }
-  .chase-mode .sheet-head { padding-bottom: 9px; margin-bottom: 8px; }
-  .chase-mode .play-modes { gap: 6px; margin: 6px 0; }
-  .chase-mode .play-modes .chip { flex: 1 1 0; justify-content: center; padding: 7px 8px; }
-  .play-modes label { min-height: 44px; }
-  #memoryOption { width: 100%; }
-  #memoryOption label { display: inline-flex; margin-right: 12px; }
+  
+  
+  
+  
+  
+  
+  
 
-  .chase-settings {
-    margin: 6px 0 8px;
-    border: 1px solid var(--hair-lit);
-    border-radius: 10px;
-    padding-inline: 11px;
-    background: var(--glass);
-  }
-  .chase-settings > summary { color: var(--mint); font-size: 12px; cursor: pointer; }
-  .chase-settings[open] { padding-bottom: 8px; }
-  .chase-venue { display: block; margin: 4px 0 10px; }
-  .chase-venue select { width: 100%; max-width: 100%; display: block; margin-top: 6px; }
-  .chase-practice-tools { margin: 6px 0; gap: 6px; }
-  .chase-challenge { flex: 1 1 100%; }
-  .chase-repeat { font-size: 12px; }
+  
+  
+  
+  
+  
+  
+  
+  
 
-  .chase-hud { gap: 6px; margin: 8px 0; }
-  .chase-hud > span { letter-spacing: .05em; }
-  .chase-hud b { font-size: 21px; }
-  .chase-objective { margin-bottom: 6px; }
-  .chase-star-target { margin: 4px 0 6px; }
-  .chase-field { margin-inline: auto; }
-  .chase-controls {
-    grid-template-columns: .85fr .85fr 1.1fr 1.4fr;
-    gap: 7px;
-    margin-top: 8px;
-    padding-block: 4px;
-    background: var(--night-2);
-    border-radius: 10px;
-  }
-  .chase-controls .btn { min-width: 0; min-height: 56px; padding: 8px 4px; }
-  .chase-controls #chaseHop { font-size: 15px; }
-  .chase-controls #chaseDash { font-size: 13px; white-space: nowrap; }
-  .chase-tip { font-size: 12px; }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
   /* During a 22-second run the field and controls get the screen. Settings
      return automatically when paused or finished, preserving every choice. */
-  .chase-mode:has(#chaseOverlay[hidden]) .play-modes,
-  #chaseArea:has(#chaseOverlay[hidden]) .chase-settings {
-    display: none;
-  }
+  
 
   /* Native pinch zoom remains available outside the direct game controls. */
   .tab,
   .btn,
   .chip,
   .filter-chip,
-  .activity-card,
-  .suspect-card { -webkit-tap-highlight-color: transparent; }
+  .activity-card{ -webkit-tap-highlight-color: transparent; }
 }
 
 @media (max-width: 720px) and (max-height: 700px) {
-  .chase-mode .sheet-play { max-height: calc(100dvh - var(--sat)); }
-  .chase-mode .sheet-head { padding-top: 19px; }
-  .chase-mode .sheet-head h2 { font-size: 23px; }
-  .chase-field { width: min(100%, 320px); }
+  
+  
+  
+  
   /* Text and results remain scrollable on short screens; gameplay never
      compresses the world into a different shape to try to hide overflow. */
-  .chase-mode:has(#chaseOverlay[hidden]) .chase-field {
-    width: min(100%, max(240px, calc((100dvh - 265px) * 1.3913)));
-  }
-}
-
-@media (max-width: 370px) {
-  .chase-hud b { font-size: 19px; }
-  .chase-hud .btn { padding-inline: 7px; }
-  .chase-controls { gap: 5px; }
-  .chase-controls #chaseHop { font-size: 14px; }
-  .chase-controls #chaseDash { font-size: 12px; }
-  .market-offers { grid-template-columns: 1fr; }
+  
 }
 
 /* The app chrome has five clear destinations; game-specific stages keep their
@@ -217,9 +171,9 @@
   .tray-grid .effects-setting { grid-column: 1 / -1; min-width: 0; }
   .tray select, .pane select { font-size: 16px; min-height: 44px; max-width: 100%; }
 
-  .veil:not(.court-mode) .sheet { padding-inline: max(16px, var(--sal)) max(16px, var(--sar)); }
-  .veil:not(.court-mode) .sheet-head > h2 { min-width: 0; line-height: 1.2; }
-  .veil:not(.court-mode) .sheet-head > .btn { min-height: 44px; white-space: normal; max-width: 132px; }
+  .veil .sheet { padding-inline: max(16px, var(--sal)) max(16px, var(--sar)); }
+  .veil .sheet-head > h2 { min-width: 0; line-height: 1.2; }
+  .veil .sheet-head > .btn { min-height: 44px; white-space: normal; max-width: 132px; }
   .sheet input[type="search"], .sheet input[type="number"], .sheet textarea { font-size: 16px; min-height: 44px; max-width: 100%; }
   .sheet textarea { line-height: 1.5; }
   .sheet :is(button, summary, select, input, textarea):focus-visible,

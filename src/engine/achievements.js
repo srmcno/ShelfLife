@@ -1,4 +1,5 @@
 import { VISITORS } from '../content/stories.js';
+import { ARCADE_GAMES } from '../content/arcade.js';
 import { remember } from './stories.js';
 import { FEUDS, FEUD_LINES, ESCALATION_LINES, TRUCE_LINES } from '../content/feuds.js';
 import { GRUDGE_LINES, STREAK_LINES } from '../content/copy.js';
@@ -80,6 +81,11 @@ export function stepFeudArc(state, pairKey, a, b, now = Date.now()) {
   addNote(state, pick(FEUD_LINES).replace(/\{a\}/g, a.name).replace(/\{b\}/g, b.name), 'observed', 'feud');
   return 'ongoing';
 }
+
+// The arcade keeps one best score per game. Legacy players keep whatever they
+// already earned from the retired games; these checks only look forward.
+const arcadeRuns = state => Object.values(state.arcade?.plays || {}).reduce((n, v) => n + (Number(v) || 0), 0);
+const topTier = state => ARCADE_GAMES.some(g => (state.arcade?.best?.[g.id] || 0) >= g.tiers[g.tiers.length - 1]);
 
 export const GRUDGE_STAGE_AT = [5, 12, 20];
 
@@ -170,10 +176,10 @@ export const ACHIEVEMENTS = [
   { id: 'three-cases', hint: 'Close three household mysteries.', label: 'A Pattern Of Incidents', desc: 'Closed three case files.', toastLine: 'Three files. At this point the shelf is a jurisdiction.', check: state => closedCases(state) >= 3 },
   { id: 'first-visitor', hint: 'Welcome a temporary visitor before it leaves.', label: 'Hospitality', desc: 'Welcomed a visitor and kept its keepsake.', toastLine: 'A visitor accepted your hospitality. The souvenir is already refusing to leave.', check: state => ((state.stories || {}).collection || []).length >= 1 },
   { id: 'all-visitors', hint: 'Collect every visiting curiosity for the museum.', label: 'The Complete Set', desc: 'Every visitor souvenir is in the museum.', toastLine: 'Every curiosity accounted for. You are collecting guests now.', check: state => VISITORS.every(v => state.stories?.collection?.some(c => c.id === v.id)) },
-  { id: 'first-handshake', hint: 'Learn one resident’s secret handshake.', label: 'Initiated', desc: 'Completed a secret handshake.', toastLine: 'You know the handshake. There is no undoing that.', check: state => state.pets.some(p => (p.handshakes || 0) >= 1) },
-  { id: 'handshake-veteran', hint: 'Learn the same resident’s handshake ten times.', label: 'Fluent', desc: 'Ten handshakes with one resident.', toastLine: 'Ten. It has started adding flourishes you did not agree to.', check: state => state.pets.some(p => (p.handshakes || 0) >= 10) },
-  { id: 'chase-win', hint: 'Reach the crumb goal in one Crumb Chase.', label: 'Crumb Bailiff', desc: 'Won a Crumb Chase outright.', toastLine: 'Crumb goal reached. The dust bunnies have taken note.', check: state => state.pets.some(p => (p.chaseBest || {}).stars >= 2) },
-  { id: 'chase-perfect', hint: 'Take three stars in a single Crumb Chase.', label: 'Unreasonably Good At This', desc: 'A three-star chase.', toastLine: 'Three stars. It is four inches tall and it is showing off.', check: state => state.pets.some(p => (p.chaseBest || {}).stars >= 3) },
+  { id: 'first-handshake', hint: 'Finish a run in the arcade.', label: 'After Hours', desc: 'Played a game in the arcade.', toastLine: 'The arcade has your initials now. They are carved into a coffin.', check: state => arcadeRuns(state) >= 1 },
+  { id: 'handshake-veteran', hint: 'Play fifty arcade runs.', label: 'Regular', desc: 'Fifty runs in the arcade.', toastLine: 'Fifty. The dead have started saving you a seat.', check: state => arcadeRuns(state) >= 50 },
+  { id: 'chase-win', hint: 'Score 40 in Feeding Frenzy.', label: 'Crumb Bailiff', desc: 'Forty points of falling food.', toastLine: 'Forty. The ceiling has been asked to stop.', check: state => (state.arcade?.best?.frenzy || 0) >= 40 },
+  { id: 'chase-perfect', hint: 'Reach the top score tier in any arcade game.', label: 'Unreasonably Good At This', desc: 'Three skulls in one run.', toastLine: 'Three skulls. It is four inches tall and it is showing off.', check: topTier },
   { id: 'promise-kept', hint: 'Accept a resident’s request and actually do it.', label: 'Good For It', desc: 'Kept a promise to a resident.', toastLine: 'You said you would and then you did. They are recalibrating.', check: state => state.pets.some(p => (p.fulfilledRequests || 0) >= 1) },
   { id: 'promise-broken', hint: 'Refuse a resident to its face.', label: 'On The Record', desc: 'Declined a resident’s request.', toastLine: 'Declined. Filed. It was very understanding, which is worse.', check: state => state.pets.some(p => (p.refusedRequests || 0) >= 1) },
   { id: 'promises-five', hint: 'Keep five promises across the shelf.', label: 'Dependable, Apparently', desc: 'Five requests fulfilled.', toastLine: 'Five kept promises. Somebody has started a different kind of list.', check: state => state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0) >= 5 },
@@ -228,8 +234,8 @@ export const INCIDENT_PROGRESS = {
   'streak-3': state => ({ have: state.streak.count || 0, need: 3 }),
   'streak-7': state => ({ have: state.streak.count || 0, need: 7 }),
   'terminal-grudge': state => ({ have: Math.max(0, ...state.pets.map(p => p.grudges || 0)), need: 20 }),
-  'handshake-veteran': state => ({ have: Math.max(0, ...state.pets.map(p => p.handshakes || 0)), need: 10 }),
-  'chase-perfect': state => ({ have: Math.max(0, ...state.pets.map(p => (p.chaseBest || {}).stars || 0)), need: 3 }),
+  'handshake-veteran': state => ({ have: arcadeRuns(state), need: 50 }),
+  'chase-win': state => ({ have: state.arcade?.best?.frenzy || 0, need: 40 }),
   'promises-five': state => ({ have: state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0), need: 5 }),
   'three-cases': state => ({ have: closedCases(state), need: 3 }),
   'all-visitors': state => ({ have: (((state.stories || {}).collection) || []).length, need: VISITORS.length })

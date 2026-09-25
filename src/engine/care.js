@@ -6,6 +6,7 @@ import { tick, isAsleep } from './tick.js';
 import { ASLEEP_LINES, OVERFED, CARE_LINES, ROUNDS_NOTES, ROUNDS_NAMED, ROUNDS_TOASTS } from '../content/copy.js';
 import { clamp, pick, addNote, recordCare } from '../state.js';
 import { recordEscapadeEvent } from '../escapade-state.js';
+import { rewardCare, rewardRounds } from './mayhem.js';
 
 export const CARE_GAIN = { food: 34, fuss: 38, clean: 42 };
 
@@ -60,7 +61,8 @@ export function careFor(state, pet, need, now = Date.now()) {
       bondGained = pet.bond > previousBond;
     }
   }
-  return { message: pet.name + ': ' + line, bondGained, gain: pet.needs[need] - before };
+  const souls = rewardCare(state, need, pet.needs[need] - before, now);
+  return { message: pet.name + ': ' + line, bondGained, gain: pet.needs[need] - before, souls };
 }
 
 export function doRounds(state, now = Date.now()) {
@@ -81,5 +83,6 @@ export function doRounds(state, now = Date.now()) {
     ? pick(ROUNDS_NAMED).replace(/\{first\}/g, first.name).replace(/\{last\}/g, last.name).replace(/\{n\}/g, String(inOrder.length))
     : pick(ROUNDS_NOTES);
   addNote(state, text, 'the shelf', 'note');
-  return { message: pick(ROUNDS_TOASTS) };
+  const souls = rewardRounds(state, now);
+  return { message: pick(ROUNDS_TOASTS), souls };
 }

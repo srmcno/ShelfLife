@@ -31,23 +31,23 @@ export const MOOD_BUBBLES = {
     'i licked the wood. it was fine.', 'nothing hurts. suspicious.', 'a good day for a crumb.',
     'the plank is warm today.', 'this little square suits me.', 'stillness suits my bad intentions.',
     'crumb secured.', 'warm enough to fake a pulse.', 'pick me up. brave of you.',
-    'glazed and pleased.', 'dust settling. let it.', 'i prefer flattering shadows.',
+    'glazed and pleased.', 'dust settling. let it.', 'fed, clean, cursed. perfect.', 'i buried a grudge. it is growing.', 'content as a well-kept grave.', 'i prefer flattering shadows.',
     'i could have a quiet opinion.', 'the bite was affectionate.', 'my square. my dust.',
     'immortal. still capable of sulking.', 'a crumb and a hundred years.', 'warm. i will keep this one.',
     'the dust is up to my seam. cosy.', 'hold me. mind the difficult end.',
     'a cuddle. teeth tucked in.', 'even my bad side likes warmth.', 'forever, but the warm sort.'
   ],
   fine: [
-    'hm.', '…', 'mm.', 'is it tuesday.', 'i have been counting dust.',
+    'counting my teeth. one extra.', 'i have been counting graves.', 'i have been counting dust.',
     'something moved. not me.', 'four inches. still.', 'forming a manageable complaint.',
-    'the wall is still there.', 'i had a thought. it left.', 'where did i put the crumb.',
+    'the wall knocked. i knocked back.', 'i had a thought. i buried it.', 'where did i put the crumb.',
     'bored, but alive. probably.', 'a fern might understand me.', 'i could lick that.',
     'a bowl would improve this thought.', 'waiting. i am good at it.', 'i could fit inside a bad idea.',
-    'all quiet. suspicious.', 'a moth went by. i said nothing.', 'slot life.',
+    'all quiet. suspicious.', 'a moth went by. i ate its name.', 'i dreamt of my own funeral. catered.',
     'the varnish tastes of march.', 'the moth died. show-off.', 'one day i will be dusted.',
-    'light has too many opinions.', 'slot life, day whatever.', 'is the plank oak.',
-    'a crumb went past.', 'counting possible escape routes.', 'my coffin could be a pencil case.',
-    'four inches. checked.', 'still waiting to decompose.', 'the notes are about me. probably.',
+    'light has too many opinions.', 'day nine thousand of being haunted.', 'the plank is someone’s coffin lid.',
+    'a crumb went past. i mourned it.', 'counting possible escape routes.', 'my coffin could be a pencil case.',
+    'i practised dying. got bored.', 'still waiting to decompose.', 'the notes are about me. probably.',
     'nothing moved. i checked twice.', 'the edge is still there.', 'the dust and i have an understanding.',
     'i miss being somebody’s problem.', 'the dust is taller by a hair.',
     'still four inches. still here.', 'i have outlived the guarantee.', 'a long life. very little plot.',
@@ -70,7 +70,8 @@ export const MOOD_BUBBLES = {
     'i will still be cross in a century.', 'noted. dated. shelved. like me.',
     'four inches and nothing in reach.', 'the crumb moved. i did not move it.',
     'they wiped my good side. again.', 'i am small, not optional.',
-    'i rehearsed your apology. poor.'
+    'i rehearsed your apology. poor.', 'i have written your eulogy. it is short.',
+    'i will outlive your houseplants.', 'your name is on my list. in ink.'
   ],
   furious: [
     'no.', '!', 'i will eat the bracket.', 'i have a mouthful of evidence.',
@@ -89,7 +90,8 @@ export const MOOD_BUBBLES = {
     'the coffin is for your finger.',
     'give me a century. i have one.', 'the dust looks like distant family.',
     'i would break if i could. i cannot.', 'the hand will hear from me. all year.',
-    'four inches of teeth and nowhere.'
+    'four inches of teeth and nowhere.', 'i will wear your finger as a hat.',
+    'feed me or i summon something.', 'i am drafting a curse. in crayon.'
   ]
 };
 
@@ -102,7 +104,8 @@ export const SLEEP_TALK = [
   'no flowers. just the thumb.', 'shh. the notes can hear.', 'the plank. it leans.',
   'it never ends. it never ends.', 'the drawer. no. the drawer.', 'i am under the shelf. i am.',
   'the previous one is awake too.',
-  'i was dead. it was very quiet.', 'the hand is smaller now. smaller.'
+  'i was dead. it was very quiet.', 'the hand is smaller now. smaller.',
+  'six feet. five. four. four inches.', 'grandmother, put the teeth back.', 'the worms send their regards.'
 ];
 
 export const PLOTTING_BUBBLES = [
@@ -127,7 +130,8 @@ export const NOTICE_BUBBLES = [
   'my thoughts deserve a larger head.', 'the trolley person.', 'you make a very large shadow.', 'come closer. i have concerns.',
   'hello. small body, many opinions.', 'you smell of the kitchen.', 'back before the wake. awkward.',
   'you look older. we do not.', 'you could stay a little while.', 'you came back. we never left.',
-  'we have been having private lives.', 'you smell of a day we missed.'
+  'we have been having private lives.', 'you smell of a day we missed.',
+  'we held a seance. you came.', 'we voted. you are still here.', 'we thought you had died. we planned a party.'
 ];
 
 export const TRAVEL_BUBBLES = [
@@ -143,13 +147,13 @@ export const TRAVEL_BUBBLES = [
 
 export const CARE_BUBBLES = {
   food: ['finally.', 'mine. all mine.', 'chew. chew. yes.', 'acceptable.', 'more.', 'i knew you would fold.', 'crumb accepted.', 'noted. thank you.', 'the bowl was a rumour. was.', 'the crumb has come home.', 'chewing. do not watch.', 'bowl acknowledged.', 'four inches fuller.',
-    'i will be hungry again in march.', 'a crumb against forever. fine.', 'the bowl remembered me today.'],
+    'i will be hungry again in march.', 'a crumb against forever. fine.', 'the bowl remembered me today.', 'tastes like a funeral. lovely.', 'last meal. again. my favourite.'],
   fuss: ['hm. nice.', 'again.', 'there. no, there.', 'do not stop.', 'i permit this.', 'that is my difficult spot. again.', 'ok. enough. no, more.', 'the seam likes it.', 'the thumb. the good thumb.', 'warm. suspiciously warm.', 'warm to the seam.', 'record attempt. shh.',
-    'warmer than the plank.', 'i will keep this one for years.', 'hold on a bit longer. longer.'],
+    'warmer than the plank.', 'i will keep this one for years.', 'hold on a bit longer. longer.', 'your hand is so alive. gross. nice.'],
   fussbad: ['get off.', 'no.', 'i did not ask.', 'hands.', 'personal space.', 'later. maybe.', 'i am four inches of no.', 'i have a seam. mind it.', 'the light saw that.', 'not on the good side.',
     'not the seam. never the seam.', 'i will recall this in a century.', 'put me down as you found me.'],
   clean: ['sparkling.', 'i was fine.', 'cold water. cold.', 'the dust will return.', 'i smell of soap. betrayal.', 'that was my good grime.', 'shiny. vulnerable.', 'my dust. gone.', 'the ring will be back.', 'damp on purpose now.', 'squeak. that was me.',
-    'that dirt and i were intimate.', 'my ring is gone. i will make one.', 'cold. and i cannot get ill.'],
+    'that dirt and i were intimate.', 'my ring is gone. i will make one.', 'cold. and i cannot get ill.', 'embalmed. finally.', 'clean as a fresh grave.'],
   rounds: ['ah. the rounds.', 'efficient. noted.', 'everyone got one. hm.', 'assembly line care.', 'i prefer individual obsession.', 'a rota is not love.', 'a trolley. i am a stop.', 'make eye contact with the problem.', 'same cloth. i saw.', 'the rota has been noted.',
     'the rota outlives everyone. me too.', 'same cloth, same order, forever.', 'a hand each. briefly.']
 };

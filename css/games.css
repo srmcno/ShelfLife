@@ -1,0 +1,151 @@
+/* =============================================================================
+   The arcade: four quick games in one sheet. The playfield is a lit little
+   stage; everything else stays out of the way.
+   ============================================================================= */
+.sheet-arcade{--ar-accent:#F6C768;max-width:560px;overflow:hidden;
+  background:radial-gradient(110% 55% at 50% 0%,color-mix(in srgb,var(--ar-accent) 16%,transparent),transparent 70%),linear-gradient(180deg,var(--night-3),var(--night-2))}
+.sheet-arcade .sheet-head{margin-bottom:12px;padding-bottom:10px}
+.sheet-arcade .sheet-head .eyebrow{color:var(--ar-accent)}
+.sheet-arcade .mh-glyph{display:block;width:100%;height:100%}
+
+/* ---- menu ---- */
+.ar-menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ar-menu-card{--ar-accent:#F6C768;display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:14px;border-radius:14px;text-align:left;cursor:pointer;font:inherit;color:var(--ink);
+  border:1px solid color-mix(in srgb,var(--ar-accent) 35%,transparent);background:radial-gradient(90% 80% at 100% 0%,color-mix(in srgb,var(--ar-accent) 18%,transparent),transparent 70%),#150e18;transition:transform .12s ease,border-color .12s ease}
+.ar-menu-card:hover,.ar-menu-card:focus-visible{transform:translateY(-2px);border-color:var(--ar-accent)}
+.ar-menu-card:focus-visible{outline:2px solid var(--ar-accent);outline-offset:2px}
+.ar-menu-glyph{width:42px;height:42px;color:var(--ar-accent)}
+.ar-menu-card b{font:22px/1.1 var(--display)}
+.ar-menu-card small{font-size:12.5px;line-height:1.4;color:var(--ink-2)}
+.ar-menu-card em{margin-top:auto;font-style:normal;font:700 10px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--ar-accent)}
+
+/* ---- intro ---- */
+.ar-intro{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.ar-intro-art{position:relative;width:220px;height:170px}
+.ar-intro-glyph{position:absolute;right:0;top:4px;width:78px;height:78px;color:var(--ar-accent);filter:drop-shadow(0 0 14px color-mix(in srgb,var(--ar-accent) 55%,transparent))}
+.ar-intro-pet{position:absolute;left:10px;bottom:0;width:140px;height:160px}
+.ar-intro-pet .sprite{width:100%;height:100%;--pet-h:140px}
+.ar-hook{margin:0;font:26px/1.2 var(--display);color:var(--ink);text-wrap:balance}
+.ar-howto{margin:0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:40ch}
+.ar-records{display:flex;gap:8px;margin:6px 0 2px}
+.ar-records span{display:flex;flex-direction:column;align-items:center;min-width:86px;padding:8px 10px;border-radius:12px;border:1px solid var(--hair-lit);background:#0004}
+.ar-records b{font:22px/1 var(--display);color:var(--ar-accent)}
+.ar-records small{margin-top:3px;font:700 9px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.ar-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:6px}
+.ar-go,.ar-again{min-width:150px;min-height:50px;font-size:17px}
+
+/* ---- hud ---- */
+.ar-hud{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.ar-hud>span{display:flex;flex-direction:column;line-height:1}
+.ar-hud small{font:700 9px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.ar-score b{font:30px/1 var(--display);color:var(--ar-accent);font-variant-numeric:tabular-nums}
+.ar-best b{font:18px/1.3 var(--display);color:var(--ink-2)}
+.ar-lives{flex-direction:row!important;gap:3px;margin-left:auto}
+.ar-lives i,.ar-tier i{display:block;width:22px;height:22px;color:#ffffff22}
+.ar-lives i.on,.ar-tier i.on{color:var(--ar-accent);filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ar-accent) 60%,transparent))}
+.ar-hud .ar-pause{min-height:36px;padding:6px 10px;letter-spacing:-.1em}
+.ar-hud:not(:has(.ar-lives)) .ar-pause{margin-left:auto}
+.ar-status{min-height:1.4em;margin:0 0 8px;font-size:12.5px;color:var(--ink-3)}
+
+/* ---- the field ---- */
+.ar-field{position:relative;width:100%;aspect-ratio:4/4.4;max-height:min(58vh,520px);border-radius:16px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;
+  background:radial-gradient(70% 50% at 50% 12%,color-mix(in srgb,var(--ar-accent) 16%,transparent),transparent 70%),linear-gradient(180deg,#1f1426,#0d0910 85%);border:1px solid var(--hair-lit);outline:none}
+.ar-field:focus-visible{box-shadow:0 0 0 2px var(--ar-accent)}
+.ar-field.hurt{animation:ar-hurt .35s ease-out 1}
+@keyframes ar-hurt{0%{box-shadow:inset 0 0 0 999px #c4243c55}100%{box-shadow:inset 0 0 0 999px transparent}}
+.ar-pop{position:absolute;z-index:8;transform:translate(-50%,-50%);font:800 16px var(--body);white-space:nowrap;pointer-events:none;animation:ar-pop .9s ease-out forwards;text-shadow:0 2px 6px #000}
+.ar-pop.good{color:var(--ar-accent)} .ar-pop.bad{color:#ff7f8e}
+@keyframes ar-pop{from{opacity:0;transform:translate(-50%,-30%) scale(.8)}20%{opacity:1}to{opacity:0;transform:translate(-50%,-160%) scale(1.1)}}
+.ar-paused{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:0;cursor:pointer;background:#08050bcc;color:var(--ink);font:inherit}
+.ar-paused b{font:30px var(--display)} .ar-paused span{font:20px var(--hand);color:var(--ink-2)}
+.ar-pads{display:flex;gap:10px;margin-top:10px}
+.ar-pad{flex:1;min-height:60px;font-size:24px}
+.ar-pad.wide{font-size:17px}
+
+/* Feeding Frenzy */
+.ar-floor{position:absolute;left:0;right:0;bottom:0;height:9%;background:linear-gradient(180deg,#5c3a47,#2b1822);box-shadow:inset 0 2px 0 #7a4c5b}
+.ar-catcher{position:absolute;bottom:7%;left:50%;z-index:3;width:24%;aspect-ratio:1/1.1;transform:translateX(-50%);pointer-events:none}
+.ar-catcher .sprite{width:100%;height:100%;--pet-h:110px}
+.ar-item{position:absolute;z-index:2;width:9%;aspect-ratio:1;transform:translate(-50%,-50%) rotate(var(--spin,0deg));pointer-events:none}
+.ar-item.good{color:var(--ar-accent);filter:drop-shadow(0 0 6px color-mix(in srgb,var(--ar-accent) 50%,transparent))}
+.ar-item.bad{color:#7fd8ff;filter:drop-shadow(0 0 6px #7fd8ff88)}
+.ar-item.k-trap{color:#c9bcae;filter:none} .ar-item.k-heart{color:#ff4d5e;filter:drop-shadow(0 0 10px #ff4d5e)}
+.ar-frenzy-glow{position:absolute;inset:0;opacity:0;transition:opacity .3s;background:radial-gradient(60% 60% at 50% 100%,#ff4d5e44,transparent 70%);pointer-events:none}
+.ar-field.frenzied .ar-frenzy-glow{opacity:1}
+
+/* Coffin Stack */
+.ar-tower{position:absolute;inset:0;transition:transform .35s ease}
+.ar-coffin{position:absolute;height:7.5%;border-radius:40% 40% 10% 10% / 60% 60% 20% 20%;
+  background:linear-gradient(180deg,#8a5a6b,#5c3a47 55%,#3a2330);box-shadow:inset 0 2px 0 #b07a8c,inset 0 -3px 0 #0005,0 2px 0 #0007}
+.ar-coffin::after{content:'';position:absolute;left:50%;top:22%;width:10%;max-width:10px;height:56%;transform:translateX(-50%);background:linear-gradient(90deg,transparent 30%,#f6c76899 30% 70%,transparent 70%),linear-gradient(0deg,transparent 30%,#f6c76899 30% 48%,transparent 48%)}
+.ar-mover{position:absolute;height:7.5%;z-index:3}
+.ar-mover .ar-coffin{position:absolute;inset:0;height:100%;background:linear-gradient(180deg,color-mix(in srgb,var(--ar-accent) 70%,#fff 10%),color-mix(in srgb,var(--ar-accent) 55%,#000));box-shadow:0 0 18px -2px var(--ar-accent)}
+.ar-coffin.falling{z-index:1;animation:ar-fall .9s ease-in forwards}
+.ar-coffin.falling.left{--dx:-40px;--rot:-40deg} .ar-coffin.falling.right{--dx:40px;--rot:40deg}
+@keyframes ar-fall{to{transform:translate(var(--dx),420px) rotate(var(--rot));opacity:0}}
+.ar-rider{position:absolute;z-index:2;width:16%;aspect-ratio:1/1.1;transform:translate(-50%,0);transition:left .2s ease,bottom .35s ease;margin-bottom:-.5%}
+.ar-rider .sprite{width:100%;height:100%;--pet-h:70px}
+
+/* The Séance */
+.ar-circle{position:absolute;inset:0}
+.ar-medium{position:absolute;left:50%;top:50%;width:30%;aspect-ratio:1/1.1;transform:translate(-50%,-45%)}
+.ar-medium .sprite{width:100%;height:100%;--pet-h:120px}
+.ar-candle{--c:#f6c768;position:absolute;width:22%;aspect-ratio:1/1.25;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 0 6px;
+  border-radius:16px;border:1px solid #ffffff14;background:#0006;cursor:pointer;color:var(--ink-3);font:inherit;transition:background .1s}
+.ar-candle.c0{left:50%;top:16%;--c:#f6c768} .ar-candle.c1{left:83%;top:49%;--c:#ff7f8e} .ar-candle.c2{left:50%;top:82%;--c:#7fd8c0} .ar-candle.c3{left:17%;top:49%;--c:#b98bff}
+.ar-wax{display:block;width:30%;height:44%;border-radius:4px 4px 2px 2px;background:linear-gradient(90deg,#b8a88f,#efe3c8 45%,#9d8d75)}
+.ar-flame{display:block;width:22%;height:24%;margin-bottom:3px;border-radius:50% 50% 45% 45% / 62% 62% 38% 38%;background:radial-gradient(60% 60% at 50% 72%,#fff 0 18%,var(--c) 45%,transparent 100%);opacity:.18;transform:scale(.7);transition:opacity .08s,transform .08s}
+.ar-candle small{position:absolute;top:6px;right:9px;font:700 11px var(--body)}
+.ar-candle.lit{background:color-mix(in srgb,var(--c) 22%,#0006);border-color:var(--c);box-shadow:0 0 30px -4px var(--c)}
+.ar-candle.lit .ar-flame{opacity:1;transform:scale(1.25);filter:drop-shadow(0 0 10px var(--c))}
+.ar-field.listening .ar-candle{cursor:wait}
+
+/* Grave Whack */
+.ar-yard{position:absolute;inset:4% 3% 3%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:4%}
+.ar-grave{position:relative;overflow:hidden;border:0;padding:0;border-radius:12px;cursor:pointer;background:radial-gradient(70% 40% at 50% 88%,#2b1822,transparent 72%);font:inherit}
+.ar-stone{position:absolute;left:50%;top:4%;width:52%;aspect-ratio:1;transform:translateX(-50%);color:#6f6376}
+.ar-mound{position:absolute;left:6%;right:6%;bottom:6%;height:26%;border-radius:50% 50% 12px 12px;background:linear-gradient(180deg,#4a3326,#2a1c16);z-index:2}
+.ar-riser{position:absolute;left:50%;bottom:14%;width:50%;aspect-ratio:1;transform:translate(-50%,90%);transition:transform .09s ease-out;z-index:1}
+.ar-grave.up .ar-riser{transform:translate(-50%,0)}
+.ar-grave[data-kind="hand"] .ar-riser{color:#9be564}
+.ar-grave[data-kind="mourner"] .ar-riser{color:#ff9ab3}
+.ar-grave[data-kind="landlord"] .ar-riser{color:var(--ar-accent);filter:drop-shadow(0 0 10px var(--ar-accent))}
+.ar-grave.bonk .ar-mound{transform:scaleY(.8)}
+.ar-grave:focus-visible{outline:2px solid var(--ar-accent);outline-offset:-2px}
+
+/* ---- game over ---- */
+.ar-over{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding-top:6px;overflow:hidden}
+.ar-final{display:flex;flex-direction:column;align-items:center;gap:2px}
+.ar-final small{font:700 10px var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+.ar-final b{font:72px/1 var(--display);color:var(--ar-accent);text-shadow:0 0 30px color-mix(in srgb,var(--ar-accent) 45%,transparent)}
+.ar-final em{font-style:normal;font-size:13px;color:var(--ink-3)}
+.ar-newbest{padding:4px 12px;border:3px double var(--ar-accent);border-radius:8px;font:800 14px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--ar-accent);transform:rotate(-5deg);animation:mh-stamp .5s cubic-bezier(.2,1.8,.4,1) 1}
+.ar-tier{display:flex;gap:6px}
+.ar-tier i{width:30px;height:30px}
+.ar-quip{margin:4px 0 0;font:24px/1.35 var(--hand);color:var(--paper-lit);max-width:32ch}
+.ar-bestline{margin:0;font-size:13px;color:var(--ar-accent)}
+
+@media (max-width:720px){
+  .ar-field{aspect-ratio:4/4.6}
+  .ar-hook{font-size:22px}
+  .ar-final b{font-size:60px}
+}
+@media (max-width:380px){
+  .ar-menu-grid{grid-template-columns:1fr}
+  .ar-records span{min-width:70px}
+}
+@media (prefers-reduced-motion:reduce){
+  .ar-pop,.ar-coffin.falling,.ar-field.hurt,.ar-newbest{animation-duration:.01s!important}
+  .ar-tower,.ar-rider,.ar-riser{transition:none}
+}
+
+/* ---- the playroom catalogue ---- */
+#playroomVeil .play-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#playroomVeil .play-card{--ar-accent:#F6C768;position:relative;display:flex;min-height:0;flex-direction:column;gap:6px;text-align:left;border-color:color-mix(in srgb,var(--ar-accent) 30%,transparent)!important;
+  background:radial-gradient(90% 70% at 100% 0%,color-mix(in srgb,var(--ar-accent) 16%,transparent),transparent 70%),#150e18!important}
+.play-card:hover,.play-card:focus-visible{border-color:var(--ar-accent)!important}
+.play-card-glyph{width:44px;height:44px;color:var(--ar-accent);filter:drop-shadow(0 0 8px color-mix(in srgb,var(--ar-accent) 45%,transparent))}
+#playroomVeil .play-card .activity-kind{color:var(--ar-accent)}
+#playroomVeil .play-card .activity-action{background:color-mix(in srgb,var(--ar-accent) 22%,transparent);color:var(--ar-accent)}
+.play-card.for-adventure{box-shadow:0 0 0 2px var(--ar-accent),0 0 24px -6px var(--ar-accent)}
+.expedition-card{grid-column:1 / -1}

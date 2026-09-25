@@ -10,7 +10,7 @@ export const ROOMS = {
   midnight: { name: 'Midnight', swatch: '#0E1526', vars: { '--room-a': '#17233F', '--room-b': '#080C16', '--panel-a': '#131C31', '--panel-b': '#0C1322', '--line': '#2C3D63', '--rule': '#22314F', '--surface': '#141E36', '--surface-hi': '#1F2C4B', '--field': '#0F1728', '--bone': '#DDE6F5', '--bone-dim': '#93A3C2', '--wall-ink': 'rgba(190,210,255,.12)', '--room-key': '#9EC0FF' } }
 };
 
-export const WALLS = { none: 'Bare', stripes: 'Stripes', dots: 'Dots', grid: 'Grid', web: 'Cobwebs', diamond: 'Diamonds' };
+export const WALLS = { none: 'Bare', stripes: 'Stripes', dots: 'Dots', grid: 'Grid', web: 'Cobwebs', diamond: 'Diamonds', damask: 'Funeral damask' };
 
 export const WOODS = {
   rosewood: { name: 'Rosewood', wood: '#5C3A47', lip: '#7A4C5B' },

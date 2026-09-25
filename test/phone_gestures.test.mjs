@@ -65,7 +65,7 @@ test('an intentional downward pull still closes through the game close button', 
 });
 
 test('full-screen game workspaces cannot be pulled away while using their headers', () => {
-  for(const config of [{id:'playVeil'},{id:'playroomVeil'},{id:'lifeVeil',mode:'life-game-mode'},{id:'lifeVeil',mode:'court-mode'}]){
+  for(const config of [{id:'arcadeVeil'},{id:'playroomVeil'},{id:'lifeVeil',mode:'life-game-mode'}]){
     const g=sheetGesture(config);
     g.fire('pointerdown');g.fire('pointermove',{clientY:280});g.fire('pointerup',{clientY:280});
     assert.equal(g.closed,0,config.id+' '+config.mode);

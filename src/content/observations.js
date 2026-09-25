@@ -72,6 +72,12 @@ export const OBSERVATIONS = {
     '{p} is checking whether its shadow remembers the handshake. The shadow is one move behind.',
     '{p} has concealed the handshake in a normal itch. Please do not scratch the evidence.'
   ],
+  arcade: [
+    '{p} is practising Grave Whack on the bowl. The bowl has not climbed out once. {p} takes the credit.',
+    '{p}: “I stacked eleven coffins. The twelfth was mine. I was not ready to be the twelfth.”',
+    '{p} is holding a séance for its high score. The high score is not dead. {p} is making sure.',
+    '{p} caught a falling crumb in its sleep. Then some holy water. It woke up steaming and proud.'
+  ],
   alibi: [
     '{p} has lost a clean Alibi round to you. It is moving the truth to a less accessible orifice.',
     '{p}: “You found every lie. I was hoping my face would count as mitigation.”',

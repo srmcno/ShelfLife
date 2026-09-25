@@ -13,7 +13,6 @@ import { syncEffects } from './effects.js';
 import { roundsWait } from '../engine/care.js';
 import { checkWait } from '../engine/loop.js';
 import { isDragging } from './drag.js';
-import { playWait } from '../engine/play.js';
 import { renderScheme } from './schemes.js';
 import { moodOf, isAsleep, hasTrait, worstNeed, MOOD_WORD } from '../engine/tick.js';
 import { activeFeuds, ACHIEVEMENTS } from '../engine/achievements.js';
@@ -27,6 +26,7 @@ import { storyState, caseGate, currentCase, VISIT_LENGTH } from '../engine/stori
 import { VISITORS } from '../content/stories.js';
 import { renderTheatreControls } from './shelf-theatre.js';
 import { createArrivalInvitation } from './arrival.js';
+import { renderMayhem } from './mayhem.js';
 
 const cabinet = document.getElementById('cabinet');
 const notesEl = document.getElementById('notes');
@@ -65,6 +65,7 @@ export function renderAll(state) {
     renderEscapades(state);
     renderTheatreControls(state);
     renderPlayRug(state);
+    renderMayhem(state);
     save();
   });
 }
@@ -365,9 +366,9 @@ export function renderNotes(state) {
     paperworkDesk.hidden = noteFilter !== 'papers';
     if (!paperworkDesk.hidden) {
       const filed = report && papers.some(doc => doc.key === report.key);
-      paperworkDesk.innerHTML = '<div class="paperwork-heading"><span class="paperwork-seal" aria-hidden="true">SL<br>FILED</span><div><span class="eyebrow">The household filing desk</span><h2 id="paperworkTitle">A paper trail. Finally.</h2><p>Court verdicts, expedition reports, market receipts and the residents’ own documents. The latest ' + PAPERWORK_LIMIT + ' stay here when you clear the note board.</p></div></div>' +
+      paperworkDesk.innerHTML = '<div class="paperwork-heading"><span class="paperwork-seal" aria-hidden="true">SL<br>FILED</span><div><span class="eyebrow">The household filing desk</span><h2 id="paperworkTitle">A paper trail. Finally.</h2><p>Expedition reports, incident reports and the residents’ own documents. The latest ' + PAPERWORK_LIMIT + ' stay here when you clear the note board.</p></div></div>' +
         '<div class="paperwork-actions"><button type="button" class="btn" data-file-report' + (!report || filed ? ' disabled' : '') + '>' + (filed ? 'Report up to date' : 'File household report') + '</button>' +
-        (state.pets.length ? '<button type="button" class="btn btn-ghost" data-life="court">Open Shelf Court</button><button type="button" class="btn btn-ghost" data-life="outing">Plan an expedition</button>' : '') + '</div>' +
+        (state.pets.length ? '<button type="button" class="btn btn-ghost" data-life="outing">Plan an expedition</button>' : '') + '</div>' +
         '<p class="paperwork-status" role="status">' + (!report ? 'Welcome a resident to start your household register.' : filed ? 'This report matches your current household. Care, play and rearrange the shelf to give the clerk something new to record.' : 'Request a real census of your residents, care and completed adventures. The clerk insists on checking the numbers.') + '</p>';
     }
   }
@@ -501,22 +502,22 @@ function renderBrief(state) {
   const recap=state.life?.recap?.map(id=>state.life.scenes.find(scene=>scene.id===id)).filter(Boolean)||[];
   if(recap.length){
     const latest=recap[0],cast=(latest.cast||[]).map(id=>petById(state,id)?.name).filter(Boolean);
-    const next=state.life.outing?{action:'outing',label:'Continue expedition'}:state.life.market&&!state.life.market.claimed?{action:'market',label:'Finish the deliveries'}:{action:'scene-select',label:'See what happened'};
+    const next=state.life.outing?{action:'outing',label:'Continue expedition'}:{action:'scene-select',label:'See what happened'};
     const text=latest.text.length>170?latest.text.slice(0,167).trimEnd()+'…':latest.text;
     updateMarkup(host,'<span class="brief-icon" aria-hidden="true">✦</span><div><b>'+escapeHtml(cast.length?cast.join(' & ')+': '+latest.title:latest.title)+'</b><span>'+escapeHtml(text)+'</span></div><button class="btn btn-sm" data-life="'+next.action+'" data-id="'+latest.id+'">'+next.label+' ↗</button>');
     return;
   }
   const sorted = [...state.pets].sort((a, b) => a.needs[worstNeed(a)] - b.needs[worstNeed(b)]);
   const needy = sorted.find(p => p.needs[worstNeed(p)] < 60);
-  const playful = state.pets.find(p => !isAsleep(p) && !playWait(p)) || state.pets[0];
+  const playful = state.pets.find(p => !isAsleep(p)) || state.pets[0];
   const pet = needy || playful;
   if (!pet) {
     updateMarkup(host, '<span class="brief-icon" aria-hidden="true">✦</span><div><b>Make something wonderfully odd.</b><span>Care. Conspire. Collect the evidence.</span></div>');
     return;
   }
-  const markup = '<span class="brief-icon" aria-hidden="true">' + (needy ? '!' : '✦') + '</span><div><b>' + escapeHtml(needy ? pet.name + ' is feeling ' + needWords[worstNeed(pet)] + '.' : 'A little time together?') + '</b><span>' + (needy ? 'Tap to help. Individual care builds trust.' : 'Try a secret handshake with ' + escapeHtml(pet.name) + '.') + '</span></div><button class="btn btn-sm">' + (needy ? 'Care' : 'Play') + ' ↗</button>';
+  const markup = '<span class="brief-icon" aria-hidden="true">' + (needy ? '!' : '✦') + '</span><div><b>' + escapeHtml(needy ? pet.name + ' is feeling ' + needWords[worstNeed(pet)] + '.' : 'A little time together?') + '</b><span>' + (needy ? 'Tap to help. Individual care builds trust.' : 'Hold a séance with ' + escapeHtml(pet.name) + '. The dead are chatty tonight.') + '</span></div><button class="btn btn-sm">' + (needy ? 'Care' : 'Play') + ' ↗</button>';
   if (!updateMarkup(host, markup, JSON.stringify([pet.id, markup]))) return;
-  host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent(needy ? 'shelflife:care' : 'shelflife:play', { detail: { petId: pet.id, mode: 'memory' } })));
+  host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent(needy ? 'shelflife:care' : 'shelflife:arcade', { detail: { petId: pet.id, game: 'seance' } })));
 }
 
 /* ---- what needs you -------------------------------------------------------

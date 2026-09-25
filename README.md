@@ -6,6 +6,22 @@ Small creatures. Long memories. A free, darkly comic creature game for phones an
 Make peculiar residents, look after them, play together and collect the evidence of a small life.
 They cannot die. They have looked into it.
 
+## Something has gone wrong
+
+Every twelve minutes something goes wrong on the shelf. Somebody finds the rat poison, starts a cult,
+writes you out of their will or holds a funeral for a raisin. Up to three emergencies pile up while you
+are away. Each one is a card with two choices and a random, usually regrettable, result.
+
+Every result pays **souls**. Souls buy **coffins**, and every coffin holds a cursed curio for the
+**Cabinet of Curiosities**: 34 of them, from Common to Unholy. Souls earned for life set what the
+neighbours call your house, from *Suspiciously Normal* to *Unspeakable*. Care, rounds and finished
+Playroom games pay a few souls too, so the slow loop feeds the fast one.
+
+Turn over **tonight’s omen** once a night for free souls and a daily twist: double pay, cheaper coffins,
+better luck or one extra disaster. Nights in a row pay more, and the seventh leaves something rare on the
+step. Three **unholy chores** a day pay souls each and a free curio for the set. Nothing is ever taken
+away: a missed night only restarts the count.
+
 ## Make yourself at home
 
 Meet Mabel, Pip or Oswald, or create someone entirely your own. The face you choose is the
@@ -69,35 +85,37 @@ they say about the life they have had here.
 
 ## The Playroom
 
-| Activity | What you do |
+Four quick arcade games and one expedition. Every game is endless, gets faster, and ends when
+your luck does. Instructions are one line. **Again** is always one key away.
+
+| Game | What you do |
 | --- | --- |
-| Crumb Chase | Steer, hop and dash for crumbs in a 22-second chase or three-act Midnight Run. |
-| Handshake | Repeat, reverse or trade gestures in untimed memory challenges. |
-| The Alibi | Find a false statement and prove it with a record from your own household. |
+| Feeding Frenzy | Your resident catches falling snacks and dodges holy water, soap and mousetraps. Combos multiply; a still-beating heart doubles everything for six seconds. |
+| Coffin Stack | Drop coffins onto a growing tower. Overhang is sawn off; three perfect drops in a row win some width back. |
+| The Séance | Candles light in sequence. Repeat it. Each round adds one. The spirits forgive one mistake. |
+| Grave Whack | Push the hands back into their graves before they climb out. Never tap the widow. The landlord is worth five. |
 | Expeditions | Pack a tool, choose a crew and recover parts for working household objects. |
-| Shelf Court | Inspect evidence, compare verified facts and deduce the only possible culprit. |
-| Night Market | Visit eight stalls, buy pairs for three errands and deliver them to fund more shopping. |
 
-Older saved activities retain their original rules. Continue unfinished expeditions, hearings and
-market trips from the Playroom. Practice stays available when care rewards need a rest.
+Every scoring run pays souls from a daily purse, beating your best pays a bonus, and a good run
+earns a little trust (within the usual daily cap). Little adventures ask for a specific game with
+the resident who invited you. Expeditions show your crew, packed equipment, route and exact
+choice consequences; two distinct recovered parts build a permanent household project.
 
-Court pairs each clue with the suspect's actual record, with an optional deduction notebook
-and a full sentence after the verdict. Expeditions show your crew, packed equipment, route,
-exact choice consequences and a saved journey log. Returning home keeps only the parts you
-actually recovered; two distinct parts build a permanent household project.
+Crumb Chase, Handshake, The Alibi, Shelf Court and the Night Market have been retired. Saves keep
+their lifetime counts and earned achievements; unfinished hearings and market trips are dropped.
 
 **Notes → Paperwork** keeps the latest 120 filed documents independently of the temporary
-note board. Court verdicts, expedition reports, market receipts and resident documents are
+note board. Expedition reports, incident reports and resident documents are
 filed automatically. You can request a household register drawn from your actual care and
 activity records. Clearing notes preserves these documents. Empty filters and display areas
 explain what belongs there and how to add it.
 
-On desktop, **P** opens the Playroom. In Chase use arrows or A/D, Space to hop and P to pause.
-Touch controls are built into the game. Other games explain their keys beside the actions.
+On desktop, **P** opens the Playroom. Frenzy uses ← → or A/D, Coffin Stack uses Space, the Séance uses 1 to 4 and
+Grave Whack uses 1 to 9. P pauses any run; a long stall or a hidden tab pauses it for you.
 **Escape** closes the current sheet and returns focus to its opener. Motion follows your system
 preference; More also offers Automatic, Light and Full effects. The narrator is off until enabled.
 Light retains brief gameplay reactions and scene movement while simplifying decoration.
-See [the hearing, expedition and paperwork design notes](docs/hearings-and-expeditions.md).
+See [the expedition and paperwork design notes](docs/hearings-and-expeditions.md).
 
 ## Your save
 
@@ -139,8 +157,8 @@ npm run build
 ```
 
 The browser suite uses isolated synthetic households and a separate local server. It checks
-creation, saved appearance, care, all six activity entrances, completed adventure endings,
-interrupted play, full court hearings and expedition returns, report persistence,
+creation, saved appearance, care, every arcade game and expeditions, completed adventure endings,
+abandoned runs, emergencies, coffins and the curio cabinet, expedition returns, report persistence,
 replay identity, all sixteen keepsakes, real rug catches and bubble pops,
 cancelled gestures, failed saves, responsive layouts and runtime errors
 in desktop Chromium and phone-sized Chromium/WebKit. Offline reload is tested in Chromium;
@@ -151,6 +169,8 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | --- | --- |
 | `src/state.js`, `src/life-state.js` | Saves, validation, migration and bounded history |
 | `src/play-rug-state.js`, `src/engine/play-rug.js` | Resident trick collections and a bounded toy simulation |
+| `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
+| `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
 | `src/art/` | Creature/drawing data, SVG rendering, animation and the studio |
