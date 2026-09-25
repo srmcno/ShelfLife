@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0B0812">
 <meta name="color-scheme" content="dark">
 <title>Shelf Life — small creatures, long memories</title>
-<meta name="description" content="Grow or draw peculiar little pets. Feed them, rearrange their shelf, and read the complaints. A free, offline-friendly creature game.">
+<meta name="description" content="Grow or draw peculiar little immortal pets. Feed them, survive their emergencies, collect cursed curios and read the complaints. A free, offline-friendly creature game.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
@@ -34,11 +34,14 @@
 <link rel="stylesheet" href="css/play-rug.css">
 <link rel="stylesheet" href="css/room.css">
 <link rel="stylesheet" href="css/paperwork.css">
+<link rel="stylesheet" href="css/mayhem.css">
+<link rel="stylesheet" href="css/atmosphere.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
 <noscript><p class="storage-warn">Shelf Life needs JavaScript to wake the creatures. Please enable it and reload.</p></noscript>
 <div id="wall" aria-hidden="true"></div>
+<div id="haze" aria-hidden="true"><div class="haze-fog back"></div><div class="haze-fog"></div><div class="haze-vignette"></div></div>
 
 <!-- ============================================================================
      One room, five destinations at every width. The three persisted panes
@@ -48,6 +51,7 @@
   <a class="wordmark" href="#cabinet" aria-label="Shelf Life">Shelf<em>Life</em></a>
   <div class="status" id="statusBar" aria-live="polite"></div>
   <div class="topbar-actions">
+    <button class="souls-hud" id="soulsHud" type="button" hidden></button>
     <button class="btn btn-sm playroom-launch" id="playroomBtn" aria-haspopup="dialog">Playroom <span aria-hidden="true">↗</span></button>
     <button class="btn btn-ghost btn-sm btn-icon" id="quickHelp" aria-label="How to play" title="How to play">
       <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.2 7.4a2.9 2.9 0 1 1 4.2 2.6c-.9.5-1.4 1-1.4 2.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="15.3" r="1.1" fill="currentColor"/></svg>
@@ -64,7 +68,10 @@
 <main class="app room-app">
   <section class="pane pane-shelf" id="paneShelf" aria-label="Your residents">
     <div class="shelf-heading"><div><span class="eyebrow">Nobody here stays buried</span><h1>The household</h1></div><span class="room-live"><i></i> Alive &amp; opinionated</span></div>
+    <div class="mayhem-alert" id="mayhemAlert" hidden></div>
     <div class="stage">
+      <div class="candles left" aria-hidden="true"><span class="candle c1"><i></i></span><span class="candle c2"><i></i></span><span class="candle c3"><i></i></span></div>
+      <div class="candles right" aria-hidden="true"><span class="candle c1"><i></i></span><span class="candle c2"><i></i></span></div>
       <div class="cabinet-wrap" id="cabinetWrap">
         <div class="cabinet" id="cabinet" tabindex="-1" aria-label="Your creature shelf"></div>
       </div>
@@ -86,6 +93,7 @@
         <span>New resident</span><small>Make something questionable</small>
       </button>
     </div>
+    <section class="mayhem-desk" id="mayhemDesk" aria-label="Tonight on the shelf" hidden></section>
     <section id="shelfTheatre" class="shelf-theatre-controls" aria-labelledby="theatreHeading" hidden>
       <div class="theatre-heading"><h2 id="theatreHeading">Meanwhile, on the shelf</h2><span id="theatreCount"></span></div>
       <div class="theatre-caption" id="theatreCaption" role="status" aria-live="polite" aria-atomic="true">Give them furniture. They will supply the incident.</div>
@@ -170,6 +178,7 @@
   <button class="tab" type="button" data-tab="shelf" aria-current="page">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 13h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 7V4.5M15 7V3.5M11 13v-2.5M17 19v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Shelf</span>
+    <span class="tab-badge mh-badge" id="shelfBadge" aria-hidden="true" hidden></span>
   </button>
   <button class="tab" type="button" id="tabPlay" data-proxy="playroomBtn" aria-haspopup="dialog">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 10v5m-2-2.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="11" r="1.2" fill="currentColor"/><circle cx="18" cy="14" r="1.2" fill="currentColor"/></svg>
@@ -383,6 +392,7 @@
 <div class="veil" id="helpVeil"><div class="sheet field-guide">
   <div class="sheet-head"><div><h2>A small field guide</h2><p class="card-meta">Nobody here came with instructions. These are our best guesses.</p></div><button class="btn btn-ghost btn-sm" id="helpClose">Close</button></div>
   <ol class="guide-steps">
+    <li><h3>Deal with the emergencies.</h3><p>Something goes wrong on the shelf every twelve minutes, and up to three disasters pile up while you are away. Each one is a choice. Every choice pays souls; not every choice goes well. Spend souls on coffins, collect cursed curios, and watch the neighbours’ opinion of your house get worse. Turn over one omen a night and finish three unholy chores a day for extra.</p></li>
     <li><h3>Make someone peculiar.</h3><p>Grow a creature and change its parts, or draw one and give it moving stamps. Name it. Move it in.</p></li>
     <li><h3>Keep it fed, fussed, and clean.</h3><p>Tap a creature to care for it. Helping when a need is below 72 earns care credit; every three credits adds a trust point. Rounds help everyone a little, but build no trust. Games and conspiracies add at most three trust per resident per day; care is the steady route.</p></li>
     <li><h3>Read the room.</h3><p>Check the shelf for notes, arguments, and small developments. A resident files at most one grievance an hour, so reading often costs nothing. Individual care builds trust, unlocking drawing tools and furniture in Decorate. Tap a byline on the board to keep one resident’s notes.</p></li>
@@ -442,6 +452,8 @@
   </div>
 </div>
 
+<div class="veil" id="mayhemVeil"><div class="sheet mh-sheet" id="mayhemSheet"></div></div>
+<div class="mh-rankup" id="mayhemRankUp" role="status" aria-live="polite" hidden></div>
 <div class="veil" id="incidentsVeil"><div class="sheet" id="incidentsSheet"></div></div>
 <div class="veil" id="lifeVeil"><div class="sheet sheet-life"><div class="sheet-head"><h2 id="lifeTitle">Your small world</h2><button class="btn btn-ghost" id="lifeClose">Close</button></div><div id="lifeContent"></div></div></div>
 <div class="veil" id="museumVeil"><div class="sheet sheet-museum"><div class="sheet-head"><div><span class="eyebrow">Long memories, short legs</span><h2>Memory museum</h2></div><button class="btn btn-ghost btn-sm" id="museumClose">Close</button></div><div id="museumContent"></div></div></div>

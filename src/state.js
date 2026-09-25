@@ -6,6 +6,7 @@ import { PROPS } from './content/props.js';
 import { normalizeTheatre } from './theatre-state.js';
 import { blankEscapades, normalizeEscapades } from './escapade-state.js';
 import { blankRug, normalizeRug } from './play-rug-state.js';
+import { blankMayhem, normalizeMayhem } from './mayhem-state.js';
 import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.js';
 import { RESIDENT_TENURE } from './content/resident-life.js';
 export const Store = (function () {
@@ -162,7 +163,7 @@ export function pick(arr) {
 export function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 
 export function defaultNeeds() { return { food: 78, fuss: 78, clean: 82 }; }
-export function defaultDecor() { return { room: 'aubergine', wall: 'none', wood: 'rosewood', accent: 'bubblegum' }; }
+export function defaultDecor() { return { room: 'aubergine', wall: 'damask', wood: 'rosewood', accent: 'blood' }; }
 export function defaultStreak() { return { count: 0, lastCheckin: 0 }; }
 export function defaultSettings() { return { muted: false, narratorOn: false, narratorVoiceURI: null, effects: 'auto' }; }
 export function defaultCareLog() { return { food: 0, fuss: 0, clean: 0 }; }
@@ -172,7 +173,7 @@ export function defaultLedger() { return { meeting: 1, carried: 0, struck: {}, a
 
 export function blankState() {
   return {
-    v: 4, life: blankLife(), escapades: blankEscapades(), rug: blankRug(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
+    v: 4, life: blankLife(), escapades: blankEscapades(), rug: blankRug(), mayhem: blankMayhem(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
     notes: [], paperwork: blankPaperwork(), seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
@@ -414,6 +415,7 @@ export function normalizeState(raw) {
   s.theatre = normalizeTheatre(s.theatre, s, now);
   s.escapades = normalizeEscapades(s.escapades, s, now);
   s.rug = normalizeRug(s.rug, s, now);
+  s.mayhem = normalizeMayhem(s.mayhem, s, now);
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
   for (const pet of s.pets) pet.chaseCampaign = normalizeChaseCampaign(pet.chaseCampaign);
   return s;

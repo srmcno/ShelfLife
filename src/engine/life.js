@@ -10,6 +10,7 @@ import { addNote, clamp } from '../state.js';
 import { recordEscapadeEvent } from '../escapade-state.js';
 import { fileScene } from '../paperwork-state.js';
 import { RESIDENT_TENURE } from '../content/resident-life.js';
+import { rewardGame } from './mayhem.js';
 const checked = new WeakSet();
 export function lifeState(state) {
   if (!state.life || !checked.has(state.life)) { state.life=normalizeLife(state.life,state.pets.length>0); checked.add(state.life); }
@@ -62,6 +63,7 @@ export function recordResidentTenure(state, now=Date.now()) {
 export function recordGameLife(state, pet, kind, now=Date.now(), victory=true) {
   const l=lifeState(state);
   dailyActivity(state,'play',now);
+  if(victory!==false)rewardGame(state,now);
   const first=awardDiscovery(state,'game:'+kind,3,now);
   if(first)recordScene(state,'celebration', ({memory:'The secret accomplice',chase:'The Ministry of Crumbs',alibi:'An inconveniently observant landlord',court:'The household takes the stand'})[kind] || 'A shared incident', pet.name+' '+({memory:'has taught you a secret handshake. It now looks for your hand before pretending it was looking for something else.',chase:'has appointed itself Minister of Crumbs. The ministry has one employee and considerable overhead.',alibi:'has discovered you can check its story. It has requested a less observant landlord.',court:'has attended court. It has kept the little hammer. This may prove unwise.'}[kind]||'has taken up a hobby.'),[pet.id],now,{key:'game:'+kind});
   l.introDone=true;
@@ -192,7 +194,7 @@ export function chooseOuting(state, choice, now=Date.now()) {
   crew.forEach(p=>{p.needs.fuss=clamp(p.needs.fuss+8,0,100);p.expeditions=(p.expeditions||0)+1;});
   if(crew.length===2){state.stories||={};state.stories.relationships||={};const key=crew.map(p=>p.id).sort().join('|');const r=state.stories.relationships[key]||={time:0,plots:0};r.plots=(r.plots||0)+1;r.lastPlotAt=now;}
   const text=crew.map(p=>p.name).join(' and ')+' returned with '+relic.name.toLowerCase()+'. '+relic.line+' '+line;
-  recordScene(state,'outing',route.name,text,crew.map(p=>p.id),now,{key:'outing',branch:route.id,object:relic.id});addNote(state,text,'beyond the shelf','scheme');
+  recordScene(state,'outing',route.name,text,crew.map(p=>p.id),now,{key:'outing',branch:route.id,object:relic.id});addNote(state,text,'beyond the shelf','scheme');rewardGame(state,now);
   o.result={relic:relic.id,fresh};
   if(o.receipt && !o.practice && !o.returnedAt && o.score>=3) {
     const before=mastery(state,'expedition').tier;
@@ -359,7 +361,7 @@ export function claimMarket(state,now=Date.now()){
  const first=awardDiscovery(state,'game:market',3,now);dailyActivity(state,'market',now);l.introDone=true;
  const cast=(snapshot.version>=4?(snapshot.patronIds||[]):state.pets.slice(0,2).map(p=>p.id)).filter(id=>state.pets.some(p=>p.id===id)).slice(0,2),names=cast.map(id=>state.pets.find(p=>p.id===id).name).join(' and ')||'The household';
  const text=snapshot.version>=3?names+' delivered '+done+' of '+snapshot.requests.length+' household errands and brought home '+snapshot.buttons+' buttons. '+(done===snapshot.requests.length?'Everyone got what they asked for. They are meeting to decide what they meant.':done?'The completed errands are pleased. The others have requested your manager.':'They brought the list back. The list was not one of the errands.')+(snapshot.score.premiumPoints?' Special deliveries earned '+snapshot.score.premiumPoints+' points.':''):names+' returned from the night market with '+snapshot.bag.length+' questionable purchase'+(snapshot.bag.length===1?'':'s')+' and '+score.fulfilled.filter(Boolean).length+' of 3 requests filled. '+(tier===2?'The vendors applauded. One of them checked for missing buttons.':tier===1?'The household calls this careful budgeting. The receipt calls it three objects in a bag.':'The bag has been presented as an artistic statement. This is why nobody lets the bag speak.')+' '+relic.line;
- recordScene(state,'market','The Unlicensed Night Market',text,cast,now,{key:'market',object:relic.id});addNote(state,text,'the night market','scheme');
+ recordScene(state,'market','The Unlicensed Night Market',text,cast,now,{key:'market',object:relic.id});addNote(state,text,'the night market','scheme');rewardGame(state,now);
  return {score,relic,fresh,first};
 }
 

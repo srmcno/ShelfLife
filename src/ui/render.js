@@ -27,6 +27,7 @@ import { storyState, caseGate, currentCase, VISIT_LENGTH } from '../engine/stori
 import { VISITORS } from '../content/stories.js';
 import { renderTheatreControls } from './shelf-theatre.js';
 import { createArrivalInvitation } from './arrival.js';
+import { renderMayhem } from './mayhem.js';
 
 const cabinet = document.getElementById('cabinet');
 const notesEl = document.getElementById('notes');
@@ -65,6 +66,7 @@ export function renderAll(state) {
     renderEscapades(state);
     renderTheatreControls(state);
     renderPlayRug(state);
+    renderMayhem(state);
     save();
   });
 }

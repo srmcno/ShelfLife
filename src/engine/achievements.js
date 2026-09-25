@@ -81,6 +81,13 @@ export function stepFeudArc(state, pairKey, a, b, now = Date.now()) {
   return 'ongoing';
 }
 
+// Crumb Chase keeps its best result in two places: the original single-game
+// record, and the Midnight Run campaign's per-stage records. Either counts.
+export function bestChaseStars(pet) {
+  const records = Object.values(pet?.chaseCampaign?.records || {}).filter(r => r && r.won).map(r => Number(r.stars) || 0);
+  return Math.max(Number((pet?.chaseBest || {}).stars) || 0, 0, ...records);
+}
+
 export const GRUDGE_STAGE_AT = [5, 12, 20];
 
 export function grudgeStageFor(grudges) {
@@ -172,8 +179,8 @@ export const ACHIEVEMENTS = [
   { id: 'all-visitors', hint: 'Collect every visiting curiosity for the museum.', label: 'The Complete Set', desc: 'Every visitor souvenir is in the museum.', toastLine: 'Every curiosity accounted for. You are collecting guests now.', check: state => VISITORS.every(v => state.stories?.collection?.some(c => c.id === v.id)) },
   { id: 'first-handshake', hint: 'Learn one resident’s secret handshake.', label: 'Initiated', desc: 'Completed a secret handshake.', toastLine: 'You know the handshake. There is no undoing that.', check: state => state.pets.some(p => (p.handshakes || 0) >= 1) },
   { id: 'handshake-veteran', hint: 'Learn the same resident’s handshake ten times.', label: 'Fluent', desc: 'Ten handshakes with one resident.', toastLine: 'Ten. It has started adding flourishes you did not agree to.', check: state => state.pets.some(p => (p.handshakes || 0) >= 10) },
-  { id: 'chase-win', hint: 'Reach the crumb goal in one Crumb Chase.', label: 'Crumb Bailiff', desc: 'Won a Crumb Chase outright.', toastLine: 'Crumb goal reached. The dust bunnies have taken note.', check: state => state.pets.some(p => (p.chaseBest || {}).stars >= 2) },
-  { id: 'chase-perfect', hint: 'Take three stars in a single Crumb Chase.', label: 'Unreasonably Good At This', desc: 'A three-star chase.', toastLine: 'Three stars. It is four inches tall and it is showing off.', check: state => state.pets.some(p => (p.chaseBest || {}).stars >= 3) },
+  { id: 'chase-win', hint: 'Reach the crumb goal in one Crumb Chase.', label: 'Crumb Bailiff', desc: 'Won a Crumb Chase outright.', toastLine: 'Crumb goal reached. The dust bunnies have taken note.', check: state => state.pets.some(p => bestChaseStars(p) >= 2) },
+  { id: 'chase-perfect', hint: 'Take three stars in a single Crumb Chase.', label: 'Unreasonably Good At This', desc: 'A three-star chase.', toastLine: 'Three stars. It is four inches tall and it is showing off.', check: state => state.pets.some(p => bestChaseStars(p) >= 3) },
   { id: 'promise-kept', hint: 'Accept a resident’s request and actually do it.', label: 'Good For It', desc: 'Kept a promise to a resident.', toastLine: 'You said you would and then you did. They are recalibrating.', check: state => state.pets.some(p => (p.fulfilledRequests || 0) >= 1) },
   { id: 'promise-broken', hint: 'Refuse a resident to its face.', label: 'On The Record', desc: 'Declined a resident’s request.', toastLine: 'Declined. Filed. It was very understanding, which is worse.', check: state => state.pets.some(p => (p.refusedRequests || 0) >= 1) },
   { id: 'promises-five', hint: 'Keep five promises across the shelf.', label: 'Dependable, Apparently', desc: 'Five requests fulfilled.', toastLine: 'Five kept promises. Somebody has started a different kind of list.', check: state => state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0) >= 5 },
@@ -229,7 +236,7 @@ export const INCIDENT_PROGRESS = {
   'streak-7': state => ({ have: state.streak.count || 0, need: 7 }),
   'terminal-grudge': state => ({ have: Math.max(0, ...state.pets.map(p => p.grudges || 0)), need: 20 }),
   'handshake-veteran': state => ({ have: Math.max(0, ...state.pets.map(p => p.handshakes || 0)), need: 10 }),
-  'chase-perfect': state => ({ have: Math.max(0, ...state.pets.map(p => (p.chaseBest || {}).stars || 0)), need: 3 }),
+  'chase-perfect': state => ({ have: Math.max(0, ...state.pets.map(bestChaseStars)), need: 3 }),
   'promises-five': state => ({ have: state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0), need: 5 }),
   'three-cases': state => ({ have: closedCases(state), need: 3 }),
   'all-visitors': state => ({ have: (((state.stories || {}).collection) || []).length, need: VISITORS.length })

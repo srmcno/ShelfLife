@@ -1,0 +1,297 @@
+/* =============================================================================
+   Mayhem: souls, emergencies, coffins, the omen and the Cabinet of Curiosities.
+   The rest of the room is candlelit and quiet; these are the loud bits.
+   ============================================================================= */
+:root{
+  --mh-blood:#C4243C; --mh-blood-deep:#5A0F1C; --mh-ember:#FF6B4A; --mh-candle:#F6C768; --mh-wax:#FFE7B0;
+  --mh-bile:#A6E36B; --mh-violet:#B98BFF; --mh-good:#8FE0B4; --mh-bad:#FF6F7F; --mh-weird:#C49BFF;
+  --r-common:#C9BCAE; --r-uncommon:#7FD8C0; --r-rare:#74AEFF; --r-cursed:#C77DFF; --r-unholy:#FF4D5E;
+}
+.mh-glyph{display:block;width:100%;height:100%}
+
+/* ---- the souls counter ----------------------------------------------------- */
+.souls-hud{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:4px 12px 4px 6px;border-radius:999px;cursor:pointer;
+  color:var(--ink);font:inherit;border:1px solid color-mix(in srgb,var(--mh-candle) 34%,transparent);
+  background:radial-gradient(circle at 18px 50%,color-mix(in srgb,var(--mh-candle) 26%,transparent),transparent 36px),linear-gradient(180deg,#221726,#140d18);
+  box-shadow:0 0 0 1px #0006 inset,0 6px 18px -10px color-mix(in srgb,var(--mh-candle) 60%,transparent)}
+.souls-hud[hidden]{display:none}
+.souls-hud:hover{border-color:color-mix(in srgb,var(--mh-candle) 60%,transparent)}
+.souls-hud:focus-visible{outline:2px solid var(--mh-candle);outline-offset:2px}
+.souls-icon{width:28px;height:28px;color:var(--mh-candle);filter:drop-shadow(0 0 6px color-mix(in srgb,var(--mh-candle) 70%,transparent));animation:mh-flicker 3.2s steps(16) infinite}
+.souls-count{display:flex;flex-direction:column;line-height:1;text-align:left}
+.souls-count b{font:19px/1 var(--display);color:var(--mh-wax)}
+.souls-count small{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:2px}
+.souls-rank{display:flex;flex-direction:column;gap:5px;min-width:0;max-width:150px}
+.souls-rank em{font-style:normal;font-size:11px;font-weight:600;color:var(--mh-candle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.souls-bar{display:block;height:4px;width:110px;border-radius:9px;background:#ffffff14;overflow:hidden}
+.souls-bar>i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--mh-blood),var(--mh-candle));transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.souls-hud.pulse{animation:mh-hud-pulse .7s ease-out 1}
+.souls-float{position:absolute;left:22px;top:-4px;font:700 14px/1 var(--body);color:var(--mh-wax);text-shadow:0 0 10px var(--mh-candle);pointer-events:none;animation:mh-float 1.3s ease-out forwards}
+@keyframes mh-float{from{opacity:0;transform:translateY(8px) scale(.8)}20%{opacity:1}to{opacity:0;transform:translateY(-26px) scale(1.1)}}
+@keyframes mh-hud-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--mh-candle) 70%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+@keyframes mh-flicker{0%,100%{opacity:1;transform:scale(1)}45%{opacity:.86;transform:scale(.97) rotate(-2deg)}55%{opacity:1;transform:scale(1.03) rotate(1deg)}70%{opacity:.92}}
+
+/* ---- the alarm strip ---------------------------------------------------------- */
+.mayhem-alert{margin:0 0 14px}
+.mayhem-alert[hidden]{display:none}
+.mh-alert{position:relative;isolation:isolate;display:flex;align-items:center;gap:14px;width:100%;padding:12px 14px;border-radius:14px;text-align:left;color:var(--ink);font:inherit;border:1px solid var(--hair-lit);background:var(--night-2)}
+button.mh-alert{cursor:pointer}
+.mh-siren{flex:none;width:44px;height:44px;padding:8px;border-radius:12px;color:var(--mh-wax);background:#0005}
+.mh-alert-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.mh-alert-text b{font:600 12px var(--body);letter-spacing:.14em;text-transform:uppercase}
+.mh-alert-text>span{font:22px/1.2 var(--hand);color:var(--ink);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.mh-alert-go{flex:none;padding:10px 16px;border-radius:999px;font-weight:700;font-size:13px;white-space:nowrap}
+.mh-alert.hot{border-color:color-mix(in srgb,var(--mh-blood) 70%,transparent);
+  background:radial-gradient(120% 180% at 0% 50%,color-mix(in srgb,var(--mh-blood) 42%,transparent),transparent 60%),linear-gradient(90deg,#2a0c15,#170a12);
+  box-shadow:0 0 22px -8px color-mix(in srgb,var(--mh-blood) 60%,transparent)}
+.mh-alert.hot::after{content:'';position:absolute;inset:-1px;z-index:-1;border-radius:inherit;box-shadow:0 0 26px -2px color-mix(in srgb,var(--mh-blood) 70%,transparent);opacity:0;animation:mh-alarm 2.4s steps(12) infinite;pointer-events:none}
+.mh-alert.hot .mh-alert-text b{color:#ff9aa6}
+.mh-alert.hot .mh-siren{background:var(--mh-blood);color:#fff;animation:mh-wobble 1.6s steps(16) infinite}
+.mh-alert.hot .mh-alert-go{background:linear-gradient(180deg,#ff5a6c,var(--mh-blood));color:#fff;box-shadow:0 6px 18px -6px var(--mh-blood)}
+.mh-alert.hot:hover .mh-alert-go{filter:brightness(1.1)}
+.mh-alert.omen{border-color:color-mix(in srgb,var(--mh-violet) 60%,transparent);background:radial-gradient(120% 180% at 0% 50%,color-mix(in srgb,var(--mh-violet) 32%,transparent),transparent 60%),linear-gradient(90deg,#1d1030,#130b1d)}
+.mh-alert.omen .mh-alert-text b{color:var(--mh-violet)}
+.mh-alert.omen .mh-siren{background:#3a2160;color:#e8d6ff;animation:mh-blink 4s steps(20) infinite}
+.mh-alert.omen .mh-alert-go{background:linear-gradient(180deg,#caa6ff,#8a5ad8);color:#12081f}
+.mh-alert.calm .mh-siren{color:var(--mh-candle);animation:mh-flicker 3.4s steps(16) infinite}
+.mh-alert.calm .mh-alert-text b{letter-spacing:.02em;text-transform:none;font:20px/1.2 var(--hand);color:var(--ink-2)}
+.mh-alert.calm .mh-alert-text>span{font:600 11px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.mh-alert.calm .mh-alert-go{border:1px solid var(--hair-lit);color:var(--ink-2)}
+.mh-alert.calm:hover .mh-alert-go{border-color:var(--mh-candle);color:var(--mh-wax)}
+.mh-alert.calm [data-countdown]{color:var(--mh-candle);font-variant-numeric:tabular-nums}
+@keyframes mh-alarm{0%,100%{opacity:0}50%{opacity:1}}
+@keyframes mh-wobble{0%,100%{transform:rotate(0)}10%{transform:rotate(-12deg)}20%{transform:rotate(10deg)}30%{transform:rotate(-6deg)}40%{transform:rotate(0)}}
+@keyframes mh-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+
+/* ---- residents in trouble ----------------------------------------------------- */
+#cabinet .pet.mh-trouble::before{will-change:transform;content:'!';position:absolute;z-index:6;left:82%;top:4px;width:22px;height:22px;margin-left:-11px;border-radius:50%;
+  display:grid;place-items:center;font:800 14px/1 var(--body);color:#fff;background:var(--mh-blood);box-shadow:0 0 0 2px #0008,0 0 14px var(--mh-blood);animation:mh-bob 1.4s steps(10) infinite;pointer-events:none}
+@keyframes mh-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* ---- the tab badge ---- */
+.room-nav .tab-badge.mh-badge,.tab-badge.mh-badge{background:var(--mh-blood);color:#fff}
+.mh-badge[hidden]{display:none}
+
+/* ---- the desk ---------------------------------------------------------------- */
+.mayhem-desk{display:grid;grid-template-columns:1.1fr 1.5fr 1fr 1fr;gap:10px;margin:14px 0 6px}
+.mayhem-desk[hidden]{display:none}
+.mh-tile{display:flex;flex-direction:column;gap:5px;min-width:0;padding:13px 14px;border-radius:14px;text-align:left;color:var(--ink);font:inherit;
+  border:1px solid var(--hair-lit);background:linear-gradient(180deg,#1d1422,#130d17);box-shadow:inset 0 1px 0 #ffffff0a}
+button.mh-tile{cursor:pointer;transition:transform .15s ease,border-color .15s ease}
+button.mh-tile:hover{transform:translateY(-2px);border-color:var(--edge)}
+.mh-tile b{font:22px/1.1 var(--display);color:var(--ink)}
+.mh-tile small{font-size:12px;line-height:1.35;color:var(--ink-2)}
+.mh-tile-kicker{font:700 9.5px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.mh-omen-tile .mh-tile-kicker{color:var(--mh-violet)}
+.mh-omen-tile.pending{border-color:color-mix(in srgb,var(--mh-violet) 55%,transparent);background:radial-gradient(circle at 85% 20%,color-mix(in srgb,var(--mh-violet) 30%,transparent),transparent 60%),linear-gradient(180deg,#221537,#140c1f);box-shadow:0 0 22px -6px color-mix(in srgb,var(--mh-violet) 55%,transparent)}
+@keyframes mh-omen-glow{50%{box-shadow:0 0 22px -4px color-mix(in srgb,var(--mh-violet) 60%,transparent)}}
+.mh-chores ul{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.mh-chores li{display:flex;align-items:center;gap:8px;font-size:13px;line-height:1.2}
+.mh-chores li>span:nth-child(2){flex:1;min-width:0}
+.mh-chores li small{display:block;font-size:10.5px;color:var(--ink-3)}
+.mh-chores li em{font-style:normal;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.mh-check{flex:none;width:17px;height:17px;border-radius:5px;border:1.5px solid var(--edge);display:grid;place-items:center;font-size:11px;font-weight:800;color:#12081a}
+.mh-chores li.done{color:var(--ink-3)}
+.mh-chores li.done>span:nth-child(2){text-decoration:line-through;text-decoration-color:var(--mh-blood)}
+.mh-chores li.done .mh-check{background:var(--mh-good);border-color:var(--mh-good)}
+.mh-coffin-tile{flex-direction:row;align-items:center;gap:12px}
+.mh-coffin-tile>span:last-child{display:flex;flex-direction:column;gap:4px}
+.mh-coffin-art{flex:none;width:46px;height:58px;color:var(--mh-candle);filter:drop-shadow(0 0 8px color-mix(in srgb,var(--mh-candle) 40%,transparent))}
+.mh-coffin-tile:not([aria-disabled="true"]) .mh-coffin-art{animation:mh-knock 2.6s steps(26) infinite}
+.mh-coffin-tile[aria-disabled="true"]{opacity:.72}
+.mh-coffin-tile[aria-disabled="true"] .mh-coffin-art{color:var(--ink-3);filter:none}
+@keyframes mh-knock{0%,70%,100%{transform:none}74%{transform:rotate(-5deg)}78%{transform:rotate(4deg)}82%{transform:rotate(-3deg)}86%{transform:none}}
+.mh-cabinet-tile .mh-tile-kicker{color:var(--mh-candle)}
+.mh-meter{display:block;height:6px;border-radius:9px;background:#ffffff12;overflow:hidden}
+.mh-meter>i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--mh-violet),var(--mh-candle))}
+.mh-meter.big{height:9px;margin:12px 0 6px}
+
+/* ---- the sheet ----------------------------------------------------------------- */
+.mh-sheet{max-width:580px;overflow:hidden}
+.mh-sheet .sheet-head .eyebrow{color:var(--mh-candle)}
+.mh-emergency{background:radial-gradient(120% 60% at 50% 0%,#3a0f1c 0%,transparent 60%),linear-gradient(180deg,var(--night-3),var(--night-2))}
+.mh-emergency .sheet-head .eyebrow{color:#ff8d9b}
+.mh-card{display:flex;flex-direction:column;gap:14px}
+.mh-scene{position:relative;height:200px;border-radius:16px;overflow:hidden;display:flex;align-items:flex-end;justify-content:center;gap:4%;
+  background:radial-gradient(60% 70% at 50% 30%,#f6c76833,transparent 70%),radial-gradient(40% 20% at 50% 100%,#000a,transparent),linear-gradient(180deg,#221426,#0e0911 80%);border:1px solid var(--hair-lit)}
+.mh-scene::after{content:'';position:absolute;inset:auto 0 0;height:26px;background:linear-gradient(180deg,#5c3a47,#2b1822);box-shadow:inset 0 2px 0 #7a4c5b}
+.mh-actor{position:relative;z-index:2;width:150px;height:170px;margin-bottom:18px}
+.mh-actor .sprite{width:100%;height:100%;--pet-h:150px}
+.mh-scene.pair .mh-actor{width:128px;height:150px}
+.mh-actor-b{transform:scaleX(-1)}
+.mh-prop{position:absolute;z-index:3;left:50%;top:18px;width:64px;height:64px;margin-left:-32px;color:var(--mh-wax);filter:drop-shadow(0 0 12px color-mix(in srgb,var(--mh-candle) 60%,transparent));animation:mh-prop-float 3s ease-in-out infinite}
+.mh-scene:not(.pair) .mh-prop{left:auto;right:16%;margin-left:0}
+@keyframes mh-prop-float{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(5deg)}}
+.mh-actor.bounce{animation:mh-bounce .7s cubic-bezier(.3,1.6,.5,1) 1}
+.mh-actor-b.bounce{animation-name:mh-bounce-b}
+.mh-actor.recoil{animation:mh-recoil .6s ease-out 1}
+.mh-actor-b.recoil{animation-name:mh-recoil-b}
+@keyframes mh-bounce{0%{transform:none}35%{transform:translateY(-22px) scale(1.04,.96)}70%{transform:translateY(0) scale(.96,1.04)}100%{transform:none}}
+@keyframes mh-bounce-b{0%{transform:scaleX(-1)}35%{transform:scaleX(-1) translateY(-22px)}100%{transform:scaleX(-1)}}
+@keyframes mh-recoil{0%,100%{transform:none}20%{transform:translateX(-10px) rotate(-6deg)}40%{transform:translateX(8px) rotate(4deg)}60%{transform:translateX(-5px)}}
+@keyframes mh-recoil-b{0%,100%{transform:scaleX(-1)}20%{transform:scaleX(-1) translateX(-10px) rotate(-6deg)}40%{transform:scaleX(-1) translateX(8px)}}
+.mh-title{margin:4px 2px 0;font:30px/1.12 var(--display);letter-spacing:-.01em;color:var(--ink);text-wrap:balance}
+.mh-choices{display:grid;gap:10px}
+.mh-choice{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:12px 16px;border-radius:14px;cursor:pointer;text-align:left;font:600 16px/1.25 var(--body);color:var(--ink);
+  border:1px solid var(--edge);background:linear-gradient(180deg,#2a1c30,#1b1220);transition:transform .12s ease,border-color .12s ease,background .12s ease}
+.mh-choice span{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;font:700 13px var(--body);background:#0006;color:var(--mh-candle)}
+.mh-choice:hover,.mh-choice:focus-visible{transform:translateY(-2px);border-color:var(--mh-candle);background:linear-gradient(180deg,#3a2438,#22141f)}
+.mh-choice:focus-visible{outline:2px solid var(--mh-candle);outline-offset:2px}
+.mh-fineprint{margin:0;font-size:12px;color:var(--ink-3);text-align:center}
+.mh-outcome{position:relative;display:flex;flex-direction:column;gap:12px;animation:sheet-in .3s ease-out 1}
+.mh-stamp{align-self:center;margin:4px 0 2px;padding:6px 18px;border:3px double currentColor;border-radius:8px;font:800 22px/1 var(--body);letter-spacing:.14em;transform:rotate(-6deg);
+  animation:mh-stamp .5s cubic-bezier(.2,1.8,.4,1) 1;text-shadow:0 0 18px currentColor;background:#0003}
+.mh-stamp.tone-good{color:var(--mh-good)} .mh-stamp.tone-bad{color:var(--mh-bad)} .mh-stamp.tone-weird{color:var(--mh-weird)}
+@keyframes mh-stamp{0%{opacity:0;transform:rotate(-6deg) scale(2.6)}60%{opacity:1;transform:rotate(-6deg) scale(.92)}100%{transform:rotate(-6deg) scale(1)}}
+.mh-card.resolved .mh-title{font-size:22px;color:var(--ink-2)}
+.mh-card.resolved.tone-bad .mh-scene{box-shadow:inset 0 0 60px #c4243c55}
+.mh-card.resolved.tone-good .mh-scene{box-shadow:inset 0 0 60px #8fe0b433}
+.mh-card.resolved.tone-weird .mh-scene{box-shadow:inset 0 0 60px #b98bff44}
+.mh-text{margin:0;font:24px/1.4 var(--hand);color:var(--paper-lit);text-align:center;text-wrap:pretty}
+.mh-rewards{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.mh-rewards li{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;font-size:12.5px;font-weight:600;background:#ffffff0d;border:1px solid var(--hair-lit);color:var(--ink-2)}
+.mh-rewards li .mh-glyph{width:16px;height:16px}
+.mh-rewards li.souls{color:var(--mh-wax);border-color:color-mix(in srgb,var(--mh-candle) 45%,transparent);background:color-mix(in srgb,var(--mh-candle) 12%,transparent)}
+.mh-rewards li.good{color:var(--mh-good);border-color:color-mix(in srgb,var(--mh-good) 35%,transparent)}
+.mh-rewards li.bad{color:var(--mh-bad);border-color:color-mix(in srgb,var(--mh-bad) 35%,transparent)}
+.mh-next{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:4px}
+.mh-next .btn small{opacity:.8;font-weight:500}
+.mh-drop{display:flex;flex-direction:column;align-items:center;gap:8px}
+.mh-drop-kicker{font:700 10px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--mh-candle)}
+.mh-quiet{font:22px/1.4 var(--hand);color:var(--ink-2);text-align:center}
+.mh-quiet [data-countdown]{font-family:var(--body);color:var(--mh-candle)}
+
+/* ---- curio cards ------------------------------------------------------------------ */
+.mh-curio-card{--rc:var(--r-common);position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;width:min(100%,320px);padding:18px 18px 16px;border-radius:16px;text-align:center;
+  border:1px solid color-mix(in srgb,var(--rc) 60%,transparent);background:radial-gradient(90% 60% at 50% 20%,color-mix(in srgb,var(--rc) 22%,transparent),transparent 70%),linear-gradient(180deg,#1f1624,#120c15);
+  box-shadow:0 0 0 1px #0008 inset,0 18px 40px -18px color-mix(in srgb,var(--rc) 70%,transparent);animation:mh-reveal .6s cubic-bezier(.2,1.4,.4,1) 1}
+.mh-curio-card .mh-curio-art{width:84px;height:84px;color:var(--rc);filter:drop-shadow(0 0 14px color-mix(in srgb,var(--rc) 55%,transparent))}
+.mh-curio-card b{font:22px/1.15 var(--display)}
+.mh-curio-card p{margin:0;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.mh-curio-card small{font:19px/1.3 var(--hand);color:var(--ink-3)}
+.mh-curio-flag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);padding:3px 10px;border-radius:999px;font:700 10px var(--body);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;background:var(--rc);color:#120a14}
+.mh-curio-card.duplicate .mh-curio-flag{background:#2a2030;color:var(--ink-2);border:1px solid var(--hair-lit)}
+.mh-rarity{font:700 10px var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--rc)}
+.rarity-common{--rc:var(--r-common)} .rarity-uncommon{--rc:var(--r-uncommon)} .rarity-rare{--rc:var(--r-rare)} .rarity-cursed{--rc:var(--r-cursed)} .rarity-unholy{--rc:var(--r-unholy)}
+.mh-curio-card.rarity-cursed,.mh-curio-card.rarity-unholy{animation:mh-reveal .6s cubic-bezier(.2,1.4,.4,1) 1,mh-aura 2.2s ease-in-out .6s infinite}
+@keyframes mh-reveal{0%{opacity:0;transform:scale(.6) rotate(-4deg)}100%{opacity:1;transform:none}}
+@keyframes mh-aura{50%{box-shadow:0 0 0 1px #0008 inset,0 0 46px -4px var(--rc)}}
+.mh-odds{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:4px 0 0;font:700 10px var(--body);letter-spacing:.14em;text-transform:uppercase}
+.mh-odds span{color:var(--rc)}
+
+/* ---- the coffin ------------------------------------------------------------------ */
+.mh-coffin{background:radial-gradient(90% 50% at 50% 20%,#3a2a12 0%,transparent 70%),linear-gradient(180deg,var(--night-3),var(--night-2))}
+.mh-coffin-stage{display:grid;place-items:center;min-height:250px;padding:14px 0}
+.mh-coffin-box{width:150px;height:200px;padding:0;border:0;background:none;cursor:pointer;color:var(--mh-candle);filter:drop-shadow(0 0 24px color-mix(in srgb,var(--mh-candle) 45%,transparent))}
+.mh-coffin-box .mh-glyph{animation:mh-knock 2.2s ease-in-out infinite}
+.mh-coffin-box:disabled{cursor:not-allowed;color:var(--ink-3);filter:none;opacity:.6}
+.mh-coffin-box:disabled .mh-glyph{animation:none}
+.mh-coffin-box:focus-visible{outline:2px solid var(--mh-candle);outline-offset:6px;border-radius:12px}
+.mh-coffin-box.shaking .mh-glyph{animation:mh-shake .12s linear infinite}
+@keyframes mh-shake{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(-4px,1px) rotate(-3deg)}50%{transform:translate(3px,-2px) rotate(2deg)}75%{transform:translate(-2px,2px) rotate(-1deg)}100%{transform:translate(0,0)}}
+.mh-coffin-note{text-align:center;color:var(--ink-2);font-size:14px;line-height:1.5}
+
+/* ---- the omen ------------------------------------------------------------------- */
+.mh-omen{background:radial-gradient(90% 55% at 50% 15%,#2c1650 0%,transparent 70%),linear-gradient(180deg,var(--night-3),var(--night-2))}
+.mh-tarot-stage{display:grid;place-items:center;padding:12px 0 6px;perspective:900px}
+.mh-tarot{position:relative;width:180px;height:272px;padding:0;border-radius:14px;border:1px solid #caa6ff66;cursor:pointer;color:#e8d6ff;
+  background:repeating-linear-gradient(45deg,#26143f 0 10px,#1c0f30 10px 20px);box-shadow:0 0 0 6px #120a1d inset,0 0 0 7px #caa6ff44 inset,0 26px 50px -20px #000,0 0 40px -10px var(--mh-violet)}
+.mh-tarot-back{position:absolute;inset:0;margin:auto;width:80px;height:80px;animation:mh-blink 4s ease-in-out infinite}
+button.mh-tarot{animation:mh-omen-glow 2.8s ease-in-out infinite}
+button.mh-tarot:focus-visible{outline:2px solid var(--mh-violet);outline-offset:6px}
+.mh-tarot.face{cursor:default;background:radial-gradient(80% 50% at 50% 35%,#f6c76855,transparent 70%),linear-gradient(180deg,#2d1a45,#160c24)}
+.mh-tarot.flipping{animation:mh-flip .8s cubic-bezier(.3,1.3,.5,1) 1}
+@keyframes mh-flip{0%{transform:rotateY(180deg) scale(.9)}100%{transform:none}}
+.mh-tarot-face{position:absolute;inset:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;border:1px solid #f6c76844;border-radius:8px}
+.mh-tarot-art{width:90px;height:90px;color:var(--mh-candle);filter:drop-shadow(0 0 16px var(--mh-candle))}
+.mh-tarot-face b{font:22px/1.1 var(--display);color:var(--mh-wax);text-align:center;padding:0 10px}
+.mh-omen-line{text-align:center;font:23px/1.4 var(--hand);color:var(--ink);margin:14px 0}
+
+/* ---- the cabinet ------------------------------------------------------------------ */
+.mh-cabinet{max-width:720px}
+.mh-rank-card{padding:16px 18px;border-radius:16px;border:1px solid color-mix(in srgb,var(--mh-candle) 35%,transparent);background:radial-gradient(90% 90% at 100% 0%,#f6c7681f,transparent 60%),#150e18}
+.mh-rank-card h3{margin:4px 0 4px;font:34px/1.05 var(--display);color:var(--mh-wax)}
+.mh-rank-card p{margin:0;font:21px/1.35 var(--hand);color:var(--ink-2)}
+.mh-rank-card>small{font-size:12px;color:var(--ink-3)}
+.mh-ladder{list-style:none;display:flex;gap:6px;overflow-x:auto;margin:12px -2px 0;padding:2px 2px 6px;scrollbar-width:thin}
+.mh-ladder li{flex:none;display:flex;flex-direction:column;gap:2px;padding:7px 10px;border-radius:10px;border:1px solid var(--hair);font-size:11px;min-width:92px}
+.mh-ladder li b{font-weight:600;color:var(--ink-2)}
+.mh-ladder li small{color:var(--ink-3);font-size:10px}
+.mh-ladder li.past{opacity:.55}
+.mh-ladder li.now{border-color:var(--mh-candle);background:color-mix(in srgb,var(--mh-candle) 14%,transparent)}
+.mh-ladder li.now b{color:var(--mh-wax)}
+.mh-ladder li.future b{color:var(--ink-3)}
+.mh-stats{margin:10px 0 0!important;font:600 12px var(--body)!important;color:var(--ink-3)!important;letter-spacing:.02em}
+.mh-cabinet-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.mh-curio-detail{display:flex;justify-content:center;margin:16px 0 6px}
+.mh-curio-detail[hidden]{display:none}
+.mh-shelf-group{margin-top:18px}
+.mh-shelf-group h3{display:flex;align-items:baseline;gap:8px;margin:0 0 8px;font:700 11px var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--rc)}
+.mh-shelf-group h3 small{color:var(--ink-3);letter-spacing:.06em}
+.mh-shelf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.mh-shelf-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px 10px;border-radius:12px;font:inherit;color:var(--ink);text-align:center;
+  border:1px solid color-mix(in srgb,var(--rc) 40%,transparent);background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 10%,#170f1a),#110b13)}
+button.mh-shelf-item{cursor:pointer}
+button.mh-shelf-item:hover{border-color:var(--rc);transform:translateY(-2px)}
+.mh-shelf-item .mh-curio-art{width:46px;height:46px;color:var(--rc)}
+.mh-shelf-item b{font-size:11.5px;font-weight:600;line-height:1.25}
+.mh-shelf-item em{position:absolute;top:5px;right:7px;font-style:normal;font-size:10px;color:var(--ink-3)}
+.mh-shelf-item.missing{border-style:dashed;border-color:var(--hair-lit);background:#0c080e}
+.mh-shelf-item.missing .mh-curio-art{color:#fff;opacity:.08}
+.mh-shelf-item.missing b{color:var(--ink-3);letter-spacing:.2em}
+.mh-log{margin-top:22px}
+.mh-log h3{font:20px var(--display);margin:0 0 10px}
+.mh-log ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.mh-log li{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.mh-log li b{color:var(--ink)}
+.mh-mini-stamp{flex:none;padding:3px 7px;border:1.5px solid currentColor;border-radius:5px;font:800 9px var(--body);letter-spacing:.1em;transform:rotate(-3deg);margin-top:2px}
+.mh-log li.tone-good .mh-mini-stamp{color:var(--mh-good)} .mh-log li.tone-bad .mh-mini-stamp{color:var(--mh-bad)} .mh-log li.tone-weird .mh-mini-stamp{color:var(--mh-weird)}
+
+/* ---- rank up ------------------------------------------------------------------------ */
+.mh-rankup{position:fixed;z-index:90;left:50%;top:calc(var(--topbar-h) + 14px + var(--sat));transform:translateX(-50%);width:min(92vw,440px);pointer-events:none}
+.mh-rankup[hidden]{display:none}
+.mh-rankup-card{display:flex;flex-direction:column;gap:6px;padding:18px 22px;border-radius:18px;text-align:center;border:1px solid var(--mh-candle);
+  background:radial-gradient(100% 120% at 50% 0%,#f6c76844,transparent 60%),linear-gradient(180deg,#2a1a18,#140c10);box-shadow:0 30px 70px -20px #000,0 0 60px -10px var(--mh-candle)}
+.mh-rankup-card .mh-tile-kicker{color:var(--mh-candle)}
+.mh-rankup-card b{font:34px/1.05 var(--display);color:var(--mh-wax)}
+.mh-rankup-card p{margin:0;font:21px/1.35 var(--hand);color:var(--ink-2)}
+.mh-rankup.show .mh-rankup-card{animation:mh-rank-in .7s cubic-bezier(.2,1.5,.4,1) 1}
+@keyframes mh-rank-in{0%{opacity:0;transform:translateY(-40px) scale(.8)}100%{opacity:1;transform:none}}
+
+/* ---- phone -------------------------------------------------------------------------- */
+@media (max-width:900px){
+  .mayhem-desk{grid-template-columns:1fr 1fr}
+  .mh-chores{grid-column:1 / -1;order:-1}
+  .mh-cabinet-tile{grid-column:1 / -1}
+}
+@media (max-width:720px){
+  .souls-hud{min-height:36px;padding:3px 10px 3px 4px;gap:6px}
+  .souls-rank{display:none}
+  .souls-icon{width:24px;height:24px}
+  .souls-count b{font-size:16px}
+  .mh-alert{padding:10px 11px;gap:10px}
+  .mh-siren{width:38px;height:38px;padding:7px}
+  .mh-alert-text>span{font-size:19px}
+  .mh-alert-go{padding:8px 12px;font-size:12px}
+  .mh-title{font-size:25px}
+  .mh-scene{height:170px}
+  .mh-actor{width:124px;height:140px}
+  .mh-scene.pair .mh-actor{width:108px;height:124px}
+  .mh-text{font-size:21px}
+  .mh-tile b{font-size:19px}
+}
+@media (max-width:420px){
+  .mh-alert-go{display:none}
+  .mh-alert.omen .mh-alert-text>span{display:none}
+  .mh-alert.omen .mh-alert-text b{font-size:13px}
+  .mh-alert.omen::after{content:'Reveal';flex:none;padding:7px 12px;border-radius:999px;font-weight:700;font-size:12px;background:linear-gradient(180deg,#caa6ff,#8a5ad8);color:#12081f}
+  .mayhem-desk{gap:8px}
+  .mh-tile{padding:11px 12px}
+}
+
+/* ---- motion off ---------------------------------------------------------------------- */
+@media (prefers-reduced-motion:reduce){
+  .souls-icon,.mh-alert.hot::after,.mh-alert .mh-siren,.mh-coffin-art,.mh-prop,.mh-coffin-box .mh-glyph,button.mh-tarot,.mh-tarot-back,
+  #cabinet .pet.mh-trouble::before,.mh-curio-card,.mh-actor,.mh-stamp,.mh-rankup.show .mh-rankup-card,.souls-hud.pulse,.mh-tarot.flipping{animation:none!important}
+  .souls-float{display:none}
+}

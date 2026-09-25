@@ -9,6 +9,8 @@ import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
 import { artPersonality } from './engine/personality.js';
 import { initStories } from './ui/stories.js';
+import { initMayhem } from './ui/mayhem.js';
+import { accrueMayhem } from './engine/mayhem.js';
 import {
   state, save, addNote, pick, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store, RECOVERY_KEY, loadFailed, backupDue
 } from './state.js';
@@ -77,9 +79,10 @@ const studio = initStudio({
     state.slots[slot] = pet.id;
     addNote(state, finalName + ' has moved in. ' + TRAIT_BY_ID[traits[0]].blurb + ' ' + pick([
       'It has inspected the edge. It will be staying.',
-      'It brought nothing. It has already lost something.',
-      'It tried to look taller for the introductions.',
-      'It has unpacked. There was a crumb.'
+      'It brought nothing but a very small shovel. It will not say why.',
+      'It introduced itself to everyone, then to the thing under the floorboards.',
+      'It has unpacked. Mostly teeth. None of them its own.',
+      'It has measured the shelf for a coffin. Its own, it says. Probably.'
     ]), 'the shelf', 'arrival');
     const anatomy = artPersonality(pet);
     if (anatomy.horns || anatomy.halo || anatomy.motion.canFlap) addNote(state, finalName + ': ' + anatomy.features[0].text, 'made this way', 'note');
@@ -354,6 +357,7 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 
 // ---------- wire the remaining self-contained widgets ----------
 
+initMayhem(state, () => renderAll(state));
 initSchemeUI(state, () => renderAll(state));
 initPlay(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
@@ -407,6 +411,13 @@ document.getElementById('helpPlayroom').addEventListener('click', () => {
 });
 helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.classList.remove('open'); });
 
+// Coming back to a pile of disasters is the point; say so once, briefly.
+function announceMayhem(added) {
+  if (!added || !state.pets.length) return;
+  const n = state.mayhem.queue.length;
+  toast(n === 1 ? 'While you were out, something went wrong. It is waiting above the shelf.' : 'While you were out, ' + n + ' things went wrong. They are waiting above the shelf.');
+}
+
 (function boot() {
   applyDecor(state);
   syncNight();
@@ -414,8 +425,10 @@ helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.cl
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
+  const newTrouble = accrueMayhem(state);
   welcomeBack(state);
   renderAll(state);
+  announceMayhem(newTrouble);
   if (state.pets.length && away > 6) {
     const worst = state.pets.slice().sort((a, b) =>
       (a.needs.food + a.needs.fuss + a.needs.clean) - (b.needs.food + b.needs.fuss + b.needs.clean)
@@ -433,6 +446,7 @@ setInterval(() => {
   if (document.hidden || shelfTheatre.isPlaying() || document.getElementById('playVeil').classList.contains('open') || document.getElementById('studioVeil').classList.contains('open')) return;
   if (tick(state)) {
     advanceSchemes(state);
+    accrueMayhem(state);
     const behavior = runBehavior(state); // self-rate-limited to PASS_INTERVAL_MS
     renderAll(state);
     const openId = getOpenPetId();
@@ -451,8 +465,10 @@ document.addEventListener('visibilitychange', () => {
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
+  const newTrouble = accrueMayhem(state);
   welcomeBack(state);
   renderAll(state);
+  if (!document.querySelector('.veil.open')) announceMayhem(newTrouble);
 });
 window.addEventListener('pagehide', () => { lifeState(state).lastSeen = Date.now(); save(); });
 

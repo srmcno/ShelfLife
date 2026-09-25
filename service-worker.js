@@ -1,7 +1,14 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v44';
+const CACHE_VERSION = 'shelflife-v45';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
+  "./src/content/mayhem.js",
+  "./src/mayhem-state.js",
+  "./src/engine/mayhem.js",
+  "./src/ui/mayhem.js",
+  "./src/art/mayhem-glyphs.js",
+  "./css/mayhem.css",
+  "./css/atmosphere.css",
   "./assets/rooms/night-market.webp",
   "./src/mastery-state.js",
   "./src/household-echoes.js",

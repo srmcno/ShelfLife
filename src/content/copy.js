@@ -269,7 +269,13 @@ export const CARE_LINES = {
     'Ate, then put both hands on the bowl and pushed it toward you. Empty.',
     'Ate it faster than it could have chewed it. Sat down. Hiccupped once.',
     'Ate all of it, then licked your fingertip in case there was more on there.',
-    'Ate, and has fallen asleep with its head on the rim of the bowl.'
+    'Ate, and has fallen asleep with its head on the rim of the bowl.',
+    'Said grace. It was addressed to something under the floorboards. Something said amen.',
+    'Ate like it was its last meal. It has had eleven thousand last meals. It is getting good at them.',
+    'Ate the crumb, then held a small wake for it, then ate the flowers from the wake.',
+    'Chewed with its mouth open so you could watch the crumb go. It wanted a witness.',
+    'Ate it, burped, and a moth flew out. The moth looked as surprised as anyone.',
+    'Ate, then licked the bowl, then licked your thumb, then looked at your other thumb with intent.'
   ],
   fuss: [
     'Leaned into your thumb. Something clicked back into its socket.',
@@ -291,7 +297,12 @@ export const CARE_LINES = {
     'Pressed against your fingertip until the impression showed through its back.',
     'Put one hand on your finger and left it there for the whole thing.',
     'Purred. The nameplate buzzed with it.',
-    'Shut its eyes and leaned. Kept leaning after the finger had gone.'
+    'Shut its eyes and leaned. Kept leaning after the finger had gone.',
+    'Purred so hard a tooth came loose. Gave it to you. You have to keep it now. Those are the rules.',
+    'Went limp in the way the recently deceased do in films. Opened one eye to check you were impressed.',
+    'Pressed its cold little face into your palm and said “warm” like it was reading your will.',
+    'Let you stroke it, then whispered the date you will die. Then said “kidding”. Then did not blink.',
+    'Nuzzled your wrist, found the pulse, and stayed there listening to it like a radio.'
   ],
   clean: [
     'Held up its chin for the cloth. There was more chin than expected.',
@@ -313,7 +324,12 @@ export const CARE_LINES = {
     'Was wiped. Squeaked on the second pass. Squeaked again on purpose.',
     'Came out clean and went straight to check the dust was still there.',
     'Held very still while its face was done. Held stiller for the second go.',
-    'Patted its stuffing back through the seam. Kept one piece out to clean its teeth.'
+    'Patted its stuffing back through the seam. Kept one piece out to clean its teeth.',
+    'Was scrubbed until something that was not dirt came off. It had a face. It waved.',
+    'Came out so clean it looks embalmed. It is thrilled. It is asking for an open casket.',
+    'Lay perfectly still to be washed, arms crossed on its chest. Nobody asked it to do that.',
+    'Rinsed off. The water went black, then red, then clear. It says that is normal. It says it twice.',
+    'Held still for the cloth, then rolled straight back in the dust, like a dog, or a grave robber.'
   ]
 };
 
@@ -453,6 +469,14 @@ export const ASLEEP_LINES = [
    here is the inch and the slot, because that is the size of the world. */
 export const EVENTS = [
   'Everything on the shelf is one inch to the left this morning. Including the shelf.',
+  'A small wreath has been left on the empty slot. It is addressed to whoever is next.',
+  'The houseplant has been dug up and replanted, facing the other way. It looks relieved.',
+  'Someone has chalked a pentagram under the bowl. It is badly drawn. It worked anyway.',
+  'There are footprints in the dust leading up the wall and across the ceiling. They are small. They are wearing heels.',
+  'A funeral procession went past at 3am. It was four inches tall. Nobody on the shelf was invited, and they are furious.',
+  'The drawer has been breathing all night. Slow, contented breaths, like it has eaten.',
+  'A note under the door reads “WE KNOW”. Everyone on the shelf is pretending it is for someone else.',
+  'Every resident woke up holding a single tooth. Nobody will say whose. Everyone is smiling with their mouth closed.',
   'A tooth was found on the floor. Nobody is missing one.',
   'They were all facing the same direction this morning. Nothing was moved.',
   'A rota went up overnight. Monday to Sunday, and an eighth column headed AFTER.',
@@ -956,7 +980,12 @@ export const ROUNDS_TOASTS = [
   "All topped up. The candle got wiped too.",
   "Rounds done. Somebody wants the bill.",
   "Everyone handled. At arm's length.",
-  "Rounds done. MINIMUM, says a small sign."
+  "Rounds done. MINIMUM, says a small sign.",
+  "Rounds done. Somebody is drafting a complaint in blood. Their own. Mostly.",
+  "Everyone fed. The one at the end asked if you were in a hurry to get somewhere. Like a funeral.",
+  "Rounds done. They rated you. The ratings are on a small headstone.",
+  "Done. Somebody says you do the rounds like an undertaker measures people.",
+  "Rounds done. A tiny voice asked for the manager. The manager is you. It knows."
 ];
 
 /* ================= A PET AND A PROP =================

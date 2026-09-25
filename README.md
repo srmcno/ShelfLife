@@ -6,6 +6,22 @@ Small creatures. Long memories. A free, darkly comic creature game for phones an
 Make peculiar residents, look after them, play together and collect the evidence of a small life.
 They cannot die. They have looked into it.
 
+## Something has gone wrong
+
+Every twelve minutes something goes wrong on the shelf. Somebody finds the rat poison, starts a cult,
+writes you out of their will or holds a funeral for a raisin. Up to three emergencies pile up while you
+are away. Each one is a card with two choices and a random, usually regrettable, result.
+
+Every result pays **souls**. Souls buy **coffins**, and every coffin holds a cursed curio for the
+**Cabinet of Curiosities**: 34 of them, from Common to Unholy. Souls earned for life set what the
+neighbours call your house, from *Suspiciously Normal* to *Unspeakable*. Care, rounds and finished
+Playroom games pay a few souls too, so the slow loop feeds the fast one.
+
+Turn over **tonight’s omen** once a night for free souls and a daily twist: double pay, cheaper coffins,
+better luck or one extra disaster. Nights in a row pay more, and the seventh leaves something rare on the
+step. Three **unholy chores** a day pay souls each and a free curio for the set. Nothing is ever taken
+away: a missed night only restarts the count.
+
 ## Make yourself at home
 
 Meet Mabel, Pip or Oswald, or create someone entirely your own. The face you choose is the
@@ -151,6 +167,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | --- | --- |
 | `src/state.js`, `src/life-state.js` | Saves, validation, migration and bounded history |
 | `src/play-rug-state.js`, `src/engine/play-rug.js` | Resident trick collections and a bounded toy simulation |
+| `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
 | `src/art/` | Creature/drawing data, SVG rendering, animation and the studio |

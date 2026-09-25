@@ -1,0 +1,118 @@
+/* =============================================================================
+   Atmosphere: the room after dark. Candles on the cabinet, a low fog, drifting
+   embers and a light that will not hold still. Everything here is decoration:
+   it sits behind or above the play surface, ignores the pointer, and switches
+   off for Light effects and reduced motion.
+   ============================================================================= */
+
+/* ---- new wallpaper: damask, drawn from the room's own ink ---------------- */
+body.wall-damask{
+  --wall-pattern:
+    radial-gradient(ellipse 5px 11px at 50% 50%,var(--wall-ink) 96%,transparent 100%),
+    radial-gradient(circle at 50% 50%,transparent 13px,var(--wall-ink) 13.5px 15px,transparent 15.5px),
+    radial-gradient(ellipse 3px 6px at 0 0,var(--wall-ink) 96%,transparent 100%),
+    radial-gradient(ellipse 3px 6px at 100% 100%,var(--wall-ink) 96%,transparent 100%),
+    repeating-linear-gradient(90deg,transparent 0 23px,color-mix(in srgb,var(--wall-ink) 45%,transparent) 23px 24px,transparent 24px 48px);
+  --wall-pattern-size:48px 60px;
+}
+/* Loud inside the cabinet, a whisper on the wall behind it. */
+body.wall-damask #wall{opacity:.38}
+
+/* ---- the haze layer ---------------------------------------------------------- */
+#haze{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+/* A warm pool of candlelight over the cabinet that breathes and gutters. */
+#haze::before{content:'';position:absolute;left:50%;top:-10vh;width:120vw;height:90vh;transform:translateX(-50%);
+  background:radial-gradient(50% 45% at 50% 30%,color-mix(in srgb,var(--mh-candle,#F6C768) 11%,transparent),transparent 70%);
+  animation:haze-gutter 6.5s steps(26) infinite}
+/* Embers and dust, rising. Two tiled layers at different speeds read as depth. */
+#haze::after{content:'';position:absolute;inset:-100% 0 0;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 22%,#f6c768cc,transparent),radial-gradient(1.2px 1.2px at 64% 8%,#ffb07acc,transparent),
+    radial-gradient(1.4px 1.4px at 38% 71%,#f6c768aa,transparent),radial-gradient(1px 1px at 86% 44%,#fff3,transparent),
+    radial-gradient(1.8px 1.8px at 76% 88%,#ff8a5caa,transparent),radial-gradient(1px 1px at 24% 52%,#fff2,transparent),
+    radial-gradient(1.3px 1.3px at 52% 36%,#f6c76899,transparent),radial-gradient(1px 1px at 4% 90%,#fff2,transparent);
+  background-size:420px 520px;animation:haze-rise 38s steps(300) infinite;opacity:.75;will-change:transform}
+.haze-fog{position:absolute;left:-20%;right:-20%;bottom:-6vh;height:42vh;
+  background:
+    radial-gradient(40% 55% at 20% 70%,color-mix(in srgb,var(--room-a) 55%,#8e7aa0 20%),transparent 70%),
+    radial-gradient(35% 50% at 62% 80%,color-mix(in srgb,var(--room-a) 50%,#8e7aa0 25%),transparent 70%),
+    radial-gradient(30% 45% at 92% 65%,color-mix(in srgb,var(--room-a) 45%,#8e7aa0 20%),transparent 70%);
+  opacity:.28;will-change:transform;animation:haze-drift 34s steps(120) infinite alternate}
+.haze-fog.back{bottom:auto;top:40vh;height:36vh;opacity:.13;animation-duration:52s;animation-direction:alternate-reverse}
+.haze-vignette{position:absolute;inset:0;background:radial-gradient(120% 95% at 50% 35%,transparent 55%,#000a 100%)}
+@keyframes haze-gutter{0%,100%{opacity:1}18%{opacity:.82}22%{opacity:.95}47%{opacity:.7}52%{opacity:1}78%{opacity:.86}}
+@keyframes haze-rise{from{transform:translateY(0)}to{transform:translateY(50%)}}
+@keyframes haze-drift{from{transform:translateX(-4%)}to{transform:translateX(5%)}}
+
+/* ---- candles on the cabinet ---------------------------------------------------- */
+.pane-shelf .stage{position:relative}
+.candles{position:absolute;z-index:4;bottom:100%;display:flex;align-items:flex-end;gap:7px;pointer-events:none;margin-bottom:-4px}
+.candles.left{left:34px}
+.candles.right{right:34px;flex-direction:row-reverse}
+.candle{--h:34px;position:relative;width:13px;height:var(--h);border-radius:3px 3px 2px 2px;
+  background:linear-gradient(90deg,#b8a88f,#efe3c8 38%,#fff6e0 50%,#d9ccb2 75%,#9d8d75);box-shadow:0 2px 0 #0008}
+.candle.c2{--h:24px;width:12px}
+.candle.c3{--h:17px;width:11px}
+/* Wax drips down the side. */
+.candle::before{content:'';position:absolute;left:1px;top:-1px;width:6px;height:calc(var(--h) * .55);border-radius:0 0 4px 4px;
+  background:linear-gradient(90deg,#efe3c8,#fff6e0);box-shadow:5px -2px 0 -1px #f3e9d2}
+/* The flame, its wick and a halo. */
+.candle i{position:absolute;left:50%;bottom:calc(100% + 1px);width:9px;height:16px;margin-left:-4.5px;border-radius:50% 50% 45% 45% / 62% 62% 38% 38%;
+  background:radial-gradient(60% 60% at 50% 72%,#fff 0 20%,#ffe39a 38%,#ff9d3c 72%,#ff5a2a00 100%);
+  transform-origin:50% 100%;animation:candle-flicker 1.4s steps(10) infinite;box-shadow:0 -2px 8px 1px #ffb05066}
+.candle i::after{content:'';position:absolute;left:50%;top:50%;width:70px;height:70px;margin:-35px 0 0 -35px;border-radius:50%;
+  background:radial-gradient(circle,#ffc56e40,transparent 65%);animation:candle-halo 2.3s steps(12) infinite}
+.candle.c2 i{animation-duration:1.7s;animation-delay:-.4s}
+.candle.c3 i{animation-duration:1.2s;animation-delay:-.9s}
+@keyframes candle-flicker{0%,100%{transform:scale(1,1) rotate(-2deg)}20%{transform:scale(.92,1.08) rotate(3deg)}40%{transform:scale(1.05,.94) rotate(-1deg)}60%{transform:scale(.95,1.1) rotate(2deg)}80%{transform:scale(1.02,.96) rotate(-3deg)}}
+@keyframes candle-halo{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:.6;transform:scale(.9)}}
+
+/* The alarm strip sits above the candles, so it needs room for the flames. */
+.pane-shelf .mayhem-alert{margin-bottom:46px}
+.pane-shelf .mayhem-alert[hidden] + .stage{margin-top:42px}
+
+/* ---- the cabinet at night -------------------------------------------------------- */
+/* A little glow along each plank so the creatures read as lit by the candles. */
+.pane-shelf .cabinet-wrap{box-shadow:0 3px 0 #0009,0 24px 45px -21px #000,0 0 120px -30px color-mix(in srgb,#ffb050 40%,transparent)}
+.cabinet-sign{letter-spacing:.2em}
+
+/* ---- the primary action, in wax and blood ------------------------------------------- */
+#paneShelf #actions .rug-launch{
+  background-color:var(--pink);
+  background-image:radial-gradient(120% 140% at 0% 0%,#ff7a5c55,transparent 55%),linear-gradient(180deg,#ffffff1a,#0000002e);
+  color:var(--accent-ink);border-color:color-mix(in srgb,var(--pink) 60%,#fff 20%);
+  box-shadow:0 3px 0 color-mix(in srgb,var(--pink) 40%,#000),0 12px 30px -12px var(--pink),inset 0 1px 0 #fff4}
+#paneShelf #actions .rug-launch small{color:var(--accent-ink);opacity:.85}
+
+/* ---- the wordmark takes the candle colour ---------------------------------------------- */
+.wordmark em{color:var(--mh-candle,#F6C768);text-shadow:0 0 18px color-mix(in srgb,var(--mh-candle,#F6C768) 45%,transparent)}
+
+/* ---- phone ------------------------------------------------------------------------------ */
+@media (max-width:720px){
+  .pane-shelf .stage{overflow-x:clip;overflow-y:visible}
+  .candles{gap:5px}
+  .candles.left{left:14px}
+  .candles.right{right:14px}
+  .candle{--h:26px;width:10px}
+  .candle.c2{--h:19px;width:9px}
+  .candle.c3{display:none}
+  .candle i{width:8px;height:13px;margin-left:-4px}
+  .pane-shelf .mayhem-alert{margin-bottom:36px}
+  .pane-shelf .mayhem-alert[hidden] + .stage{margin-top:34px}
+  #haze::after{background-size:300px 380px}
+}
+
+/* ---- asleep behind a sheet ---------------------------------------------------------------
+   An open sheet blurs whatever is behind it; blurring a moving room every frame
+   is the most expensive thing this page could do, so the room holds still. */
+body.dialog-open #haze::before,body.dialog-open #haze::after,body.dialog-open .haze-fog,
+body.dialog-open .candle i,body.dialog-open .candle i::after,body.dialog-open .mayhem-alert *,body.dialog-open .mayhem-alert *::after,
+body.dialog-open .mayhem-desk *,body.dialog-open .souls-icon,body.dialog-open #cabinet .pet.mh-trouble::before{animation-play-state:paused!important}
+
+/* ---- light effects and reduced motion --------------------------------------------------- */
+body[data-effects="light"] #haze::before,body[data-effects="light"] #haze::after,body[data-effects="light"] .haze-fog,
+body[data-effects="light"] .candle i,body[data-effects="light"] .candle i::after{animation:none}
+body[data-effects="light"] #haze::after{display:none}
+@media (prefers-reduced-motion:reduce){
+  #haze::before,#haze::after,.haze-fog,.candle i,.candle i::after{animation:none!important}
+}
