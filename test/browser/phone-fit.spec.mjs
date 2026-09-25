@@ -29,20 +29,20 @@ async function openHousehold(page) {
   await page.goto('/');
   await expect(page.locator('#cabinet .piece.pet')).toHaveCount(snapshot.pets.length);
 }
-// Scroll the open sheet the way a finger would, then check its lowest
-// visible content is on screen.
+// Scroll the open sheet the way a finger would: only boxes whose CSS lets
+// them scroll (overflow auto or scroll) move; a clipped box stays put. Then
+// check the sheet's lowest visible content is on screen. (Wheel events are
+// not available in mobile WebKit, so the scrolling is done from the page.)
 async function bottomReachable(page, label) {
-  const centre = await page.evaluate(() => {
+  const result = await page.evaluate(async () => {
     const veil = document.querySelector('.veil.open');
     const sheet = veil.querySelector('.sheet') || veil;
-    const box = sheet.getBoundingClientRect();
-    return { x: box.left + box.width / 2, y: Math.min(innerHeight - 60, box.top + box.height / 2) };
-  });
-  await page.mouse.move(centre.x, centre.y);
-  for (let i = 0; i < 25; i++) await page.mouse.wheel(0, 500);
-  await page.waitForTimeout(300);
-  const result = await page.evaluate(() => {
-    const sheet = document.querySelector('.veil.open .sheet');
+    // Let the sheet finish sliding up before measuring it.
+    await Promise.all(sheet.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => {})));
+    const scrollable = el => /(auto|scroll)/.test(getComputedStyle(el).overflowY);
+    for (let pass = 0; pass < 3; pass++) {
+      for (const el of [veil, ...veil.querySelectorAll('*')]) if (scrollable(el)) el.scrollTop = el.scrollHeight;
+    }
     let lowest = 0, text = '';
     for (const el of sheet.querySelectorAll('button,a,p,li,h3,select,label')) {
       if (el.closest('[hidden],details:not([open]) > :not(summary)')) continue;
