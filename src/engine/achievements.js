@@ -1,5 +1,6 @@
 import { VISITORS } from '../content/stories.js';
 import { ARCADE_GAMES } from '../content/arcade.js';
+import { COURT_CASES } from '../content/court.js';
 import { remember } from './stories.js';
 import { FEUDS, FEUD_LINES, ESCALATION_LINES, TRUCE_LINES } from '../content/feuds.js';
 import { GRUDGE_LINES, STREAK_LINES } from '../content/copy.js';
@@ -180,6 +181,9 @@ export const ACHIEVEMENTS = [
   { id: 'handshake-veteran', hint: 'Play fifty arcade runs.', label: 'Regular', desc: 'Fifty runs in the arcade.', toastLine: 'Fifty. The dead have started saving you a seat.', check: state => arcadeRuns(state) >= 50 },
   { id: 'chase-win', hint: 'Score 40 in Feeding Frenzy.', label: 'Crumb Bailiff', desc: 'Forty points of falling food.', toastLine: 'Forty. The ceiling has been asked to stop.', check: state => (state.arcade?.best?.frenzy || 0) >= 40 },
   { id: 'chase-perfect', hint: 'Reach the top score tier in any arcade game.', label: 'Unreasonably Good At This', desc: 'Three skulls in one run.', toastLine: 'Three skulls. It is four inches tall and it is showing off.', check: topTier },
+  { id: 'court-win', hint: 'Win a case in Shelf Court.', label: 'Not Guilty', desc: 'Got a resident acquitted in Shelf Court.', toastLine: 'Acquitted. The skeleton judge nodded. Something in his neck clicked.', check: state => (state.courtroom?.wins || 0) >= 1 },
+  { id: 'court-all', hint: 'Win every case in Shelf Court.', label: 'Senior Counsel', desc: 'Won every case on the docket.', toastLine: 'Every case won. The prosecution has gone back to being a rat.', check: state => (state.courtroom?.solved?.length || 0) >= COURT_CASES.length },
+  { id: 'court-flawless', hint: 'Win a Shelf Court case without a single wrong objection.', label: 'Flawless Defence', desc: 'Won a case with the judge’s patience untouched.', toastLine: 'Not one wasted objection. The judge would weep, but he has no ducts.', check: state => (state.courtroom?.flawless?.length || 0) >= 1 },
   { id: 'promise-kept', hint: 'Accept a resident’s request and actually do it.', label: 'Good For It', desc: 'Kept a promise to a resident.', toastLine: 'You said you would and then you did. They are recalibrating.', check: state => state.pets.some(p => (p.fulfilledRequests || 0) >= 1) },
   { id: 'promise-broken', hint: 'Refuse a resident to its face.', label: 'On The Record', desc: 'Declined a resident’s request.', toastLine: 'Declined. Filed. It was very understanding, which is worse.', check: state => state.pets.some(p => (p.refusedRequests || 0) >= 1) },
   { id: 'promises-five', hint: 'Keep five promises across the shelf.', label: 'Dependable, Apparently', desc: 'Five requests fulfilled.', toastLine: 'Five kept promises. Somebody has started a different kind of list.', check: state => state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0) >= 5 },
@@ -208,7 +212,7 @@ export const INCIDENT_GROUPS = [
   { id: 'grief', title: 'Being resented',
     ids: ['first-grudge', 'first-reckoning', 'terminal-grudge', 'first-feud', 'first-truce'] },
   { id: 'games', title: 'Playing along',
-    ids: ['first-handshake', 'handshake-veteran', 'chase-win', 'chase-perfect'] },
+    ids: ['court-win', 'court-flawless', 'court-all', 'first-handshake', 'handshake-veteran', 'chase-win', 'chase-perfect'] },
   { id: 'word', title: 'Your word',
     ids: ['promise-kept', 'promises-five', 'promise-broken'] },
   { id: 'record', title: 'The long record',
@@ -236,6 +240,7 @@ export const INCIDENT_PROGRESS = {
   'terminal-grudge': state => ({ have: Math.max(0, ...state.pets.map(p => p.grudges || 0)), need: 20 }),
   'handshake-veteran': state => ({ have: arcadeRuns(state), need: 50 }),
   'chase-win': state => ({ have: state.arcade?.best?.frenzy || 0, need: 40 }),
+  'court-all': state => ({ have: state.courtroom?.solved?.length || 0, need: COURT_CASES.length }),
   'promises-five': state => ({ have: state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0), need: 5 }),
   'three-cases': state => ({ have: closedCases(state), need: 3 }),
   'all-visitors': state => ({ have: (((state.stories || {}).collection) || []).length, need: VISITORS.length })

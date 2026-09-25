@@ -78,6 +78,12 @@ export const OBSERVATIONS = {
     '{p} is holding a séance for its high score. The high score is not dead. {p} is making sure.',
     '{p} caught a falling crumb in its sleep. Then some holy water. It woke up steaming and proud.'
   ],
+  court: [
+    '{p} is cross-examining the teaspoon. The teaspoon is sweating. It is condensation, but {p} is taking notes.',
+    '{p}: “Objection.” Nobody said anything. {p} is getting ahead of the day.',
+    '{p} has been practising its not-guilty face in the mirror. The mirror has asked for a lawyer.',
+    '{p} keeps glancing at the lamp. The lamp faces the wall now. The lamp knows what it did.'
+  ],
   alibi: [
     '{p} has lost a clean Alibi round to you. It is moving the truth to a less accessible orifice.',
     '{p}: “You found every lie. I was hoping my face would count as mitigation.”',

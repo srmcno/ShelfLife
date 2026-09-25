@@ -6,7 +6,7 @@ import { toast } from './toast.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const say = (text, name) => String(text || '').replaceAll('{name}', () => name);
-const gameNames = { 'arcade:frenzy':'Feeding Frenzy', 'arcade:stack':'Coffin Stack', 'arcade:seance':'The Séance', 'arcade:whack':'Grave Whack', outing:'Expeditions' };
+const gameNames = { 'arcade:frenzy':'Feeding Frenzy', 'arcade:stack':'Coffin Stack', 'arcade:seance':'The Séance', 'arcade:whack':'Grave Whack', outing:'Expeditions', court:'Shelf Court' };
 const button = (action, label, extra = '', primary = false) => '<button type="button" class="btn ' + (primary ? 'btn-primary' : 'btn-ghost') + '" data-escapade="' + action + '" ' + extra + '>' + esc(label) + '</button>';
 let latestState, view, previewId = '', selectedPet = '', panel = 'story', receiptKey = '', recentReceipt = null;
 let hubKey = '', portraitArt = null, previousProgress = '';
@@ -145,6 +145,7 @@ export function initEscapades(state, refresh) {
       else {
         const activity = active.approach.activity;
         if (activity.startsWith('arcade:')) window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail:{ petId:active.petId, game:activity.slice(7) } }));
+        else if (activity === 'court') window.dispatchEvent(new CustomEvent('shelflife:court', { detail:{ petId:active.petId } }));
         else window.dispatchEvent(new CustomEvent('shelflife:activity', { detail:{ petId:active.petId, action:activity } }));
       }
     }

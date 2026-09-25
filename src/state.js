@@ -7,6 +7,7 @@ import { blankEscapades, normalizeEscapades } from './escapade-state.js';
 import { blankRug, normalizeRug } from './play-rug-state.js';
 import { blankMayhem, normalizeMayhem } from './mayhem-state.js';
 import { blankArcade, normalizeArcade } from './arcade-state.js';
+import { blankCourtroom, normalizeCourtroom } from './court-state.js';
 import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.js';
 import { RESIDENT_TENURE } from './content/resident-life.js';
 export const Store = (function () {
@@ -173,7 +174,7 @@ export function defaultLedger() { return { meeting: 1, carried: 0, struck: {}, a
 
 export function blankState() {
   return {
-    v: 4, life: blankLife(), escapades: blankEscapades(), rug: blankRug(), mayhem: blankMayhem(), arcade: blankArcade(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
+    v: 4, life: blankLife(), escapades: blankEscapades(), rug: blankRug(), mayhem: blankMayhem(), arcade: blankArcade(), courtroom: blankCourtroom(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
     notes: [], paperwork: blankPaperwork(), seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
@@ -354,7 +355,7 @@ export function normalizeState(raw) {
     // The retired games' records (Crumb Chase, Handshake, Alibi, Court and the
     // Night Market) are dropped; their lifetime counters below stay as history.
     for (const key of ['playedAt', 'lastPlayed', 'chaseBest', 'chaseRecords', 'handshakeBest', 'handshakeRituals', 'chaseCampaign']) delete p[key];
-    for (const key of ['expeditions', 'arcadeRuns', 'handshakes', 'dustPatrols', 'chases', 'alibis', 'alibiWins', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
+    for (const key of ['expeditions', 'arcadeRuns', 'courtCases', 'handshakes', 'dustPatrols', 'chases', 'alibis', 'alibiWins', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
     p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];
     p.stats = record(p.stats) ? p.stats : {};
     ['cute', 'menace', 'damp', 'mystique'].forEach(k => { p.stats[k] = finite(p.stats[k], 5, 1, 10); });
@@ -397,6 +398,7 @@ export function normalizeState(raw) {
   s.rug = normalizeRug(s.rug, s, now);
   s.mayhem = normalizeMayhem(s.mayhem, s, now);
   s.arcade = normalizeArcade(s.arcade);
+  s.courtroom = normalizeCourtroom(s.courtroom);
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
   return s;
 }

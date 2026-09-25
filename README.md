@@ -85,8 +85,24 @@ they say about the life they have had here.
 
 ## The Playroom
 
-Four quick arcade games and one expedition. Every game is endless, gets faster, and ends when
-your luck does. Instructions are one line. **Again** is always one key away.
+Shelf Court, four quick arcade games and one expedition. Arcade games are endless, get faster,
+and end when your luck does. Instructions are one line. **Again** is always one key away.
+
+### Shelf Court
+
+A courtroom comedy in the old cross-examination style. Your resident stands in the dock, a
+skeleton judge presides, and Prosecutor Rattigan (a rat in a wig) calls two witnesses per case.
+Step through each testimony, **Press** anything suspicious (liars sweat, and some presses turn up
+new evidence), then **Present** the one piece of evidence that flatly contradicts a statement.
+Get it right and the witness breaks down; get it wrong three times and the judge runs out of
+patience and your resident is dusted weekly for all eternity.
+
+Six hand-written cases share a recurring cast: Geoffrey the Woodlouse, Madam Moth, the Lamp,
+Sir Reginald Whiskers, Inspector Wispley of the Ministry of Haunting, Uncle, the Raven, Mrs Widow
+and Susan the doll's head. Every case is solvable from the statement and the evidence card alone;
+a unit test walks each one and checks that every lie is disproved by evidence the player can hold.
+Wins pay souls (more for patience left, a bonus the first time), a little trust, and count for
+adventures that ask for a trial. The docket stamps each won case, gold for a flawless defence.
 
 | Game | What you do |
 | --- | --- |
@@ -94,6 +110,7 @@ your luck does. Instructions are one line. **Again** is always one key away.
 | Coffin Stack | Drop coffins onto a growing tower. Overhang is sawn off; three perfect drops in a row win some width back. |
 | The Séance | Candles light in sequence. Repeat it. Each round adds one. The spirits forgive one mistake. |
 | Grave Whack | Push the hands back into their graves before they climb out. Never tap the widow. The landlord is worth five. |
+| Shelf Court | Defend your resident: press witnesses, present evidence, shout objection. Six cases. |
 | Expeditions | Pack a tool, choose a crew and recover parts for working household objects. |
 
 Every scoring run pays souls from a daily purse, beating your best pays a bonus, and a good run
@@ -101,8 +118,9 @@ earns a little trust (within the usual daily cap). Little adventures ask for a s
 the resident who invited you. Expeditions show your crew, packed equipment, route and exact
 choice consequences; two distinct recovered parts build a permanent household project.
 
-Crumb Chase, Handshake, The Alibi, Shelf Court and the Night Market have been retired. Saves keep
-their lifetime counts and earned achievements; unfinished hearings and market trips are dropped.
+Crumb Chase, Handshake, The Alibi, the old Shelf Court hearings and the Night Market have been
+retired. Saves keep their lifetime counts and earned achievements; unfinished hearings and market
+trips are dropped. Shelf Court returns rebuilt from scratch, above.
 
 **Notes → Paperwork** keeps the latest 120 filed documents independently of the temporary
 note board. Expedition reports, incident reports and resident documents are
@@ -111,7 +129,7 @@ activity records. Clearing notes preserves these documents. Empty filters and di
 explain what belongs there and how to add it.
 
 On desktop, **P** opens the Playroom. Frenzy uses ← → or A/D, Coffin Stack uses Space, the Séance uses 1 to 4 and
-Grave Whack uses 1 to 9. P pauses any run; a long stall or a hidden tab pauses it for you.
+Grave Whack uses 1 to 9. In Shelf Court, Enter or Space advances dialogue and ← → step through testimony. P pauses any run; a long stall or a hidden tab pauses it for you.
 **Escape** closes the current sheet and returns focus to its opener. Motion follows your system
 preference; More also offers Automatic, Light and Full effects. The narrator is off until enabled.
 Light retains brief gameplay reactions and scene movement while simplifying decoration.
@@ -157,7 +175,7 @@ npm run build
 ```
 
 The browser suite uses isolated synthetic households and a separate local server. It checks
-creation, saved appearance, care, every arcade game and expeditions, completed adventure endings,
+creation, saved appearance, care, every arcade game, a full Shelf Court case won and one lost, expeditions, completed adventure endings,
 abandoned runs, emergencies, coffins and the curio cabinet, expedition returns, report persistence,
 replay identity, all sixteen keepsakes, real rug catches and bubble pops,
 cancelled gestures, failed saves, responsive layouts and runtime errors
@@ -171,6 +189,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/play-rug-state.js`, `src/engine/play-rug.js` | Resident trick collections and a bounded toy simulation |
 | `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
 | `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
+| `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js` | Shelf Court: cases, trial state machine, courtroom stage and the drawn cast |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
 | `src/art/` | Creature/drawing data, SVG rendering, animation and the studio |

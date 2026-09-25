@@ -83,6 +83,12 @@ export function residentMemories(state, pet, now = Date.now()) {
     watchful: 'I have watched every one of our arcade runs twice. Once live. Once in my head, at night, with commentary.',
     plain: 'We have played at the arcade. I keep my scores in a small tin. The tin is also a coffin.'
   }), count(pet.arcadeRuns) + ' scored arcade runs with this resident.');
+  if (count(pet.courtCases)) add('court', voice(pet, {
+    attached: 'You stood up for me in court. In front of a skeleton. I have never felt so defended or so looked at.',
+    toothy: 'I have been in the dock. I bit the rail. It is in the transcript.',
+    watchful: 'I watched you catch a liar in court. I now watch everyone the way you watched that moth.',
+    plain: 'We went to court together. The judge had no skin and still somehow frowned.'
+  }), count(pet.courtCases) + ' trials in Shelf Court with this resident.');
   const guest = state.stories?.visitor;
   if (guest?.welcomed && guest.hostId === pet.id && typeof guest.kind === 'string') add('visitor', guest.choice === 'crumbs'
     ? 'I shared my food with the visitor. Hospitality feels exactly like having less food.'

@@ -28,6 +28,7 @@ export function observationLines(state, pet, now = Date.now()) {
   if (pet.handshakes > 0) topics.push(['handshake']);
   if (pet.alibiWins > 0) topics.push(['alibi']);
   if (pet.arcadeRuns > 0) topics.push(['arcade']);
+  if (pet.courtCases > 0) topics.push(['court']);
   const v = state.stories?.visitor;
   if (v?.welcomed && v.hostId === pet.id && now < v.at + 6 * 3600000) {
     const visitor = VISITORS.find(d => d.id === v.kind)?.name;
