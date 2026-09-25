@@ -288,9 +288,12 @@ function gameOver() {
     '<ul class="mh-rewards">' + (result.souls ? '<li class="souls">' + glyph('soul') + '+' + result.souls + ' souls</li>' : '<li>' + (result.score ? 'Today’s arcade purse is empty. Play for glory.' : 'No score, no souls.') + '</li>') +
     (result.trust ? '<li class="good">' + esc(pet()?.name || '') + ' trusts you a little more</li>' : '') + '</ul>' +
     (escapadeView(S).active?.ready ? '<div class="ar-actions"><button class="btn btn-primary" type="button" data-escapade="open">Our story’s ending ↗</button></div>' : '') +
-    '<div class="ar-actions"><button class="btn btn-primary ar-again" type="button" data-ar="play">Again</button><button class="btn" type="button" data-ar="menu">Other games</button><button class="btn btn-ghost" type="button" data-ar="close">Back to the shelf</button></div></div>';
+    '<div class="ar-actions"><button class="btn btn-primary ar-again" type="button" data-ar="play" disabled>Again</button><button class="btn" type="button" data-ar="menu">Other games</button><button class="btn btn-ghost" type="button" data-ar="close">Back to the shelf</button></div></div>';
   (result.newBest ? playAchievement : result.tier >= 2 ? playStar : playFeed)();
-  sheet.querySelector('.ar-again')?.focus({ preventScroll: true });
+  // A beat before Again is live, so the key mashing that ended the run does
+  // not start another one by accident.
+  const again = sheet.querySelector('.ar-again');
+  setTimeout(() => { if (again?.isConnected) { again.disabled = false; again.focus({ preventScroll: true }); } }, 650);
   refresh();
 }
 
