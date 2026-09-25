@@ -44,7 +44,7 @@ export const ESCAPADES = [
     pitch: '{name} has found a loose button and declared it a country. It has four holes, no roads, and a border dispute with a very patient bit of thread.',
     care: { need: 'food', label: 'A snack for the founder', line: 'Give {name} a personal snack. Constitutions are difficult work on an empty stomach.' },
     approaches: [
-      { id: 'legal', activity: 'court', label: 'Get some courtroom experience', line: 'Win or lose a case in Shelf Court. A nation needs a judiciary, and {name} would like to see how a real one shouts.' },
+      { id: 'legal', activity: 'court', label: 'Get some courtroom experience', line: 'Film an episode of Shelf Court with {name} in it. A nation needs a judiciary, and {name} would like to see how a real one shouts.' },
       { id: 'survey', activity: 'outing', label: 'Scout beyond the border', line: 'Finish an expedition Beyond the Shelf. Every return journey gives a new country something to put on its map.' }
     ],
     endings: [
@@ -63,7 +63,7 @@ export const ESCAPADES = [
     care: { need: 'clean', label: 'Freshen up the negotiator', line: 'Give {name} a personal clean before discussing the damp. A fresh start seems diplomatic.' },
     approaches: [
       { id: 'survey', activity: 'outing', label: 'Look for a better address', line: 'Finish an expedition Beyond the Shelf. A short trip still gives {name} somewhere to recommend.' },
-      { id: 'tenancy', activity: 'court', label: 'Take the rain to court', line: 'Stand trial in Shelf Court. {name} wants to learn how eviction works before trying it on weather.' }
+      { id: 'tenancy', activity: 'court', label: 'Take a neighbour to court', line: 'Put {name} on Shelf Court. It wants to learn how eviction works on daytime television before trying it on weather.' }
     ],
     endings: [
       { id: 'bottle', label: 'Rent it a little bottle', keepsake: 'rain-bottle', title: 'The Bottled Bedsit',
@@ -135,7 +135,7 @@ export const ESCAPADES = [
     care: { need: 'food', label: 'A snack before dragon business', line: 'Give {name} a personal snack. Nobody should negotiate with a dragon while thinking about lunch.' },
     approaches: [
       { id: 'mystery', activity: 'arcade:stack', label: 'Build a lookout for the treasure', line: 'Play Coffin Stack. {name} would like a better view before questioning anything with pins in its mouth.' },
-      { id: 'claim', activity: 'court', label: 'Sue the dragon', line: 'Stand trial in Shelf Court. {name} wants to see a skeleton judge in action before filing against anything with pins.' }
+      { id: 'claim', activity: 'court', label: 'Practise suing someone', line: 'Put {name} on Shelf Court. It wants to see a skeleton judge in action before filing against anything with pins.' }
     ],
     endings: [
       { id: 'keeper', label: 'Appoint it keeper of small treasures', keepsake: 'dragon-key', title: 'The Treasury Key',

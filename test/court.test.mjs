@@ -1,167 +1,177 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blankState, normalizeState } from '../src/state.js';
-import { COURT_CASES, COURT_CAST, COURT_PATIENCE } from '../src/content/court.js';
-import { GLYPH_NAMES } from '../src/art/mayhem-glyphs.js';
+import { COURT_CASES, COURT_CAST, HAPPENINGS, RANDOM_HAPPENINGS, ADS, QUESTIONS_PER_EPISODE, JURY_EXTRAS, STAND_INS } from '../src/content/court.js';
 import { COURT_ART } from '../src/art/court-cast.js';
 import {
-  courtStart, courtCallWitness, courtMove, courtPress, courtPresent, courtFinish, courtCases, trialWitness, evidenceList, statementText
+  castEpisode, episodeOpening, episodeQuestions, episodeAsk, questionsLeft, startHappening, resolveHappening, randomHappening,
+  episodeBreak, episodeRule, courtFinish, courtCases, nextCaseId, JURY_SEATS
 } from '../src/engine/court.js';
 import { seededRandom } from '../src/engine/arcade.js';
 import { normalizeCourtroom } from '../src/court-state.js';
-import { GAME_SOULS_PER_DAY } from '../src/engine/mayhem.js';
 import { ESCAPADES } from '../src/content/escapades.js';
 
 const NOW = new Date(2026, 8, 25, 14, 0, 0).getTime();
-const SPEAKERS = new Set(['judge', 'prosecutor', 'witness', 'you', 'defendant', 'gallery', 'narrator']);
-function household() {
+const SPEAKERS = new Set(['judge', 'bailiff', 'p', 'd', 'announcer', 'audience', 'jury', 'narrator', 'npc']);
+function household(n = 3) {
   const s = blankState();
-  s.pets = [{ id: 'g0', name: 'Agnes', traits: ['damp'], needs: { food: 50, fuss: 40, clean: 50 }, bond: 2, cared: 0, grudges: 0, born: NOW - 86400000 }];
-  s.slots[0] = 'g0';
+  s.pets = ['Agnes', 'Mort', 'Pip', 'Dot'].slice(0, n).map((name, i) => ({ id: 'g' + i, name, traits: ['damp'], needs: { food: 50, fuss: 40, clean: 50 }, bond: 2, cared: 0, grudges: 0, born: NOW - 86400000 }));
+  s.pets.forEach((p, i) => { s.slots[i] = p.id; });
   return s;
 }
-// Walk a whole trial with the right answers straight from the case file,
-// pressing every statement first so evidence that only turns up under
-// questioning is in hand when it is needed.
-function solve(trial) {
-  const k = COURT_CASES.find(c => c.id === trial.caseId);
-  let result;
-  for (let w = 0; w < k.witnesses.length; w++) {
-    courtCallWitness(trial);
-    const testimony = trialWitness(trial).testimony;
-    for (let i = 0; i < testimony.length; i++) { trial.statement = i; courtPress(trial, seededRandom(i + 1)); }
-    const lie = testimony.findIndex(s => s.lie);
-    trial.statement = lie;
-    const answer = Object.keys(testimony[lie].lie).find(id => trial.evidence.includes(id));
-    result = courtPresent(trial, answer, seededRandom(w + 7));
-    assert.equal(result.correct, true, k.id + ' witness ' + w);
+const leftovers = list => list.filter(line => /\{[pdjx]\}/.test(line.t));
+function playAll(s, caseId, ruling, choice = 'gavel', rnd = seededRandom(3)) {
+  const ep = castEpisode(s, { caseId, plaintiffId: 'g0', defendantId: 'g1' }, rnd);
+  const said = [...episodeOpening(ep, rnd)];
+  for (const q of episodeQuestions(ep).slice(0, QUESTIONS_PER_EPISODE)) {
+    const r = episodeAsk(ep, q.index, rnd);
+    said.push(...r.lines);
+    if (r.happening) { said.push(...r.happening.lines); said.push(...resolveHappening(ep, r.happening, choice)); }
   }
-  return result;
+  const result = episodeRule(ep, ruling ?? COURT_CASES.find(k => k.id === caseId).truth, rnd);
+  said.push(...result.ruling, ...result.jury, result.audience, ...result.hallway);
+  return { ep, result, said };
 }
 
-test('every case is fair: one lie per testimony, disproved by evidence the player can hold', () => {
-  assert.equal(COURT_CASES.length, 6);
-  const ids = new Set();
+test('twelve cases, fairly split, each with six questions, clues that point at the truth and three rulings', () => {
+  assert.equal(COURT_CASES.length, 12);
+  const truths = COURT_CASES.map(k => k.truth);
+  for (const t of ['plaintiff', 'defendant', 'both']) assert.equal(truths.filter(x => x === t).length, 4, t);
   for (const k of COURT_CASES) {
-    assert.ok(!ids.has(k.id)); ids.add(k.id);
-    assert.equal(k.witnesses.length, 2, k.id);
-    const later = k.evidenceLater || {};
-    for (const e of [...k.evidence, ...Object.values(later)]) assert.ok(GLYPH_NAMES.includes(e.glyph), k.id + ' ' + e.id);
-    const held = new Set(k.evidence.map(e => e.id));
-    for (const w of k.witnesses) {
-      assert.ok(COURT_CAST[w.who], k.id + ' cast ' + w.who);
-      assert.ok(COURT_ART[COURT_CAST[w.who].art], 'art for ' + w.who);
-      assert.equal(w.testimony.filter(s => s.lie).length, 1, k.id + ' ' + w.who + ' has exactly one lie');
-      assert.ok(w.testimony.length >= 4 && w.testimony.length <= 6);
-      // Evidence added by pressing this witness counts for this witness.
-      for (const s of w.testimony) if (s.adds) { assert.ok(later[s.adds], k.id + ' adds unknown ' + s.adds); held.add(s.adds); }
-      for (const s of w.testimony.filter(x => x.lie)) {
-        const ids = Object.keys(s.lie);
-        assert.ok(ids.length && ids.every(id => held.has(id)), k.id + ' lie disproved by evidence not yet in hand');
-        assert.ok(s.crack?.length, k.id + ' crack lines');
-      }
-      for (const s of w.testimony) for (const line of [...(s.press || []), ...(s.crack || [])]) assert.ok(SPEAKERS.has(line.s), k.id + ' speaker ' + line.s);
+    assert.equal(k.questions.length, 6, k.id);
+    assert.ok(k.questions.filter(q => q.clue).length >= 2, k.id + ' needs at least two clues');
+    assert.ok(k.questions.some(q => q.sass), k.id + ' needs a zinger');
+    for (const r of ['plaintiff', 'defendant', 'both']) assert.ok(k.rulings[r]?.length, k.id + ' ruling ' + r);
+    assert.ok(k.hallway.p && k.hallway.d, k.id + ' hallway');
+    const all = [...k.plaintiff, ...k.defendant, ...k.questions.flatMap(q => q.lines), ...Object.values(k.rulings).flat()];
+    for (const [s, , who] of all) {
+      assert.ok(SPEAKERS.has(s), k.id + ' speaker ' + s);
+      if (s === 'npc') { assert.ok(COURT_CAST[who], k.id + ' npc ' + who); assert.ok(COURT_ART[COURT_CAST[who].art]); }
     }
-    for (const line of [...k.opening, ...k.verdict, ...k.witnesses.flatMap(w => w.intro)]) assert.ok(SPEAKERS.has(line.s), k.id + ' speaker ' + line.s);
+    for (const q of k.questions) if (q.happen) assert.ok(HAPPENINGS[q.happen], k.id + ' happening ' + q.happen);
   }
+  for (const id of RANDOM_HAPPENINGS) assert.ok(HAPPENINGS[id], id);
+  for (const id of [...JURY_EXTRAS, ...STAND_INS]) assert.ok(COURT_ART[COURT_CAST[id].art], id);
+  assert.ok(ADS.length >= 6);
 });
 
-test('no dash punctuation sneaks into the court script', () => {
-  const text = JSON.stringify(COURT_CASES);
-  assert.ok(!/[—–]/.test(text));
+test('the script never uses a dash as punctuation', () => {
+  assert.ok(!/[—–]/.test(JSON.stringify([COURT_CASES, HAPPENINGS, ADS])));
 });
 
-test('every case can be won from start to finish, and the first win pays a bonus', () => {
-  const s = household();
+test('the shelf is the jury: other residents first, neighbours fill the rest, witnesses never sit', () => {
+  const s = household(4);
+  const ep = castEpisode(s, { caseId: 'snoring-wall', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(1));
+  assert.equal(ep.p.name, 'Agnes'); assert.equal(ep.d.name, 'Mort');
+  assert.equal(ep.jury.length, JURY_SEATS);
+  assert.deepEqual(ep.jury.slice(0, 2).map(j => j.name), ['Pip', 'Dot']);
+  assert.ok(!ep.jury.some(j => j.id === 'ghost'), 'the snoring case calls the ghost as a witness');
+  const alone = household(1);
+  const solo = castEpisode(alone, { caseId: 'moth-custody', plaintiffId: 'g0' }, seededRandom(2));
+  assert.equal(solo.d.kind, 'npc');
+  assert.notEqual(solo.d.id, 'moth');
+  assert.equal(solo.jury.length, JURY_SEATS);
+  assert.equal(castEpisode(blankState(), {}), null);
+});
+
+test('every case plays start to finish with every name filled in', () => {
   for (const k of COURT_CASES) {
-    const trial = courtStart(s, { caseId: k.id, petId: 'g0' });
-    assert.ok(trial.opening.every(line => !line.t.includes('{d}')));
-    const last = solve(trial);
-    assert.equal(last.next, 'verdict');
-    assert.ok(trial.done && trial.won);
-    assert.ok(last.lines.some(line => /NOT GUILTY/.test(line.t)));
-    const result = courtFinish(s, trial, NOW);
-    assert.ok(result.won && result.firstSolve && result.flawless);
-    assert.equal(courtFinish(s, trial, NOW), null, 'a trial pays once');
+    for (const choice of ['gavel', 'let']) {
+      const { said, result } = playAll(household(3), k.id, k.truth, choice, seededRandom(k.id.length + choice.length));
+      assert.deepEqual(leftovers(said), [], k.id);
+      assert.equal(result.correct, true);
+    }
   }
-  assert.equal(s.courtroom.solved.length, 6);
-  assert.equal(s.courtroom.flawless.length, 6);
-  assert.equal(s.pets[0].courtCases, 6);
-  assert.ok(s.mayhem.gameSouls <= GAME_SOULS_PER_DAY);
-  assert.ok(courtCases(s).every(c => c.solved && !c.next));
 });
 
-test('wrong evidence costs patience and the third mistake loses the case', () => {
+test('three questions only, clues go in the notes, and zingers and chaos move the meters', () => {
   const s = household();
-  const trial = courtStart(s, { caseId: 'funeral-cake', petId: 'g0' });
-  courtCallWitness(trial);
-  trial.statement = 0;
-  let r;
-  for (let i = 0; i < COURT_PATIENCE; i++) r = courtPresent(trial, 'fork', seededRandom(i));
-  assert.equal(r.correct, false);
-  assert.equal(r.lost, true);
-  assert.ok(r.lines.some(line => /GUILTY/.test(line.t)));
-  assert.equal(trial.patience, 0);
-  assert.equal(courtPresent(trial, 'complaint'), null, 'no objections after the verdict');
-  const result = courtFinish(s, trial, NOW);
-  assert.equal(result.won, false);
-  assert.equal(s.courtroom.solved.length, 0);
-  assert.equal(s.courtroom.trials, 1);
-  assert.equal(result.trust, 0);
+  const ep = castEpisode(s, { caseId: 'borrowed-coffin', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(4));
+  const zinger = episodeAsk(ep, 2, seededRandom(1));
+  assert.equal(zinger.clue, null);
+  assert.ok(ep.ratings > 50);
+  const clue = episodeAsk(ep, 0, seededRandom(1));
+  assert.match(clue.clue, /Keith/);
+  assert.equal(ep.clues.length, 1);
+  assert.equal(episodeAsk(ep, 0), null, 'no asking twice');
+  const withScene = episodeAsk(ep, 3, seededRandom(1));
+  assert.equal(withScene.happening.id, 'outburst');
+  assert.equal(withScene.happening.x, 'p');
+  assert.ok(withScene.happening.lines.some(l => l.s === 'p'));
+  const before = { ...ep };
+  resolveHappening(ep, withScene.happening, 'let');
+  assert.ok(ep.ratings > before.ratings && ep.respect < before.respect);
+  assert.equal(questionsLeft(ep), 0);
+  assert.equal(episodeAsk(ep, 1), null);
+  const br = episodeBreak(ep, seededRandom(2));
+  assert.ok(ep.hadBreak && br.ad.brand);
+  const scene = randomHappening(ep, seededRandom(5));
+  assert.ok(scene && scene.id !== 'outburst', 'the outburst already happened');
+  assert.equal(ep.happened.filter(id => id === scene.id).length, 1);
 });
 
-test('the right evidence at the wrong statement is still wrong', () => {
-  const s = household();
-  const trial = courtStart(s, { caseId: 'funeral-cake', petId: 'g0' });
-  courtCallWitness(trial);
-  trial.statement = 1;
-  assert.equal(courtPresent(trial, 'complaint', seededRandom(3)).correct, false);
-  trial.statement = 3;
-  const hit = courtPresent(trial, 'complaint', seededRandom(3));
-  assert.equal(hit.correct, true);
-  assert.equal(hit.next, 'witness');
-  assert.match(hit.shout, /Agnes/);
+test('a just ruling earns the winner’s trust; an unjust one earns a grudge', () => {
+  const fair = household();
+  const good = playAll(fair, 'borrowed-coffin', 'plaintiff');
+  const res = courtFinish(fair, good.ep, NOW);
+  assert.equal(res.correct, true);
+  assert.equal(res.trust, 'Agnes');
+  assert.equal(res.grudge, null);
+  assert.equal(courtFinish(fair, good.ep, NOW), null, 'an episode settles once');
+  assert.equal(fair.courtroom.episodes, 1);
+  assert.equal(fair.courtroom.justice, 1);
+  assert.ok(fair.courtroom.best['borrowed-coffin'] >= 1);
+  assert.equal(fair.pets[0].courtCases, 1);
+  assert.equal(fair.pets[1].courtCases, 1);
+  assert.ok(fair.life.scenes.some(scene => scene.kind === 'court'));
+
+  const unfair = household();
+  const bad = playAll(unfair, 'borrowed-coffin', 'defendant');
+  const wrong = courtFinish(unfair, bad.ep, NOW);
+  assert.equal(wrong.correct, false);
+  assert.equal(wrong.grudge, 'Agnes');
+  assert.equal(unfair.pets[0].grudges, 1);
+  assert.equal(unfair.courtroom.justice, 0);
+
+  const idiots = household();
+  const both = playAll(idiots, 'stolen-slot', 'both');
+  const r = courtFinish(idiots, both.ep, NOW);
+  assert.equal(r.correct, true);
+  assert.equal(r.trust, null);
+  assert.equal(r.grudge, null);
 });
 
-test('pressing reveals hidden evidence once, and lies make the witness sweat', () => {
+test('the jury mostly follows a respected, correct judge and the stars add up', () => {
   const s = household();
-  const trial = courtStart(s, { caseId: 'unlicensed-haunting', petId: 'g0' });
-  courtCallWitness(trial);
-  assert.ok(!trial.evidence.includes('licence'));
-  trial.statement = 4;
-  const first = courtPress(trial, () => 0.9);
-  assert.equal(first.added.id, 'licence');
-  assert.equal(courtPress(trial, () => 0.9).added, null);
-  assert.equal(trial.evidence.filter(id => id === 'licence').length, 1);
-  trial.statement = 2;
-  assert.equal(courtPress(trial, () => 0.9).sweat, true);
-  trial.statement = 0;
-  assert.equal(courtPress(trial, () => 0.9).sweat, false);
-  assert.equal(courtMove(trial, -1), 4);
-  assert.equal(courtMove(trial, 1), 0);
-  assert.ok(evidenceList(trial).every(e => !e.text.includes('{d}')));
-  assert.ok(!statementText(trial, 2).includes('{d}'));
+  const ep = castEpisode(s, { caseId: 'haunted-sock', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(1));
+  ep.respect = 100; ep.ratings = 90;
+  const r = episodeRule(ep, 'defendant', seededRandom(9));
+  assert.equal(r.agree, 6);
+  assert.equal(r.stars, 3);
+  assert.equal(episodeRule(ep, 'both'), null, 'one ruling per episode');
+  const s2 = household();
+  const ep2 = castEpisode(s2, { caseId: 'haunted-sock', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(1));
+  ep2.respect = 0; ep2.ratings = 20;
+  const r2 = episodeRule(ep2, 'plaintiff', seededRandom(9));
+  assert.equal(r2.stars, 0);
+  assert.ok(r2.agree <= 3);
 });
 
-test('the case list points at the next unsolved case and saves survive a reload', () => {
+test('the guide offers unaired cases first and records survive a reload', () => {
   const s = household();
-  assert.equal(courtCases(s).find(c => c.next).id, COURT_CASES[0].id);
-  const trial = courtStart(s, { petId: 'g0' });
-  assert.equal(trial.caseId, COURT_CASES[0].id);
-  solve(trial); courtFinish(s, trial, NOW);
-  assert.equal(courtCases(s).find(c => c.next).id, COURT_CASES[1].id);
+  const first = nextCaseId(s, seededRandom(1));
+  const { ep } = playAll(s, first);
+  courtFinish(s, ep, NOW);
+  for (let i = 0; i < 20; i++) assert.notEqual(nextCaseId(s, seededRandom(i)), first);
+  const list = courtCases(s);
+  assert.equal(list.filter(c => c.aired).length, 1);
   const reloaded = normalizeState(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(reloaded.courtroom.solved, [COURT_CASES[0].id]);
-  assert.deepEqual(normalizeCourtroom({ solved: ['nope', COURT_CASES[1].id, COURT_CASES[1].id], flawless: [COURT_CASES[2].id], trials: -4 }),
-    { trials: 0, wins: 0, solved: [COURT_CASES[1].id], flawless: [], last: '' });
+  assert.deepEqual(reloaded.courtroom.best, s.courtroom.best);
+  assert.deepEqual(normalizeCourtroom({ episodes: 3, justice: 9, best: { 'borrowed-coffin': 7, nope: 2, 'snoring-wall': -1 }, last: 'nope' }),
+    { episodes: 3, justice: 3, best: { 'borrowed-coffin': 3 }, last: '' });
 });
 
-test('a court case finishes an adventure that asked for one', () => {
+test('adventures can ask for an episode, and an episode moves them on', () => {
   const approaches = ESCAPADES.flatMap(e => e.approaches).filter(a => a.activity === 'court');
   assert.ok(approaches.length >= 3);
-  const s = household();
-  const trial = courtStart(s, { petId: 'g0' });
-  solve(trial);
-  courtFinish(s, trial, NOW);
-  assert.ok(s.life.scenes.some(scene => scene.kind === 'court'));
 });

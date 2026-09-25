@@ -12,8 +12,7 @@ const test = base.extend({
     expect(errors, 'browser errors').toEqual([]);
   }, { auto: true }]
 });
-
-// A full trial is a lot of dialogue; give it room.
+// A whole episode is a lot of television; give it room.
 test.describe.configure({ timeout: 120000 });
 
 async function openHousehold(page) {
@@ -36,85 +35,87 @@ async function openCourt(page) {
   await page.locator('#playroomVeil [data-court]').click();
   await expect(page.locator('#courtVeil')).toHaveClass(/open/);
 }
-// Click through dialogue until the cross-examination buttons (or the verdict) appear.
-async function talkUntil(page, target) {
-  const box = page.locator('#courtSheet [data-ct-box]');
-  for (let i = 0; i < 80; i++) {
-    if (await page.locator(target).isVisible()) return;
-    await box.click({ force: true });
-    await page.waitForTimeout(40);
-  }
-  await expect(page.locator(target)).toBeVisible();
-}
-async function object(page, evidenceId) {
-  await page.locator('#courtSheet [data-ct="record"]').click();
-  await page.locator('#courtSheet [data-ct-ev="' + evidenceId + '"]').click();
-  await page.locator('#courtSheet .ct-objection-btn').click();
-}
 async function noHorizontalOverflow(page) {
   const sizes = await page.evaluate(() => [...document.querySelectorAll('.veil.open .sheet')].map(el => ({ width: el.clientWidth, content: el.scrollWidth })));
   for (const dialog of sizes) expect(dialog.content).toBeLessThanOrEqual(dialog.width + 1);
 }
+// Click through the show. Dialogue is advanced from inside the page, which
+// is quick and never lands on the wrong button; every choice is a real
+// click. Questions: always the first on offer. Chaos: the gavel. The
+// ruling: whatever `ruling` says.
+async function playEpisode(page, ruling, seen = {}) {
+  for (let turn = 0; turn < 40; turn++) {
+    const state = await page.evaluate(async () => {
+      const sheet = document.getElementById('courtSheet');
+      for (let n = 0; n < 600; n++) {
+        if (sheet.querySelector('.sc-wrap')) return { wrap: true };
+        const controls = sheet.querySelector('[data-sc-controls]:not([hidden])');
+        const choices = controls ? [...controls.querySelectorAll('[data-sc-choice]')].map(b => b.dataset.scChoice) : [];
+        if (choices.length) return { choices };
+        sheet.querySelector('[data-sc-box]')?.click();
+        await new Promise(resolve => setTimeout(resolve, 25));
+      }
+      return {};
+    });
+    if (state.wrap) return;
+    if (!state.choices) continue;
+    let value;
+    if (state.choices.includes(ruling)) { value = ruling; seen.ruling = true; await noHorizontalOverflow(page); }
+    else if (state.choices.includes('gavel')) { value = 'gavel'; seen.chaos = true; }
+    else { value = state.choices[0]; seen.questions = (seen.questions || 0) + 1; }
+    await page.locator('#courtSheet [data-sc-choice="' + value + '"]').click();
+  }
+  await expect(page.locator('#courtSheet .sc-wrap')).toBeVisible();
+}
 
-test('a whole Shelf Court case: a wasted objection, a press, two breakdowns and an acquittal', async ({ page }) => {
+test('a whole episode of Shelf Court: questions, a ruling, a jury vote and a wrap', async ({ page }) => {
   const snapshot = await openHousehold(page);
   await openCourt(page);
-  const first = COURT_CASES[0];
-  await expect(page.locator('#courtSheet .ct-case')).toHaveCount(COURT_CASES.length);
-  await page.locator('#courtSheet .ct-case.next').click();
-  await expect(page.locator('#courtSheet h2')).toHaveText(first.title);
-  await talkUntil(page, '#courtSheet [data-ct="press"]');
+  await expect(page.locator('#courtSheet .sc-logo')).toContainText('SHELF COURT');
+  await expect(page.locator('#courtSheet .sc-ep')).toHaveCount(COURT_CASES.length);
+  const k = COURT_CASES[0];
+  await page.locator('#courtSheet [data-sc-case="' + k.id + '"]').click();
+  await expect(page.locator('#courtSheet .sc-tonight h3')).toHaveText(k.title);
   await noHorizontalOverflow(page);
-
-  // Statement 1 is true, so objecting to it costs a skull of patience.
-  await object(page, 'fork');
-  await expect(page.locator('#courtSheet [data-ct-meter] i.on')).toHaveCount(2);
-  await talkUntil(page, '#courtSheet [data-ct="press"]');
-
-  for (const [index, witness] of first.witnesses.entries()) {
-    const lie = witness.testimony.findIndex(s => s.lie);
-    await expect(page.locator('#courtSheet .ct-count')).toHaveText('Statement 1 of ' + witness.testimony.length);
-    for (let i = 0; i < lie; i++) await page.locator('#courtSheet [data-ct="next"]').click();
-    await expect(page.locator('#courtSheet .ct-count')).toHaveText('Statement ' + (lie + 1) + ' of ' + witness.testimony.length);
-    if (index === 0) {
-      await page.locator('#courtSheet [data-ct="press"]').click();
-      await expect(page.locator('#courtSheet .ct-stand')).toHaveClass(/sweating/);
-      await talkUntil(page, '#courtSheet [data-ct="press"]');
-    }
-    await object(page, Object.keys(witness.testimony[lie].lie)[0]);
-    await expect(page.locator('#courtSheet .ct-say-you')).toBeVisible();
-    await talkUntil(page, index === 0 ? '#courtSheet [data-ct="press"]' : '#courtSheet .ct-result');
-  }
-  await expect(page.locator('#courtSheet .ct-result h3')).toHaveText('Not guilty');
-  await expect(page.locator('#courtSheet .ct-result')).toContainText('souls');
+  await page.locator('#courtSheet [data-sc="roll"]').click();
+  await expect(page.locator('#courtSheet .sc-stage')).toBeVisible();
+  await expect(page.locator('#courtSheet .sc-seat')).toHaveCount(6);
+  const seen = {};
+  await playEpisode(page, k.truth, seen);
+  expect(seen.questions).toBe(3);
+  expect(seen.ruling).toBe(true);
+  await expect(page.locator('#courtSheet .sc-seat.agree, #courtSheet .sc-seat.disagree')).toHaveCount(6);
+  await expect(page.locator('#courtSheet .sc-wrap h3')).toHaveText('Justice, allegedly, was served');
+  await expect(page.locator('#courtSheet .sc-wrap')).toContainText('souls');
   await noHorizontalOverflow(page);
   const after = await saved(page);
-  expect(after.courtroom.solved).toEqual([first.id]);
-  expect(after.courtroom.flawless).toEqual([]);
+  expect(after.courtroom.episodes).toBe(1);
+  expect(after.courtroom.justice).toBe(1);
+  expect(after.courtroom.best[k.id]).toBeGreaterThanOrEqual(1);
   expect(after.pets.find(p => p.id === snapshot.pets[0].id).courtCases).toBe(1);
 
-  // Straight on to the next case from the verdict.
-  await expect(page.locator('#courtSheet .ct-next-case')).toBeEnabled();
-  await page.locator('#courtSheet .ct-next-case').click();
-  await expect(page.locator('#courtSheet h2')).toHaveText(COURT_CASES[1].title);
+  // Straight into the next episode, then walk out mid-show.
+  await expect(page.locator('#courtSheet .sc-next')).toBeEnabled();
+  await page.locator('#courtSheet .sc-next').click();
+  await expect(page.locator('#courtSheet .sc-stage')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('#courtVeil')).not.toHaveClass(/open/);
+  expect((await saved(page)).courtroom.episodes).toBe(1);
 });
 
-test('three wrong objections lose the case and the docket remembers nothing was won', async ({ page }) => {
-  await openHousehold(page);
+test('the wrong ruling goes out live and the wronged resident holds a grudge', async ({ page }) => {
+  const snapshot = await openHousehold(page);
   await openCourt(page);
-  await page.locator('#courtSheet .ct-case').nth(2).click();
-  await talkUntil(page, '#courtSheet [data-ct="press"]');
-  for (let i = 0; i < 3; i++) {
-    await object(page, 'forms');
-    await talkUntil(page, i < 2 ? '#courtSheet [data-ct="press"]' : '#courtSheet .ct-result');
-  }
-  await expect(page.locator('#courtSheet .ct-result h3')).toContainText('Guilty');
-  await expect(page.locator('#courtSheet .ct-dock')).toHaveClass(/dusted/);
+  const k = COURT_CASES.find(c => c.truth === 'plaintiff');
+  await page.locator('#courtSheet [data-sc-case="' + k.id + '"]').click();
+  await page.locator('#courtSheet [data-sc="roll"]').click();
+  await playEpisode(page, 'defendant');
+  await expect(page.locator('#courtSheet .sc-wrap h3')).toHaveText('You got it wrong, live on air');
+  await expect(page.locator('#courtSheet .sc-wrap .bad')).toContainText('will remember this');
   const after = await saved(page);
-  expect(after.courtroom.solved).toEqual([]);
-  expect(after.courtroom.trials).toBe(1);
-  await page.locator('#courtSheet [data-ct="docket"]').click();
-  await expect(page.locator('#courtSheet .ct-case.solved')).toHaveCount(0);
+  const plaintiff = after.pets.find(p => p.id === snapshot.pets[0].id);
+  expect(plaintiff.grudges).toBe((snapshot.pets[0].grudges || 0) + 1);
+  expect(after.courtroom.justice).toBe(0);
+  await page.locator('#courtSheet [data-sc="lobby"]').click();
+  await expect(page.locator('#courtSheet .sc-ep .sc-ep-stars .on, #courtSheet .sc-ep .sc-ep-stars i')).not.toHaveCount(0);
 });

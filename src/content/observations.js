@@ -79,10 +79,10 @@ export const OBSERVATIONS = {
     '{p} caught a falling crumb in its sleep. Then some holy water. It woke up steaming and proud.'
   ],
   court: [
-    '{p} is cross-examining the teaspoon. The teaspoon is sweating. It is condensation, but {p} is taking notes.',
-    '{p}: “Objection.” Nobody said anything. {p} is getting ahead of the day.',
-    '{p} has been practising its not-guilty face in the mirror. The mirror has asked for a lawyer.',
-    '{p} keeps glancing at the lamp. The lamp faces the wall now. The lamp knows what it did.'
+    '{p} is practising its hallway interview in the mirror. “No comment. Actually, one comment. Several.”',
+    '{p}: “I was on television.” It was on a shelf. It is not accepting corrections.',
+    '{p} keeps glancing at the jury box. The jury box is a matchbox. It glances back.',
+    '{p} has started ending sentences with “and the audience went OOOH”. The audience did not.'
   ],
   alibi: [
     '{p} has lost a clean Alibi round to you. It is moving the truth to a less accessible orifice.',
