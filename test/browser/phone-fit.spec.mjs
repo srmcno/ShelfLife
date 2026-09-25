@@ -14,6 +14,8 @@ const test = base.extend({
   }, { auto: true }]
 });
 test.use({ viewport: { width: 375, height: 548 } });
+// Each check opens several sheets; WebKit on a busy CI runner needs room.
+test.describe.configure({ timeout: 90000 });
 
 async function openHousehold(page) {
   const snapshot = householdFixture('established');
@@ -56,7 +58,7 @@ async function bottomReachable(page, label) {
 }
 const close = async page => { await page.keyboard.press('Escape'); await expect(page.locator('.veil.open')).toHaveCount(0); };
 
-test('on a small phone every sheet scrolls to its last line and game controls stay on screen', async ({ page }) => {
+test('on a small phone every sheet scrolls to its last line', async ({ page }) => {
   await openHousehold(page);
   const playroom = page.locator('#playroomBtn:visible, #tabPlay:visible').first();
 
@@ -76,7 +78,11 @@ test('on a small phone every sheet scrolls to its last line and game controls st
   await page.locator('#playroomVeil [data-court]').click();
   await bottomReachable(page, 'shelf court');
   await close(page);
+});
 
+test('on a small phone the arcade controls stay on screen', async ({ page }) => {
+  await openHousehold(page);
+  const playroom = page.locator('#playroomBtn:visible, #tabPlay:visible').first();
   for (const game of ['frenzy', 'stack']) {
     await playroom.click();
     await page.locator('#playroomVeil [data-game="' + game + '"]').click();
