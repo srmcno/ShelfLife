@@ -56,7 +56,7 @@ export function householdReport(state, now = Date.now()) {
   });
   const life = state.life || {};
   const text = 'HOUSEHOLD REGISTER\n' + state.pets.length + (state.pets.length === 1 ? ' resident. One opinion, expressed repeatedly.' : ' residents. Unanimity remains a distant prospect.') + '\n\n' + residents.join('\n\n') +
-    '\n\nEXPEDITIONS RETURNED: ' + number(life.outings) + '\nCOURT HEARINGS: ' + number(life.courtPlays) + ' · cases solved ' + number(life.courtWins) +
+    '\n\nEXPEDITIONS RETURNED: ' + number(life.outings) + '\nEMERGENCIES SURVIVED: ' + number(state.mayhem?.resolved) + ' · souls in hand ' + number(state.mayhem?.souls) +
     '\nWORKSHOP PROJECTS BUILT: ' + (life.projects?.length || 0) + '\n\nPrepared from the household’s actual records. Nobody was consulted about the wording.';
   return { key: 'register:' + hash(text), title: 'The household register', text, from: 'the filing desk', at: now, cast: state.pets.map(p => p.id) };
 }

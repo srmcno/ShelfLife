@@ -1,12 +1,12 @@
 import { normalizeMastery } from './mastery-state.js';
 import { normalizeEchoes } from './household-echoes.js';
-import { normalizeChaseCampaign } from './content/chase-campaign.js';
 import { blankLife, normalizeLife } from './life-state.js';
 import { PROPS } from './content/props.js';
 import { normalizeTheatre } from './theatre-state.js';
 import { blankEscapades, normalizeEscapades } from './escapade-state.js';
 import { blankRug, normalizeRug } from './play-rug-state.js';
 import { blankMayhem, normalizeMayhem } from './mayhem-state.js';
+import { blankArcade, normalizeArcade } from './arcade-state.js';
 import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.js';
 import { RESIDENT_TENURE } from './content/resident-life.js';
 export const Store = (function () {
@@ -173,7 +173,7 @@ export function defaultLedger() { return { meeting: 1, carried: 0, struck: {}, a
 
 export function blankState() {
   return {
-    v: 4, life: blankLife(), escapades: blankEscapades(), rug: blankRug(), mayhem: blankMayhem(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
+    v: 4, life: blankLife(), escapades: blankEscapades(), rug: blankRug(), mayhem: blankMayhem(), arcade: blankArcade(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
     notes: [], paperwork: blankPaperwork(), seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
@@ -350,31 +350,11 @@ export function normalizeState(raw) {
     p.lifeKeepsakes = Array.isArray(p.lifeKeepsakes)
       ? [...new Set(p.lifeKeepsakes.filter(day => p.lifeMilestones.includes(day) && RESIDENT_TENURE.some(milestone => milestone.days === day)))].sort((a, b) => a - b)
       : [];
-    p.lastPlayed = finite(p.lastPlayed, 0, 0, now);
     p.lastMischiefAt = finite(p.lastMischiefAt, 0, 0, now);
-    p.playedAt = Object.fromEntries(Object.entries(record(p.playedAt) ? p.playedAt : {}).filter(([k]) => ['memory','chase','alibi','court'].includes(k)).map(([k,v])=>[k,finite(v,0,0,now)]));
-    if (record(p.chaseBest)) p.chaseBest = { score: Math.floor(finite(p.chaseBest.score, 0, 0, 100000)), caught: Math.floor(finite(p.chaseBest.caught, 0, 0, 100)), dodged: Math.floor(finite(p.chaseBest.dodged, 0, 0, 100)), at: finite(p.chaseBest.at, now, 0, now), bestStreak: Math.floor(finite(p.chaseBest.bestStreak, 0, 0, 100)), stars: Math.floor(finite(p.chaseBest.stars, 0, 0, 3)) };
-    else delete p.chaseBest;
-    p.chaseRecords = record(p.chaseRecords) ? p.chaseRecords : {};
-    for (const key of Object.keys(p.chaseRecords)) {
-      const r = p.chaseRecords[key];
-      if (!['gentle', 'standard', 'pantry:gentle', 'pantry:standard', 'moon:gentle', 'moon:standard', 'run:gentle', 'run:standard'].includes(key) || !record(r)) { delete p.chaseRecords[key]; continue; }
-      p.chaseRecords[key] = { score:Math.floor(finite(r.score,0,0,100000)), stars:Math.floor(finite(r.stars,0,0,3)), at:finite(r.at,now,0,now) };
-    }
-    p.handshakeBest = record(p.handshakeBest) ? p.handshakeBest : {};
-    for (const key of Object.keys(p.handshakeBest)) {
-      const r = p.handshakeBest[key];
-      if (!['encore', 'standard', 'mirror', 'mirror-encore', 'duet', 'duet-encore'].includes(key) || !record(r)) { delete p.handshakeBest[key]; continue; }
-      p.handshakeBest[key] = {rounds:Math.floor(finite(r.rounds,3,3,5)),mistakes:Math.floor(finite(r.mistakes,0,0,10000)),replays:Math.floor(finite(r.replays,0,0,10000)),at:finite(r.at,now,0,now)};
-    }
-    p.handshakeRituals = record(p.handshakeRituals) ? p.handshakeRituals : {};
-    for (const key of Object.keys(p.handshakeRituals)) {
-      const r = p.handshakeRituals[key], length = key === 'duet' ? 4 : 2;
-      if (!['echo', 'mirror', 'duet'].includes(key) || !record(r) || !Array.isArray(r.opening) || r.opening.length !== length || !r.opening.every(move => Number.isInteger(move) && move >= 0 && move <= 3) || !(r.completions > 0)) { delete p.handshakeRituals[key]; continue; }
-      const completions = Math.floor(finite(r.completions, 1, 1, 100000));
-      p.handshakeRituals[key] = { opening: r.opening.slice(), completions, clean: Math.floor(finite(r.clean, 0, 0, completions)), at: finite(r.at, now, 0, now) };
-    }
-    for (const key of ['expeditions', 'handshakes', 'dustPatrols', 'chases', 'alibis', 'alibiWins', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
+    // The retired games' records (Crumb Chase, Handshake, Alibi, Court and the
+    // Night Market) are dropped; their lifetime counters below stay as history.
+    for (const key of ['playedAt', 'lastPlayed', 'chaseBest', 'chaseRecords', 'handshakeBest', 'handshakeRituals', 'chaseCampaign']) delete p[key];
+    for (const key of ['expeditions', 'arcadeRuns', 'handshakes', 'dustPatrols', 'chases', 'alibis', 'alibiWins', 'fulfilledRequests', 'refusedRequests']) p[key] = Math.floor(finite(p[key], 0));
     p.traits = Array.isArray(p.traits) ? p.traits.filter(t => typeof t === 'string' && !['__proto__', 'prototype', 'constructor'].includes(t)) : [];
     p.stats = record(p.stats) ? p.stats : {};
     ['cute', 'menace', 'damp', 'mystique'].forEach(k => { p.stats[k] = finite(p.stats[k], 5, 1, 10); });
@@ -416,8 +396,8 @@ export function normalizeState(raw) {
   s.escapades = normalizeEscapades(s.escapades, s, now);
   s.rug = normalizeRug(s.rug, s, now);
   s.mayhem = normalizeMayhem(s.mayhem, s, now);
+  s.arcade = normalizeArcade(s.arcade);
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
-  for (const pet of s.pets) pet.chaseCampaign = normalizeChaseCampaign(pet.chaseCampaign);
   return s;
 }
 

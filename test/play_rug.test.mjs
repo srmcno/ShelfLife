@@ -218,7 +218,7 @@ test('six verified moments earn six discoveries and scenes, preserving care and 
   assert.equal(state.life.xp, 6); assert.equal(state.life.scenes.length, 6);
   assert.ok(state.life.scenes.every(scene => scene.kind === 'play-rug' && scene.cast[0] === pet.id));
   assert.deepEqual(pet, before); assert.deepEqual(state.life.daily, daily);
-  assert.equal(state.life.introDone, false); assert.equal(state.life.outings, 0); assert.equal(state.life.marketRuns, 0);
+  assert.equal(state.life.introDone, false); assert.equal(state.life.outings, 0);
   assert.equal(rugProgress(state, pet.id, now).earned, 6); assert.equal(rugProgress(state, pet.id, now).next, null);
 });
 

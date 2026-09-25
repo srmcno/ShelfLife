@@ -7,7 +7,7 @@ import { normalizeState } from '../src/state.js';
 import { tick } from '../src/engine/tick.js';
 import { runBehavior } from '../src/engine/behavior.js';
 import { advanceStories } from '../src/engine/stories.js';
-import { newChase, updateChase } from '../src/engine/chase.js';
+import { frenzyStart, frenzyStep, seededRandom } from '../src/engine/arcade.js';
 const now=new Date(2026,8,12,12).getTime();
 function measure(label,iterations,fn){
   for(let i=0;i<5;i++)fn(i);
@@ -23,6 +23,5 @@ for(const kind of ['established','nearly-full','drawing-heavy']){
   let pass=0;
   measurements.push(measure(kind+' elapsed household minute',120,()=>{const time=now+(++pass)*60000;tick(s,time);runBehavior(s,time);advanceStories(s,time);}));
 }
-const resident=householdFixture('established',now).pets[0];
-measurements.push(measure('Crumb Chase full 22-second engine run (1320 updates)',100,()=>{const g=newChase(resident,{seed:121});for(let i=0;i<1320;i++)updateChase(g,{left:i%180<70,right:i%180>90,hop:i%120===0},1/60);}));
+measurements.push(measure('Feeding Frenzy 60-second engine run (3600 steps)',100,i=>{const g=frenzyStart(seededRandom(i+1));g.lives=1e6;for(let n=0;n<3600;n++)frenzyStep(g,1/60);}));
 console.log(JSON.stringify({runtime:process.version,scope:'Node CPU only. No browser/DOM/GPU or physical touch claims.',measurements},null,2));

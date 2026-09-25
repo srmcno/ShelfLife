@@ -10,6 +10,7 @@ import { lifeState, welcomeBack } from './engine/life.js';
 import { artPersonality } from './engine/personality.js';
 import { initStories } from './ui/stories.js';
 import { initMayhem } from './ui/mayhem.js';
+import { initArcade } from './ui/arcade.js';
 import { accrueMayhem } from './engine/mayhem.js';
 import {
   state, save, addNote, pick, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store, RECOVERY_KEY, loadFailed, backupDue
@@ -25,7 +26,6 @@ import { doRounds } from './engine/care.js';
 import { checkAchievements, ACHIEVEMENTS, INCIDENT_GROUPS, incidentProgress } from './engine/achievements.js';
 import { checkUnlocks, totalBond } from './engine/unlocks.js';
 import { advanceSchemes } from './engine/schemes.js';
-import { initPlay } from './ui/play.js';
 import { initSchemeUI } from './ui/schemes.js';
 import { initDialogs } from './ui/dialogs.js';
 import { initPostcard } from './ui/postcard.js';
@@ -358,8 +358,8 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 // ---------- wire the remaining self-contained widgets ----------
 
 initMayhem(state, () => renderAll(state));
+initArcade(state, () => renderAll(state));
 initSchemeUI(state, () => renderAll(state));
-initPlay(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
 initWelcome(state, () => renderAll(state));
 initEscapades(state, () => renderAll(state));
@@ -443,7 +443,7 @@ function announceMayhem(added) {
 })();
 
 setInterval(() => {
-  if (document.hidden || shelfTheatre.isPlaying() || document.getElementById('playVeil').classList.contains('open') || document.getElementById('studioVeil').classList.contains('open')) return;
+  if (document.hidden || shelfTheatre.isPlaying() || document.getElementById('arcadeVeil').classList.contains('open') || document.getElementById('studioVeil').classList.contains('open')) return;
   if (tick(state)) {
     advanceSchemes(state);
     accrueMayhem(state);

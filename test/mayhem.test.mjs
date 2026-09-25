@@ -184,15 +184,3 @@ test('names are substituted and saves survive hostile or old data', () => {
   assert.ok(legacy.mayhem && legacy.mayhem.souls === 0);
 });
 
-test('Crumb Chase achievements count the Midnight Run campaign records', async () => {
-  const { ACHIEVEMENTS, bestChaseStars } = await import('../src/engine/achievements.js');
-  const s = household(1);
-  const win = ACHIEVEMENTS.find(a => a.id === 'chase-win'), perfect = ACHIEVEMENTS.find(a => a.id === 'chase-perfect');
-  assert.equal(win.check(s), false);
-  s.pets[0].chaseCampaign = { version: 1, unlocked: 2, records: { 'first-crumbs': { won: true, score: 4, stars: 3, attempts: 1, at: NOW, rewarded: true } } };
-  assert.equal(bestChaseStars(s.pets[0]), 3);
-  assert.equal(win.check(s), true);
-  assert.equal(perfect.check(s), true);
-  s.pets[0].chaseCampaign.records['first-crumbs'].won = false;
-  assert.equal(win.check(s), false, 'an unfinished stage is not a win');
-});

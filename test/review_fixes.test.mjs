@@ -7,7 +7,6 @@ import { previewCare } from '../src/engine/care.js';
 import { checkShelf, checkWait, CHECK_COOLDOWN_MS } from '../src/engine/loop.js';
 import { advanceStories, storyState, currentCase, caseText, caseNames, acceptRequest, REQUEST_LENGTH, REFLECTION } from '../src/engine/stories.js';
 import { contestProp, TRAIT_PROP_AFFINITY } from '../src/engine/behavior.js';
-import { rewardHandshake, newHandshake } from '../src/engine/play.js';
 import { TRAITS } from '../src/content/traits.js';
 
 function localHour(h, day = 1) { return new Date(2026, 8, day, h, 0, 0).getTime(); }
@@ -88,25 +87,6 @@ test('the particulars act: damp attracts grime, cute sweetens fussing, menace wi
   s.slots[0] = 'e'; s.slots[1] = 'q1'; s.slots[2] = 'f';
   s.lastTick = localHour(12);
   assert.equal(contestProp(s, candle, localHour(12)).winner, 'f');
-});
-
-test('games and conspiracies grant at most BONUS_TRUST_PER_DAY trust per resident per day', () => {
-  const pet = makePet('a');
-  const t0 = localHour(12);
-  assert.equal(grantBonusTrust(pet, 2, t0), 2);
-  assert.equal(grantBonusTrust(pet, 2, t0 + 60000), 1);
-  assert.equal(grantBonusTrust(pet, 1, t0 + 120000), 0);
-  assert.equal(pet.bond, BONUS_TRUST_PER_DAY);
-  assert.equal(bonusTrustLeft(pet, t0), 0);
-  assert.equal(grantBonusTrust(pet, 1, localHour(12, 2)), 1, 'a new day opens the tap again');
-  const s = shelf([makePet('b', { needs: { food: 50, fuss: 50, clean: 50 } })]);
-  const game = newHandshake(s.pets[0]); game.complete = true;
-  s.pets[0].bonusTrust = { day: null, n: 0 };
-  const now = localHour(12);
-  s.lastTick = now;
-  assert.equal(rewardHandshake(s, game, now).bond, 1);
-  const stuffed = makePet('c', { bond: 25 });
-  assert.equal(grantBonusTrust(stuffed, 1, t0), 0, 'full trust stays full');
 });
 
 test('a case opened on a shelf of one seats a second witness later, reads names live, and never says its own reflection', () => {

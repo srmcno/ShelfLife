@@ -75,14 +75,14 @@ export function residentMemories(state, pet, now = Date.now()) {
     toothy: 'Our handshake contains no biting. That is the part I have to remember.',
     plain: 'I remember our handshake. My body gets there before my dignity.'
   }), count(pet.handshakes) + ' completed handshakes for this resident.');
-  for (const [mode, ritual] of Object.entries(pet.handshakeRituals || {})) {
-    if (!['echo','mirror','duet'].includes(mode) || !count(ritual?.completions) || !Array.isArray(ritual.opening) || !ritual.opening.length || !ritual.opening.every(n=>Number.isInteger(n)&&n>=0&&n<4)) continue;
-    const opening=ritual.opening.slice(0,3).map(n=>['Knock','Wiggle','Blink','Boop'][n]).join(', ');
-    add('ritual:'+mode, 'Our ' + mode + ' starts ' + opening + '. I know that bit in my body now. The rest is your problem.', 'The saved opening of this resident\'s completed ' + mode + ' ritual.');
-  }
   if (count(pet.chases)) add('chase', 'We chased crumbs together. Small prey, enormous faith in your thumbs.', count(pet.chases) + ' completed chases for this resident.');
   if (count(pet.alibiWins)) add('alibi', 'You caught my alibi. I am practising a face with less information in it.', count(pet.alibiWins) + ' clean Alibi wins with this resident.');
-  if (pet.playedAt?.court > 0 && pet.playedAt.court <= now) add('court', 'After court I keep trying to look innocent while eating. It uses too much face.', 'This resident has a recorded Court reward timestamp.');
+  if (count(pet.arcadeRuns)) add('arcade', voice(pet, {
+    attached: 'We play at the arcade after hours. I lose on purpose sometimes, so you stay longer.',
+    toothy: 'At the arcade I push the dead back into the ground. It is the only time I am allowed to bite a hand.',
+    watchful: 'I have watched every one of our arcade runs twice. Once live. Once in my head, at night, with commentary.',
+    plain: 'We have played at the arcade. I keep my scores in a small tin. The tin is also a coffin.'
+  }), count(pet.arcadeRuns) + ' scored arcade runs with this resident.');
   const guest = state.stories?.visitor;
   if (guest?.welcomed && guest.hostId === pet.id && typeof guest.kind === 'string') add('visitor', guest.choice === 'crumbs'
     ? 'I shared my food with the visitor. Hospitality feels exactly like having less food.'

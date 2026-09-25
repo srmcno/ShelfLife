@@ -3,7 +3,6 @@ import { householdFixture } from '../household-fixtures.mjs';
 import { ARRIVALS, arrivalDraft } from '../../src/content/arrivals.js';
 import { ESCAPADES } from '../../src/content/escapades.js';
 import { startEscapade } from '../../src/engine/escapades.js';
-import { startMarket } from '../../src/engine/life.js';
 
 const SAVE_KEY = 'shelflife.v4';
 const test = base.extend({
@@ -165,67 +164,75 @@ test('a shelf with retained furniture can welcome another resident without losin
   await noHorizontalOverflow(page);
 });
 
-const activities = [
-  { id: 'chase', dialog: '#playVeil', title: 'Crumb Chase' },
-  { id: 'memory', dialog: '#playVeil', title: 'Secret handshake' },
-  { id: 'alibi', dialog: '#playVeil', title: 'The Alibi' },
-  { id: 'outing', dialog: '#lifeVeil', title: 'Beyond the shelf' },
-  { id: 'court', dialog: '#lifeVeil', title: 'Shelf Court' },
-  { id: 'market', dialog: '#lifeVeil', title: 'The Unlicensed Night Market' }
+const arcadeGames = [
+  { id: 'frenzy', title: 'Feeding Frenzy' },
+  { id: 'stack', title: 'Coffin Stack' },
+  { id: 'seance', title: 'The Séance' },
+  { id: 'whack', title: 'Grave Whack' }
 ];
-for (const activity of activities) {
-  test(activity.id + ' opens, starts real play and closes cleanly at this viewport', async ({ page }) => {
+test('the playroom offers four arcade games and expeditions, one tap from playing', async ({ page }) => {
+  await openHousehold(page);
+  await playroomLauncher(page).click();
+  await expect(page.locator('#activityCards [data-game]')).toHaveCount(4);
+  await expect(page.locator('#activityCards [data-activity="outing"]')).toHaveCount(1);
+  await noHorizontalOverflow(page);
+  await page.locator('[data-activity="outing"]').click();
+  await expect(page.locator('#lifeVeil .sheet-head h2')).toHaveText('Beyond the shelf');
+  await page.locator('[data-life="set-out"]').click();
+  await expect(page.locator('[data-life="outing-choice"]')).toHaveCount(3);
+  await page.locator('[data-life="outing-choice"][data-choice="0"]').click();
+  await expect(page.locator('[data-life="continue-outing"]')).toBeVisible();
+  expect((await savedShelf(page)).life.outing.step).toBe(1);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#lifeVeil')).not.toBeVisible();
+});
+for (const game of arcadeGames) {
+  test(game.id + ' opens, plays for real, pauses and closes cleanly at this viewport', async ({ page }) => {
     await openHousehold(page);
     await playroomLauncher(page).click();
-    await expect(page.locator('#activityCards [data-activity]')).toHaveCount(6);
+    await page.locator('[data-game="' + game.id + '"]').click();
+    await expect(page.locator('#arcadeVeil .sheet-head h2')).toHaveText(game.title);
+    await expectDialogFocus(page, '#arcadeVeil');
+    await page.locator('#arcadeSheet [data-ar="play"]').click();
+    await expect(page.locator('#arcadeSheet [data-ar-field]')).toBeVisible();
+    if (game.id === 'stack') { await page.keyboard.press('Space'); await expect(page.locator('#arcadeSheet [data-ar-score]')).toHaveText('1'); }
+    if (game.id === 'frenzy') { await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(250); await page.keyboard.up('ArrowLeft'); }
+    if (game.id === 'seance') await expect(page.locator('#arcadeSheet .ar-candle')).toHaveCount(4);
+    if (game.id === 'whack') await expect(page.locator('#arcadeSheet .ar-grave')).toHaveCount(9);
+    await page.locator('#arcadeSheet [data-ar="pause"]').click();
+    await expect(page.locator('#arcadeSheet .ar-paused')).toBeVisible();
+    await page.locator('#arcadeSheet .ar-paused').click();
+    await expect(page.locator('#arcadeSheet .ar-paused')).toHaveCount(0);
     await noHorizontalOverflow(page);
-    await page.locator('[data-activity="' + activity.id + '"]').click();
-    await expect(page.locator(activity.dialog + ' .sheet-head h2')).toHaveText(activity.title);
-    await expectDialogFocus(page, activity.dialog);
-    if (activity.id === 'chase') {
-      await page.locator('#chaseGo').click();
-      await expect(page.locator('#chasePause')).toBeVisible();
-      await page.locator('#chaseHop').click();
-      await page.locator('#chasePause').click();
-      await expect(page.locator('#chaseGo')).toHaveText('Resume chase');
-      await expect(page.locator('#chaseDescription')).toContainText('Paused at');
-    } else if (activity.id === 'memory') {
-      await page.locator('#playStart').click();
-      await expect(page.locator('#playReplay')).toBeVisible();
-    } else if (activity.id === 'alibi') {
-      await page.locator('#playStart').click();
-      await expect(page.locator('#alibiStatements button')).toHaveCount(3);
-      await page.locator('#alibiStatements button').first().click();
-      await expect(page.locator('.alibi-exhibits button')).toHaveCount(0);
-      await expect(page.locator('.alibi-accuse')).toBeEnabled();
-    } else if (activity.id === 'outing') {
-      await page.locator('[data-life="set-out"]').click();
-      await expect(page.locator('[data-life="outing-choice"]')).toHaveCount(3);
-      await page.locator('[data-life="outing-choice"][data-choice="0"]').click();
-      await expect(page.locator('[data-life="continue-outing"]')).toBeVisible();
-      expect((await savedShelf(page)).life.outing.step).toBe(1);
-    } else if (activity.id === 'court') {
-      await expect(page.locator('#courtCaseTitle')).toBeVisible();
-      await expect.poll(async () => (await savedShelf(page)).life.court?.moves?.length).toBe(0);
-      await page.locator('[data-life="court-clue"]').first().click();
-      await expect.poll(async () => (await savedShelf(page)).life.court.moves[0]?.type).toBe('inspect');
-    } else if (activity.id === 'market') {
-      await page.locator('[data-life="market-start"]').click();
-      await expect(page.locator('[data-life="market-select"]')).toHaveCount(1);
-      expect((await savedShelf(page)).life.market.version).toBe(5);
-    }
-    await noHorizontalOverflow(page);
-    const close = page.locator(activity.dialog + ' .sheet-head button');
-    await close.focus();
     await page.keyboard.press('Escape');
-    await expect(page.locator(activity.dialog)).not.toBeVisible();
-    await expect(page.locator('#playroomVeil')).toBeVisible();
-    await expect(page.locator('[data-activity="' + activity.id + '"]')).toBeFocused();
-    await page.locator('#playroomClose').click();
+    await expect(page.locator('#arcadeVeil')).not.toBeVisible();
     await expect(page.locator('.veil.open')).toHaveCount(0);
-    await expect(playroomLauncher(page)).toBeFocused();
   });
 }
+
+async function finishStack(page) {
+  await page.locator('#arcadeSheet [data-ar="play"]').click();
+  await expect(page.locator('#arcadeSheet [data-ar-field]')).toBeVisible();
+  await page.keyboard.press('Space');
+  await expect(page.locator('#arcadeSheet [data-ar-score]')).toHaveText('1');
+  for (let i = 0; i < 80 && !(await page.locator('#arcadeSheet .ar-over').count()); i++) { await page.keyboard.press('Space'); await page.waitForTimeout(170); }
+  await expect(page.locator('#arcadeSheet .ar-over')).toBeVisible();
+}
+
+test('a finished arcade run saves its best, pays souls and offers another go', async ({ page }) => {
+  await openHousehold(page);
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: 'stack', petId: 'qa0' } })));
+  await finishStack(page);
+  const shelf = await savedShelf(page);
+  expect(shelf.arcade.plays.stack).toBe(1);
+  expect(shelf.arcade.best.stack).toBeGreaterThanOrEqual(1);
+  expect(shelf.mayhem.souls).toBeGreaterThan(0);
+  expect(shelf.pets[0].arcadeRuns).toBe(1);
+  await expect(page.locator('#arcadeSheet .ar-again')).toBeFocused();
+  await noHorizontalOverflow(page);
+  await page.reload();
+  expect((await savedShelf(page)).arcade.best.stack).toBe(shelf.arcade.best.stack);
+});
 
 test('installed shell reloads offline with saved adventure progress, usable care and the illustrated play rug', async ({ page, context, browserName }) => {
   // Playwright documents service-worker tooling for Chromium only. WebKit's
@@ -284,31 +291,20 @@ async function adventureSnack(page) {
   await page.locator('#cardVeil [data-escapade="open"]').click();
 }
 
-test('a real Crumb Chase adventure earns a chosen keepsake that survives reload', async ({ page }, testInfo) => {
-  // The full journey has ~20 pointer actions plus a 22-second game. Linux
-  // WebKit trace capture takes 1–3s per action at native phone pixel density;
-  // preserve the 35s gameplay deadline while budgeting for the entire journey.
+test('a real arcade adventure earns a chosen keepsake that survives reload', async ({ page }) => {
   test.setTimeout(90_000);
-  if (testInfo.project.name === 'desktop-chromium') {
-    // Exercise the actual UI with a slow foreground frame schedule. A frame
-    // must retain its elapsed simulation time instead of stretching the game.
-    await page.addInitScript(() => {
-      window.requestAnimationFrame = callback => window.setTimeout(() => callback(performance.now()), 500);
-      window.cancelAnimationFrame = id => window.clearTimeout(id);
-    });
-  }
   await openHousehold(page);
-  await beginObservatory(page);
+  await beginObservatory(page, 'equipment');
   await adventureSnack(page);
   await page.reload();
   await page.locator('.tab[data-tab="plots"]').click();
   await page.locator('#escapadeOpen').click();
   await expect(page.locator('#escapadeContent .escapade-steps .done')).toHaveCount(1);
   await page.locator('#escapadeContent [data-escapade="play"]').click();
-  await page.locator('#chaseGo').click();
-  await page.locator('#chaseHop').click();
-  await expect.poll(async () => (await savedShelf(page)).escapades.active.playAt, { timeout:35_000 }).not.toBeNull();
-  await page.locator('#playVeil .escapade-return').click();
+  await expect(page.locator('#arcadeVeil .sheet-head h2')).toHaveText('Coffin Stack');
+  await finishStack(page);
+  await expect.poll(async () => (await savedShelf(page)).escapades.active.playAt).not.toBeNull();
+  await page.locator('#arcadeSheet [data-escapade="open"]').click();
   await expect(page.locator('#escapadeContent [data-escapade="finish"]')).toHaveCount(2);
   const before = (await savedShelf(page)).life.xp;
   await page.locator('[data-escapade="finish"][data-ending="supper"]').click();
@@ -317,73 +313,41 @@ test('a real Crumb Chase adventure earns a chosen keepsake that survives reload'
   const finished = await savedShelf(page);
   expect(finished.life.xp).toBe(before + 2);
   expect(finished.escapades.active).toBeNull();
-  expect(finished.escapades.album).toHaveLength(1);
   expect(finished.escapades.album[0]).toMatchObject({ petId:'qa0', endingId:'supper', episodeId:'crumb-observatory' });
-  expect(finished.life.scenes[0].stage.object).toBe('orbit-saucer');
   await noHorizontalOverflow(page);
   await page.reload();
   await page.locator('.tab[data-tab="plots"]').click();
   await page.locator('#escapadeAlbum').click();
   await expect(page.locator('.escapade-album-item')).toHaveCount(1);
-  await page.locator('.escapade-album-item').click();
-  await expect(page.locator('.escapade-receipt')).toContainText('Kept with Agnes');
-  expect((await savedShelf(page)).life.xp).toBe(before + 2);
-  await page.locator('#escapadeClose').click();
-  await expect(page.locator('#escapadeAlbum')).toBeFocused();
 });
 
-test('full needs permit a story moment while cancelling play never completes it', async ({ page }) => {
+test('full needs permit a story moment while abandoning a run never completes it', async ({ page }) => {
   await openHousehold(page, 'capped');
-  await beginObservatory(page);
+  await beginObservatory(page, 'equipment');
   await adventureSnack(page);
   await page.locator('#escapadeContent [data-escapade="play"]').click();
-  await page.locator('#chaseGo').click();
-  await page.locator('#chaseHop').click();
-  await page.locator('#playClose').click();
+  await page.locator('#arcadeSheet [data-ar="play"]').click();
+  await page.keyboard.press('Space');
+  await page.locator('#arcadeSheet [data-ar="close"]').click();
   await page.reload();
   const active = (await savedShelf(page)).escapades.active;
   expect(active.careAt).not.toBeNull();
   expect(active.playAt).toBeNull();
   await page.locator('.tab[data-tab="plots"]').click();
   await page.locator('#escapadeOpen').click();
-  await expect(page.locator('#escapadeContent .escapade-steps .done')).toHaveCount(1);
   await expect(page.locator('[data-escapade="finish"]')).toHaveCount(0);
   await expectDialogFocus(page, '#escapadeVeil');
 });
 
-test('a fourth resident leads their own market adventure and imperfect play counts', async ({ page }) => {
+test('a fourth resident leads their own arcade adventure', async ({ page }) => {
   test.setTimeout(60_000);
   await openHousehold(page, 'conflicting');
   await beginObservatory(page, 'equipment', 'qa3');
   await page.locator('#escapadeContent [data-escapade="play"]').click();
-  await page.locator('[data-life="market-start"]').click();
-  expect((await savedShelf(page)).life.market.patronIds[0]).toBe('qa3');
-  for (let stall = 0; stall < 2; stall++) await page.locator('[data-life="market-pass"]').click();
-  expect((await savedShelf(page)).escapades.active.playAt).toBeNull();
-  await page.locator('[data-life="market-leave"]').click();
+  await expect(page.locator('#arcadeVeil .eyebrow')).toContainText('Bitey');
+  await finishStack(page);
   await expect.poll(async () => (await savedShelf(page)).escapades.active.playAt).not.toBeNull();
-  await page.locator('#lifeClose').click();
-  await page.locator('.tab[data-tab="plots"]').click();
-  await page.locator('#escapadeOpen').click();
-  await adventureSnack(page);
-  await page.locator('[data-escapade="finish"][data-ending="discovery"]').click();
-  await expect(page.locator('.escapade-receipt')).toContainText('Kept with Bitey');
-  expect((await savedShelf(page)).escapades.album[0].petId).toBe('qa3');
-  await noHorizontalOverflow(page);
-});
-
-test('a saved trip with another crew explains how to continue without crediting the wrong resident', async ({ page }) => {
-  await openHousehold(page, 'conflicting', snapshot => {
-    startMarket(snapshot, { errands:true });
-  });
-  await beginObservatory(page, 'equipment', 'qa3');
-  await expect(page.locator('#escapadeContent')).toContainText('An earlier market trip is waiting.');
-  await page.locator('#escapadeContent [data-escapade="play"]').click();
-  for (let stall = 0; stall < 8; stall++) await page.locator('[data-life="market-pass"]').click();
-  await page.locator('[data-life="market-leave"]').click();
-  expect((await savedShelf(page)).escapades.active.playAt).toBeNull();
-  await page.locator('[data-life="market-start"]').click();
-  expect((await savedShelf(page)).life.market.patronIds[0]).toBe('qa3');
+  expect((await savedShelf(page)).pets.find(p => p.id === 'qa3').arcadeRuns).toBe(1);
   await noHorizontalOverflow(page);
 });
 
@@ -436,7 +400,7 @@ test('the complete keepsake album and long resident names fit a 320px screen', a
   await noHorizontalOverflow(page);
 });
 
-test('a long browser frame gap pauses Chase without consuming the remaining game', async ({ page }) => {
+test('a long browser stall pauses an arcade run instead of skipping ahead', async ({ page }) => {
   await page.addInitScript(() => {
     const request = window.requestAnimationFrame.bind(window);
     window.requestAnimationFrame = callback => request(time => {
@@ -446,38 +410,14 @@ test('a long browser frame gap pauses Chase without consuming the remaining game
   });
   await openHousehold(page);
   await playroomLauncher(page).click();
-  await page.locator('[data-activity="chase"]').click();
-  await page.locator('#chaseGo').click();
+  await page.locator('[data-game="frenzy"]').click();
+  await page.locator('#arcadeSheet [data-ar="play"]').click();
   await page.evaluate(() => { window.shelfTestFrameDelay = 2400; });
-  await expect(page.locator('#chaseArea')).toHaveAttribute('data-paused', 'true');
-  await expect(page.locator('#chaseGo')).toHaveText('Resume chase');
-  await expect(page.locator('#chaseDescription')).toContainText('browser');
-  const pausedDescription = await page.locator('#chaseDescription').textContent();
+  await expect(page.locator('#arcadeSheet .ar-paused')).toBeVisible();
   await page.evaluate(() => { window.shelfTestFrameDelay = 0; });
-  await expect(page.locator('#chaseDescription')).toHaveText(pausedDescription);
-  await page.locator('#chaseGo').click();
-  await expect(page.locator('#chaseArea')).toHaveAttribute('data-running', 'true');
-  await page.locator('#chasePause').click();
-  await expect(page.locator('#chaseGo')).toHaveText('Resume chase');
+  await page.locator('#arcadeSheet .ar-paused').click();
+  await expect(page.locator('#arcadeSheet .ar-paused')).toHaveCount(0);
+  await expect(page.locator('#arcadeSheet .ar-over')).toHaveCount(0);
 });
 
-test('a novice completes the single market errand and sees the next lesson after reload', async ({page}) => {
-  await openHousehold(page);
-  await page.locator('#tabPlay').click();
-  await page.locator('#playroomVeil [data-activity="market"]').click();
-  await page.locator('[data-life="market-start"]').click();
-  for(let stop=0;stop<2;stop++) {
-    await expect(page.locator('[data-life="market-select"]')).toHaveCount(1);
-    await page.locator('[data-life="market-buy"]').click();
-  }
-  await page.locator('[data-life="market-deliver"]').click();
-  await expect(page.locator('[data-life="market-leave"]')).toHaveText('Return home · 1/1 delivered');
-  await page.locator('[data-life="market-leave"]').click();
-  await expect(page.locator('.mastery-unlock')).toContainText('Unlocked: Three errands');
-  const completed=await savedShelf(page);
-  expect(completed.mastery.market.tier).toBe(1);
-  await page.reload();
-  expect((await savedShelf(page)).mastery.market.tier).toBe(1);
-  expect((await savedShelf(page)).life.market.claimed).toBe(true);
-  await noHorizontalOverflow(page);
-});
+

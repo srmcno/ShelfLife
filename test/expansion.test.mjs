@@ -15,9 +15,6 @@ import {
   addFriction, frictionBetween, frictionKey, pairScore, resolveOf, notePlayerMove,
   slotScore, decideMove, FRICTION_DECAY_MS, FRICTION_MAX, PATIENCE_MAX, PATIENCE_STEP
 } from '../src/engine/behavior.js';
-import { newAlibi, answerAlibi, advanceAlibi, rewardAlibi, statementsFor, currentRound, ALIBI_ROUNDS } from '../src/engine/alibi.js';
-import { gesturesFor, handshakeRounds, newHandshake, tapHandshake, GESTURES, GESTURE_STYLES, TRAIT_GESTURES, LONG_HANDSHAKE_AT } from '../src/engine/play.js';
-import { newChase, temperOf, TEMPER } from '../src/engine/chase.js';
 import { ACHIEVEMENTS } from '../src/engine/achievements.js';
 
 const HOUR = 3600000;
@@ -258,147 +255,6 @@ function alibiShelf() {
   ], [{ id: 'r1', kind: 'bowl' }]);
 }
 
-test('every statement the alibi can offer is checkable, and the truths are true', () => {
-  const s = alibiShelf();
-  const pet = s.pets[0];
-  const { truths, lies } = statementsFor(s, pet);
-  assert.ok(truths.length >= ALIBI_ROUNDS * 2, 'not enough true statements to build a game');
-  assert.ok(lies.length >= ALIBI_ROUNDS, 'not enough lies to build a game');
-  // Spot-check the claims against the shelf they were generated from.
-  const text = truths.map(t => t.text).join(' | ');
-  assert.ok(text.includes('Doreen on my right'), 'it should know who is actually beside it');
-  assert.ok(text.includes('there are 3 of us'), 'it should be able to count the shelf');
-  assert.ok(text.includes('never once fussed over me'), 'it should know what you have never done');
-  const lieText = lies.map(l => l.text).join(' | ');
-  assert.ok(!lieText.includes('Doreen on my right'), 'a lie must not restate a truth');
-});
-
-test('an alibi is three rounds of three, with exactly one lie and no repeats', () => {
-  let seed = 11;
-  const rng = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
-  const s = alibiShelf();
-  const game = newAlibi(s, s.pets[0], rng);
-  assert.equal(game.rounds.length, ALIBI_ROUNDS);
-  const seen = new Set();
-  game.rounds.forEach(round => {
-    assert.equal(round.statements.length, 3);
-    assert.ok(round.lie >= 0 && round.lie < 3, 'every round needs exactly one marked lie');
-    round.statements.forEach(t => {
-      assert.ok(!seen.has(t), `the same statement was offered twice: ${t}`);
-      seen.add(t);
-      assert.ok(!/[{}]/.test(t), `unsubstituted placeholder in a statement: ${t}`);
-    });
-  });
-});
-
-test('answering is untimed, unpunished, and closes the game exactly once', () => {
-  const s = alibiShelf();
-  const game = newAlibi(s, s.pets[0]);
-  assert.equal(answerAlibi(game, 99), 'ignored', 'a nonsense index changes nothing');
-  const first = currentRound(game);
-  const wrong = (first.lie + 1) % 3;
-  assert.equal(answerAlibi(game, wrong), 'wrong');
-  assert.equal(answerAlibi(game, 0), 'ignored', 'a round only takes one answer');
-  assert.equal(game.correct, 0);
-  assert.equal(advanceAlibi(game), true);
-  assert.equal(answerAlibi(game, currentRound(game).lie), 'right');
-  assert.equal(advanceAlibi(game), true);
-  assert.equal(answerAlibi(game, currentRound(game).lie), 'right');
-  assert.equal(game.complete, true);
-  assert.equal(game.correct, 2);
-  assert.equal(answerAlibi(game, 0), 'ignored', 'a finished game is finished');
-});
-
-test('a clean sweep pays trust; a partial one pays attention only', () => {
-  const now = Date.now();
-  const s = alibiShelf();
-  const pet = s.pets[0];
-  pet.needs.fuss = 10;
-  const game = newAlibi(s, pet);
-  while (!game.complete) { answerAlibi(game, currentRound(game).lie); advanceAlibi(game); }
-  const reward = rewardAlibi(s, game, now);
-  assert.equal(reward.clean, true);
-  assert.ok(reward.bond >= 1, 'finding every lie should be worth trust');
-  assert.ok(reward.fuss > 0);
-  assert.equal(rewardAlibi(s, game, now), null, 'a reward cannot be claimed twice');
-
-  const s2 = alibiShelf();
-  const pet2 = s2.pets[0];
-  pet2.needs.fuss = 10;
-  const partial = newAlibi(s2, pet2);
-  while (!partial.complete) { answerAlibi(partial, (currentRound(partial).lie + 1) % 3); advanceAlibi(partial); }
-  const meagre = rewardAlibi(s2, partial, now);
-  assert.equal(meagre.clean, false);
-  assert.equal(meagre.bond, 0, 'trust is for a clean sweep only');
-});
-
-test('a resident that has just played gets practice, not another reward', () => {
-  const now = Date.now();
-  const s = alibiShelf();
-  const pet = s.pets[0];
-  pet.playedAt = {alibi:now - 1000}; pet.lastPlayed = now - 1000;                       // inside PLAY_COOLDOWN
-  const game = newAlibi(s, pet);
-  while (!game.complete) { answerAlibi(game, currentRound(game).lie); advanceAlibi(game); }
-  const reward = rewardAlibi(s, game, now);
-  assert.equal(reward.practice, true);
-  assert.equal(reward.bond, 0);
-  assert.equal(reward.fuss, 0);
-});
-
-test('a shelf with nothing to swear to yields an empty game rather than throwing', () => {
-  const s = shelf([makePet('a')]);
-  const game = newAlibi(s, s.pets[0]);
-  assert.ok(Array.isArray(game.rounds));
-  assert.doesNotThrow(() => answerAlibi(game, 0));
-});
-
-/* ================= the two older games ================= */
-
-test('each archetype teaches the handshake in its own words, and unknown traits still work', () => {
-  assert.deepEqual(gesturesFor({ traits: [] }), GESTURES, 'a plain creature keeps the house names');
-  assert.deepEqual(gesturesFor({ traits: ['nonsense'] }), GESTURES, 'an unmapped trait must not break the game');
-  const damp = gesturesFor({ traits: ['damp'] });
-  assert.notDeepEqual(damp, GESTURES);
-  assert.equal(damp.length, 4, 'there are four pads, so there are four names');
-  Object.values(GESTURE_STYLES).forEach(style => assert.equal(style.length, 4));
-  Object.values(TRAIT_GESTURES).forEach(style =>
-    assert.ok(GESTURE_STYLES[style], `TRAIT_GESTURES points at a style that does not exist: ${style}`));
-  const ids = new Set(TRAITS.map(t => t.id));
-  Object.keys(TRAIT_GESTURES).forEach(id => assert.ok(ids.has(id), `${id} is not a trait`));
-});
-
-test('the handshake grows through explicit mastery, never trust', () => {
-  assert.equal(handshakeRounds(makePet('a', { bond: 0 })), 3);
-  assert.equal(handshakeRounds(makePet('a', { bond: LONG_HANDSHAKE_AT })), 3);
-  const shy = newHandshake(makePet('a', { bond: 0 }));
-  const close = newHandshake(makePet('b', { bond: 20, mastery:{handshake:{tier:1}} }));
-  assert.equal(shy.sequence.length, 4);
-  assert.equal(close.sequence.length, 5, 'a longer handshake needs a longer pattern');
-  // Play the long one through: it must take four rounds, not three.
-  let rounds = 0;
-  for (let guard = 0; guard < 40 && !close.complete; guard++) {
-    const result = tapHandshake(close, close.sequence[close.cursor]);
-    if (result === 'round' || result === 'complete') rounds++;
-  }
-  assert.equal(close.complete, true);
-  assert.equal(rounds, 4);
-});
-
-test('the chase reads the creature it is played with', () => {
-  assert.ok(temperOf('furious').speed > temperOf('content').speed, 'a furious resident is quicker');
-  assert.ok(temperOf('furious').grip < temperOf('content').grip, 'and harder to steer');
-  assert.deepEqual(temperOf('nonsense'), TEMPER.fine, 'an unknown mood falls back rather than breaking');
-  const calm = newChase(makePet('a'), { mood: 'content' });
-  const cross = newChase(makePet('b'), { mood: 'furious' });
-  assert.ok(cross.speedScale > calm.speedScale);
-  assert.ok(cross.grip < calm.grip);
-  const trusted = newChase(makePet('c', { bond: 20 }), {});
-  const stranger = newChase(makePet('d', { bond: 0 }), {});
-  assert.ok(trusted.shield > stranger.shield, 'a resident that trusts you takes a knock for you');
-});
-
-/* ================= the record ================= */
-
 test('every incident is unique, safely checkable, and actually reachable', () => {
   const ids = new Set();
   ACHIEVEMENTS.forEach(a => {
@@ -413,7 +269,8 @@ test('every incident is unique, safely checkable, and actually reachable', () =>
   });
   assert.ok(ACHIEVEMENTS.length >= 25, 'the record should cover more than the early game');
   const covered = ACHIEVEMENTS.map(a => a.id).join(' ');
-  ['case', 'visitor', 'handshake', 'chase', 'promise'].forEach(topic =>
+  ['case', 'visitor', 'handshake', 'chase', 'promise'].forEach(topic => // ids kept for saved records
+
     assert.ok(covered.includes(topic), `nothing in the record covers ${topic}`));
 });
 
@@ -421,7 +278,7 @@ test('the new incidents fire off real save data', () => {
   const s = alibiShelf();
   const byId = id => ACHIEVEMENTS.find(a => a.id === id);
   assert.equal(byId('first-handshake').check(s), false);
-  s.pets[0].handshakes = 1;
+  s.arcade = { best: { stack: 3 }, plays: { stack: 1 } };
   assert.equal(byId('first-handshake').check(s), true);
   assert.equal(byId('first-case').check(s), false);
   s.stories = { archive: [{ kind: 'case', title: 'x', text: 'y', at: Date.now() }] };

@@ -138,11 +138,11 @@ button.mh-tile:hover{transform:translateY(-2px);border-color:var(--edge)}
 .mh-choice:hover,.mh-choice:focus-visible{transform:translateY(-2px);border-color:var(--mh-candle);background:linear-gradient(180deg,#3a2438,#22141f)}
 .mh-choice:focus-visible{outline:2px solid var(--mh-candle);outline-offset:2px}
 .mh-fineprint{margin:0;font-size:12px;color:var(--ink-3);text-align:center}
-.mh-outcome{position:relative;display:flex;flex-direction:column;gap:12px;animation:sheet-in .3s ease-out 1}
+.mh-outcome{position:relative;display:flex;flex-direction:column;gap:12px;padding-top:6px;overflow:hidden;animation:sheet-in .3s ease-out 1}
 .mh-stamp{align-self:center;margin:4px 0 2px;padding:6px 18px;border:3px double currentColor;border-radius:8px;font:800 22px/1 var(--body);letter-spacing:.14em;transform:rotate(-6deg);
   animation:mh-stamp .5s cubic-bezier(.2,1.8,.4,1) 1;text-shadow:0 0 18px currentColor;background:#0003}
 .mh-stamp.tone-good{color:var(--mh-good)} .mh-stamp.tone-bad{color:var(--mh-bad)} .mh-stamp.tone-weird{color:var(--mh-weird)}
-@keyframes mh-stamp{0%{opacity:0;transform:rotate(-6deg) scale(2.6)}60%{opacity:1;transform:rotate(-6deg) scale(.92)}100%{transform:rotate(-6deg) scale(1)}}
+@keyframes mh-stamp{0%{opacity:0;transform:rotate(-6deg) scale(1.7)}60%{opacity:1;transform:rotate(-6deg) scale(.92)}100%{transform:rotate(-6deg) scale(1)}}
 .mh-card.resolved .mh-title{font-size:22px;color:var(--ink-2)}
 .mh-card.resolved.tone-bad .mh-scene{box-shadow:inset 0 0 60px #c4243c55}
 .mh-card.resolved.tone-good .mh-scene{box-shadow:inset 0 0 60px #8fe0b433}
@@ -181,7 +181,7 @@ button.mh-tile:hover{transform:translateY(-2px);border-color:var(--edge)}
 
 /* ---- the coffin ------------------------------------------------------------------ */
 .mh-coffin{background:radial-gradient(90% 50% at 50% 20%,#3a2a12 0%,transparent 70%),linear-gradient(180deg,var(--night-3),var(--night-2))}
-.mh-coffin-stage{display:grid;place-items:center;min-height:250px;padding:14px 0}
+.mh-coffin-stage{display:grid;place-items:center;min-height:250px;padding:14px 0;overflow:hidden}
 .mh-coffin-box{width:150px;height:200px;padding:0;border:0;background:none;cursor:pointer;color:var(--mh-candle);filter:drop-shadow(0 0 24px color-mix(in srgb,var(--mh-candle) 45%,transparent))}
 .mh-coffin-box .mh-glyph{animation:mh-knock 2.2s ease-in-out infinite}
 .mh-coffin-box:disabled{cursor:not-allowed;color:var(--ink-3);filter:none;opacity:.6}

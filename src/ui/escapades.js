@@ -6,7 +6,7 @@ import { toast } from './toast.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const say = (text, name) => String(text || '').replaceAll('{name}', () => name);
-const gameNames = { chase:'Crumb Chase', memory:'Handshake', alibi:'The Alibi', outing:'Expeditions', court:'Shelf Court', market:'Night Market' };
+const gameNames = { 'arcade:frenzy':'Feeding Frenzy', 'arcade:stack':'Coffin Stack', 'arcade:seance':'The Séance', 'arcade:whack':'Grave Whack', outing:'Expeditions' };
 const button = (action, label, extra = '', primary = false) => '<button type="button" class="btn ' + (primary ? 'btn-primary' : 'btn-ghost') + '" data-escapade="' + action + '" ' + extra + '>' + esc(label) + '</button>';
 let latestState, view, previewId = '', selectedPet = '', panel = 'story', receiptKey = '', recentReceipt = null;
 let hubKey = '', portraitArt = null, previousProgress = '';
@@ -26,20 +26,10 @@ function protagonist() {
 function savedGameGuidance(active) {
   if (active.playDone) return '';
   const { activity } = active.approach, name = active.pet.name;
-  if (activity === 'market') {
-    const market = latestState.life?.market;
-    if (market?.claimed) return 'Choose “New market” to make a fresh visit with ' + name + '.';
-    if (market && (market.version !== 4 || !market.patronIds?.includes(active.petId))) return 'An earlier market trip is waiting. Finish it, then choose “New market” to bring ' + name + ' along.';
-  }
   if (activity === 'outing') {
     const outing = latestState.life?.outing;
     if (outing?.step === 3) return 'Plan another expedition and keep ' + name + ' in your crew.';
     if (outing && !outing.cast?.includes(active.petId)) return 'Finish the saved expedition, then plan another with ' + name + '. This adventure will wait.';
-  }
-  if (activity === 'court') {
-    const hearing = latestState.life?.court;
-    if (hearing?.claimed) return 'Choose “Another case” to hear a new case with ' + name + '.';
-    if (hearing && hearing.petId !== active.petId) return 'Finish the saved case, then choose “Another case” with ' + name + '. This adventure will wait.';
   }
   return '';
 }
@@ -154,7 +144,8 @@ export function initEscapades(state, refresh) {
       if (kind === 'care') window.dispatchEvent(new CustomEvent('shelflife:care', { detail:{ petId:active.petId } }));
       else {
         const activity = active.approach.activity;
-        window.dispatchEvent(new CustomEvent(['chase','memory','alibi'].includes(activity) ? 'shelflife:play' : 'shelflife:activity', { detail:{ petId:active.petId, mode:activity, action:activity } }));
+        if (activity.startsWith('arcade:')) window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail:{ petId:active.petId, game:activity.slice(7) } }));
+        else window.dispatchEvent(new CustomEvent('shelflife:activity', { detail:{ petId:active.petId, action:activity } }));
       }
     }
     if (kind === 'finish') {
@@ -176,7 +167,7 @@ export function initEscapades(state, refresh) {
   // Offer the story ending directly from the real game's result. Its Close
   // control remains first so Escape still invokes that game's own cleanup.
   syncReturns = () => {
-    for (const id of ['playVeil','lifeVeil']) {
+    for (const id of ['lifeVeil']) {
       const game = document.getElementById(id), head = game?.querySelector('.sheet-head');
       if (!head) continue;
       let link = head.querySelector('.escapade-return');
@@ -186,5 +177,5 @@ export function initEscapades(state, refresh) {
       if (link) link.hidden = !view?.active?.ready;
     }
   };
-  for (const id of ['playVeil','lifeVeil']) new MutationObserver(syncReturns).observe(document.getElementById(id), { attributes:true, attributeFilter:['class'] });
+  for (const id of ['lifeVeil']) new MutationObserver(syncReturns).observe(document.getElementById(id), { attributes:true, attributeFilter:['class'] });
 }

@@ -22,7 +22,7 @@ export function blankMayhem() {
     queue: [], nextAt: 0, serial: 0, recent: [], curios: {},
     omen: { day: '', id: '', streak: 0, lastDay: '' },
     chores: { day: '', list: [], bonus: false },
-    log: []
+    log: [], gameDay: '', gameSouls: 0
   };
 }
 
@@ -62,6 +62,8 @@ export function normalizeMayhem(raw, state = {}, now = Date.now()) {
     out.chores = { day: typeof raw.chores.day === 'string' ? raw.chores.day.slice(0, 20) : '', list, bonus: raw.chores.bonus === true };
     if (!list.length) out.chores.day = '';
   }
+  out.gameDay = typeof raw.gameDay === 'string' ? raw.gameDay.slice(0, 20) : '';
+  out.gameSouls = Math.floor(finite(raw.gameSouls, 0, 0, 1e6));
   out.log = (Array.isArray(raw.log) ? raw.log : []).filter(entry => object(entry) && typeof entry.text === 'string')
     .slice(0, LOG_MAX)
     .map(entry => ({

@@ -8,8 +8,8 @@ export const ESCAPADES = [
     pitch: '{name} has spotted a crumb caught in a cobweb. It appears to be orbiting the shelf. The astronomers predict the end of the biscuit. There are no astronomers yet; {name} is making badges.',
     care: { need: 'food', label: 'Feed the astronomer', line: 'Give {name} a personal snack so the discovery can remain an astronomical object.' },
     approaches: [
-      { id: 'orbit', activity: 'chase', label: 'Follow a crumb trail', line: 'Finish a Crumb Chase. {name} is collecting observations, including any spectacular miscalculations.' },
-      { id: 'equipment', activity: 'market', label: 'Look for observatory supplies', line: 'Complete a Night Market trip. Even returning with an empty bag counts as important research into the cost of astronomy.' }
+      { id: 'orbit', activity: 'arcade:frenzy', label: 'Follow a crumb trail', line: 'Play a round of Feeding Frenzy. {name} is collecting observations, mostly by eating them.' },
+      { id: 'equipment', activity: 'arcade:stack', label: 'Build an observation tower', line: 'Play Coffin Stack. The tallest pile of coffins in the parish makes a respectable telescope mount.' }
     ],
     endings: [
       { id: 'discovery', label: 'Name a new constellation', keepsake: 'crumb-telescope', title: 'The Biscuit-Scope',
@@ -26,8 +26,8 @@ export const ESCAPADES = [
     pitch: 'A ghost the size of a sugar grain has applied to haunt {name}. It fits through a stitch. It has already measured the hollow behind one eye.',
     care: { need: 'fuss', label: 'Steady the host', line: 'Give {name} a moment of personal fuss before meeting the applicant. The ghost has brought its own key.' },
     approaches: [
-      { id: 'rehearse', activity: 'memory', label: 'Rehearse the haunting', line: 'Play Secret Handshake. The ghost must learn which movements belong to the resident.' },
-      { id: 'references', activity: 'alibi', label: 'Check its references', line: 'Finish a round of The Alibi. {name} would like some practice before asking a ghost about a gap in its employment.' }
+      { id: 'rehearse', activity: 'arcade:seance', label: 'Rehearse the haunting', line: 'Hold a Séance. The ghost must learn which candles belong to the resident.' },
+      { id: 'references', activity: 'arcade:whack', label: 'Check its references', line: 'Play Grave Whack. {name} would like to meet the ghost’s previous colleagues, briefly, on their way back down.' }
     ],
     endings: [
       { id: 'home', label: 'Offer it a place to stay', keepsake: 'ghost-bed', title: 'The Spare Matchbox',
@@ -44,7 +44,7 @@ export const ESCAPADES = [
     pitch: '{name} has found a loose button and declared it a country. It has four holes, no roads, and a border dispute with a very patient bit of thread.',
     care: { need: 'food', label: 'A snack for the founder', line: 'Give {name} a personal snack. Constitutions are difficult work on an empty stomach.' },
     approaches: [
-      { id: 'legal', activity: 'court', label: 'Practise cabinet law', line: 'Take a case in Shelf Court. Whatever the verdict, {name} will return with an opinion about borders.' },
+      { id: 'legal', activity: 'arcade:whack', label: 'Guard the border', line: 'Play Grave Whack. Whatever climbs out, {name} will return with an opinion about borders.' },
       { id: 'survey', activity: 'outing', label: 'Scout beyond the border', line: 'Finish an expedition Beyond the Shelf. Every return journey gives a new country something to put on its map.' }
     ],
     endings: [
@@ -63,7 +63,7 @@ export const ESCAPADES = [
     care: { need: 'clean', label: 'Freshen up the negotiator', line: 'Give {name} a personal clean before discussing the damp. A fresh start seems diplomatic.' },
     approaches: [
       { id: 'survey', activity: 'outing', label: 'Look for a better address', line: 'Finish an expedition Beyond the Shelf. A short trip still gives {name} somewhere to recommend.' },
-      { id: 'tenancy', activity: 'court', label: 'Investigate rain tenancy', line: 'Finish a Shelf Court case. {name} hopes household law has a section on weather with luggage.' }
+      { id: 'tenancy', activity: 'arcade:seance', label: 'Ask the previous tenants', line: 'Hold a Séance. {name} hopes the dead remember whether it rained indoors in their day too.' }
     ],
     endings: [
       { id: 'bottle', label: 'Rent it a little bottle', keepsake: 'rain-bottle', title: 'The Bottled Bedsit',
@@ -80,8 +80,8 @@ export const ESCAPADES = [
     pitch: '{name} has received a birthday invitation with the date left blank. Nobody remembers being born, and nobody is likely to get on with dying. The committee suggests celebrating something more available.',
     care: { need: 'fuss', label: 'Make the guest feel wanted', line: 'Give {name} a moment of personal fuss. No birthday, reason, or explanation is required.' },
     approaches: [
-      { id: 'supplies', activity: 'market', label: 'Browse for party supplies', line: 'Finish a trip to the Night Market. An unsuitable purchase makes a perfectly respectable party anecdote.' },
-      { id: 'toast', activity: 'memory', label: 'Rehearse an awkward toast', line: 'Play Secret Handshake. The committee has agreed that losing your place is a form of spontaneity.' }
+      { id: 'supplies', activity: 'arcade:frenzy', label: 'Gather the party snacks', line: 'Play a round of Feeding Frenzy. Whatever survives the catering becomes the buffet.' },
+      { id: 'toast', activity: 'arcade:seance', label: 'Rehearse an awkward toast', line: 'Hold a Séance. The committee has agreed that losing your place is a form of spontaneity.' }
     ],
     endings: [
       { id: 'years', label: 'Celebrate all the unknown years', keepsake: 'ever-candle', title: 'The Candle with No Number',
@@ -98,7 +98,7 @@ export const ESCAPADES = [
     pitch: 'A letter addressed to Nobody in Particular has arrived for {name} to sort. It weighs slightly more than paper should. Something inside presses against the envelope when the room gets quiet. The return address is underneath the shelf.',
     care: { need: 'fuss', label: 'A moment for the postmaster', line: 'Give {name} some personal fuss before answering a question that deserves a careful answer.' },
     approaches: [
-      { id: 'sender', activity: 'alibi', label: 'Learn to read between the lines', line: 'Finish The Alibi. Whatever you deduce, {name} will have practised listening to an unlikely account.' },
+      { id: 'sender', activity: 'arcade:seance', label: 'Learn to read between the lines', line: 'Hold a Séance. {name} will have practised taking messages from something with no handwriting.' },
       { id: 'route', activity: 'outing', label: 'Scout the postal route', line: 'Finish an expedition Beyond the Shelf. Every journey home is useful experience for a very small postal service.' }
     ],
     endings: [
@@ -116,8 +116,8 @@ export const ESCAPADES = [
     pitch: 'A teaspoon has asked {name} to stage its opera. The score is one note held for an unreasonable time. The spoon says the tragedy is in the duration. A nearby fork has already submitted a review.',
     care: { need: 'clean', label: 'Dress rehearsal, freshly polished', line: 'Give {name} a personal clean before the production meeting. There will be mirrors, even if they are all spoons.' },
     approaches: [
-      { id: 'rehearsal', activity: 'memory', label: 'Practise the conductor’s cues', line: 'Play Secret Handshake. Missed gestures will give {name} useful experience handling a difficult rehearsal.' },
-      { id: 'cue', activity: 'chase', label: 'Chase the runaway interval snacks', line: 'Finish a Crumb Chase. {name} needs to understand why the interval is attracting more interest than the opera.' }
+      { id: 'rehearsal', activity: 'arcade:seance', label: 'Practise the conductor’s cues', line: 'Hold a Séance. Missed candles will give {name} useful experience handling a difficult rehearsal.' },
+      { id: 'cue', activity: 'arcade:frenzy', label: 'Catch the runaway interval snacks', line: 'Play a round of Feeding Frenzy. {name} needs to understand why the interval is attracting more interest than the opera.' }
     ],
     endings: [
       { id: 'solo', label: 'Give the spoon its great solo', keepsake: 'silver-baton', title: 'The Needle Baton',
@@ -134,8 +134,8 @@ export const ESCAPADES = [
     pitch: '{name} has been summoned to deal with a dragon in the sewing box. It is mostly lint, but it has collected three pins and developed the appropriate attitude. Its sneeze drives a pin through the drawer lining.',
     care: { need: 'food', label: 'A snack before dragon business', line: 'Give {name} a personal snack. Nobody should negotiate with a dragon while thinking about lunch.' },
     approaches: [
-      { id: 'mystery', activity: 'alibi', label: 'Investigate the missing treasure', line: 'Finish The Alibi. {name} would like some detective practice before questioning anything with pins in its mouth.' },
-      { id: 'claim', activity: 'court', label: 'Hear the dragon’s claim', line: 'Finish a case in Shelf Court. Even a difficult hearing gives {name} something to bring to the sewing box.' }
+      { id: 'mystery', activity: 'arcade:stack', label: 'Build a lookout for the treasure', line: 'Play Coffin Stack. {name} would like a better view before questioning anything with pins in its mouth.' },
+      { id: 'claim', activity: 'arcade:whack', label: 'Hold back the dragon’s cousins', line: 'Play Grave Whack. Even a messy night gives {name} something to bring to the sewing box.' }
     ],
     endings: [
       { id: 'keeper', label: 'Appoint it keeper of small treasures', keepsake: 'dragon-key', title: 'The Treasury Key',

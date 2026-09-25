@@ -319,5 +319,16 @@ export function rewardCare(state, need, gained, now = Date.now()) {
   return souls;
 }
 export function rewardRounds(state, now = Date.now()) { addSouls(state, ROUNDS_SOULS); deed(state, 'rounds', 1, now); return ROUNDS_SOULS; }
-export function rewardGame(state, now = Date.now()) { addSouls(state, GAME_SOULS); deed(state, 'game', 1, now); return GAME_SOULS; }
+// Games share one daily purse, so replaying a quick game cannot empty the
+// undertaker's back room in an afternoon.
+export const GAME_SOULS_PER_DAY = 160;
+export function payGameSouls(state, amount, now = Date.now()) {
+  const m = mayhemState(state), day = localDayKey(now);
+  if (m.gameDay !== day) { m.gameDay = day; m.gameSouls = 0; }
+  const paid = Math.max(0, Math.min(Math.floor(amount || 0), GAME_SOULS_PER_DAY - m.gameSouls));
+  m.gameSouls += paid;
+  addSouls(state, paid);
+  return paid;
+}
+export function rewardGame(state, now = Date.now()) { const paid = payGameSouls(state, GAME_SOULS, now); deed(state, 'game', 1, now); return paid; }
 export function rewardCheck(state, now = Date.now()) { deed(state, 'check', 1, now); }
