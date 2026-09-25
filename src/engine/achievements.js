@@ -1,5 +1,6 @@
 import { VISITORS } from '../content/stories.js';
 import { ARCADE_GAMES } from '../content/arcade.js';
+import { COURT_CASES } from '../content/court.js';
 import { remember } from './stories.js';
 import { FEUDS, FEUD_LINES, ESCALATION_LINES, TRUCE_LINES } from '../content/feuds.js';
 import { GRUDGE_LINES, STREAK_LINES } from '../content/copy.js';
@@ -180,6 +181,9 @@ export const ACHIEVEMENTS = [
   { id: 'handshake-veteran', hint: 'Play fifty arcade runs.', label: 'Regular', desc: 'Fifty runs in the arcade.', toastLine: 'Fifty. The dead have started saving you a seat.', check: state => arcadeRuns(state) >= 50 },
   { id: 'chase-win', hint: 'Score 40 in Feeding Frenzy.', label: 'Crumb Bailiff', desc: 'Forty points of falling food.', toastLine: 'Forty. The ceiling has been asked to stop.', check: state => (state.arcade?.best?.frenzy || 0) >= 40 },
   { id: 'chase-perfect', hint: 'Reach the top score tier in any arcade game.', label: 'Unreasonably Good At This', desc: 'Three skulls in one run.', toastLine: 'Three skulls. It is four inches tall and it is showing off.', check: topTier },
+  { id: 'court-win', hint: 'Rule correctly in a Shelf Court episode.', label: 'Justice, Allegedly', desc: 'Got a Shelf Court verdict right.', toastLine: 'Justice was served. It was a little undercooked, but it was served.', check: state => (state.courtroom?.justice || 0) >= 1 },
+  { id: 'court-all', hint: 'Air every episode of Shelf Court.', label: 'Syndicated', desc: 'Every Shelf Court case has aired.', toastLine: 'Every episode aired. The reruns will outlive everyone. Well. Most people here are already dead.', check: state => Object.keys(state.courtroom?.best || {}).length >= COURT_CASES.length },
+  { id: 'court-flawless', hint: 'Earn three stars on a Shelf Court episode.', label: 'Must-See TV', desc: 'Right verdict, huge ratings, a jury that agreed.', toastLine: 'Three stars. The ghosts are talking about it in the afterlife, which is mostly where they talk.', check: state => Object.values(state.courtroom?.best || {}).some(stars => stars >= 3) },
   { id: 'promise-kept', hint: 'Accept a resident’s request and actually do it.', label: 'Good For It', desc: 'Kept a promise to a resident.', toastLine: 'You said you would and then you did. They are recalibrating.', check: state => state.pets.some(p => (p.fulfilledRequests || 0) >= 1) },
   { id: 'promise-broken', hint: 'Refuse a resident to its face.', label: 'On The Record', desc: 'Declined a resident’s request.', toastLine: 'Declined. Filed. It was very understanding, which is worse.', check: state => state.pets.some(p => (p.refusedRequests || 0) >= 1) },
   { id: 'promises-five', hint: 'Keep five promises across the shelf.', label: 'Dependable, Apparently', desc: 'Five requests fulfilled.', toastLine: 'Five kept promises. Somebody has started a different kind of list.', check: state => state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0) >= 5 },
@@ -208,7 +212,7 @@ export const INCIDENT_GROUPS = [
   { id: 'grief', title: 'Being resented',
     ids: ['first-grudge', 'first-reckoning', 'terminal-grudge', 'first-feud', 'first-truce'] },
   { id: 'games', title: 'Playing along',
-    ids: ['first-handshake', 'handshake-veteran', 'chase-win', 'chase-perfect'] },
+    ids: ['court-win', 'court-flawless', 'court-all', 'first-handshake', 'handshake-veteran', 'chase-win', 'chase-perfect'] },
   { id: 'word', title: 'Your word',
     ids: ['promise-kept', 'promises-five', 'promise-broken'] },
   { id: 'record', title: 'The long record',
@@ -236,6 +240,7 @@ export const INCIDENT_PROGRESS = {
   'terminal-grudge': state => ({ have: Math.max(0, ...state.pets.map(p => p.grudges || 0)), need: 20 }),
   'handshake-veteran': state => ({ have: arcadeRuns(state), need: 50 }),
   'chase-win': state => ({ have: state.arcade?.best?.frenzy || 0, need: 40 }),
+  'court-all': state => ({ have: Object.keys(state.courtroom?.best || {}).length, need: COURT_CASES.length }),
   'promises-five': state => ({ have: state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0), need: 5 }),
   'three-cases': state => ({ have: closedCases(state), need: 3 }),
   'all-visitors': state => ({ have: (((state.stories || {}).collection) || []).length, need: VISITORS.length })

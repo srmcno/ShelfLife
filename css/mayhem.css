@@ -107,7 +107,7 @@ button.mh-tile:hover{transform:translateY(-2px);border-color:var(--edge)}
 .mh-meter.big{height:9px;margin:12px 0 6px}
 
 /* ---- the sheet ----------------------------------------------------------------- */
-.mh-sheet{max-width:580px;overflow:hidden}
+.mh-sheet{max-width:580px;overflow-x:hidden}
 .mh-sheet .sheet-head .eyebrow{color:var(--mh-candle)}
 .mh-emergency{background:radial-gradient(120% 60% at 50% 0%,#3a0f1c 0%,transparent 60%),linear-gradient(180deg,var(--night-3),var(--night-2))}
 .mh-emergency .sheet-head .eyebrow{color:#ff8d9b}

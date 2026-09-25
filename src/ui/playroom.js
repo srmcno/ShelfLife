@@ -3,9 +3,12 @@ import { arcadeState } from '../arcade-state.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { glyph } from '../art/mayhem-glyphs.js';
 import { escapadeView } from '../engine/escapades.js';
+import { courtroomState } from '../court-state.js';
+import { COURT_CASES } from '../content/court.js';
+import { castSvg } from '../art/court-cast.js';
 
-/* The Playroom: pick an accomplice, pick a game. Four arcade games and the
-   expedition, each one tap from playing. Records are a single number. */
+/* The Playroom: pick an accomplice, pick a game. Shelf Court, four arcade
+   games and the expedition, each one tap from playing. */
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
@@ -31,7 +34,11 @@ export function initPlayroom(state) {
     purpose.hidden = !forUs;
     if (forUs) purpose.innerHTML = '<b>' + esc(adventure.episode.title) + '</b> · ' + esc(adventure.approach.label) + '. The marked game moves our adventure on.';
     const best = arcadeState(state).best, wanted = forUs ? adventure.approach.activity : '';
-    cards.innerHTML = ARCADE_GAMES.map(g => '<button type="button" class="activity-card play-card' + (wanted === 'arcade:' + g.id ? ' for-adventure' : '') + '" data-game="' + g.id + '" style="--ar-accent:' + g.accent + '" ' + (pet ? '' : 'disabled') + ' aria-label="Play ' + esc(g.title) + '. ' + esc(g.hook) + ' Best ' + (best[g.id] || 0) + '.">' +
+    const aired = Object.keys(courtroomState(state).best).length;
+    cards.innerHTML = '<button type="button" class="activity-card play-card court-card' + (wanted === 'court' ? ' for-adventure' : '') + '" data-court style="--ar-accent:#F2C94C" ' + (pet ? '' : 'disabled') + ' aria-label="Shelf Court. ' + esc(pet?.name || 'A resident') + ' sues a shelf-mate on daytime television. ' + aired + ' of ' + COURT_CASES.length + ' episodes aired.">' +
+        '<span class="court-card-judge" aria-hidden="true">' + castSvg('judge') + '</span><span class="activity-kind">Daytime TV · live' + (wanted === 'court' ? ' · for our adventure' : '') + '</span><strong>Shelf Court</strong><span class="activity-hook">' + esc(pet?.name || 'Your resident') + ' is suing a shelf-mate. You are the judge. The shelf is the jury. The audience is dead.</span>' +
+        '<span class="activity-bottom"><span>' + aired + ' of ' + COURT_CASES.length + ' episodes aired</span><b class="activity-action" aria-hidden="true">Roll tape</b></span></button>' +
+      ARCADE_GAMES.map(g => '<button type="button" class="activity-card play-card' + (wanted === 'arcade:' + g.id ? ' for-adventure' : '') + '" data-game="' + g.id + '" style="--ar-accent:' + g.accent + '" ' + (pet ? '' : 'disabled') + ' aria-label="Play ' + esc(g.title) + '. ' + esc(g.hook) + ' Best ' + (best[g.id] || 0) + '.">' +
         '<span class="play-card-glyph" aria-hidden="true">' + glyph(g.glyph) + '</span><span class="activity-kind">' + esc(g.kind) + (wanted === 'arcade:' + g.id ? ' · for our adventure' : '') + '</span><strong>' + esc(g.title) + '</strong><span class="activity-hook">' + esc(g.hook) + '</span>' +
         '<span class="activity-bottom"><span>Best ' + (best[g.id] || 0) + '</span><b class="activity-action" aria-hidden="true">Play</b></span></button>').join('') +
       '<button type="button" class="activity-card play-card expedition-card' + (wanted === 'outing' ? ' for-adventure' : '') + '" data-activity="outing" style="--ar-accent:#7FD8C0" ' + (pet ? '' : 'disabled') + ' aria-label="Expeditions. Three stops beyond the shelf to recover parts for household projects.">' +
@@ -49,10 +56,11 @@ export function initPlayroom(state) {
   veil.addEventListener('click', e => { if (e.target === veil) close(); });
   document.getElementById('playroomCreate').addEventListener('click', () => { close(); document.getElementById('newPetBtn').click(); });
   cards.addEventListener('click', e => {
-    const card = e.target.closest('[data-game],[data-activity]');
+    const card = e.target.closest('[data-game],[data-activity],[data-court]');
     if (!card || card.disabled || !state.pets.some(p => p.id === selected)) return;
     close();
-    if (card.dataset.game) window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: card.dataset.game, petId: selected } }));
+    if ('court' in card.dataset) window.dispatchEvent(new CustomEvent('shelflife:court', { detail: { petId: selected } }));
+    else if (card.dataset.game) window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: card.dataset.game, petId: selected } }));
     else window.dispatchEvent(new CustomEvent('shelflife:activity', { detail: { action: 'outing', petId: selected } }));
   });
   document.addEventListener('keydown', e => {

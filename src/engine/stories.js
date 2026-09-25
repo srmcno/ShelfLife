@@ -12,8 +12,8 @@ export const WEEK = 7 * DAY;
 const safeRecord = x => x && typeof x === 'object' && !Array.isArray(x);
 const cleanTime = x => Number.isFinite(x) && x >= 0 ? x : 0;
 const careCount = state => state.stories?.careActions || 0;
-const playCount = state => (state.stories?.handshakes || 0) + (state.stories?.chases || 0) + (state.stories?.alibiWins || 0) + (state.pets || []).reduce((n, p) => n + (p.arcadeRuns || 0), 0);
-export const residentWins = pet => (pet.handshakes || 0) + (pet.chases || 0) + (pet.alibiWins || 0) + (pet.arcadeRuns || 0);
+const playCount = state => (state.stories?.handshakes || 0) + (state.stories?.chases || 0) + (state.stories?.alibiWins || 0) + (state.pets || []).reduce((n, p) => n + (p.arcadeRuns || 0) + (p.courtCases || 0), 0);
+export const residentWins = pet => (pet.handshakes || 0) + (pet.chases || 0) + (pet.alibiWins || 0) + (pet.arcadeRuns || 0) + (pet.courtCases || 0);
 const roll = rng => clamp(Number(rng()) || 0, 0, 0.999999999);
 export const VISIT_GAP_MIN = 8 * 3600000;
 export const VISIT_GAP_MAX = 18 * 3600000;
@@ -87,7 +87,7 @@ export function storyState(state) {
     r.baseline = cleanTime(r.baseline);
     if (r.kind === 'play' && r.status === 'accepted' && !r.winBaseline) {
       const pet = state.pets.find(p => p.id === id);
-      r.baseline += (pet?.chases || 0) + (pet?.alibiWins || 0) + (pet?.arcadeRuns || 0);
+      r.baseline += (pet?.chases || 0) + (pet?.alibiWins || 0) + (pet?.arcadeRuns || 0) + (pet?.courtCases || 0);
       r.winBaseline = true;
     }
     r.offeredAt = cleanTime(r.offeredAt);

@@ -196,7 +196,7 @@ test('an arcade run advances only the chosen game, only for its resident, and ne
 });
 
 test('every adventure offers at least one playable approach', () => {
-  const playable = new Set(['arcade:frenzy', 'arcade:stack', 'arcade:seance', 'arcade:whack', 'outing']);
+  const playable = new Set(['arcade:frenzy', 'arcade:stack', 'arcade:seance', 'arcade:whack', 'outing', 'court']);
   for (const episode of ESCAPADES) for (const path of episode.approaches) assert.ok(playable.has(path.activity), episode.id + '/' + path.id + ' uses ' + path.activity);
 });
 

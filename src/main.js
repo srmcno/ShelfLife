@@ -11,6 +11,7 @@ import { artPersonality } from './engine/personality.js';
 import { initStories } from './ui/stories.js';
 import { initMayhem } from './ui/mayhem.js';
 import { initArcade } from './ui/arcade.js';
+import { initCourt } from './ui/court.js';
 import { accrueMayhem } from './engine/mayhem.js';
 import {
   state, save, addNote, pick, defaultNeeds, normalizeState, normalizePetArt, HOUR, Store, RECOVERY_KEY, loadFailed, backupDue
@@ -359,6 +360,7 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 
 initMayhem(state, () => renderAll(state));
 initArcade(state, () => renderAll(state));
+initCourt(state, () => renderAll(state));
 initSchemeUI(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
 initWelcome(state, () => renderAll(state));
@@ -443,7 +445,7 @@ function announceMayhem(added) {
 })();
 
 setInterval(() => {
-  if (document.hidden || shelfTheatre.isPlaying() || document.getElementById('arcadeVeil').classList.contains('open') || document.getElementById('studioVeil').classList.contains('open')) return;
+  if (document.hidden || shelfTheatre.isPlaying() || document.getElementById('arcadeVeil').classList.contains('open') || document.getElementById('courtVeil').classList.contains('open') || document.getElementById('studioVeil').classList.contains('open')) return;
   if (tick(state)) {
     advanceSchemes(state);
     accrueMayhem(state);

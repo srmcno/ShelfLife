@@ -42,7 +42,7 @@ export function residentLifeHTML(pet,now=Date.now()){
  const saved=Array.isArray(pet.lifeKeepsakes)?pet.lifeKeepsakes.length:0;
  const next=RESIDENT_TENURE.find(mark=>mark.days>days);
  const tenure=days+' '+(days===1?'day':'days')+' on the shelf · '+saved+' life keepsake'+(saved===1?'':'s')+(next?' · next at '+next.days+' days':'');
- return '<details class="resident-habits"><summary>Little habits & shared history</summary><p><b>'+esc(fav.name)+'</b> · '+esc(fav.line)+'</p><p>'+esc(tenure)+'</p><p>'+(pet.expeditions||0)+' expeditions · '+(pet.arcadeRuns||0)+' arcade runs together.</p></details>';
+ return '<details class="resident-habits"><summary>Little habits & shared history</summary><p><b>'+esc(fav.name)+'</b> · '+esc(fav.line)+'</p><p>'+esc(tenure)+'</p><p>'+(pet.expeditions||0)+' expeditions · '+(pet.arcadeRuns||0)+' arcade runs · '+(pet.courtCases||0)+' court appearances together.</p></details>';
 }
 export function initLife(state,refresh) {
  const veil=document.getElementById('lifeVeil'),content=document.getElementById('lifeContent'),title=document.getElementById('lifeTitle');

@@ -233,7 +233,7 @@ document.addEventListener('pointerdown', e => {
   if (!head || e.target.closest('button, input, select, textarea, summary, a, [contenteditable="true"]')) return;
   const sheet = head.closest('.sheet');
   const veil = head.closest('.veil');
-  if (!sheet || !veil || ['arcadeVeil','playroomVeil'].includes(veil.id) || veil.classList?.contains('life-game-mode') || sheet.scrollTop > 2) return;
+  if (!sheet || !veil || ['arcadeVeil','courtVeil','playroomVeil'].includes(veil.id) || veil.classList?.contains('life-game-mode') || sheet.scrollTop > 2) return;
   pull = { sheet, veil, x0: e.clientX, y0: e.clientY, dy: 0, id: e.pointerId, dragging: false };
 }, { passive: true });
 document.addEventListener('pointermove', e => {

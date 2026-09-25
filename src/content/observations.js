@@ -78,6 +78,12 @@ export const OBSERVATIONS = {
     '{p} is holding a séance for its high score. The high score is not dead. {p} is making sure.',
     '{p} caught a falling crumb in its sleep. Then some holy water. It woke up steaming and proud.'
   ],
+  court: [
+    '{p} is practising its hallway interview in the mirror. “No comment. Actually, one comment. Several.”',
+    '{p}: “I was on television.” It was on a shelf. It is not accepting corrections.',
+    '{p} keeps glancing at the jury box. The jury box is a matchbox. It glances back.',
+    '{p} has started ending sentences with “and the audience went OOOH”. The audience did not.'
+  ],
   alibi: [
     '{p} has lost a clean Alibi round to you. It is moving the truth to a less accessible orifice.',
     '{p}: “You found every lie. I was hoping my face would count as mitigation.”',

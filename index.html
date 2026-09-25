@@ -31,6 +31,7 @@
 <link rel="stylesheet" href="css/paperwork.css">
 <link rel="stylesheet" href="css/mayhem.css">
 <link rel="stylesheet" href="css/games.css">
+<link rel="stylesheet" href="css/court.css">
 <link rel="stylesheet" href="css/atmosphere.css">
 </head>
 <body data-tab="shelf">
@@ -240,11 +241,13 @@
 <div class="veil" id="playroomVeil">
   <div class="sheet sheet-playroom">
     <div class="sheet-head"><div><span class="eyebrow">Open at all unreasonable hours</span><h2>The playroom</h2></div><button class="btn btn-ghost btn-sm" id="playroomClose">Close</button></div>
+    <div class="playroom-workspace">
     <div class="playroom-company" id="playroomCompany"><div id="playroomPortrait" aria-hidden="true"></div><label for="playroomResident">Playing with<select id="playroomResident"></select></label></div>
     <div id="playroomEmpty" class="playroom-empty"><p>A resident makes an excellent accomplice. Qualifications are not checked.</p><button class="btn btn-primary" id="playroomCreate">Make your first resident</button></div>
     <p class="escapade-game-purpose" id="playroomPurpose" hidden></p>
     <div class="activity-grid play-grid" id="activityCards"></div>
     <p class="hint">Every run pays souls, up to a daily purse. Beat your best for a bonus.</p>
+    </div>
   </div>
 </div>
 <div class="veil" id="studioVeil">
@@ -395,7 +398,7 @@
     <li><h3>Encourage a terrible idea.</h3><p>Small conspiracies offer choices with visible costs and rewards. Help, redirect, or leave the residents to their own devices. They act after three minutes; another plan follows five minutes later. Nobody dies. Sometimes the raisin does.</p></li>
     <li><h3>Make a little history.</h3><p>Stories holds a six-beat weekly case and temporary visitors. Follow the evidence through care, placement and choices. A case waits until you finish it. Visitors stay six hours and leave museum curiosities when welcomed.</p></li>
     <li><h3>Keep your promises.</h3><p>Accept a resident’s request in its card, then fulfil it within twelve hours of accepting for trust. Refusing costs one trust and adds a grievance. Friends form after fifteen minutes beside each other with trust on both sides. Rivals can reach a truce once both trust you at level three.</p></li>
-    <li><h3>Find your kind of mischief.</h3><p>Open Play on a phone or Playroom on a larger screen. Pick a resident, then a game: catch snacks in Feeding Frenzy, stack coffins, hold a Séance, or push the dead back down in Grave Whack. Every run pays souls, beating your best pays extra, and Expeditions bring home parts for household projects.</p><button class="btn btn-primary" id="helpPlayroom">Open the Playroom</button></li>
+    <li><h3>Find your kind of mischief.</h3><p>Open Play on a phone or Playroom on a larger screen. Pick a resident, then a game: judge its petty lawsuits on Shelf Court, catch snacks in Feeding Frenzy, stack coffins, hold a Séance, or push the dead back down in Grave Whack. Every run pays souls, beating your best pays extra, and Expeditions bring home parts for household projects.</p><button class="btn btn-primary" id="helpPlayroom">Open the Playroom</button></li>
   </ol>
   <p class="guide-footnote">Needs change while you are away, up to eighteen hours at a time, and only half as fast at night. They cannot die. You can take a break. Your shelf saves on this device; More → Back up keeps a copy you can restore elsewhere.</p>
   <p class="guide-footnote">Keyboard: Tab through controls, Enter or Space to activate, Escape to close a sheet. The game respects your device’s reduced-motion preference.</p>
@@ -448,6 +451,7 @@
 </div>
 
 <div class="veil" id="arcadeVeil"><div class="sheet sheet-arcade" id="arcadeSheet"></div></div>
+<div class="veil" id="courtVeil"><div class="sheet sheet-court" id="courtSheet"></div></div>
 <div class="veil" id="mayhemVeil"><div class="sheet mh-sheet" id="mayhemSheet"></div></div>
 <div class="mh-rankup" id="mayhemRankUp" role="status" aria-live="polite" hidden></div>
 <div class="veil" id="incidentsVeil"><div class="sheet" id="incidentsSheet"></div></div>
