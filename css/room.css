@@ -43,8 +43,7 @@ body[data-tab="notes"] .room-app > .pane-notes { display: block; }
   background: linear-gradient(180deg, color-mix(in srgb, var(--wood-lip) 65%, var(--key)) 0 2px, var(--wood-lip) 2px 6px, var(--wood) 6px 11px, color-mix(in srgb, var(--wood) 58%, #000) 11px 15px, #0008 15px);
   box-shadow: 0 8px 12px -5px #000b;
 }
-/* The room paint and chosen wallpaper are real cabinet materials. Keep the
-   perspective room artwork on the play rug, where it has a floor to sit on. */
+/* The room paint and chosen wallpaper are real cabinet materials. */
 .pane-shelf, .decor-preview {
   --cabinet-surface: var(--wall-pattern),
     radial-gradient(ellipse at 30% -10%, color-mix(in srgb, var(--key) 18%, transparent), transparent 67%),
@@ -91,12 +90,12 @@ body[data-tab="notes"] .room-app > .pane-notes { display: block; }
 .shelf-brief .brief-icon { color: var(--mint); font-size: 23px; }
 .shelf-brief b { font-size: 14px; }
 .shelf-brief span:not(.brief-icon) { font-size: 12px; line-height: 1.4; }
-#paneShelf #actions.actions { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 10px; margin: 0 0 19px; }
+#paneShelf #actions.actions { display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; margin: 0 0 19px; }
 #paneShelf #actions .btn { display: grid; grid-template-columns: auto 1fr; align-content: center; text-align: left; justify-content: start; column-gap: 12px; row-gap: 3px; padding: 14px 19px; min-height: 65px; border-radius: 9px; background: var(--glass); border-color: var(--hair-lit); box-shadow: 0 3px 0 #0006, inset 0 1px 0 var(--glass); font-size: 14px; white-space: normal; }
 #paneShelf #actions .btn svg { grid-row: 1 / 3; align-self: center; width: 24px; height: 24px; }
 #paneShelf #actions small { display: block; font-size: 11px; grid-column: 2; line-height: 1.35; color: var(--ink-2); }
-#paneShelf #actions .rug-launch { background: var(--pink); color: var(--accent-ink); border-color: color-mix(in srgb, var(--pink) 70%, white); box-shadow: 0 3px 0 color-mix(in srgb, var(--pink) 50%, #000), inset 0 1px 0 #fff5; }
-#paneShelf #actions .rug-launch small { color: var(--accent-ink); }
+#paneShelf #actions .shelf-primary { background: var(--pink); color: var(--accent-ink); border-color: color-mix(in srgb, var(--pink) 70%, white); box-shadow: 0 3px 0 color-mix(in srgb, var(--pink) 50%, #000), inset 0 1px 0 #fff5; }
+#paneShelf #actions .shelf-primary small { color: var(--accent-ink); }
 #paneShelf #actions .btn:not(:disabled):active { transform: translateY(2px); box-shadow: none; }
 #paneShelf .shelf-theatre-controls { margin: 7px 2px 0; padding: 12px 0 0; border-top: 1px solid var(--hair); border-bottom: 0; }
 #paneShelf .theatre-heading { flex-direction: row; align-items: baseline; gap: 12px; margin: 0 0 3px; }
@@ -206,7 +205,7 @@ body[data-tab="notes"] .room-app > .pane-notes { display: block; }
   .shelf-brief b { font-size: 13px; }
   .shelf-brief span:not(.brief-icon) { font-size: 12px; line-height: 1.35; }
   .shelf-brief .btn { min-height: 44px; font-size: 11px; padding: 9px 10px; max-width: 116px; white-space: normal; }
-  #paneShelf #actions.actions { grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 18px; }
+  #paneShelf #actions.actions { grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 18px; }
   #paneShelf #actions .btn { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 11px 5px; gap: 7px; min-height: 79px; font-size: 12px; line-height: 1.25; }
   #paneShelf #actions .btn svg { width: 23px; height: 23px; }
   #paneShelf #actions small { display: none; }

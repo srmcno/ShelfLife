@@ -234,7 +234,7 @@ test('a finished arcade run saves its best, pays souls and offers another go', a
   expect((await savedShelf(page)).arcade.best.stack).toBe(shelf.arcade.best.stack);
 });
 
-test('installed shell reloads offline with saved adventure progress, usable care and the illustrated play rug', async ({ page, context, browserName }) => {
+test('installed shell reloads offline with saved adventure progress and usable care', async ({ page, context, browserName }) => {
   // Playwright documents service-worker tooling for Chromium only. WebKit's
   // emulated offline navigation fails internally before the cached page loads.
   // Keep its UI/save coverage above; do not report this as an iOS offline check.
@@ -260,13 +260,6 @@ test('installed shell reloads offline with saved adventure progress, usable care
     await page.locator('#escapadeOpen').click();
     await expect(page.locator('#escapadeContent .escapade-steps .done')).toHaveCount(1);
     await noHorizontalOverflow(page);
-    await page.keyboard.press('Escape');await page.locator('.tab[data-tab="shelf"]').click();
-    await page.locator('#hangoutBtn').click();
-    const illustration=await page.evaluate(async()=>{const result=await fetch('assets/rooms/play-rug.webp');const bytes=await result.blob();return{ok:result.ok,type:bytes.type,size:bytes.size};});
-    expect(illustration.ok).toBe(true);expect(illustration.type).toContain('image/webp');expect(illustration.size).toBeGreaterThan(100_000);
-    await page.locator('[data-rug-toy="bubbles"]').click();await page.locator('#rugAction').click();await page.locator('#rugPop').click();
-    await expect(page.locator('#rugTally')).toHaveText('1 / 6');
-    await page.reload();await page.locator('#hangoutBtn').click();await expect(page.locator('#rugTally')).toHaveText('1 / 6');
   } finally {
     await context.setOffline(false);
   }

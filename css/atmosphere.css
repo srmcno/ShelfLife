@@ -77,12 +77,12 @@ body.wall-damask #wall{opacity:.38}
 .cabinet-sign{letter-spacing:.2em}
 
 /* ---- the primary action, in wax and blood ------------------------------------------- */
-#paneShelf #actions .rug-launch{
+#paneShelf #actions .shelf-primary{
   background-color:var(--pink);
   background-image:radial-gradient(120% 140% at 0% 0%,#ff7a5c55,transparent 55%),linear-gradient(180deg,#ffffff1a,#0000002e);
   color:var(--accent-ink);border-color:color-mix(in srgb,var(--pink) 60%,#fff 20%);
   box-shadow:0 3px 0 color-mix(in srgb,var(--pink) 40%,#000),0 12px 30px -12px var(--pink),inset 0 1px 0 #fff4}
-#paneShelf #actions .rug-launch small{color:var(--accent-ink);opacity:.85}
+#paneShelf #actions .shelf-primary small{color:var(--accent-ink);opacity:.85}
 
 /* ---- the wordmark takes the candle colour ---------------------------------------------- */
 .wordmark em{color:var(--mh-candle,#F6C768);text-shadow:0 0 18px color-mix(in srgb,var(--mh-candle,#F6C768) 45%,transparent)}
