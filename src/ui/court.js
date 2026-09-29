@@ -182,7 +182,7 @@ function studioMarkup() {
     '<span class="sc-applause">APPLAUSE</span><span class="sc-onair">ON AIR</span>' +
     '<span class="sc-bug"><b>SHELF COURT</b><i></i>LIVE</span>' +
     '<div class="sc-jury" data-actor="jury"><span class="sc-jury-label">Jury</span><div class="sc-seats">' + ep.jury.map(seat).join('') + '</div></div>' +
-    '<div class="sc-actor sc-judge" data-actor="judge">' + castSvg('judge') + '<span class="sc-gavel">' + COURT_PROPS.gavel + '</span></div>' +
+    '<div class="sc-actor sc-judge" data-actor="judge">' + castSvg('judge') + '</div>' +
     '<div class="sc-bench"><span>' + glyph('skull') + '</span></div>' +
     '<div class="sc-actor sc-bailiff" data-actor="bailiff">' + castSvg('rat') + '</div>' +
     '<div class="sc-actor sc-podium p" data-actor="p"><span class="sc-party">' + portrait(ep.p) + '</span><span class="sc-lectern"><small>Plaintiff</small><span>' + esc(ep.p.name) + '</span></span></div>' +
@@ -257,6 +257,7 @@ function speak(line) {
   name.hidden = !name.textContent;
   if (line.s === 'npc') showWitness(line.who);
   setSpeaker(line.s);
+  cue(line);
   $('[data-actor="' + line.s + '"]')?.classList.add('talking');
   let typed = 0;
   text.textContent = '';
@@ -312,9 +313,46 @@ function shake(big = false) {
 }
 function gavel(word = 'ORDER!') {
   const judge = $('.sc-judge'); if (!judge) return;
-  judge.classList.remove('banging'); void judge.offsetWidth; judge.classList.add('banging');
-  later(() => { playStomp(); shake(); bubble(word, 'sc-bang'); }, 240);
+  judge.classList.remove('banging', 'jm-nogavel'); void judge.offsetWidth; judge.classList.add('banging');
+  // 240ms is when the gavel head meets the block in css/court.css (jm-swing).
+  later(() => { playStomp(); shake(); bubble(word, 'sc-bang'); react('bailiff', 'rb-jumped', 650); }, 240);
   later(() => judge?.classList.remove('banging'), 900);
+}
+
+/* ---------------- the judge and the bailiff ----------------
+   Both puppets react through classes on their actor that css/court.css
+   animates. One-shots clear themselves; a newer copy of the same reaction
+   restarts it rather than being cut short by the old timer. */
+const reactTimers = {};
+function react(actor, cls, ms) {
+  const el = $('.sc-' + actor); if (!el) return;
+  clearTimeout(reactTimers[cls]); timers.delete(reactTimers[cls]);
+  el.classList.remove(cls); void el.getBoundingClientRect(); el.classList.add(cls);
+  reactTimers[cls] = later(() => el.classList.remove(cls), ms);
+}
+const JUDGE_MOODS = { surprise: 1250, irked: 2600, sigh: 1850 };
+const judgeMood = mood => react('judge', 'jm-' + mood, JUDGE_MOODS[mood]);
+// How the bench takes each scene.
+const JUDGE_TAKES = { outburst: 'surprise', throw: 'surprise', jaw: 'surprise', moth: 'surprise', sleep: 'irked', heckle: 'irked', eat: 'irked', cat: 'irked', faint: 'sigh', applause: 'sigh' };
+const busyEffects = () => reduced() || document.body.dataset.effects === 'light';
+// When the bench speaks to the bailiff he salutes, and a question makes him
+// sweat until somebody else takes the floor. Shouting irritates the judge.
+function cue(line) {
+  const bailiff = $('.sc-bailiff');
+  if (line.s === 'judge' && /\bbailiff\b/i.test(line.t)) {
+    react('bailiff', 'rb-salute', 1500);
+    if (line.t.includes('?')) bailiff?.classList.add('rb-caught');
+  } else if (line.s !== 'bailiff') bailiff?.classList.remove('rb-caught');
+  if (line.s === 'judge' && (line.t.match(/\b[A-Z]{3,}\b/g) || []).length >= 2) judgeMood('irked');
+}
+// Business between lines: every so often the wig slides and gets shoved back.
+// Full effects only.
+function idle(tok) {
+  later(() => {
+    if (tok !== session || !stage()) return;
+    if (!busyEffects() && !$('.sc-judge.banging')) react('judge', 'jm-slip', 2700);
+    idle(tok);
+  }, 9000 + Math.random() * 9000);
 }
 function sting() {
   [392, 523.3, 659.3, 784].forEach((f, i) => later(() => playTone(f, { duration: 0.22, type: 'triangle', gain: 0.07 }), i * 130));
@@ -330,6 +368,7 @@ function podium(side) { return $('.sc-podium.' + side); }
 function happeningStart(h) {
   const st = stage(); if (!st) return;
   const heads = st.querySelectorAll('.sc-head');
+  if (JUDGE_TAKES[h.anim]) later(() => judgeMood(JUDGE_TAKES[h.anim]), h.anim === 'throw' ? 650 : h.anim === 'cat' ? 2000 : 0);
   switch (h.anim) {
     case 'outburst': podium(h.x)?.classList.add('sc-rant'); shake(true); playTone(150, { duration: 0.3, type: 'sawtooth', gain: 0.06 }); break;
     case 'sleep': $('.sc-seat[data-seat="' + ep.jury.indexOf(h.juror) + '"]')?.classList.add('asleep'); break;
@@ -340,9 +379,9 @@ function happeningStart(h) {
     case 'heckle': heads[5]?.classList.add('standing'); break;
     case 'faint': heads[2]?.classList.add('fainted'); heads[6]?.classList.add('fainted'); break;
     case 'dark': st.classList.add('sc-dark'); playTone(70, { duration: 0.4, type: 'sawtooth', gain: 0.05 }); break;
-    case 'cat': layer('sc-walker cat', castSvg('cat'), 3400); break;
+    case 'cat': layer('sc-walker cat', castSvg('cat'), 3400); later(() => $('.sc-judge')?.classList.add('jm-nogavel'), 1800); break;
     case 'applause': applause(3200); break;
-    case 'eat': $('.sc-bailiff')?.classList.add('chomping'); break;
+    case 'eat': $('.sc-bailiff')?.classList.add('chomping', 'rb-caught'); break;
     case 'jaw': layer('sc-jaw', COURT_PROPS.bone, 2200); break;
     case 'moth': layer('sc-walker moth', castSvg('moth'), 2600); break;
   }
@@ -351,7 +390,8 @@ function happeningEnd(h, choice) {
   const st = stage(); if (!st) return;
   podium('p')?.classList.remove('sc-rant'); podium('d')?.classList.remove('sc-rant');
   st.classList.remove('sc-dark');
-  $('.sc-bailiff')?.classList.remove('chomping');
+  $('.sc-bailiff')?.classList.remove('chomping', 'rb-caught');
+  $('.sc-judge')?.classList.remove('jm-nogavel');
   st.querySelectorAll('.sc-head.standing').forEach(el => el.classList.remove('standing'));
   if (h.anim === 'sleep' && choice === 'gavel') st.querySelectorAll('.sc-seat.asleep').forEach(el => el.classList.remove('asleep'));
 }
@@ -361,6 +401,7 @@ async function runEpisode() {
   const tok = session;
   const alive = () => tok === session && !!ep;
   showStudio();
+  idle(tok);
   tvStatic(); sting();
   await wait(700); if (!alive()) return;
   applause(1600);
@@ -384,9 +425,11 @@ async function runEpisode() {
   const ruling = await chooseRuling(); if (!alive()) return;
   const result = episodeRule(ep, ruling);
   gavel(ruling === 'both' ? 'BOTH IDIOTS!' : 'JUDGMENT!');
+  if (ruling === 'both') later(() => judgeMood('sigh'), 950);
   await wait(700); if (!alive()) return;
   await play(result.ruling); if (!alive()) return;
   await juryVote(result); if (!alive()) return;
+  if (result.agree * 2 < ep.jury.length) judgeMood('irked');
   await play(result.jury); if (!alive()) return;
   meters();
   if (ep.ratings >= 50) applause(2200);

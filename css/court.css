@@ -97,18 +97,145 @@
 .sc-bug i{width:7px;height:7px;border-radius:50%;background:#ff3b4e;animation:sc-onair 1s steps(1) infinite}
 
 .sc-actor{position:absolute;transition:filter .18s}
-.sc-judge{left:50%;top:6%;height:35%;aspect-ratio:120/140;transform:translateX(-50%);z-index:2}
-.sc-gavel{position:absolute;right:-32%;top:46%;width:42%;transform-origin:88% 84%;transform:rotate(-8deg);z-index:4}
-.sc-gavel svg{display:block;width:100%}
-.sc-judge.banging .sc-gavel{animation:sc-gavel .7s ease-in 1}
-@keyframes sc-gavel{0%{transform:rotate(-8deg)}35%{transform:rotate(-60deg)}50%{transform:rotate(22deg)}62%{transform:rotate(8deg)}100%{transform:rotate(-8deg)}}
-.sc-bench{position:absolute;left:50%;top:31%;height:16%;width:34%;transform:translateX(-50%);z-index:3;display:grid;place-items:center;border:3px solid #1a0a11;border-radius:6px 6px 0 0;
-  background:linear-gradient(180deg,#7a4c3a 0 18%,#5a3326 18% 24%,#6b3f2f 24%)}
+/* The judge sits behind his bench: the bench top lines up with his own desk
+   (y = 114 of 140 in his portrait), so his hands, block and gavel rest on it. */
+.sc-judge{left:50%;top:2%;height:44%;aspect-ratio:120/140;transform:translateX(-50%);z-index:2}
+.sc-bench{position:absolute;left:50%;top:38%;height:15%;width:36%;transform:translateX(-50%);z-index:3;display:grid;place-items:center;border:3px solid #1a0a11;border-radius:4px 4px 0 0;
+  background:linear-gradient(180deg,#8a5a44 0 16%,#5a3326 16% 22%,#6b3f2f 22%);box-shadow:inset 0 -10px 16px -8px rgba(0,0,0,.45)}
 .sc-bench span{width:20%;max-width:30px;color:#f2c94c}
-.sc-bailiff{left:67%;top:17%;height:34%;aspect-ratio:120/140;z-index:2}
-.sc-bailiff.chomping .cc-mouth{animation:sc-talk .12s steps(2,jump-none) infinite}
+.sc-bailiff{left:69%;top:13%;height:39%;aspect-ratio:120/140;z-index:2}
 .sc-bailiff.chomping{animation:sc-wobble .2s steps(2,jump-none) infinite alternate}
 @keyframes sc-wobble{from{transform:translateX(-2px) rotate(-2deg)}to{transform:translateX(2px) rotate(2deg)}}
+
+/* ---- Judge Mortis ----
+   Loops use steps() so the SVG repaints a few times a second, not sixty.
+   Reactions are classes on the actor: .banging swings the gavel, .jm-slip
+   lets the wig slide and shoves it back, .jm-surprise, .jm-irked and
+   .jm-sigh are his three moods, .jm-nogavel is the cat's doing. */
+.cc-judge :is(.jm-sway,.jm-body,.jm-head,.jm-jaw,.jm-eyes,.jm-pupil,.jm-lid,.jm-brow,.jm-wig,.jm-arm,.jm-gavel,.jm-flash,.jm-block,.jm-hand,.jm-f,.jm-push){transform-box:view-box}
+.cc-judge .jm-sway{transform-origin:60px 140px;animation:jm-sway 7s steps(14) infinite}
+.cc-judge .jm-body,.cc-judge .jm-head{transform-origin:60px 120px}
+.cc-judge .jm-jaw{transform-origin:60px 68px}
+.cc-judge .jm-pupil-l{transform-origin:49px 55px}
+.cc-judge .jm-pupil-r{transform-origin:71px 55px}
+.cc-judge .jm-eyes{animation:jm-glance 9s steps(1) infinite}
+.cc-judge .jm-glow{animation:jm-glow 2.8s steps(4) infinite alternate}
+.cc-judge .jm-lid{transform-origin:60px 46px;transform:scaleY(0);animation:jm-blink 5.3s steps(1) infinite}
+.cc-judge .jm-brow{transition:transform .18s ease-out}
+.cc-judge .jm-brow-l{transform-origin:38px 50px}
+.cc-judge .jm-brow-r{transform-origin:82px 50px}
+.cc-judge .jm-wig{transform-origin:60px 24px}
+.cc-judge .jm-arm{transform-origin:31px 116px}
+.cc-judge .jm-gavel{transform-origin:26px 98px}
+.cc-judge .jm-block{transform-origin:10px 116px}
+.cc-judge .jm-flash{transform-origin:10px 106px;opacity:0;transform:scale(.3)}
+.cc-judge .jm-f{animation:jm-drum 5.6s steps(1) infinite}
+.cc-judge .jm-f2{animation-delay:.14s}
+.cc-judge .jm-f3{animation-delay:.28s}
+.cc-judge .jm-push{opacity:0;transform-origin:96px 90px}
+@keyframes jm-sway{0%,100%{transform:rotate(0)}25%{transform:rotate(-1.1deg)}75%{transform:rotate(1.1deg)}}
+@keyframes jm-glance{0%,34%{transform:none}36%,50%{transform:translate(-2px,.6px)}52%,70%{transform:none}72%,82%{transform:translate(2.2px,.2px)}84%,100%{transform:none}}
+@keyframes jm-glow{from{opacity:.14}to{opacity:.42}}
+@keyframes jm-blink{0%,91%{transform:scaleY(0)}92%{transform:scaleY(.6)}93%,95%{transform:scaleY(1)}96%{transform:scaleY(.4)}97%,100%{transform:scaleY(0)}}
+@keyframes jm-drum{0%,70%,74%,100%{transform:none}72%{transform:translate(-.6px,-1.8px)}}
+/* talking: the jaw drops and snaps shut, and the eyes burn brighter */
+.talking .cc-judge .cc-mouth{animation:jm-talk .22s steps(2,jump-none) infinite}
+.talking .cc-judge .jm-glow{animation:none;opacity:.55}
+@keyframes jm-talk{from{transform:none}to{transform:translateY(5.5px) rotate(-1.5deg)}}
+/* the gavel: wind-up, strike on the block at 240ms, recoil */
+.banging .cc-judge .jm-arm{animation:jm-swing .9s cubic-bezier(.3,0,.25,1) 1}
+.banging .cc-judge .jm-gavel{animation:jm-cock .9s cubic-bezier(.3,0,.25,1) 1}
+.banging .cc-judge .jm-block{animation:jm-thud .9s linear 1}
+.banging .cc-judge .jm-flash{animation:jm-flash .9s linear 1}
+.banging .cc-judge .jm-glow{animation:jm-flare .9s steps(1) 1}
+@keyframes jm-swing{0%{transform:none}20%,22%{transform:translateY(-5px) rotate(-14deg)}26.5%{transform:rotate(2deg)}34%{transform:translateY(-1px) rotate(-5deg)}46%{transform:rotate(.6deg)}58%,100%{transform:none}}
+@keyframes jm-cock{0%{transform:none}18%,22%{transform:rotate(78deg)}26.5%{transform:rotate(-5deg)}36%{transform:rotate(16deg)}48%{transform:rotate(-2deg)}58%,100%{transform:none}}
+@keyframes jm-thud{0%,26%{transform:none}27.5%{transform:scale(1.1,.8)}34%,100%{transform:none}}
+@keyframes jm-flash{0%,26%{opacity:0;transform:scale(.3)}27%{opacity:1;transform:scale(1.25)}38%{opacity:.8;transform:scale(1.5) rotate(18deg)}46%,100%{opacity:0;transform:scale(1.6) rotate(24deg)}}
+@keyframes jm-flare{0%,26%{opacity:.3}27%,40%{opacity:.9}41%,100%{opacity:.3}}
+/* the wig slides off to one side; a bony hand shoves it back */
+.jm-slip .cc-judge .jm-wig{animation:jm-slip 2.6s cubic-bezier(.4,0,.3,1) 1}
+.jm-slip .cc-judge .jm-push{animation:jm-push 2.6s ease-out 1}
+.jm-slip .cc-judge .jm-hand{animation:jm-hand-away 2.6s steps(1) 1}
+.jm-slip .cc-judge .jm-eyes{animation:jm-lookup 2.6s steps(1) 1}
+@keyframes jm-slip{0%{transform:none}14%{transform:translate(2px,4px) rotate(9deg)}20%,58%{transform:translate(2.4px,5px) rotate(8deg)}72%{transform:translate(-1px,-3px) rotate(-3deg)}80%{transform:translate(0,1px) rotate(1deg)}88%,100%{transform:none}}
+@keyframes jm-push{0%,50%{opacity:0;transform:translateY(22px)}56%{opacity:1;transform:translateY(8px)}62%{opacity:1;transform:translate(1px,-1px)}72%{opacity:1;transform:translate(-2px,-8px)}80%{opacity:1;transform:translate(0,4px)}88%,100%{opacity:0;transform:translateY(24px)}}
+@keyframes jm-hand-away{0%,52%{opacity:1}53%,86%{opacity:0}87%,100%{opacity:1}}
+@keyframes jm-lookup{0%,16%{transform:none}17%,58%{transform:translate(1.6px,-2px)}59%,100%{transform:none}}
+/* surprise: the jaw falls open and the wig hops */
+.jm-surprise .cc-judge .cc-mouth{animation:jm-gape 1.2s cubic-bezier(.2,.8,.3,1) 1}
+.jm-surprise .cc-judge .jm-wig{animation:jm-hop 1.2s cubic-bezier(.2,.8,.3,1) 1}
+.jm-surprise .cc-judge .jm-pupil{animation:jm-pin 1.2s steps(1) 1}
+@keyframes jm-gape{0%{transform:none}14%,62%{transform:translateY(12px) rotate(3deg)}74%{transform:translateY(2px)}82%{transform:translateY(4px)}100%{transform:none}}
+@keyframes jm-hop{0%{transform:none}12%{transform:translateY(-10px) rotate(-3deg)}24%{transform:translateY(1.5px)}32%{transform:translateY(-2px)}40%,100%{transform:none}}
+@keyframes jm-pin{0%,70%{transform:scale(.55)}71%,100%{transform:none}}
+/* irritation: brow bones come down, pupils narrow to slits */
+.jm-irked .cc-judge .jm-brow-l{transform:translateY(2.4px) rotate(15deg)}
+.jm-irked .cc-judge .jm-brow-r{transform:translateY(2.4px) rotate(-15deg)}
+.jm-irked .cc-judge .jm-pupil{transform:scale(1.15,.4);transition:transform .15s ease-out}
+.jm-irked .cc-judge .jm-glow{animation:none;opacity:.5}
+/* a sigh: shoulders drop, head sinks, the lights in his sockets dim */
+.jm-sigh .cc-judge .jm-body{animation:jm-sigh 1.8s ease-in-out 1}
+.jm-sigh .cc-judge .jm-head{animation:jm-sigh-head 1.8s ease-in-out 1}
+.jm-sigh .cc-judge .jm-lid{animation:jm-droop 1.8s ease-in-out 1}
+@keyframes jm-sigh{0%,100%{transform:none}35%,62%{transform:translateY(4.5px) scaleX(.98)}}
+@keyframes jm-sigh-head{0%,100%{transform:none}35%,62%{transform:translateY(3.5px) rotate(-2deg)}}
+@keyframes jm-droop{0%,100%{transform:scaleY(0)}30%,66%{transform:scaleY(.5)}}
+/* the cat knocks the gavel off the bench */
+.jm-nogavel .cc-judge .jm-gavel{animation:jm-knocked .7s cubic-bezier(.5,0,.8,.6) 1 forwards}
+@keyframes jm-knocked{0%{transform:none;opacity:1}30%{transform:translate(-6px,-10px) rotate(-60deg);opacity:1}100%{transform:translate(-18px,60px) rotate(-220deg);opacity:0}}
+
+/* ---- Bailiff Rattigan ---- */
+.cc-rat :is(.rb-jump,.rb-tail,.rb-ear,.rb-whisk,.rb-look,.rb-teeth,.rb-nose,.rb-cap,.rb-cheeks,.rb-arm,.rb-head){transform-box:view-box}
+.cc-rat .rb-jump{transform-origin:60px 140px}
+.cc-rat .rb-tail{transform-origin:88px 124px;animation:rb-swish 3.4s steps(8) infinite alternate}
+.cc-rat .rb-ear-l{transform-origin:38px 34px;animation:rb-flick-l 7.3s steps(1) infinite}
+.cc-rat .rb-ear-r{transform-origin:82px 34px;animation:rb-flick-r 5.9s steps(1) infinite}
+.cc-rat .rb-whisk-l{transform-origin:52px 74px;animation:rb-twitch 2.7s steps(1) infinite}
+.cc-rat .rb-whisk-r{transform-origin:68px 74px;animation:rb-twitch-r 3.1s steps(1) infinite}
+.cc-rat .rb-look{animation:rb-look 8.5s steps(1) infinite}
+.cc-rat .rb-nose{transform-origin:60px 77px;animation:rb-sniff 3.3s steps(1) infinite}
+.cc-rat .rb-teeth{transform-origin:60px 81px}
+.cc-rat .rb-cap{transform-origin:60px 34px;transform:rotate(-5deg)}
+.cc-rat .rb-cheeks{transform-origin:60px 67px;transform:scale(.6);opacity:0}
+.cc-rat .rb-head{transform-origin:60px 86px}
+.cc-rat .rb-arm-salute{transform-origin:30px 88px}
+.cc-rat .rb-arm-salute,.cc-rat .rb-arm-chomp{opacity:0}
+@keyframes rb-swish{from{transform:rotate(-7deg)}to{transform:rotate(8deg)}}
+@keyframes rb-flick-l{0%,88%{transform:none}89%{transform:rotate(-18deg)}91%{transform:rotate(5deg)}93%,100%{transform:none}}
+@keyframes rb-flick-r{0%,40%{transform:none}41%{transform:rotate(18deg)}43%{transform:rotate(-5deg)}45%,100%{transform:none}}
+@keyframes rb-twitch{0%,78%{transform:none}80%{transform:rotate(-8deg)}83%{transform:rotate(4deg)}86%{transform:rotate(-5deg)}89%,100%{transform:none}}
+@keyframes rb-twitch-r{0%,30%{transform:none}32%{transform:rotate(8deg)}35%{transform:rotate(-4deg)}38%{transform:rotate(5deg)}41%,100%{transform:none}}
+@keyframes rb-look{0%,40%{transform:none}42%,66%{transform:translateX(-1.8px)}68%,100%{transform:none}}
+@keyframes rb-sniff{0%,60%,66%,72%,100%{transform:none}63%,69%{transform:scale(1.12,.92)}}
+/* talking and chewing: the incisors chatter */
+.talking .cc-rat .cc-mouth{animation:rb-talk .18s steps(2,jump-none) infinite}
+.talking .cc-rat .rb-nose{animation:rb-sniff-talk .36s steps(2,jump-none) infinite}
+@keyframes rb-talk{from{transform:none}to{transform:translateY(3px)}}
+@keyframes rb-sniff-talk{from{transform:none}to{transform:scale(1.08,.94)}}
+.chomping .cc-rat .rb-arm-rest{opacity:0}
+.chomping .cc-rat .rb-arm-chomp{opacity:1}
+.chomping .cc-rat .cc-mouth{animation:rb-chew .14s steps(2,jump-none) infinite}
+.chomping .cc-rat .rb-cheeks{opacity:1;animation:rb-puff .28s steps(2,jump-none) infinite}
+@keyframes rb-chew{from{transform:none}to{transform:translateY(2.4px) scaleX(.9)}}
+@keyframes rb-puff{from{transform:scale(.9)}to{transform:scale(1.08)}}
+/* addressed by the bench: a nervous salute, raisin and all */
+.rb-salute .cc-rat .rb-arm-rest{opacity:0}
+.rb-salute .cc-rat .rb-arm-salute{opacity:1;animation:rb-tremble .1s steps(2,jump-none) infinite}
+.rb-salute .cc-rat .rb-jump{transform:translateY(-2px) scaleY(1.03)}
+@keyframes rb-tremble{from{transform:rotate(-1.4deg)}to{transform:rotate(1.4deg)}}
+/* caught: sweat and flattened ears */
+.rb-caught .cc-rat .cc-sweat,.chomping .cc-rat .cc-sweat{opacity:1;animation:rb-drip 1.1s steps(4) infinite}
+.rb-caught .cc-rat .rb-ear-l{animation:none;transform:rotate(-22deg)}
+.rb-caught .cc-rat .rb-ear-r{animation:none;transform:rotate(22deg)}
+@keyframes rb-drip{from{transform:translateY(0)}to{transform:translateY(3px)}}
+/* the gavel lands and he leaves the floor */
+.rb-jumped .cc-rat .rb-jump{animation:rb-jump .6s cubic-bezier(.2,.9,.3,1) 1}
+.rb-jumped .cc-rat .rb-cap{animation:rb-capfly .6s cubic-bezier(.2,.9,.3,1) 1}
+.rb-jumped .cc-rat .rb-ear-l{animation:none;transform:rotate(14deg)}
+.rb-jumped .cc-rat .rb-ear-r{animation:none;transform:rotate(-14deg)}
+@keyframes rb-jump{0%{transform:scaleY(.9)}24%{transform:translateY(-15px) scaleY(1.08)}58%{transform:translateY(0) scaleY(.9)}72%{transform:translateY(-2px)}100%{transform:none}}
+@keyframes rb-capfly{0%{transform:rotate(-5deg)}24%{transform:translateY(-9px) rotate(6deg)}58%{transform:translateY(1px) rotate(-8deg)}100%{transform:rotate(-5deg)}}
 
 .sc-jury{position:absolute;left:2%;top:19%;width:23%;z-index:3;padding:3px 4px 5px;border:3px solid #1a0a11;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,#4e2c22,#3a1d17)}
 .sc-jury-label{display:block;text-align:center;font:800 clamp(7px,1.6vw,9.5px) var(--body);letter-spacing:.2em;text-transform:uppercase;color:#f2c94c}
@@ -286,8 +413,15 @@
   .sc-titlecard-judge{width:76px}
   .sc-cast{grid-template-columns:1fr}
 }
+/* Light effects keep the reactions (talking, the gavel, the salute, the
+   jump) and drop the idle business. Reduced motion drops that too, and the
+   hops and jumps. */
+body[data-effects="light"] .cc-judge :is(.jm-sway,.jm-eyes,.jm-glow,.jm-f),
+body[data-effects="light"] .cc-rat :is(.rb-tail,.rb-ear,.rb-whisk,.rb-look,.rb-nose){animation:none}
 @media (prefers-reduced-motion:reduce){
   .sheet-court .cc-bob,.sheet-court .cc-eye,.sheet-court .sc-head,.sheet-court .cc-wing,.sc-onair,.sc-bug i{animation:none}
+  .cc-bob,.cc-judge :is(.jm-sway,.jm-eyes,.jm-glow,.jm-lid,.jm-f,.jm-wig,.jm-push,.jm-hand),
+  .cc-rat :is(.rb-jump,.rb-cap,.rb-tail,.rb-ear,.rb-whisk,.rb-look,.rb-nose,.rb-arm,.cc-sweat,.rb-cheeks),.sc-bailiff.chomping{animation:none!important}
 }
 
 /* ---- the daily docket ---- */
