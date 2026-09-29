@@ -1,5 +1,5 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v53';
+const CACHE_VERSION = 'shelflife-v54';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./src/cloud/config.js",
@@ -9,6 +9,8 @@ const SHELL = [
   "./src/cloud/social.js",
   "./src/ui/cloud.js",
   "./css/cloud.css",
+  "./src/ui/friends.js",
+  "./css/social.css",
   "./src/content/mayhem.js",
   "./src/mayhem-state.js",
   "./src/engine/mayhem.js",
