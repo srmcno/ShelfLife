@@ -1,7 +1,7 @@
 import { COURT_CAST, QUESTIONS_PER_EPISODE } from '../content/court.js';
 import {
   courtCases, nextCaseId, castEpisode, episodeCase, episodeOpening, episodeQuestions, episodeAsk,
-  randomHappening, resolveHappening, episodeBreak, episodeRule, courtFinish, fill, COURT_BY_ID, docketToday, DOCKET_SOULS
+  randomHappening, resolveHappening, episodeBreak, episodeRule, courtFinish, fill, COURT_BY_ID, docketToday, DOCKET_SOULS, summonsReward
 } from '../engine/court.js';
 import { courtroomState } from '../court-state.js';
 import { save } from '../state.js';
@@ -9,6 +9,8 @@ import { renderPetSprite } from '../art/sprite.js';
 import { castSvg, COURT_PROPS } from '../art/court-cast.js';
 import { glyph } from '../art/mayhem-glyphs.js';
 import { escapadeView } from '../engine/escapades.js';
+import { guestPet } from '../cloud/social.js';
+import { guestPortrait, collectVerdicts, verdictLine } from './friends.js';
 import { playTone, playStomp, playAchievement, playError, playStar, playUnlock } from '../audio/sound.js';
 
 /* Shelf Court, the daytime TV show. You are Judge Mortis. The sheet is a
@@ -28,6 +30,9 @@ const HEADS = 9;
 let S = null, refresh = () => {};
 let lobby = { caseId: '', plaintiffId: '', defendantId: '', standInSalt: Math.floor(Math.random() * 1000) };
 let ep = null, session = 0;
+// Summonses from friends (only when the social layer is on): what is in the
+// post, and the one being heard right now.
+let courtSocial = null, post = { cases: [], results: [], note: '' }, postToken = 0, hearing = null;
 let queue = [], onDone = null, current = null, typer = 0, onChoice = null;
 const timers = new Set();
 const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
@@ -46,6 +51,7 @@ function stopAll() {
 }
 function portrait(who) {
   if (who.kind === 'npc') return castSvg(who.art);
+  if (who.kind === 'guest') return hearing?.pet ? guestPortrait(hearing.pet) : '';
   const pet = S.pets.find(p => p.id === who.id);
   if (!pet) return '';
   const holder = document.createElement('span');
@@ -83,6 +89,7 @@ function showLobby() {
     '<div class="sc-titlecard"><div class="sc-logo"><small>Live from the shelf</small><b>SHELF COURT</b><em>Real residents. Real disputes. Real dead.</em></div><div class="sc-titlecard-judge">' + castSvg('judge') + '</div></div>' +
     (forUs ? '<p class="sc-adventure"><b>' + esc(adventure.episode.title) + '</b> · An episode starring our resident moves our adventure on.</p>' : '') +
     docketLine(docket, k) +
+    (courtSocial?.active() ? '<div data-sc-summons>' + summonsMarkup() + '</div>' : '') +
     '<section class="sc-tonight" aria-label="Tonight’s episode"><span class="sc-kicker">Tonight’s episode</span><h3>' + esc(k.title) + '</h3>' +
     '<div class="sc-vs"><figure><span class="sc-vs-art">' + portrait(preview.p) + '</span><figcaption><small>Plaintiff</small>' + esc(preview.p.name) + '</figcaption></figure><b>v.</b><figure><span class="sc-vs-art">' + portrait(preview.d) + '</span><figcaption><small>Defendant</small>' + esc(preview.d.name) + '</figcaption></figure></div>' +
     '<p class="sc-claim">' + esc(fill(preview, k.claim)) + '<br><small>Asking: ' + esc(fill(preview, k.asking)) + '</small></p>' +
@@ -93,6 +100,75 @@ function showLobby() {
     '<h3 class="sc-guide-title">Episode guide</h3><div class="sc-guide">' + cases.map(x => '<button type="button" class="sc-ep' + (x.id === lobby.caseId ? ' on' : '') + '" data-sc-case="' + x.id + '" aria-pressed="' + (x.id === lobby.caseId) + '"><span class="sc-ep-no">Ep. ' + x.number + '</span><b>' + esc(x.title) + '</b><span class="sc-ep-stars" aria-label="' + (x.aired ? x.stars + ' of 3 stars' : 'Unaired') + '">' + (x.aired ? stars(x.stars) : '<em>Unaired</em>') + '</span></button>').join('') + '</div>';
   open();
   $('.sc-roll')?.focus({ preventScroll: true });
+}
+
+/* ---------------- summonses from friends ---------------- */
+function summonsMarkup() {
+  if (!post.cases.length && !post.results.length && !post.note) return '';
+  return '<section class="sc-summons" aria-labelledby="scSummonsTitle"><h3 id="scSummonsTitle">Summonses</h3>' +
+    (post.note ? '<p class="sc-summons-note">' + esc(post.note) + '</p>' : '') +
+    post.results.map(r => '<p class="sc-verdict">' + esc(verdictLine(r)) + '</p>').join('') + post.cases.map(summonsCase).join('') + '</section>';
+}
+function summonsCase(c) {
+  const k = COURT_BY_ID[c.caseId], home = S.pets.find(p => p.id === c.defendant.id);
+  const problem = !k ? ' This edition does not know that case yet.' : !home ? ' ' + c.defendant.name + ' no longer lives here.' : '';
+  return '<div class="sc-summons-case"><p><b>' + esc(c.plaintiff.name) + '</b>, from ' + esc(c.fromName || 'a friend') + ', is suing <b>' + esc(home ? home.name : c.defendant.name) +
+    '</b> over ' + esc(k ? k.title : 'a mystery') + '.' + (problem ? '<span class="sc-summons-problem">' + esc(problem) + '</span>' : '') + '</p><div class="sc-actions">' +
+    (k && home ? '<button class="btn btn-primary btn-sm" type="button" data-sc-take="' + esc(c.id) + '">Take the case</button>' : '') +
+    '<button class="btn btn-ghost btn-sm" type="button" data-sc-decline="' + esc(c.id) + '">Decline</button></div></div>';
+}
+function renderSummons() {
+  const slot = !ep && sheet.querySelector('[data-sc-summons]');
+  if (slot) slot.innerHTML = summonsMarkup();
+}
+// Never in the way: the lobby is already up, and the post arrives when it arrives.
+async function fetchPost() {
+  if (!courtSocial?.active()) return;
+  const token = ++postToken;
+  try {
+    const box = await courtSocial.inbox();
+    if (token !== postToken) return;
+    post = { cases: box.cases, results: [...collectVerdicts(S, courtSocial, box.results), ...post.results.filter(r => !box.results.some(x => x.id === r.id))], note: '' };
+    if (post.results.some(r => r.souls)) refresh();
+  } catch (error) {
+    if (token !== postToken) return;
+    post = { ...post, note: error?.offline ? 'Offline. Any papers will keep.' : '' };
+  }
+  renderSummons();
+}
+function takeSummons(id) {
+  const c = post.cases.find(x => x.id === id), home = c && S.pets.find(p => p.id === c.defendant.id), pet = c && guestPet(c.plaintiff);
+  if (!c || !home || !pet || !COURT_BY_ID[c.caseId]) return;
+  stopAll();
+  hearing = { summons: c, pet };
+  ep = castEpisode(S, { caseId: c.caseId, defendantId: home.id, guest: { side: 'p', pet } });
+  if (ep) runEpisode(); else hearing = null;
+}
+async function declineSummons(id) {
+  const c = post.cases.find(x => x.id === id);
+  if (!c) return;
+  try {
+    await courtSocial.decline(id);
+    post.cases = post.cases.filter(x => x.id !== id);
+    post.note = 'Declined. ' + (c.fromName || 'Your friend') + ' is not told.';
+  } catch (error) { post.note = error?.offline ? 'Offline. Try again once you are back online.' : 'That did not go through. The papers are still here.'; }
+  renderSummons();
+  sheet.querySelector('[data-sc-summons] button, .sc-roll')?.focus({ preventScroll: true });
+}
+// After the wrap: the verdict goes back to whoever served the papers.
+async function deliverVerdict(h, res, ruling) {
+  const line = () => sheet.querySelector('[data-sc-verdict]');
+  const to = h.summons.fromName || 'your friend';
+  try {
+    await courtSocial.rule(h.summons.id, { verdict: ruling, stars: res.stars, ratings: res.ratings });
+    const souls = summonsReward(S, h.summons.id, 'heard');
+    post.cases = post.cases.filter(c => c.id !== h.summons.id);
+    save(); refresh();
+    if (line()) line().innerHTML = glyph('soul') + esc(souls ? '+' + souls + ' for hearing ' + to + '’s summons. The verdict is on its way.' : 'The verdict is on its way to ' + to + '. Summonses pay nothing more today.');
+  } catch (error) {
+    if (error?.code === 'not_open') post.cases = post.cases.filter(c => c.id !== h.summons.id);
+    if (line()) line().textContent = error?.code === 'not_open' ? 'Someone had already heard this one.' : 'The verdict did not reach ' + to + '. The papers stay in the lobby.';
+  }
 }
 
 /* ---------------- the studio ---------------- */
@@ -383,7 +459,7 @@ async function juryVote(result) {
 
 /* ---------------- wrap ---------------- */
 function finish() {
-  const res = courtFinish(S, ep, Date.now());
+  const res = courtFinish(S, ep, Date.now()), heard = ep.guest ? hearing : null;
   save();
   const k = episodeCase(ep);
   const truth = res.truth === 'plaintiff' ? ep.p.name + ' was right.' : res.truth === 'defendant' ? ep.d.name + ' was right.' : 'They were both idiots.';
@@ -397,10 +473,12 @@ function finish() {
     (res.docket ? '<li class="souls">' + glyph('soul') + '+' + res.docket.bonus + ' for today’s docket' + (res.docket.streak > 1 ? ' · ' + res.docket.streak + ' days in session' : '') + '</li>' : '') +
     (res.trust ? '<li class="good">' + esc(res.trust) + ' trusts you a little more</li>' : '') +
     (res.grudge ? '<li class="bad">' + esc(res.grudge) + ' will remember this</li>' : '') +
-    (res.firstAir ? '<li>Episode ' + (courtCases(S).findIndex(c => c.id === k.id) + 1) + ' aired · ' + res.aired + ' of ' + res.total + '</li>' : '') + '</ul>' +
+    (res.firstAir ? '<li>Episode ' + (courtCases(S).findIndex(c => c.id === k.id) + 1) + ' aired · ' + res.aired + ' of ' + res.total + '</li>' : '') +
+    (heard ? '<li class="souls" data-sc-verdict>Sending the verdict to ' + esc(heard.summons.fromName || 'your friend') + '.</li>' : '') + '</ul>' +
     (escapadeView(S).active?.ready ? '<div class="sc-actions"><button class="btn btn-primary" type="button" data-escapade="open">Our story’s ending ↗</button></div>' : '') +
     '<div class="sc-actions"><button class="btn btn-primary sc-next" type="button" data-sc="next" disabled>Next episode</button><button class="btn" type="button" data-sc="lobby">Episode guide</button><button class="btn btn-ghost" type="button" data-sc="close">Back to the shelf</button></div></div>';
   (res.stars >= 3 ? playAchievement : res.correct ? playStar : playError)();
+  if (heard) deliverVerdict(heard, res, ep.ruling);
   const next = controls.querySelector('.sc-next');
   later(() => { if (next?.isConnected) { next.disabled = false; next.focus({ preventScroll: true }); } }, 650);
   refresh();
@@ -408,9 +486,10 @@ function finish() {
 
 /* ---------------- wiring ---------------- */
 function open() { if (!veil.classList.contains('open')) veil.classList.add('open'); }
-function close() { stopAll(); ep = null; veil.classList.remove('open'); refresh(); }
+function close() { stopAll(); ep = null; hearing = null; veil.classList.remove('open'); refresh(); }
 function roll() {
   stopAll();
+  hearing = null;
   ep = castEpisode(S, lobby);
   if (ep) runEpisode();
 }
@@ -420,10 +499,11 @@ export function openCourt(residentId, caseId) {
   if (caseId && COURT_BY_ID[caseId]) lobby.caseId = caseId;
   defaultLobby(residentId);
   showLobby();
+  fetchPost();
 }
 
-export function initCourt(state, onRefresh) {
-  S = state; refresh = onRefresh || refresh;
+export function initCourt(state, onRefresh, { social } = {}) {
+  S = state; refresh = onRefresh || refresh; courtSocial = social || null;
   window.addEventListener('shelflife:court', e => openCourt(e.detail?.petId, e.detail?.caseId));
   sheet.addEventListener('change', e => {
     const key = e.target.dataset?.scCast;
@@ -434,6 +514,10 @@ export function initCourt(state, onRefresh) {
     showLobby();
   });
   sheet.addEventListener('click', e => {
+    const take = e.target.closest('[data-sc-take]');
+    if (take) { takeSummons(take.dataset.scTake); return; }
+    const decline = e.target.closest('[data-sc-decline]');
+    if (decline) { declineSummons(decline.dataset.scDecline); return; }
     const pickCase = e.target.closest('[data-sc-case]');
     if (pickCase) { lobby.caseId = pickCase.dataset.scCase; showLobby(); return; }
     const choice = e.target.closest('[data-sc-choice]');

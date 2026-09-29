@@ -71,5 +71,5 @@ test('the docket record survives reload and hostile data', () => {
   assert.equal(courtroomState(back).docketStreak, 1);
   const bad = normalizeCourtroom({ docketDay: 'yesterday', docketLastDay: 5, docketStreak: -2 });
   assert.equal(bad.docketDay, ''); assert.equal(bad.docketLastDay, ''); assert.equal(bad.docketStreak, 0);
-  assert.deepEqual(Object.keys(normalizeCourtroom(null)).sort(), ['best', 'docketDay', 'docketLastDay', 'docketStreak', 'episodes', 'justice', 'last']);
+  assert.deepEqual(Object.keys(normalizeCourtroom(null)).sort(), ['best', 'docketDay', 'docketLastDay', 'docketStreak', 'episodes', 'justice', 'last', 'summonsDay', 'summonsHeard', 'summonsPaid', 'summonsVerdicts']);
 });

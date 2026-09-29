@@ -3,7 +3,7 @@ import {
   OPENERS, ALL_RISE, JUDGE_ENTRANCES, PLAINTIFF_CUE, DEFENDANT_CUE, ADS, BREAK_IN, BREAK_OUT,
   JURY_AGREE, JURY_DISAGREE, AUDIENCE_REACTIONS, HALLWAY_IN
 } from '../content/court.js';
-import { courtroomState } from '../court-state.js';
+import { courtroomState, SUMMONS_REMEMBERED } from '../court-state.js';
 import { grantBonusTrust, petById, localDayKey, dayKeyOffset } from '../state.js';
 import { payGameSouls, addSouls, deed } from './mayhem.js';
 import { dayNumber } from './daily.js';
@@ -84,8 +84,9 @@ export function standInFor(caseId, salt = 0) {
   const eligible = STAND_INS.filter(id => !witnesses.has(id));
   return eligible[Math.abs(Math.floor(salt)) % eligible.length];
 }
-export function castEpisode(state, { caseId, plaintiffId, defendantId, standInSalt } = {}, rnd = Math.random) {
+export function castEpisode(state, { caseId, plaintiffId, defendantId, standInSalt, guest } = {}, rnd = Math.random) {
   const k = COURT_BY_ID[caseId] || COURT_BY_ID[nextCaseId(state, rnd)];
+  if (guest) return castGuestEpisode(state, k, guest, guest.side === 'd' ? plaintiffId : defendantId, rnd);
   const pets = state.pets || [];
   const plaintiff = petById(state, plaintiffId) || pets[0];
   if (!plaintiff) return null;
@@ -102,6 +103,28 @@ export function castEpisode(state, { caseId, plaintiffId, defendantId, standInSa
     caseId: k.id, p: person(plaintiff), d, jury, juror: null,
     ratings: 50, respect: 50, asked: [], clues: [], happened: [], hadBreak: false,
     ruling: null, done: false, settled: false
+  };
+  ep.juror = pick(jury, rnd);
+  return ep;
+}
+
+// A summons from a friend: their resident (guest.pet, from cloud/social.js
+// guestPet) takes one side and one of ours the other. The guest is seated as
+// kind 'guest', so nothing below mistakes it for a resident of this shelf.
+function castGuestEpisode(state, k, guest, residentId, rnd) {
+  const home = petById(state, residentId);
+  if (!home || !guest.pet || typeof guest.pet.name !== 'string' || typeof guest.pet.id !== 'string') return null;
+  const side = guest.side === 'd' ? 'd' : 'p';
+  const visitor = { kind: 'guest', id: guest.pet.id, name: guest.pet.name };
+  const witnesses = new Set(k.questions.flatMap(q => q.lines.filter(l => l[0] === 'npc').map(l => l[2])));
+  const jury = (state.pets || []).filter(p => p.id !== home.id).slice(0, JURY_SEATS).map(person);
+  for (const id of JURY_EXTRAS) {
+    if (jury.length >= JURY_SEATS) break;
+    if (!witnesses.has(id)) jury.push(extra(id));
+  }
+  const ep = {
+    caseId: k.id, p: side === 'p' ? visitor : person(home), d: side === 'p' ? person(home) : visitor, jury, juror: null, guest: side,
+    ratings: 50, respect: 50, asked: [], clues: [], happened: [], hadBreak: false, ruling: null, done: false, settled: false
   };
   ep.juror = pick(jury, rnd);
   return ep;
@@ -212,6 +235,7 @@ export function episodeRule(ep, ruling, rnd = Math.random) {
 // household's memory.
 export function courtFinish(state, ep, now = Date.now()) {
   if (!ep?.done || ep.settled) return null;
+  if (ep.guest) return guestFinish(state, ep, now);
   ep.settled = true;
   const c = courtroomState(state), k = episodeCase(ep);
   const correct = ep.ruling === k.truth;
@@ -257,4 +281,36 @@ export function courtFinish(state, ep, now = Date.now()) {
       cast.map(r => r.id), now, { key: 'court', branch: loser ? 'convicted' : 'witness' });
   }
   return { correct, stars, agree, ratings: ep.ratings, souls, docket, trust, grudge, firstAir, truth: k.truth, aired: Object.keys(c.best).length, total: COURT_CASES.length };
+}
+
+// A friend's summons pays the usual souls and nothing else: it is their case,
+// so the courtroom's records, the docket, trust, grudges and the household's
+// memory are all left as they were. The summons reward is paid separately.
+function guestFinish(state, ep, now) {
+  ep.settled = true;
+  const k = episodeCase(ep), correct = ep.ruling === k.truth;
+  const stars = ep.stars ?? ((correct ? 1 : 0) + (ep.ratings >= 70 ? 1 : 0));
+  const souls = payGameSouls(state, 10 + stars * 12 + Math.floor(ep.ratings / 10), now);
+  deed(state, 'game', 1, now);
+  return { correct, stars, agree: ep.agree ?? 0, ratings: ep.ratings, souls, docket: null, trust: null, grudge: null, firstAir: false,
+    truth: k.truth, aired: Object.keys(courtroomState(state).best).length, total: COURT_CASES.length, guest: true };
+}
+
+// Summonses between friends pay a little on each side: the judge for hearing
+// one, the sender for learning the verdict. Once per summons, and at most
+// SUMMONS_DAILY_CAP of each kind per local day.
+export const SUMMONS_SOULS = 15;
+export const VERDICT_SOULS = 10;
+export const SUMMONS_DAILY_CAP = 3;
+export function summonsReward(state, id, kind = 'heard', now = Date.now()) {
+  const c = courtroomState(state), day = localDayKey(now);
+  if (typeof id !== 'string' || !id || c.summonsPaid.includes(id)) return 0;
+  if (c.summonsDay !== day) { c.summonsDay = day; c.summonsHeard = 0; c.summonsVerdicts = 0; }
+  c.summonsPaid = [...c.summonsPaid, id].slice(-SUMMONS_REMEMBERED);
+  const key = kind === 'verdict' ? 'summonsVerdicts' : 'summonsHeard';
+  if (c[key] >= SUMMONS_DAILY_CAP) return 0;
+  c[key]++;
+  const souls = kind === 'verdict' ? VERDICT_SOULS : SUMMONS_SOULS;
+  addSouls(state, souls);
+  return souls;
 }
