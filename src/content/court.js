@@ -1467,6 +1467,486 @@ export const COURT_CASES = [
         '1908. I still remember the taste. I think about it more than I think about {p}.',
         'I’m going to live forever out of spite. Well. I was anyway. But now it’s spite.']
     }
+  },
+  {
+    id: 'borrowed-name', title: 'Squelch', truth: 'plaintiff',
+    claim: '{p} is suing {d} for borrowing {p}’s name for the summer fête and bringing it back with a nickname.',
+    asking: 'Its name back as lent, and for everybody to stop doing the noise',
+    plaintiff: alt([
+      ['p', 'I lent {d} my name for one afternoon, Your Honour. The summer fête. {d} is banned from the fête under its own.'],
+      ['p', 'It came back on Monday with a nickname. The whole shelf calls me Squelch now.'],
+      ['judge', 'Why Squelch?'],
+      ['p', 'Nobody will tell me. They just do the noise.']
+    ], [
+      ['p', 'My name has been on this shelf since 1846. It has never been in any trouble. It has never been anywhere.'],
+      ['p', 'I lent it to {d} for one fête. Now, when I walk past, the eggcups go “squelch”.'],
+      ['judge', 'The eggcups.'],
+      ['p', 'They had not said a word since 1846, Your Honour.']
+    ]),
+    defendant: alt([
+      ['d', 'I gave the name back on Monday, Your Honour, as agreed. I even gave it a wipe.'],
+      ['judge', 'Why did it need a wipe?'],
+      ['d', 'I would not know, Your Honour. I was not at the fête. {p} was. It is on every form.']
+    ], [
+      ['d', 'I have not asked {p} what happened at the fête, Your Honour. It is none of my business.'],
+      ['d', 'Whatever {p} did at that fête is between {p} and the jam.'],
+      ['p', 'I WAS NOT AT THE FÊTE.'],
+      ['d', 'That is not what the programme says.']
+    ]),
+    questions: [
+      { ask: 'Ask {d} why it is banned from the fête.', clue: '{d} is banned from the fête for getting into the tombola. It needed another name to get back in.', lines: [
+        ['d', 'Last year. The tombola. I would rather not go into it.'],
+        ['judge', 'Go into it.'],
+        ['d', 'That was the problem. I went into it. Somebody won me. They had wanted the bath salts.']] },
+      { ask: 'Have the bailiff read out the jam results.', happen: 'heckle', lines: [
+        ['bailiff', 'Jam competition, Your Honour. Third place: “{p}, in a jar, in some jam.”'],
+        ['judge', 'How many entries were there?'],
+        ['bailiff', 'Three, Your Honour. The other two were just jam.']] },
+      { ask: 'Call the judge of the jam.', clue: 'The Raven heard the jam entrant climb out of the jar and say, “Nobody tell {p}.”', lines: [
+        ['npc', 'I judged the jam. Three jars. I did not know there was anybody in the third one until it waved.', 'raven'],
+        ['judge', 'Did the entrant say anything?'],
+        ['npc', 'It climbed out, looked round, and said, “Nobody tell {p}.” Then it went squelch.', 'raven']] },
+      { ask: 'Have the bailiff look in {d}’s ears.', clue: 'Four days after the fête, there is still raspberry jam in {d}’s ears.', lines: [
+        ['narrator', '(The bailiff puts a finger in {d}’s ear. He takes it out. He looks at it. He licks it.)'],
+        ['bailiff', 'Raspberry, Your Honour.'],
+        ['judge', 'That was evidence, Bailiff.'],
+        ['bailiff', 'It was, Your Honour. There is more in the other ear.']] },
+      { ask: 'Tell {p} the nickname suits it.', sass: true, lines: [
+        ['judge', '{p}. You are four inches tall. You are faintly damp. When you sat down just now, you made a noise.'],
+        ['p', 'What noise?'],
+        ['narrator', '(The whole courtroom does the noise.)']] },
+      { ask: 'Ask {d} where the rosette for third place is.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'It was won by {p}, Your Honour. It has {p}’s name on it. If {p} has lost it, I cannot help that.'],
+        ['d', 'Typical Squelch.']] }
+    ],
+    rulings: {
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. You borrow a name, you bring it back as you found it. Not sticky. Not third.'],
+        ['judge', '{d} will stand on the top shelf every morning this week and tell everybody exactly who went squelch.'],
+        ['d', 'Then they will call ME Squelch.'],
+        ['judge', 'Yes.']], [
+        ['judge', 'Judgment for {p}. {d} took a borrowed name to a fête, sat it in a jar of jam, and handed it back with a wipe.'],
+        ['judge', 'The nickname goes to its rightful owner. {d}, you are Squelch now.'],
+        ['narrator', '(As {d} leaves, the bailiff does the noise. He does not mean to. It just comes out.)']]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. The records are clear. {p} went to the fête, {p} got into the jam, and {p} came third.'],
+        ['p', 'I have never been in a jam in my LIFE.'],
+        ['judge', 'You are in one now.']], [
+        ['judge', 'Judgment for {d}. {p} lent the name. What the name did next is the name’s business.'],
+        ['judge', 'Case closed. Mind how you sit down, Squelch.']]),
+      both: alt([
+        ['judge', 'You are both to blame. {p}, you do not lend your name to a known tombola risk. {d}, you do not take a borrowed name into jam.'],
+        ['judge', 'You will share the nickname. {p} is Squelch on weekdays. {d} is Squelch at weekends.'],
+        ['narrator', '(From the gallery, very quietly, somebody does the noise twice.)']], [
+        ['judge', 'You are both idiots. One of you lent its name to a creature banned from a tombola. The other one wore it into a jar.'],
+        ['judge', 'Neither of you may use a name for a month. You will be known as “the plaintiff” and “that one”.'],
+        ['d', 'Which one am I?'],
+        ['judge', 'You know which one you are.']])
+    },
+    hallway: {
+      p: ['I’ve changed my name. I’m not telling anyone what to. They still do the noise.',
+        'I’m entering next year’s jam. As me. I’ll win it. Then we’ll see who’s Squelch.',
+        'I’ve started sitting down very slowly. It helps. It doesn’t help.'],
+      d: ['Third place. Out of three. In somebody else’s name. I have never been prouder.',
+        'I’ve already borrowed a name for the harvest supper. I won’t say whose. They’ll find out at the trifle.',
+        'Squelch is a lovely name. Nobody had noticed {p} since 1846. You’re welcome.']
+    }
+  },
+  {
+    id: 'runaway-rock', title: 'The Runaway Rock', truth: 'plaintiff',
+    claim: '{p} is suing {d} for luring away Colin, {p}’s pet rock, who had not moved since 1931 and left on Friday.',
+    asking: 'Colin home by Sunday, and {d} kept a full ruler’s length away from him',
+    plaintiff: alt([
+      ['p', 'Colin has been with me since 1931, Your Honour. He is a rock. He is a very good rock. He has never once gone anywhere.'],
+      ['p', 'On Friday morning Colin was at {d}’s end of the shelf. Sitting with {d}. Like they were friends.'],
+      ['judge', 'How far is {d}’s end?'],
+      ['p', 'Nine inches, Your Honour. Colin has never done nine inches. Colin has never done one.']
+    ], [
+      ['p', 'Colin is a rock, Your Honour. Grey. About the size of my head. I walk him every morning.'],
+      ['judge', 'How do you walk a rock?'],
+      ['p', 'I stand next to him, and then I stand a bit further along. It is mostly me.'],
+      ['p', 'On Friday he turned up at {d}’s. Nine inches away. Without me. He has never gone anywhere without me. He has never gone anywhere.']
+    ]),
+    defendant: alt([
+      ['d', 'I did not take Colin, Your Honour. Colin came to me. I woke up on Friday and he was at the foot of my slot, looking up at me.'],
+      ['judge', 'He is a rock. How could you tell he was looking?'],
+      ['d', 'It is all in the stillness.']
+    ], [
+      ['d', 'Colin was unhappy, Your Honour. He had sat in the same spot since 1931. There is a dent.'],
+      ['d', 'With me he has a view. On Sundays I turn him over so he can see the ceiling.'],
+      ['p', 'He does not LIKE the ceiling.']
+    ]),
+    questions: [
+      { ask: 'Have the bailiff roll a marble along the shelf.', clue: 'The shelf has sloped towards {d} since Thursday night. Before that it was dead level.', lines: [
+        ['narrator', '(The bailiff sets a marble down outside {p}’s slot. It rolls, quite briskly, the whole way to {d}, and stops against {d}’s foot.)'],
+        ['judge', 'The shelf slopes.'],
+        ['bailiff', 'Only since Thursday night, Your Honour. Before that you could have played snooker on it. I did.']] },
+      { ask: 'Have the bailiff look under {p}’s end of the shelf.', clue: 'A pub beer mat, folded very tight, is propping up {p}’s end of the shelf. {d} is the only resident who has been to a pub.', happen: 'throw', lines: [
+        ['narrator', '(The bailiff crawls under {p}’s end of the shelf and comes out with a beer mat, folded eight times, very hard.)'],
+        ['bailiff', 'From the Fox and Hounds, Your Honour. Only one resident on this shelf has ever been to the Fox and Hounds.'],
+        ['d', 'Once. In a coat pocket. I did not even have a drink. I only came back with a beer mat.']] },
+      { ask: 'Call a witness who was up in the night.', clue: 'Geoffrey saw Colin roll past at three on Friday morning, with {d} walking beside him saying “good boy”.', lines: [
+        ['npc', 'I saw Colin go past at three on Friday morning, Your Honour. At a steady walking pace, for a rock.', 'woodlouse'],
+        ['judge', 'Was he alone?'],
+        ['npc', '{d} was walking beside him, saying “good boy”. Every inch.', 'woodlouse']] },
+      { ask: 'Remind {p} that Colin is a rock.', sass: true, lines: [
+        ['judge', '{p}. Colin is a rock. I say this as a man who is mostly calcium. He does not love you. He does not love anything. He is a rock.'],
+        ['p', 'He loves me in his own way.'],
+        ['judge', 'Which way is that?'],
+        ['p', 'Staying.']] },
+      { ask: 'Have the bailiff weigh Colin.', lines: [
+        ['bailiff', 'Colin has put on a gram since Friday, Your Honour.'],
+        ['judge', 'A rock cannot put on weight.'],
+        ['bailiff', 'Moss, Your Honour. {d}’s end is damp. He is growing a little coat.'],
+        ['d', 'He is thriving.']] },
+      { ask: 'Ask {d} what it and Colin do all day.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'We sit. We watch the door. In the evenings I read to him.'],
+        ['judge', 'What do you read him?'],
+        ['d', 'Geology, Your Honour. He likes to hear about his family.']] }
+    ],
+    rulings: {
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. Rocks do not choose, {d}. Rocks go downhill. It is the only thing rocks know, and you built one a hill.'],
+        ['judge', '{d} will carry Colin home tonight. Nine inches. Uphill.'],
+        ['d', 'He is heavier now. He has moss.'],
+        ['judge', 'Lift with your knees.']], [
+        ['judge', 'Judgment for {p}. {d} propped up a shelf with a pub beer mat and walked a rock downhill saying “good boy”. That is not love. That is a gradient.'],
+        ['narrator', '(The bailiff moves the beer mat to {d}’s end. Colin rolls, slowly, all the way home. {p} weeps. Colin does not. Colin is a rock.)']]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. Colin has moss for the first time in his life. This court will not part a rock from its moss.'],
+        ['p', 'He is MY rock.'],
+        ['judge', 'He was your rock, {p}. Now he has moss and a view. They grow up so fast.']], [
+        ['judge', 'Judgment for {d}. Colin went where Colin went. This court will not stand between a rock and a hill.'],
+        ['narrator', '({p} waits outside {d}’s slot all evening, holding a lead. Colin does not come to the door. Colin has never come to anything.)']]),
+      both: alt([
+        ['judge', 'You are both unwell. One of you walks a rock. The other one kidnapped the rock and reads it geology.'],
+        ['judge', 'Colin will live exactly halfway, at four and a half inches, and nobody touches the shelf.'],
+        ['narrator', '(By morning there are beer mats under both ends. The shelf is perfectly level, and an inch higher.)']], [
+        ['judge', 'You are both fools. Colin goes to the rockery, with other rocks, where nobody walks him and nobody reads to him.'],
+        ['narrator', '(Colin is put in the rockery. He fits in at once. By teatime neither of them can tell which one he is.)']])
+    },
+    hallway: {
+      p: ['I’ve got a new rock. He’s called Colin as well. It’s not the same. He moves even less.',
+        'I walk past {d}’s end every morning. Colin never looks up. Colin never looked up. It still hurts.',
+        'I’ve put two beer mats under {d}’s end. Let’s see how Colin likes a hill now.'],
+      d: ['He’ll roll back. They always roll back. I know which end to lift.',
+        'I’ve told Colin it isn’t his fault. He took it like a rock.',
+        'I’m keeping the moss. Nobody said anything about the moss.']
+    }
+  },
+  {
+    id: 'ghost-writer', title: 'The Ghost-Writer', truth: 'defendant',
+    claim: '{p} is suing {d} for publishing {p}’s memoirs, word for word, with {d}’s name on the front.',
+    asking: 'Its name on the cover, and all the royalties, which come to two souls',
+    plaintiff: alt([
+      ['p', 'My memoirs, Your Honour. STILL HERE, by {p}. I spent forty years dictating them to a ghost-writer.'],
+      ['p', 'Now they are on sale by the till with {d}’s name on the front. And a photograph of {d}, looking thoughtful.'],
+      ['judge', 'What was {d} thinking about?'],
+      ['p', 'Nothing, Your Honour. It was just a heavy chin.']
+    ], [
+      ['p', 'Two hundred years of my life, Your Honour. I dictated every word to a ghost. A real one. I could check its spelling from the other side of it.'],
+      ['p', 'Now it has {d}’s name on the front. Not one word inside has changed. Not even the dedication.'],
+      ['judge', 'What is the dedication?'],
+      ['p', '“To nobody. Nobody has earned it.”']
+    ]),
+    defendant: alt([
+      ['d', 'I bought that book fair and square, Your Honour. Two souls and a candle. The ghost could not sell it fast enough.'],
+      ['d', 'I only changed the name on the front. I did not need to change anything else. {p} and I have sat next to each other since 1840. Nothing has happened to either of us.']
+    ], [
+      ['d', 'The ghost sold me the book, Your Honour. I have a receipt. It is quite faint.'],
+      ['d', 'And, frankly, it is my life too. Page four hundred: “A crumb falls between us. Neither of us moves.” I was there. I remember that crumb.']
+    ]),
+    questions: [
+      { ask: 'Ask {p} what it paid the ghost-writer.', clue: '{p} paid the ghost-writer nothing for forty years. It offered him “exposure”.', lines: [
+        ['p', 'Exposure, Your Honour. I told him it would be wonderful exposure.'],
+        ['judge', '{p}. He is a ghost. He has spent two hundred years trying to be less exposed.']] },
+      { ask: 'Call the ghost-writer up from the audience.', clue: 'The unpaid ghost-writer sold the book to {d} for two souls and a candle. It has forty years of invoices.', lines: [
+        ['narrator', '(A ghost in row three stands up. It is holding forty years of invoices, each marked FINAL DEMAND, in fainter and fainter ink.)'],
+        ['judge', 'Why did you sell the book to {d}?'],
+        ['narrator', '(The ghost: “It paid two souls and a candle. It lit the candle for me. Nobody has lit me a candle since 1790.”)']] },
+      { ask: 'Have {p} read the court the first chapter.', happen: 'sleep', lines: [
+        ['p', '“Chapter One. 1840. I arrive on the shelf. It is a Wednesday.”'],
+        ['p', '“Chapter Two. I am still on the shelf. It is a Thursday.”'],
+        ['judge', 'How many chapters are there?'],
+        ['p', 'Four hundred and eleven. It picks up in the three hundreds. I move slightly to the left.']] },
+      { ask: 'Ask the bailiff how the book is selling.', lines: [
+        ['bailiff', 'One copy, Your Honour. I bought it.'],
+        ['judge', 'Did you enjoy it?'],
+        ['bailiff', 'I ate chapter nine, Your Honour. It was very dry.']] },
+      { ask: 'Tell {p} its life is not worth stealing.', sass: true, happen: 'outburst', party: 'p', lines: [
+        ['judge', '{p}. It is four hundred pages of you on a shelf. I have spent three hundred years in the ground and even I have had a flood.'],
+        ['p', 'I had a crumb. In 1961.'],
+        ['judge', 'Chapter two hundred and six. I skimmed it.']] },
+      { ask: 'Call the Ministry of Haunting.', clue: 'Unpaid ghost-writing goes back to the ghost after thirty years. {p} was sent eleven warnings and slept under them.', lines: [
+        ['npc', 'Ministry of Haunting. The writer is registered with us. Prose division. Unpaid work goes back to the ghost after thirty years.', 'ghost'],
+        ['judge', 'Was {p} warned?'],
+        ['npc', 'Eleven letters. {p} used them as a blanket. It has been sleeping under a final demand since 1996.', 'ghost']] }
+    ],
+    rulings: {
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. It is your life, however little is in it, and nobody else should have to own it.'],
+        ['d', 'I paid two souls and a candle.'],
+        ['judge', 'Then keep the candle, and read the book by it. All of it. As punishment.']], [
+        ['judge', 'Judgment for {p}. {p}’s name goes back on the cover, and {d} takes its own name home.'],
+        ['narrator', '(The book is reissued. Nobody buys it again, but this time, it is {p} that nobody buys.)']]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. {p} paid a ghost in exposure for forty years. The ghost sold up, and {d} paid him in candle, which is more than {p} ever did.'],
+        ['p', 'Can I at least write a sequel?'],
+        ['judge', 'What happens in it?'],
+        ['p', 'I am still here.']], [
+        ['judge', 'Judgment for {d}. Unpaid words go back to the ghost, and a ghost may sell them to whoever lights him a candle. That is the law. It is also, I am sorry to say, quite moving.'],
+        ['judge', '{p}, if you want your life back, write it again. It will not take long. Nothing has happened since.']]),
+      both: alt([
+        ['judge', 'You are both writers, which is the worst thing I can say about anybody.'],
+        ['judge', 'The book belongs to the ghost. He is the only one of you who did any work.'],
+        ['narrator', '(The ghost puts its own name on the cover. The book sells a second copy. The ghost bought it.)']], [
+        ['judge', 'You are both guilty. One of you stiffed a ghost for forty years. The other bought somebody else’s life and put its own chin on the front.'],
+        ['judge', 'You will read the whole book aloud to each other, a page each, in turn. It should take about as long as it took to live.']])
+    },
+    hallway: {
+      p: ['I’ve hired a new ghost. I’m paying this one properly. In candles. Well. In the idea of candles.',
+        'It was my life. {d} can have it. I was barely using it.',
+        'I’m writing the sequel. STILL HERE, AGAIN. Chapter one is this hallway.'],
+      d: ['I’ve read it four times. I come out of it very well. I’m in every chapter.',
+        'Book signing, Saturday, at my slot. Nobody’s coming. It’s very true to the book.',
+        'I’ve still got the candle. You never know when you’ll need a ghost.']
+    }
+  },
+  {
+    id: 'stolen-shadow', title: 'The Shadow', truth: 'defendant',
+    claim: '{p} is suing {d} for stealing {p}’s shadow. {d} now has two, and one of them has {p}’s ears.',
+    asking: 'Its shadow back, sewn on, double stitch',
+    plaintiff: alt([
+      ['p', 'On Saturday I stood in the light and nothing happened. No shadow. Just me, and the floor, looking at me.'],
+      ['p', 'Then {d} walks past with two shadows. One of them has my ears.'],
+      ['judge', 'You are sure they are your ears.'],
+      ['p', 'I have been looking at those ears on the wall behind me for two hundred years, Your Honour. I would know them in the dark.']
+    ], [
+      ['p', 'I have had the same shadow since 1811, Your Honour. Quiet. Loyal. Always half a step behind, like staff.'],
+      ['p', 'Now {d} goes about with two, like a footballer under floodlights.'],
+      ['judge', 'Perhaps {d} has two lamps.'],
+      ['p', '{d} has one lamp, Your Honour, and my shadow.']
+    ]),
+    defendant: alt([
+      ['d', 'I did not take anything, Your Honour. It turned up behind me on Saturday and it will not go away. I have tried walking quickly.'],
+      ['d', 'I do not even think it likes me. It just likes where I stand.']
+    ], [
+      ['d', 'A shadow follows you, Your Honour. That is the whole job. I cannot help who it follows.'],
+      ['d', 'I sit in the light. {p} sits in a drawer with a thimble over its head. You do the sums.']
+    ]),
+    questions: [
+      { ask: 'Ask {p} when it last stood in the light.', clue: '{p} had not stood in the light since Easter 1953, when somebody opened the curtains by mistake.', lines: [
+        ['p', 'Recently.'],
+        ['judge', 'How recently?'],
+        ['p', 'Easter, 1953. Somebody opened the curtains by mistake.'],
+        ['judge', 'And since then?'],
+        ['p', 'I have been very careful.']] },
+      { ask: 'Call the Lamp.', clue: 'The Lamp saw {p}’s shadow leave {p}’s drawer on its own on Saturday night, and follow {d}.', lines: [
+        ['npc', 'Saturday, about nine. It came out of {p}’s drawer on its own and stood in my light for an hour. Just stood there. Being a shadow.', 'lamp'],
+        ['judge', 'And then?'],
+        ['npc', '{d} walked past. It went with {d}. I would have too.', 'lamp']] },
+      { ask: 'Have the bailiff stand {d} in the studio light.', clue: 'In the light, {p}’s shadow keeps its back to {p} and has its arm round {d}’s shadow.', happen: 'dark', lines: [
+        ['narrator', '({d} stands in the light. It casts two shadows. The second one stands a little apart, with its back to {p}.)'],
+        ['judge', 'Your shadow is facing the other way, {p}.'],
+        ['p', 'It is shy.'],
+        ['bailiff', 'It has just put its arm round {d}’s shadow, Your Honour.']] },
+      { ask: 'Ask {p} what it ever did with its shadow.', sass: true, lines: [
+        ['judge', '{p}. You want this shadow back. Tell the court one thing you did with it in two hundred years.'],
+        ['p', 'I kept it very safe.'],
+        ['judge', 'You kept it in a drawer, under a thimble. That is not safe, {p}. That is filing.']] },
+      { ask: 'Have the bailiff pin the shadow down.', lines: [
+        ['narrator', '(The bailiff creeps up on the second shadow with a drawing pin. The shadow steps aside. The bailiff pins his own tail to the floor.)'],
+        ['bailiff', 'Nearly, Your Honour.']] },
+      { ask: 'Ask {d} whether it has tried to give the shadow back.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'Twice, Your Honour. I stood with my back to {p}’s drawer and waited for it to go in.'],
+        ['judge', 'And?'],
+        ['d', 'It went in, came out of the far side, walked round the long way, and got back behind me. It did not even look at {p}.']] }
+    ],
+    rulings: {
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. A shadow belongs to whoever casts it. Bailiff, sew it back on.'],
+        ['narrator', '(The bailiff sews the shadow back onto {p}. It takes an hour. The stitches cast little shadows. They leave too.)']], [
+        ['judge', 'Judgment for {p}. The shadow goes home tonight, back in the drawer, under the thimble, where {p} can keep an eye on it.'],
+        ['narrator', '(That night, in the drawer, in the dark, something very quietly starts to dig.)']]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. A shadow is not stolen if it walks. {p} kept it under a thimble in a drawer since 1953, and the first time it saw a light, it took it.'],
+        ['judge', '{p}, go and stand in a window. They grow back.'],
+        ['p', 'Where is a window?'],
+        ['judge', 'That, {p}, is the whole problem.']], [
+        ['judge', 'Judgment for {d}. That shadow spent seventy years in a drawer and one evening in the light. I know which I would pick. I have tried both.'],
+        ['narrator', '({d} leaves. Both shadows follow. One of them does a little skip.)']]),
+      both: alt([
+        ['judge', 'You are both wrong. One of you kept a shadow in a drawer for seventy years. The other walks round the shelf with two, like it is showing off.'],
+        ['judge', 'The shadow spends weekdays with {p} and weekends with {d}, and whoever has it stands in the light.'],
+        ['p', 'What if I want to go in the drawer?'],
+        ['judge', 'Then you go alone.']], [
+        ['judge', 'Neither of you owns that shadow. Shadows belong to the light.'],
+        ['npc', 'They are all mine, technically.', 'lamp'],
+        ['narrator', '(The two of them are made to stand in the lamplight together. Between them there are three shadows. Two of them are holding hands.)']])
+    },
+    hallway: {
+      p: ['I’ve moved the drawer next to the window. The curtains are shut. But it’s a start.',
+        'It’ll come crawling back. In the evening. They get very long in the evening.',
+        'I don’t need a shadow. I’ve got a thimble. The thimble has never left me.'],
+      d: ['It waved at me as it went. With both arms. It never did that for {p}.',
+        'Just the one shadow again. Very quiet. Mine has never had much to say.',
+        'I’ve started standing outside {p}’s drawer, in the light. In case it wants to visit. It knows where I stand.']
+    }
+  },
+  {
+    id: 'teacup-timeshare', title: 'The Timeshare', truth: 'both',
+    claim: '{p} is suing {d} for selling it a timeshare in a teacup with a sea view. When {p} arrived for its week, somebody poured tea on it.',
+    asking: 'Nine souls back, and damages for the steeping',
+    plaintiff: alt([
+      ['p', 'I bought one week a year in the teacup from {d}. Nine souls. The brochure said “sea view”.'],
+      ['judge', 'And the view?'],
+      ['p', 'The saucer, Your Honour.'],
+      ['p', 'Then on my first day somebody poured tea on me. I was in for four minutes. I came out quite strong.']
+    ], [
+      ['p', 'Week thirty-two in the teacup, Your Honour. Sea view. I packed. I got in. I lay back. Then it went hot and dark, and somebody added milk.'],
+      ['judge', 'You were steeped.'],
+      ['p', 'Four minutes. I came out a lovely colour. On the way here, somebody tried to dunk a biscuit in me.']
+    ]),
+    defendant: alt([
+      ['d', 'The brochure was very clear, Your Honour. Hot water on Sundays. It is under “amenities”.'],
+      ['d', 'Most of my clients love it. They come out relaxed. One came out Earl Grey.']
+    ], [
+      ['d', 'A timeshare is a dream, Your Honour. One week a year, in a cup, with a handle, looking at a saucer.'],
+      ['d', 'And {p} knew about the tea. Everybody knows about the tea. It is a teacup. The clue is in the teacup.']
+    ]),
+    questions: [
+      { ask: 'Call the owner of the teacup.', clue: 'The teacup is Mrs Widow’s. She has tea in it every Sunday at four, and never sold anything to {d}.', happen: 'faint', lines: [
+        ['npc', 'It is my teacup, dear. It was a wedding present. I have tea in it every Sunday at four.', 'widow'],
+        ['judge', 'Did you know there was somebody in it?'],
+        ['npc', 'Not until the second sip.', 'widow']] },
+      { ask: 'Have the bailiff check who else bought week thirty-two.', clue: '{d} has sold the same week in the teacup eleven times over. It also sold August to the judge.', lines: [
+        ['bailiff', 'Week thirty-two has been sold eleven times, Your Honour. All by {d}. And August has been sold to you.'],
+        ['judge', 'To me.'],
+        ['bailiff', 'The whole of it, Your Honour. You paid in advance.'],
+        ['judge', '…Carry on.']] },
+      { ask: 'Ask {p} when it filled in its damages form.', clue: '{p} filled in its damages form two days before it was steeped. It already said “four minutes” and “milk”.', lines: [
+        ['p', 'Afterwards, Your Honour. While I was drying.'],
+        ['bailiff', 'It is dated the Friday before, Your Honour. It already says “four minutes”. It already says “milk”.'],
+        ['p', 'I had a feeling.']] },
+      { ask: 'Tell {p} it got exactly what it paid for.', sass: true, lines: [
+        ['judge', '{p}. You paid nine souls to lie in a cup with a sea view, and somebody brought you hot water and milk.'],
+        ['judge', 'In Skegness, that is a spa weekend.']] },
+      { ask: 'Ask {p} why it signed.', happen: 'outburst', party: 'd', lines: [
+        ['p', 'There was a presentation. In the teapot. {d} said I was free to leave at any time.'],
+        ['judge', 'Then why did you not leave?'],
+        ['p', 'It was sitting on the lid.']] },
+      { ask: 'Ask {d} about the exchange scheme.', lines: [
+        ['d', 'Very popular, Your Honour. You can swap your teacup week for four nights in the toast rack.'],
+        ['judge', 'What is the toast rack like?'],
+        ['d', 'You sleep standing up, between two slices. It is very continental.']] }
+    ],
+    rulings: {
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. {d} sold one teacup to eleven residents and a judge. Full refunds, starting with mine.'],
+        ['d', 'What about your August?'],
+        ['judge', 'I am keeping August.']], [
+        ['judge', 'Judgment for {p}. Nobody should pay nine souls to be made into a drink.'],
+        ['narrator', '({p} leaves the court, still faintly brown. Two ghosts in the front row try to dunk a biscuit in it.)']]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. You climbed into a teacup at four on a Sunday, {p}, and came out as tea. That is not fraud. That is brewing.'],
+        ['p', 'I want a second opinion.'],
+        ['judge', 'Ask Mrs Widow. She has had a taste.']], [
+        ['judge', 'Judgment for {d}. Every timeshare has a catch. This one had a kettle.'],
+        ['narrator', '({p} is shown out. It leaves a faint brown ring on the podium.)']]),
+      both: alt([
+        ['judge', 'You are both crooks. {d} sold a teacup it does not own, eleven times. {p} climbed into it at four on a Sunday with its damages form already filled in.'],
+        ['judge', 'No refunds. No damages. The teacup goes back to Mrs Widow, who may put in it whatever she likes.'],
+        ['npc', 'I thought {d}, next Sunday. {p} was a bit strong.', 'widow']], [
+        ['judge', 'You deserve each other. One of you sells cups it does not own. The other gets steeped on purpose and sends an invoice.'],
+        ['judge', 'You will both spend week thirty-two in the teacup, together, on a Sunday, at four.'],
+        ['judge', 'I shall be in it for August. I have paid.']])
+    },
+    hallway: {
+      p: ['I’ve bought another week off {d}. In the gravy boat. {d} says there has never been gravy in it.',
+        'I’m still a bit brown. I’m telling people it’s a tan. From the sea.',
+        'I’d go back. The four minutes were lovely. It was the sip I minded.'],
+      d: ['Eleven furious clients and a judge in August. Business has never been better.',
+        'Mrs Widow can have the teacup. I’ve kept the saucer. I’m selling it as a sea view.',
+        'I’m moving into teapots. Longer stays. Lid included.']
+    }
+  },
+  {
+    id: 'radiator-raffle', title: 'The Radiator Raffle', truth: 'both',
+    claim: '{p} is suing {d} for rigging the shelf raffle. First prize was the slot next to the radiator. {d} ran the raffle, and {d} won it.',
+    asking: 'The slot next to the radiator, and a recount',
+    plaintiff: alt([
+      ['p', 'I bought ninety-nine tickets, Your Honour. {d} bought one. {d} drew the winner, and it was {d}.'],
+      ['judge', 'That is how raffles work, {p}. That is the terrible beauty of a raffle.'],
+      ['p', 'I did not buy ninety-nine tickets for beauty, Your Honour.']
+    ], [
+      ['p', 'The slot next to the radiator, Your Honour. Warm from six until seven every night. I have wanted it since 1890.'],
+      ['p', 'A hundred tickets. I bought ninety-nine. {d} bought one, drew one, and moved in the same evening.'],
+      ['judge', 'That was quick.'],
+      ['p', 'Its things were already there, Your Honour. Warming up.']
+    ]),
+    defendant: alt([
+      ['d', 'I drew the winner with my eyes shut, Your Honour. It was mine. I was so surprised I had to sit down. Next to the radiator.'],
+      ['d', 'And I would look at whoever bought ninety-nine tickets before I looked at whoever bought one.']
+    ], [
+      ['d', 'Lucky ticket, Your Honour. I have had it since 1897. It has never won anything. It was due.'],
+      ['d', 'The rules said one ticket each. I am not saying anything. I am only saying I have never met a Mr Radiator.']
+    ]),
+    questions: [
+      { ask: 'Ask to see the winning ticket.', clue: '{d}’s winning ticket is folded into a hard little triangle. The rest are flat. It can be found blind, every time.', happen: 'applause', lines: [
+        ['bailiff', 'The winning ticket, Your Honour. Folded into a triangle. Very small. Very hard. Every other ticket in the hat is flat.'],
+        ['d', 'I fold for luck.'],
+        ['bailiff', 'I put it back in and drew it out with my eyes shut, Your Honour. Four times out of four.']] },
+      { ask: 'Ask {p} what names it bought its tickets under.', clue: 'The limit was one ticket each. {p} bought ninety-nine under false names, including “Mr Radiator” and “Not {p}”.', lines: [
+        ['p', 'Various, Your Honour.'],
+        ['judge', 'Read me some.'],
+        ['p', '“{p}.” “{p}, Junior.” “Mr Radiator.” “Not {p}.” And one that is just a drawing of a hat.']] },
+      { ask: 'Call the radiator.', lines: [
+        ['narrator', '(The radiator is called. It clanks twice. It is six o’clock.)'],
+        ['narrator', '(The whole court, jury, audience and judge, shuffles four inches towards it. Nobody says anything. Nobody has to.)'],
+        ['judge', 'We will resume at seven.']] },
+      { ask: 'Tell {p} what else ninety-nine souls could have bought.', sass: true, lines: [
+        ['judge', '{p}. The tickets were a soul each. You spent ninety-nine souls on one warm hour a day. For ninety-nine souls, you could have bought the radiator.'],
+        ['p', 'The radiator is not for sale.'],
+        ['judge', 'Neither, it turns out, was the raffle.']] },
+      { ask: 'Ask {d} how it is finding the new slot.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'Wonderful, Your Honour. From six until seven I am the warmest thing on the shelf.'],
+        ['judge', 'And from seven until six?'],
+        ['d', 'I tell {p} about it.']] },
+      { ask: 'Ask the bailiff whether anybody approached him about the draw.', clue: 'Both of them bribed the bailiff over the draw. {p} offered four raisins. {d} offered six.', lines: [
+        ['bailiff', '{p} offered me four raisins to draw the raffle for it, Your Honour. {d} offered me six to let it draw its own.'],
+        ['judge', 'And what did you do?'],
+        ['bailiff', 'I am a man of principle, Your Honour. Six is more than four.']] }
+    ],
+    rulings: {
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. A triangle in a hat full of flat tickets is not luck, {d}. It is geometry.'],
+        ['judge', '{p} gets the slot next to the radiator.'],
+        ['d', 'What about Mr Radiator?'],
+        ['judge', 'Mr Radiator may visit.']], [
+        ['judge', 'Judgment for {p}. Ninety-nine tickets out of a hundred is not a raffle. It is a purchase, and this court upholds it.'],
+        ['narrator', '({p} moves in at six. At seven the radiator goes cold. {p} stays put until morning, out of principle, and comes out slightly blue.)']]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. The rule was one ticket each. {p} bought ninety-nine, one of them as a hat. The hat is disqualified, and so are you.'],
+        ['p', 'And the triangle?'],
+        ['judge', 'The triangle bought one ticket. That is all this court is prepared to know.']], [
+        ['judge', 'Judgment for {d}. One ticket won, and it was {d}’s. I see no reason to look at its shape.'],
+        ['narrator', '(From six until seven, {d} is very warm. From seven until six, it tells {p} about it.)']]),
+      both: alt([
+        ['judge', 'You are both cheats. {p} bought ninety-nine tickets as Mr Radiator and a hat. {d} folded its own ticket into a triangle and drew it blind.'],
+        ['judge', 'The slot will be shared. {p} from six until half past. {d} from half past until seven.'],
+        ['narrator', '(At half past six, neither of them moves. At seven, neither of them moves. At eight it is cold, and neither of them moves.)']], [
+        ['judge', 'You have rigged the same raffle from both ends. I admire the effort. I will not reward it.'],
+        ['judge', 'The raffle will be drawn again. One ticket each. Flat. The bailiff will hold the hat.'],
+        ['bailiff', 'Very good, Your Honour. Prices on request.']])
+    },
+    hallway: {
+      p: ['Mr Radiator is appealing. He has a very strong case. He has my handwriting.',
+        'Next year I’m buying all hundred tickets. Let’s see {d} fold its way out of that.',
+        'I don’t even like being warm. I just don’t like {d} being warm.'],
+      d: ['I’ve kept the ticket. I sleep on it. It’s very uncomfortable. It’s a triangle.',
+        'I paid that bailiff good money. I’m reporting him. To the bailiff.',
+        'My things had been in that slot since Wednesday. They were only just getting warm.']
+    }
   }
 ];
 

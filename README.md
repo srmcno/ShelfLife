@@ -110,7 +110,7 @@ Then you rule: for the plaintiff, for the defendant, or "you're both idiots". On
 truth and the clues point at it. The jury votes, the audience reacts, and the loser gives a
 hallway interview. Stars come from the right verdict, ratings of 70 or more, and a jury of five or
 more agreeing. Rule justly and the winner trusts you a little more; rule against the resident who
-was right and they hold a real grudge. Eighteen hand-written cases, six of each verdict.
+was right and they hold a real grudge. Twenty-four hand-written cases, eight of each verdict, each with alternate takes so reruns rarely repeat.
 
 | Game | What you do |
 | --- | --- |
@@ -118,7 +118,7 @@ was right and they hold a real grudge. Eighteen hand-written cases, six of each 
 | Coffin Stack | Drop coffins onto a growing tower. Overhang is sawn off; three perfect drops in a row win some width back. |
 | The Séance | Candles light in sequence. Repeat it. Each round adds one. The spirits forgive one mistake. |
 | Grave Whack | Push the hands back into their graves before they climb out. Never tap the widow. The landlord is worth five. |
-| Shelf Court | Judge your residents' petty lawsuits on live daytime TV. The rest of the shelf is the jury. Eighteen cases. |
+| Shelf Court | Judge your residents' petty lawsuits on live daytime TV. The rest of the shelf is the jury. Twenty-four cases. |
 | Expeditions | Pack a tool, choose a crew and recover parts for working household objects. |
 
 Every scoring run pays souls from a daily purse, beating your best pays a bonus, and a good run

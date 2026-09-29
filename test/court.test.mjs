@@ -36,11 +36,11 @@ function playAll(s, caseId, ruling, choice = 'gavel', rnd = seededRandom(3)) {
   return { ep, result, said };
 }
 
-test('eighteen cases, fairly split, each with six questions, clues that point at the truth and three rulings', () => {
-  assert.equal(COURT_CASES.length, 18);
+test('twenty-four cases, fairly split, each with six questions, clues that point at the truth and three rulings', () => {
+  assert.equal(COURT_CASES.length, 24);
   assert.equal(new Set(COURT_CASES.map(k => k.id)).size, COURT_CASES.length, 'case ids are unique');
   const truths = COURT_CASES.map(k => k.truth);
-  for (const t of ['plaintiff', 'defendant', 'both']) assert.equal(truths.filter(x => x === t).length, 6, t);
+  for (const t of ['plaintiff', 'defendant', 'both']) assert.equal(truths.filter(x => x === t).length, 8, t);
   for (const k of COURT_CASES) {
     assert.equal(k.questions.length, 6, k.id);
     assert.ok(k.questions.filter(q => q.clue).length >= 2, k.id + ' needs at least two clues');
