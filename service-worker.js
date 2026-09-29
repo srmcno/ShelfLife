@@ -1,13 +1,17 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v52';
+const CACHE_VERSION = 'shelflife-v58';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./src/cloud/config.js",
   "./src/cloud/client.js",
   "./src/cloud/sync.js",
   "./src/cloud/index.js",
+  "./src/cloud/social.js",
   "./src/ui/cloud.js",
   "./css/cloud.css",
+  "./css/pages.css",
+  "./src/ui/friends.js",
+  "./css/social.css",
   "./src/content/mayhem.js",
   "./src/mayhem-state.js",
   "./src/engine/mayhem.js",
@@ -22,10 +26,12 @@ const SHELL = [
   "./src/court-state.js",
   "./src/ui/court.js",
   "./src/art/court-cast.js",
+  "./src/art/court-hallway.js",
   "./src/content/arcade.js",
   "./src/engine/arcade.js",
   "./src/engine/daily.js",
   "./src/notify.js",
+  "./src/native.js",
   "./src/engine/seasons.js",
   "./src/content/seasons.js",
   "./src/content/daily.js",
@@ -71,6 +77,8 @@ const SHELL = [
   "./src/ui/backup.js",
   "./",
   "./index.html",
+  "./privacy.html",
+  "./delete-account.html",
   "./manifest.webmanifest",
   "./css/fonts.css",
   "./css/style.css",
@@ -145,8 +153,12 @@ const SHELL = [
   "./assets/fonts/karla-400-normal.woff2",
   "./assets/fonts/karla-600-normal.woff2",
   "./assets/fonts/karla-700-normal.woff2",
+  "./icons/icon.svg",
+  "./icons/icon-180.png",
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "./icons/icon-maskable-192.png",
+  "./icons/icon-maskable-512.png"
 ];
 // Every installed asset must also be eligible for offline delivery. Keeping
 // this tied to the manifest prevents new illustration folders being missed.

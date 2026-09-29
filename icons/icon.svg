@@ -1,12 +1,135 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#33203D"/>
-  <rect x="40" y="40" width="432" height="432" rx="64" fill="#1A1220"/>
-  <ellipse cx="256" cy="270" rx="150" ry="130" fill="#FF8FB8"/>
-  <ellipse cx="205" cy="250" rx="34" ry="40" fill="#F2E9DC"/>
-  <ellipse cx="315" cy="250" rx="34" ry="40" fill="#F2E9DC"/>
-  <circle cx="197" cy="258" r="16" fill="#1A1220"/>
-  <circle cx="325" cy="258" r="16" fill="#1A1220"/>
-  <path d="M180 330 Q256 380 332 330 L318 360 L294 336 L270 366 L246 336 L222 366 L198 336 Z" fill="#F2E9DC"/>
-  <path d="M150 165 L175 230 L120 215 Z" fill="#FF8FB8"/>
-  <path d="M362 165 L337 230 L392 215 Z" fill="#FF8FB8"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="72 72 288 288"><defs><clipPath id="icon-shape"><rect x="72" y="72" width="288" height="288" rx="63.36"/></clipPath></defs><g clip-path="url(#icon-shape)">
+  <!-- Adaptive icon background: 108dp canvas at 4 units per dp. The launcher
+       shows the middle 288 units; anything outside is bleed for parallax. -->
+  <defs>
+    <radialGradient id="bg-room" cx="0.5" cy="0.36" r="0.72">
+      <stop offset="0" stop-color="#4b2c55"/>
+      <stop offset="0.55" stop-color="#2a1834"/>
+      <stop offset="1" stop-color="#120a18"/>
+    </radialGradient>
+    <radialGradient id="bg-glow" cx="310" cy="176" r="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffc877" stop-opacity="0.5"/>
+      <stop offset="0.35" stop-color="#f2a35e" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#f2a35e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bg-plank-top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b98292"/>
+      <stop offset="1" stop-color="#8d566b"/>
+    </linearGradient>
+    <linearGradient id="bg-plank-front" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6f3d55"/>
+      <stop offset="1" stop-color="#4a2539"/>
+    </linearGradient>
+    <linearGradient id="bg-under" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07040a" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#120a18" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="432" height="432" fill="url(#bg-room)"/>
+  <!-- the wallpaper's teardrop motif, barely there -->
+  <g fill="#ffffff" opacity="0.035">
+    <path d="M108 40c14 22 22 38 22 52a22 22 0 0 1-44 0c0-14 8-30 22-52Z"/>
+    <path d="M216 22c14 22 22 38 22 52a22 22 0 0 1-44 0c0-14 8-30 22-52Z"/>
+    <path d="M324 40c14 22 22 38 22 52a22 22 0 0 1-44 0c0-14 8-30 22-52Z"/>
+    <path d="M54 150c14 22 22 38 22 52a22 22 0 0 1-44 0c0-14 8-30 22-52Z"/>
+    <path d="M378 150c14 22 22 38 22 52a22 22 0 0 1-44 0c0-14 8-30 22-52Z"/>
+  </g>
+  <rect width="432" height="432" fill="url(#bg-glow)"/>
+  <!-- the shelf: top face, lit front edge, front face, and the dark underneath -->
+  <rect x="0" y="292" width="432" height="16" fill="url(#bg-plank-top)"/>
+  <rect x="0" y="306" width="432" height="3" fill="#d6a3ae" opacity="0.55"/>
+  <rect x="0" y="309" width="432" height="31" fill="url(#bg-plank-front)"/>
+  <path d="M0 322h432M0 331h432" stroke="#2c1422" stroke-width="1.5" opacity="0.35"/>
+  <rect x="0" y="340" width="432" height="92" fill="#120a18"/>
+  <rect x="0" y="340" width="432" height="44" fill="url(#bg-under)"/>
+
+  <!-- Adaptive icon foreground: everything important stays inside the 264-unit
+       safe circle centred on (216,216). -->
+  <defs>
+    <radialGradient id="fg-bone" cx="0.38" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#fffaf2"/>
+      <stop offset="0.6" stop-color="#efe4d6"/>
+      <stop offset="1" stop-color="#cdb9a8"/>
+    </radialGradient>
+    <linearGradient id="fg-rim" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="#ffcf86" stop-opacity="0.55"/>
+      <stop offset="0.45" stop-color="#ffcf86" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fg-wax" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff6e2"/>
+      <stop offset="1" stop-color="#e2cfae"/>
+    </linearGradient>
+    <radialGradient id="fg-flame" cx="0.5" cy="0.72" r="0.7">
+      <stop offset="0" stop-color="#fffbe6"/>
+      <stop offset="0.45" stop-color="#ffd978"/>
+      <stop offset="1" stop-color="#f08a3c"/>
+    </radialGradient>
+    <linearGradient id="fg-brass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8a5a24"/>
+      <stop offset="0.45" stop-color="#e6b862"/>
+      <stop offset="1" stop-color="#9a6628"/>
+    </linearGradient>
+    <radialGradient id="fg-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffe2a0" stop-opacity="0.9"/>
+      <stop offset="0.4" stop-color="#ffcf7a" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffe2a0" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="fg-body-clip">
+      <path d="M200 110C241 110 263 139 263 171C263 194 254 204 270 226C289 252 285 300 200 302C115 300 111 252 130 226C146 204 137 194 137 171C137 139 159 110 200 110Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- contact shadow on the plank -->
+  <ellipse cx="214" cy="301" rx="98" ry="9" fill="#07040a" opacity="0.45"/>
+
+  <!-- ears, behind the head -->
+  <g stroke="#26152b" stroke-width="7">
+    <circle cx="147" cy="126" r="23" fill="#efe4d6"/>
+    <circle cx="253" cy="126" r="23" fill="#efe4d6"/>
+  </g>
+  <circle cx="147" cy="126" r="12" fill="#d9707f"/>
+  <circle cx="253" cy="126" r="12" fill="#d9707f"/>
+
+  <!-- the resident's free arm, resting -->
+  <path d="M136 244C122 252 116 266 120 278" fill="none" stroke="#26152b" stroke-width="22" stroke-linecap="round"/>
+  <path d="M136 244C122 252 116 266 120 278" fill="none" stroke="#e8dccd" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- feet hang over the front of the shelf -->
+  <g stroke="#26152b" stroke-width="6">
+    <ellipse cx="178" cy="310" rx="15" ry="10" fill="#b8434f"/>
+    <ellipse cx="226" cy="310" rx="15" ry="10" fill="#b8434f"/>
+  </g>
+
+  <!-- body -->
+  <path d="M200 110C241 110 263 139 263 171C263 194 254 204 270 226C289 252 285 300 200 302C115 300 111 252 130 226C146 204 137 194 137 171C137 139 159 110 200 110Z" fill="url(#fg-bone)" stroke="#26152b" stroke-width="8" stroke-linejoin="round"/>
+  <g clip-path="url(#fg-body-clip)">
+    <rect x="200" y="100" width="100" height="210" fill="url(#fg-rim)"/>
+    <path d="M150 272C176 290 226 292 256 270" fill="none" stroke="#b9a18e" stroke-width="10" opacity="0.35"/>
+  </g>
+
+  <!-- face: one eye has seen more than the other -->
+  <ellipse cx="178" cy="176" rx="21" ry="24" fill="#1a1020"/>
+  <ellipse cx="229" cy="182" rx="14" ry="16" fill="#1a1020"/>
+  <circle cx="171" cy="167" r="7" fill="#ffffff"/>
+  <circle cx="185" cy="186" r="3" fill="#ffffff" opacity="0.7"/>
+  <circle cx="225" cy="176" r="4.5" fill="#ffffff"/>
+  <path d="M214 157L243 163" stroke="#26152b" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="157" cy="208" rx="13" ry="7" fill="#e5808f" opacity="0.6"/>
+  <ellipse cx="246" cy="210" rx="11" ry="6" fill="#e5808f" opacity="0.6"/>
+  <path d="M175 222Q201 240 229 221" fill="none" stroke="#26152b" stroke-width="6" stroke-linecap="round"/>
+  <path d="M183 222l-2 12M194 227l-1 12M206 228l1 12M217 226l2 11" stroke="#26152b" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- the candle it will not put down, in a brass saucer -->
+  <circle cx="306" cy="172" r="58" fill="url(#fg-halo)"/>
+  <path d="M292 206h28v82h-28Z" fill="url(#fg-wax)" stroke="#26152b" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M296 208c5 0 5 10 9 10s4-7 7-7 3 22 5 22" fill="none" stroke="#fffaf0" stroke-width="5" stroke-linecap="round"/>
+  <path d="M306 205v-10" stroke="#26152b" stroke-width="4" stroke-linecap="round"/>
+  <path d="M306 146C318 162 322 174 322 181A16 16 0 0 1 290 181C290 174 294 162 306 146Z" fill="url(#fg-flame)" stroke="#8a3d1c" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M306 165C311 172 313 177 313 181A7 7 0 0 1 299 181C299 177 301 172 306 165Z" fill="#fffbea"/>
+  <path d="M276 290h60c0 9-13 14-30 14s-30-5-30-14Z" fill="url(#fg-brass)" stroke="#26152b" stroke-width="5" stroke-linejoin="round"/>
+  <ellipse cx="306" cy="290" rx="30" ry="5" fill="#f6d58c" stroke="#26152b" stroke-width="4"/>
+
+  <!-- the arm holding it -->
+  <path d="M262 236C276 234 286 238 294 244" fill="none" stroke="#26152b" stroke-width="22" stroke-linecap="round"/>
+  <path d="M262 236C276 234 286 238 294 244" fill="none" stroke="#e8dccd" stroke-width="10" stroke-linecap="round"/>
+</g></svg>

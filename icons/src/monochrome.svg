@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432">
+  <!-- Android 13+ themed icon: only the alpha channel is used, the launcher
+       supplies the colour. Same resident and candle as foreground.svg. -->
+  <defs>
+    <mask id="mono-face" maskUnits="userSpaceOnUse" x="0" y="0" width="432" height="432">
+      <rect width="432" height="432" fill="#fff"/>
+      <ellipse cx="178" cy="176" rx="21" ry="24" fill="#000"/>
+      <ellipse cx="229" cy="182" rx="14" ry="16" fill="#000"/>
+      <path d="M214 157L243 163" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+      <path d="M175 222Q201 240 229 221" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+      <path d="M183 222l-2 12M194 227l-1 12M206 228l1 12M217 226l2 11" stroke="#000" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="147" cy="126" r="11" fill="#000"/>
+      <circle cx="253" cy="126" r="11" fill="#000"/>
+      <path d="M306 166C311 173 313 178 313 181A7 7 0 0 1 299 181C299 178 301 173 306 166Z" fill="#000"/>
+    </mask>
+  </defs>
+  <g transform="translate(216 216) scale(0.82) translate(-216 -216)">
+  <g fill="#fff" stroke="#fff" mask="url(#mono-face)">
+    <circle cx="147" cy="126" r="26" stroke="none"/>
+    <circle cx="253" cy="126" r="26" stroke="none"/>
+    <path d="M136 244C122 252 116 266 120 278" fill="none" stroke-width="22" stroke-linecap="round"/>
+    <ellipse cx="178" cy="310" rx="18" ry="13" stroke="none"/>
+    <ellipse cx="226" cy="310" rx="18" ry="13" stroke="none"/>
+    <path d="M200 110C241 110 263 139 263 171C263 194 254 204 270 226C289 252 285 300 200 302C115 300 111 252 130 226C146 204 137 194 137 171C137 139 159 110 200 110Z" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M262 236C276 234 286 238 294 244" fill="none" stroke-width="22" stroke-linecap="round"/>
+    <path d="M289 203h34v88h-34Z" stroke="none"/>
+    <path d="M274 288h64c0 10-14 16-32 16s-32-6-32-16Z" stroke="none"/>
+    <path d="M306 205v-12" fill="none" stroke-width="4" stroke-linecap="round"/>
+    <path d="M306 143C319 160 324 173 324 181A18 18 0 0 1 288 181C288 173 293 160 306 143Z" stroke="none"/>
+  </g>
+  </g>
+</svg>

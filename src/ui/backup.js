@@ -1,4 +1,5 @@
-import { createBackup, backupEmail, shareBackup } from '../backup.js';
+import { createBackup, backupEmail, shareBackup, transferInstructions } from '../backup.js';
+import { isNative, shareFile } from '../native.js';
 
 export function initBackupTransfer({ state, download, markBackup }) {
   const veil = document.getElementById('transferVeil');
@@ -9,6 +10,10 @@ export function initBackupTransfer({ state, download, markBackup }) {
   const filename = document.getElementById('transferFilename');
   let busy = false;
   const close = () => veil.classList.remove('open');
+  // The app's share sheet attaches the file to an email itself, so the
+  // download-then-attach route is only for browsers.
+  const native = isNative();
+  if (native) veil.querySelector('.transfer-email')?.setAttribute('hidden', '');
 
   document.getElementById('transferBtn').addEventListener('click', () => {
     veil.classList.add('open');
@@ -38,7 +43,9 @@ export function initBackupTransfer({ state, download, markBackup }) {
     status.textContent = 'Choose your email app, another device, or Files in the share menu.';
     try {
       const backup = createBackup(state);
-      const result = await shareBackup(backup);
+      const result = native
+        ? await shareFile({ name: backup.name, data: backup.text, title: 'My Shelf Life backup', text: transferInstructions(backup.name), dialogTitle: 'Send your shelf' })
+        : await shareBackup(backup);
       if (result === 'shared') {
         markBackup(backup.created);
         status.textContent = 'Backup handed to the share menu. Finish saving or sending it in the app you chose; Shelf Life cannot confirm delivery.';

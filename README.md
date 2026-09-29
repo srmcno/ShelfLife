@@ -1,10 +1,10 @@
 # Shelf Life
 
-**[Play Shelf Life](https://srmcno.github.io/ShelfLife/)** · [Report a problem](https://github.com/srmcno/ShelfLife/issues/new/choose)
+**[Play Shelf Life](https://srmcno.github.io/ShelfLife/)** · [Report a problem](https://github.com/srmcno/ShelfLife/issues/new/choose) · [Privacy](https://srmcno.github.io/ShelfLife/privacy.html) · [Delete your account](https://srmcno.github.io/ShelfLife/delete-account.html)
 
 Small creatures. Long memories. A free, darkly comic creature game for phones and desktops.
 Make peculiar residents, look after them, play together and collect the evidence of a small life.
-They cannot die. They have looked into it.
+Immortal. Unwashed. In arrears.
 
 ## Something has gone wrong
 
@@ -110,7 +110,7 @@ Then you rule: for the plaintiff, for the defendant, or "you're both idiots". On
 truth and the clues point at it. The jury votes, the audience reacts, and the loser gives a
 hallway interview. Stars come from the right verdict, ratings of 70 or more, and a jury of five or
 more agreeing. Rule justly and the winner trusts you a little more; rule against the resident who
-was right and they hold a real grudge. Eighteen hand-written cases, six of each verdict.
+was right and they hold a real grudge. Twenty-four hand-written cases, eight of each verdict, each with alternate takes so reruns rarely repeat.
 
 | Game | What you do |
 | --- | --- |
@@ -118,7 +118,7 @@ was right and they hold a real grudge. Eighteen hand-written cases, six of each 
 | Coffin Stack | Drop coffins onto a growing tower. Overhang is sawn off; three perfect drops in a row win some width back. |
 | The Séance | Candles light in sequence. Repeat it. Each round adds one. The spirits forgive one mistake. |
 | Grave Whack | Push the hands back into their graves before they climb out. Never tap the widow. The landlord is worth five. |
-| Shelf Court | Judge your residents' petty lawsuits on live daytime TV. The rest of the shelf is the jury. Eighteen cases. |
+| Shelf Court | Judge your residents' petty lawsuits on live daytime TV. The rest of the shelf is the jury. Twenty-four cases. |
 | Expeditions | Pack a tool, choose a crew and recover parts for working household objects. |
 
 Every scoring run pays souls from a daily purse, beating your best pays a bonus, and a good run
@@ -175,6 +175,35 @@ save**. Guest play is unchanged, and offline the game carries on and catches up 
   browser under `shelflife.cloud`, never inside the save or its backups.
 - **Sign out of this device** stops the copying and keeps the shelf. **Delete my cloud data and account**
   removes the cloud copy and the account from the server; the shelf on this device stays.
+- [privacy.html](privacy.html) says what is stored and where. [delete-account.html](delete-account.html) explains
+  deletion without the app and, when cloud save is set up, signs in with a code and deletes the account itself.
+  Both are published with the site and linked from More.
+
+### Friends (optional, needs cloud save)
+
+With cloud save on, **More → Friends** swaps shelves with people you know. Nothing social is sent until
+you open Friends for the first time on that account; without a cloud project there is no Friends
+button at all, and a player without cloud save is pointed at Cloud save first.
+
+- **Your friend code** is eight letters and numbers. Share it; add theirs under **Add a friend by
+  code**. Asking someone who has already asked you makes you friends straight away.
+- **Friends see** your name (optional, 24 characters), your residents' names, moods, traits and
+  drawings, your rank and how many curios you have. They see the shelf as it was when you last opened
+  Friends or last synced, at most every ten minutes. A drawing over 120 KB stays home; its resident
+  appears without it.
+- **Serve papers** on a friend's resident and they hear the case in Shelf Court, with your resident
+  as a guest plaintiff and theirs defending. You hear the verdict, the stars and the ratings the next
+  time you open Friends or Shelf Court. Hearing a case pays 15 souls and hearing a verdict pays 10,
+  each for up to three summonses a day. A friend's resident never joins your shelf or its memories.
+- **Daily challenge scores** go up when you play today's challenge. Friends appear by name (top five);
+  everyone else is one line, such as "You beat 64% of players today". No stranger is ever named.
+- **Remove**, **Block** and **Report** sit in each friend's row. Blocking removes the friendship,
+  tears up any papers between you and makes your code stop working for them; they are not told.
+  Reports go to a table only the project owner can read, with the name and shelf the reporter saw.
+
+Nothing is public: there is no search, no global list of names and no way to see a stranger's shelf.
+Every reply from the server is checked again before the game draws it: text is clamped and escaped,
+creatures are rebuilt from known parts, and a drawing is only accepted as a PNG under 120 KB.
 
 After the first visit, the installed game also works offline. Returning players receive a
 **Save & refresh** banner when a new edition is available. An active interaction or failed save
@@ -206,9 +235,9 @@ The browser suite uses isolated synthetic households and a separate local server
 creation, saved appearance, care, every arcade game, a full Shelf Court episode ruled rightly and one ruled wrongly, expeditions, completed adventure endings,
 abandoned runs, emergencies, coffins and the curio cabinet, expedition returns, report persistence,
 replay identity, all sixteen keepsakes,
-cancelled gestures, failed saves, responsive layouts, cloud save against an in-memory Supabase
+cancelled gestures, failed saves, responsive layouts, cloud save and friends against an in-memory Supabase
 (`test/support/fake-supabase.mjs`) and runtime errors
-in desktop Chromium and phone-sized Chromium/WebKit. `npm test` also runs the SQL migration in PGlite. Offline reload is tested in Chromium;
+in desktop Chromium and phone-sized Chromium/WebKit. `npm test` also runs both SQL migrations in PGlite. Offline reload is tested in Chromium;
 Playwright does not support WebKit service-worker tooling. This is browser automation, not physical-device
 testing. `test/responsive-harness.html` provides additional local fixture exploration.
 
@@ -217,27 +246,116 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/state.js`, `src/life-state.js` | Saves, validation, migration and bounded history |
 | `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
 | `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
-| `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js` | Shelf Court: cases, episode state machine, TV studio stage and the drawn cast |
+| `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js`, `src/art/court-hallway.js` | Shelf Court: cases, episode state machine, TV studio stage, the drawn cast and the hall cam's corridor set |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
+| `src/cloud/social.js`, `src/ui/friends.js`, `css/social.css` | Friends, shelves on show, Shelf Court summonses and daily boards |
+| `src/native.js`, `capacitor.config.json`, `android/` | The Android app: native glue, Capacitor settings and the native project |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
 | `src/art/` | Creature/drawing data, SVG rendering, animation and the studio |
 | `src/ui/` | Views, interaction, navigation and accessible dialogs |
 | `css/` | Shared materials and dedicated game/workspace layouts |
 | `test/` | Domain regressions, synthetic households and browser tests |
-| `scripts/` | Pages packaging and optional local Mac launcher |
+| `icons/src/`, `store/` | Layered icon sources and Play Store art |
+| `scripts/` | Pages packaging, icon and store art rendering, and the optional local Mac launcher |
 
 Main publishes to GitHub Pages only after domain, Python and browser checks pass. Packaging excludes
 development files and writes the commit to `release.json`; the same revision identifies the offline
 cache. Add new production assets to `service-worker.js` and bump its development cache version.
 The tests check that the offline shell is complete.
 
+### The Android app
+
+The Play Store edition wraps the same web build in [Capacitor 8](https://capacitorjs.com). `android/` is the
+native project Capacitor generated; it is committed, and `npx cap sync` only rewrites its generated files
+(`capacitor.build.gradle`, `capacitor.settings.gradle` and the copied web assets). The web game has no
+Capacitor imports: the npm packages exist only for the native project.
+
+`src/native.js` is the only native glue. It does nothing unless `Capacitor.isNativePlatform()` is true, and it
+reaches plugins through `window.Capacitor.Plugins`, which the native bridge provides. In the app:
+
+- **Back up**, **Move to another device** and postcards are written to the app's cache and handed to the
+  Android share sheet (Drive, Files, email and so on). No storage permission is needed. **Restore** uses the
+  system file picker.
+- The narrator reads through the phone's text-to-speech engine, preferring British English. With no engine,
+  its buttons are hidden.
+- The Back key closes the open sheet, then minimises the game after saving. Pausing the app saves, stops
+  the narrator and pauses an arcade run, as hiding a browser tab does.
+- There is no service worker and no **Save & refresh**: updates come from the store.
+- Other sites, and the privacy and account pages, open in a browser tab over the game rather than replacing it.
+- The status and gesture bars are drawn over the room; the SystemBars plugin supplies the insets as the
+  `--safe-area-inset-*` variables that `css/style.css` folds into `--sat`, `--sab`, `--sal` and `--sar`.
+- Nudges are inexact local notifications. The manifest removes the exact-alarm permission the plugin declares.
+
+`test/native.test.mjs` and `test/browser/native-app.spec.mjs` check those paths against a fake bridge. That
+is not a device test: try each of them on a real phone before a release.
+
+You need Node 22 or newer, JDK 21 and the Android SDK with platform 36 and its build tools. Android Studio
+Otter (2025.2.1) or newer bundles all of it.
+
+```sh
+npm ci
+npm run android:sync     # npm run build, then copy dist/ into android/
+npm run android:open     # open the project in Android Studio
+npm run android:apk      # debug APK in android/app/build/outputs/apk/debug/
+npm run android:bundle   # release AAB in android/app/build/outputs/bundle/release/
+```
+
+The version lives in one place: `version` in `package.json`. The app's `versionName` is that string and its
+`versionCode` is `major * 10000 + minor * 100 + patch` (1.0.0 is 10000, 1.2.3 is 10203), worked out in
+`android/app/build.gradle`. Play refuses a versionCode it has seen before, so bump `version` before every upload.
+
+#### Signing a release
+
+Play only accepts signed bundles. Make an upload key once, keep it outside the repository and back it up
+with its passwords somewhere safe:
+
+```sh
+keytool -genkeypair -v -keystore ~/keys/shelflife-upload.jks -alias upload \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Then create `android/keystore.properties` (gitignored, as are `*.jks` and `*.keystore`):
+
+```properties
+storeFile=/home/you/keys/shelflife-upload.jks
+storePassword=the store password
+keyAlias=upload
+keyPassword=the key password
+```
+
+`android/app/build.gradle` reads that file only if it exists, so without it `npm run android:bundle` still
+builds an unsigned bundle. With it, the bundle is signed with the upload key. Enrol in Play App Signing when
+you create the app: Google keeps the key that signs what players install, and a lost upload key can be
+reset from the Play Console rather than ending the app.
+
+### The icon
+
+The resident on the icon is drawn once, as Android adaptive-icon layers in `icons/src/`:
+`background.svg`, `foreground.svg` and `monochrome.svg` (Android 13 themed icons) on a 108dp
+canvas of 432 units. Launchers show the middle 288 units; the resident and candle stay inside
+the 264-unit safe circle. Every other icon is a crop of the same layers, so edit the sources and
+render again:
+
+```sh
+node scripts/render_icons.mjs      # web, maskable, Apple, Play listing and Android launcher icons
+node scripts/render_store_art.mjs  # store/feature-graphic.jpg, drawn with the game's own residents
+node scripts/store_screenshots.mjs # store/screenshots/: eight 1080x1920 phone screenshots for Play
+```
+
+All three use Playwright's Chromium (set `CHROMIUM_PATH` to use another). `render_icons.mjs` writes
+the Android launcher resources only when an `android/` project exists. The screenshots use a synthetic
+household, a fixed afternoon and a seeded random, so a commit always shows the same scenes; any over
+1 MB is saved as a JPEG instead. `store/listing.md` drafts the Play listing, the content rating and Data
+safety answers and the release checklist. `store/` is not published with the site.
+
 ### Connecting your own Supabase project
 
 Cloud save stays off, with no cloud UI and no requests, until `src/cloud/config.js` has a project URL and key.
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the SQL editor, run `supabase/migrations/0001_accounts_and_saves.sql`. Running it again is harmless.
+2. In the SQL editor, run `supabase/migrations/0001_accounts_and_saves.sql`, then
+   `supabase/migrations/0002_social.sql` for Friends. Running either again is harmless.
 3. Authentication → Sign In / Providers: enable **Anonymous sign-ins** and keep **Email** on.
 4. Authentication → Emails: make the **Magic link**, **Confirm signup** and **Change email address**
    templates print `{{ .Token }}`, so players get a code. Adding an email to an anonymous account uses
@@ -249,6 +367,10 @@ Cloud save stays off, with no cloud UI and no requests, until `src/cloud/config.
 The built-in email sender allows only a few messages an hour; set up custom SMTP before real players
 arrive. Abandoned anonymous accounts can be cleared from the SQL editor:
 `delete from auth.users u where u.is_anonymous and u.created_at < now() - interval '90 days' and not exists (select 1 from public.saves s where s.user_id = u.id and s.updated_at > now() - interval '90 days');`
+Old daily scores and summonses can go the same way (the lines are also at the top of 0002):
+`delete from public.scores where day < current_date - 30;` and
+`delete from public.summons where created_at < now() - interval '60 days';`
+Reports wait in `public.reports` (select from it in the SQL editor); nothing in the game reads them.
 
 The optional Mac launcher can use locally installed **Daniel (Enhanced)**. Pages uses the voices
 provided by each visitor's browser; the local Mac voice is not distributed with the web game.

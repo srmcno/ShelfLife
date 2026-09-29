@@ -1,14 +1,17 @@
 import { COURT_CAST, QUESTIONS_PER_EPISODE } from '../content/court.js';
 import {
   courtCases, nextCaseId, castEpisode, episodeCase, episodeOpening, episodeQuestions, episodeAsk,
-  randomHappening, resolveHappening, episodeBreak, episodeRule, courtFinish, fill, COURT_BY_ID, docketToday, DOCKET_SOULS
+  randomHappening, resolveHappening, episodeBreak, episodeRule, courtFinish, fill, COURT_BY_ID, docketToday, DOCKET_SOULS, summonsReward
 } from '../engine/court.js';
 import { courtroomState } from '../court-state.js';
 import { save } from '../state.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { castSvg, COURT_PROPS } from '../art/court-cast.js';
+import { HALL_SET, HALL_PROPS } from '../art/court-hallway.js';
 import { glyph } from '../art/mayhem-glyphs.js';
 import { escapadeView } from '../engine/escapades.js';
+import { guestPet } from '../cloud/social.js';
+import { guestPortrait, collectVerdicts, verdictLine } from './friends.js';
 import { playTone, playStomp, playAchievement, playError, playStar, playUnlock } from '../audio/sound.js';
 
 /* Shelf Court, the daytime TV show. You are Judge Mortis. The sheet is a
@@ -20,7 +23,7 @@ import { playTone, playStomp, playAchievement, playError, playStar, playUnlock }
 const byId = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const veil = byId('courtVeil'), sheet = byId('courtSheet');
-const VOICES = { judge: 110, bailiff: 640, announcer: 180, p: 470, d: 380, audience: 220, jury: 300 };
+const VOICES = { judge: 110, bailiff: 640, announcer: 180, reporter: 540, p: 470, d: 380, audience: 220, jury: 300 };
 const NPC_VOICES = { woodlouse: 440, geoffrey2: 470, moth: 560, lamp: 250, cat: 180, ghost: 330, uncle: 150, raven: 240, widow: 380, susan: 600 };
 const TYPE_MS = 20;
 const HEADS = 9;
@@ -28,6 +31,9 @@ const HEADS = 9;
 let S = null, refresh = () => {};
 let lobby = { caseId: '', plaintiffId: '', defendantId: '', standInSalt: Math.floor(Math.random() * 1000) };
 let ep = null, session = 0;
+// Summonses from friends (only when the social layer is on): what is in the
+// post, and the one being heard right now.
+let courtSocial = null, post = { cases: [], results: [], note: '' }, postToken = 0, hearing = null;
 let queue = [], onDone = null, current = null, typer = 0, onChoice = null;
 const timers = new Set();
 const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
@@ -46,6 +52,7 @@ function stopAll() {
 }
 function portrait(who) {
   if (who.kind === 'npc') return castSvg(who.art);
+  if (who.kind === 'guest') return hearing?.pet ? guestPortrait(hearing.pet) : '';
   const pet = S.pets.find(p => p.id === who.id);
   if (!pet) return '';
   const holder = document.createElement('span');
@@ -83,6 +90,7 @@ function showLobby() {
     '<div class="sc-titlecard"><div class="sc-logo"><small>Live from the shelf</small><b>SHELF COURT</b><em>Real residents. Real disputes. Real dead.</em></div><div class="sc-titlecard-judge">' + castSvg('judge') + '</div></div>' +
     (forUs ? '<p class="sc-adventure"><b>' + esc(adventure.episode.title) + '</b> · An episode starring our resident moves our adventure on.</p>' : '') +
     docketLine(docket, k) +
+    (courtSocial?.active() ? '<div data-sc-summons>' + summonsMarkup() + '</div>' : '') +
     '<section class="sc-tonight" aria-label="Tonight’s episode"><span class="sc-kicker">Tonight’s episode</span><h3>' + esc(k.title) + '</h3>' +
     '<div class="sc-vs"><figure><span class="sc-vs-art">' + portrait(preview.p) + '</span><figcaption><small>Plaintiff</small>' + esc(preview.p.name) + '</figcaption></figure><b>v.</b><figure><span class="sc-vs-art">' + portrait(preview.d) + '</span><figcaption><small>Defendant</small>' + esc(preview.d.name) + '</figcaption></figure></div>' +
     '<p class="sc-claim">' + esc(fill(preview, k.claim)) + '<br><small>Asking: ' + esc(fill(preview, k.asking)) + '</small></p>' +
@@ -93,6 +101,75 @@ function showLobby() {
     '<h3 class="sc-guide-title">Episode guide</h3><div class="sc-guide">' + cases.map(x => '<button type="button" class="sc-ep' + (x.id === lobby.caseId ? ' on' : '') + '" data-sc-case="' + x.id + '" aria-pressed="' + (x.id === lobby.caseId) + '"><span class="sc-ep-no">Ep. ' + x.number + '</span><b>' + esc(x.title) + '</b><span class="sc-ep-stars" aria-label="' + (x.aired ? x.stars + ' of 3 stars' : 'Unaired') + '">' + (x.aired ? stars(x.stars) : '<em>Unaired</em>') + '</span></button>').join('') + '</div>';
   open();
   $('.sc-roll')?.focus({ preventScroll: true });
+}
+
+/* ---------------- summonses from friends ---------------- */
+function summonsMarkup() {
+  if (!post.cases.length && !post.results.length && !post.note) return '';
+  return '<section class="sc-summons" aria-labelledby="scSummonsTitle"><h3 id="scSummonsTitle">Summonses</h3>' +
+    (post.note ? '<p class="sc-summons-note">' + esc(post.note) + '</p>' : '') +
+    post.results.map(r => '<p class="sc-verdict">' + esc(verdictLine(r)) + '</p>').join('') + post.cases.map(summonsCase).join('') + '</section>';
+}
+function summonsCase(c) {
+  const k = COURT_BY_ID[c.caseId], home = S.pets.find(p => p.id === c.defendant.id);
+  const problem = !k ? ' This edition does not know that case yet.' : !home ? ' ' + c.defendant.name + ' no longer lives here.' : '';
+  return '<div class="sc-summons-case"><p><b>' + esc(c.plaintiff.name) + '</b>, from ' + esc(c.fromName || 'a friend') + ', is suing <b>' + esc(home ? home.name : c.defendant.name) +
+    '</b> over ' + esc(k ? k.title : 'a mystery') + '.' + (problem ? '<span class="sc-summons-problem">' + esc(problem) + '</span>' : '') + '</p><div class="sc-actions">' +
+    (k && home ? '<button class="btn btn-primary btn-sm" type="button" data-sc-take="' + esc(c.id) + '">Take the case</button>' : '') +
+    '<button class="btn btn-ghost btn-sm" type="button" data-sc-decline="' + esc(c.id) + '">Decline</button></div></div>';
+}
+function renderSummons() {
+  const slot = !ep && sheet.querySelector('[data-sc-summons]');
+  if (slot) slot.innerHTML = summonsMarkup();
+}
+// Never in the way: the lobby is already up, and the post arrives when it arrives.
+async function fetchPost() {
+  if (!courtSocial?.active()) return;
+  const token = ++postToken;
+  try {
+    const box = await courtSocial.inbox();
+    if (token !== postToken) return;
+    post = { cases: box.cases, results: [...collectVerdicts(S, courtSocial, box.results), ...post.results.filter(r => !box.results.some(x => x.id === r.id))], note: '' };
+    if (post.results.some(r => r.souls)) refresh();
+  } catch (error) {
+    if (token !== postToken) return;
+    post = { ...post, note: error?.offline ? 'Offline. Any papers will keep.' : '' };
+  }
+  renderSummons();
+}
+function takeSummons(id) {
+  const c = post.cases.find(x => x.id === id), home = c && S.pets.find(p => p.id === c.defendant.id), pet = c && guestPet(c.plaintiff);
+  if (!c || !home || !pet || !COURT_BY_ID[c.caseId]) return;
+  stopAll();
+  hearing = { summons: c, pet };
+  ep = castEpisode(S, { caseId: c.caseId, defendantId: home.id, guest: { side: 'p', pet } });
+  if (ep) runEpisode(); else hearing = null;
+}
+async function declineSummons(id) {
+  const c = post.cases.find(x => x.id === id);
+  if (!c) return;
+  try {
+    await courtSocial.decline(id);
+    post.cases = post.cases.filter(x => x.id !== id);
+    post.note = 'Declined. ' + (c.fromName || 'Your friend') + ' is not told.';
+  } catch (error) { post.note = error?.offline ? 'Offline. Try again once you are back online.' : 'That did not go through. The papers are still here.'; }
+  renderSummons();
+  sheet.querySelector('[data-sc-summons] button, .sc-roll')?.focus({ preventScroll: true });
+}
+// After the wrap: the verdict goes back to whoever served the papers.
+async function deliverVerdict(h, res, ruling) {
+  const line = () => sheet.querySelector('[data-sc-verdict]');
+  const to = h.summons.fromName || 'your friend';
+  try {
+    await courtSocial.rule(h.summons.id, { verdict: ruling, stars: res.stars, ratings: res.ratings });
+    const souls = summonsReward(S, h.summons.id, 'heard');
+    post.cases = post.cases.filter(c => c.id !== h.summons.id);
+    save(); refresh();
+    if (line()) line().innerHTML = glyph('soul') + esc(souls ? '+' + souls + ' for hearing ' + to + '’s summons. The verdict is on its way.' : 'The verdict is on its way to ' + to + '. Summonses pay nothing more today.');
+  } catch (error) {
+    if (error?.code === 'not_open') post.cases = post.cases.filter(c => c.id !== h.summons.id);
+    if (line()) line().textContent = error?.code === 'not_open' ? 'Someone had already heard this one.' : 'The verdict did not reach ' + to + '. The papers stay in the lobby.';
+  }
 }
 
 /* ---------------- the studio ---------------- */
@@ -106,7 +183,7 @@ function studioMarkup() {
     '<span class="sc-applause">APPLAUSE</span><span class="sc-onair">ON AIR</span>' +
     '<span class="sc-bug"><b>SHELF COURT</b><i></i>LIVE</span>' +
     '<div class="sc-jury" data-actor="jury"><span class="sc-jury-label">Jury</span><div class="sc-seats">' + ep.jury.map(seat).join('') + '</div></div>' +
-    '<div class="sc-actor sc-judge" data-actor="judge">' + castSvg('judge') + '<span class="sc-gavel">' + COURT_PROPS.gavel + '</span></div>' +
+    '<div class="sc-actor sc-judge" data-actor="judge">' + castSvg('judge') + '</div>' +
     '<div class="sc-bench"><span>' + glyph('skull') + '</span></div>' +
     '<div class="sc-actor sc-bailiff" data-actor="bailiff">' + castSvg('rat') + '</div>' +
     '<div class="sc-actor sc-podium p" data-actor="p"><span class="sc-party">' + portrait(ep.p) + '</span><span class="sc-lectern"><small>Plaintiff</small><span>' + esc(ep.p.name) + '</span></span></div>' +
@@ -153,7 +230,7 @@ function nameFor(line) {
   if (line.s === 'npc') return COURT_CAST[line.who]?.name || 'A witness';
   if (line.s === 'p') return ep.p.name + ', plaintiff';
   if (line.s === 'd') return ep.d.name + ', defendant';
-  return ({ judge: 'Judge Mortis (you)', bailiff: 'Bailiff Rattigan', announcer: 'Announcer', audience: 'Studio audience', jury: 'The jury' })[line.s] || '';
+  return ({ judge: 'Judge Mortis (you)', bailiff: 'Bailiff Rattigan', announcer: 'Announcer', reporter: 'Hall cam reporter', audience: 'Studio audience', jury: 'The jury' })[line.s] || '';
 }
 function setSpeaker(who) {
   const st = stage(); if (!st) return;
@@ -181,7 +258,10 @@ function speak(line) {
   name.hidden = !name.textContent;
   if (line.s === 'npc') showWitness(line.who);
   setSpeaker(line.s);
-  $('[data-actor="' + line.s + '"]')?.classList.add('talking');
+  cue(line);
+  const hall = $('.sc-hall');
+  if (hall && (line.s === 'reporter' || line.s === 'p' || line.s === 'd')) aimHall(line.s === 'reporter' ? line.who : line.s);
+  (hall?.querySelector('[data-actor="' + line.s + '"]') || $('[data-actor="' + line.s + '"]'))?.classList.add('talking');
   let typed = 0;
   text.textContent = '';
   const full = line.t;
@@ -236,9 +316,46 @@ function shake(big = false) {
 }
 function gavel(word = 'ORDER!') {
   const judge = $('.sc-judge'); if (!judge) return;
-  judge.classList.remove('banging'); void judge.offsetWidth; judge.classList.add('banging');
-  later(() => { playStomp(); shake(); bubble(word, 'sc-bang'); }, 240);
+  judge.classList.remove('banging', 'jm-nogavel'); void judge.offsetWidth; judge.classList.add('banging');
+  // 240ms is when the gavel head meets the block in css/court.css (jm-swing).
+  later(() => { playStomp(); shake(); bubble(word, 'sc-bang'); react('bailiff', 'rb-jumped', 650); }, 240);
   later(() => judge?.classList.remove('banging'), 900);
+}
+
+/* ---------------- the judge and the bailiff ----------------
+   Both puppets react through classes on their actor that css/court.css
+   animates. One-shots clear themselves; a newer copy of the same reaction
+   restarts it rather than being cut short by the old timer. */
+const reactTimers = {};
+function react(actor, cls, ms) {
+  const el = $('.sc-' + actor); if (!el) return;
+  clearTimeout(reactTimers[cls]); timers.delete(reactTimers[cls]);
+  el.classList.remove(cls); void el.getBoundingClientRect(); el.classList.add(cls);
+  reactTimers[cls] = later(() => el.classList.remove(cls), ms);
+}
+const JUDGE_MOODS = { surprise: 1250, irked: 2600, sigh: 1850 };
+const judgeMood = mood => react('judge', 'jm-' + mood, JUDGE_MOODS[mood]);
+// How the bench takes each scene.
+const JUDGE_TAKES = { outburst: 'surprise', throw: 'surprise', jaw: 'surprise', moth: 'surprise', sleep: 'irked', heckle: 'irked', eat: 'irked', cat: 'irked', faint: 'sigh', applause: 'sigh' };
+const busyEffects = () => reduced() || document.body.dataset.effects === 'light';
+// When the bench speaks to the bailiff he salutes, and a question makes him
+// sweat until somebody else takes the floor. Shouting irritates the judge.
+function cue(line) {
+  const bailiff = $('.sc-bailiff');
+  if (line.s === 'judge' && /\bbailiff\b/i.test(line.t)) {
+    react('bailiff', 'rb-salute', 1500);
+    if (line.t.includes('?')) bailiff?.classList.add('rb-caught');
+  } else if (line.s !== 'bailiff') bailiff?.classList.remove('rb-caught');
+  if (line.s === 'judge' && (line.t.match(/\b[A-Z]{3,}\b/g) || []).length >= 2) judgeMood('irked');
+}
+// Business between lines: every so often the wig slides and gets shoved back.
+// Full effects only.
+function idle(tok) {
+  later(() => {
+    if (tok !== session || !stage()) return;
+    if (!busyEffects() && !$('.sc-judge.banging')) react('judge', 'jm-slip', 2700);
+    idle(tok);
+  }, 9000 + Math.random() * 9000);
 }
 function sting() {
   [392, 523.3, 659.3, 784].forEach((f, i) => later(() => playTone(f, { duration: 0.22, type: 'triangle', gain: 0.07 }), i * 130));
@@ -254,6 +371,7 @@ function podium(side) { return $('.sc-podium.' + side); }
 function happeningStart(h) {
   const st = stage(); if (!st) return;
   const heads = st.querySelectorAll('.sc-head');
+  if (JUDGE_TAKES[h.anim]) later(() => judgeMood(JUDGE_TAKES[h.anim]), h.anim === 'throw' ? 650 : h.anim === 'cat' ? 2000 : 0);
   switch (h.anim) {
     case 'outburst': podium(h.x)?.classList.add('sc-rant'); shake(true); playTone(150, { duration: 0.3, type: 'sawtooth', gain: 0.06 }); break;
     case 'sleep': $('.sc-seat[data-seat="' + ep.jury.indexOf(h.juror) + '"]')?.classList.add('asleep'); break;
@@ -264,9 +382,9 @@ function happeningStart(h) {
     case 'heckle': heads[5]?.classList.add('standing'); break;
     case 'faint': heads[2]?.classList.add('fainted'); heads[6]?.classList.add('fainted'); break;
     case 'dark': st.classList.add('sc-dark'); playTone(70, { duration: 0.4, type: 'sawtooth', gain: 0.05 }); break;
-    case 'cat': layer('sc-walker cat', castSvg('cat'), 3400); break;
+    case 'cat': layer('sc-walker cat', castSvg('cat'), 3400); later(() => $('.sc-judge')?.classList.add('jm-nogavel'), 1800); break;
     case 'applause': applause(3200); break;
-    case 'eat': $('.sc-bailiff')?.classList.add('chomping'); break;
+    case 'eat': $('.sc-bailiff')?.classList.add('chomping', 'rb-caught'); break;
     case 'jaw': layer('sc-jaw', COURT_PROPS.bone, 2200); break;
     case 'moth': layer('sc-walker moth', castSvg('moth'), 2600); break;
   }
@@ -275,9 +393,89 @@ function happeningEnd(h, choice) {
   const st = stage(); if (!st) return;
   podium('p')?.classList.remove('sc-rant'); podium('d')?.classList.remove('sc-rant');
   st.classList.remove('sc-dark');
-  $('.sc-bailiff')?.classList.remove('chomping');
+  $('.sc-bailiff')?.classList.remove('chomping', 'rb-caught');
+  $('.sc-judge')?.classList.remove('jm-nogavel');
   st.querySelectorAll('.sc-head.standing').forEach(el => el.classList.remove('standing'));
   if (h.anim === 'sleep' && choice === 'gavel') st.querySelectorAll('.sc-seat.asleep').forEach(el => el.classList.remove('asleep'));
+}
+
+/* ---------------- the hallway ----------------
+   After the ruling the show cuts to a hand-held camera in the corridor
+   outside Courtroom 1: its own set (art/court-hallway.js), the loser in the
+   foreground with a microphone in their face, and on some episodes the winner
+   strolling past behind them while the loser's eyes follow. The courtroom
+   stays underneath, hidden by the stage's .sc-hallway hook, until the cut
+   back. */
+const WALK_DELAY = 1600, WALK_MS = 6400;  // matches .sc-hall-track in css/court.css
+const lowerFirst = text => text ? text[0].toLowerCase() + text.slice(1) : '';
+function hallTitle(side) {
+  if (ep.ruling === 'both') return 'Declared an idiot, live on air';
+  const asking = lowerFirst(fill(ep, episodeCase(ep).asking));
+  return (side === 'd' ? 'Found liable. Owes ' : 'Lost. Wanted ') + asking;
+}
+function hallMarkup(losers, walker, boom) {
+  const loser = side => '<div class="sc-hall-loser ' + side + '" data-actor="' + side + '"><span class="sc-hall-art">' + portrait(ep[side]) + '</span></div>';
+  return '<div class="sc-hall' + (losers.length > 1 ? ' both' : '') + '" aria-hidden="true"><div class="sc-hall-cam">' + HALL_SET +
+    '<span class="sc-hall-onair">ON AIR</span><span class="sc-hall-plate">COURT 1</span>' +
+    '<span class="sc-hall-prop board">' + HALL_PROPS.noticeboard + '</span><span class="sc-hall-prop portrait">' + HALL_PROPS.portrait + '</span>' +
+    '<span class="sc-hall-prop bench">' + HALL_PROPS.bench + '</span><span class="sc-hall-prop vend">' + HALL_PROPS.vending + '</span>' +
+    (walker ? '<div class="sc-hall-track"><span class="sc-hall-walker"><span class="sc-hall-stride">' + portrait(walker) + '</span></span></div>' : '') +
+    '<span class="sc-hall-haze"></span>' + losers.map(loser).join('') +
+    (boom ? '<span class="sc-hall-prop boom">' + HALL_PROPS.boom + '</span>' : '') +
+    '<span class="sc-hall-prop mic" data-actor="reporter">' + HALL_PROPS.mic + '</span></div>' +
+    '<span class="sc-hall-vignette"></span><span class="sc-hall-vf"><i></i><i></i><i></i><i></i><b></b></span>' +
+    '<span class="sc-hall-rec"><i></i>REC</span><span class="sc-hall-label">HALL CAM 2</span><span class="sc-hall-tc" data-sc-tc></span><span class="sc-hall-batt"><i></i></span>' +
+    '<div class="sc-hall-lower"><b data-sc-hall-name></b><span data-sc-hall-title></span></div></div>';
+}
+function enterHallway(result) {
+  const st = stage(); if (!st || !result.losers?.length) return;
+  const tok = session;
+  const walker = result.winner && !reduced() && Math.random() < 0.65 ? ep[result.winner] : null;
+  st.insertAdjacentHTML('beforeend', hallMarkup(result.losers, walker, !busyEffects() && Math.random() < 0.6));
+  st.classList.add('sc-hallway');
+  aimHall(result.losers[0]);
+  timecode(tok);
+  if (walker) followWinner(tok);
+}
+function leaveHallway() {
+  const st = stage(); if (!st) return;
+  st.classList.remove('sc-hallway');
+  st.querySelector('.sc-hall')?.remove();
+}
+// Point the microphone and the lower third at one loser.
+function aimHall(side) {
+  const hall = $('.sc-hall');
+  if (!hall || !ep?.[side] || hall.dataset.aim === side) return;
+  hall.dataset.aim = side;
+  hall.querySelector('[data-sc-hall-name]').textContent = ep[side].name;
+  hall.querySelector('[data-sc-hall-title]').textContent = hallTitle(side);
+  const lower = hall.querySelector('.sc-hall-lower');
+  lower.classList.remove('in'); void lower.offsetWidth; lower.classList.add('in');
+}
+// A running timecode, hours:minutes:seconds:frames at 24 frames a second.
+function timecode(tok) {
+  const el = $('[data-sc-tc]'); if (!el) return;
+  const start = Date.now(), base = (60 * (12 + Math.floor(Math.random() * 40)) + Math.floor(Math.random() * 60)) * 24;
+  const two = n => String(n).padStart(2, '0');
+  const tick = () => {
+    if (tok !== session || !el.isConnected) return;
+    const f = base + Math.floor((Date.now() - start) * 24 / 1000);
+    el.textContent = two(Math.floor(f / 86400)) + ':' + two(Math.floor(f / 1440) % 60) + ':' + two(Math.floor(f / 24) % 60) + ':' + two(f % 24);
+    later(tick, reduced() ? 1000 : 125);
+  };
+  tick();
+}
+// The winner walks from the far end of the corridor to the near side; the
+// loser's eyes (and a little of their head) go with them.
+function followWinner(tok) {
+  const loser = $('.sc-hall-loser'); if (!loser) return;
+  for (let t = 0; t <= WALK_MS + 800; t += 400) {
+    later(() => {
+      if (tok !== session || !loser.isConnected) return;
+      const centre = 1.1 - 1.25 * Math.min(1, t / WALK_MS);
+      loser.style.setProperty('--gaze', t > WALK_MS ? '0' : Math.max(-2.4, Math.min(2.4, (centre - 0.5) * 5)).toFixed(2));
+    }, WALK_DELAY + t);
+  }
 }
 
 /* ---------------- the episode ---------------- */
@@ -285,6 +483,7 @@ async function runEpisode() {
   const tok = session;
   const alive = () => tok === session && !!ep;
   showStudio();
+  idle(tok);
   tvStatic(); sting();
   await wait(700); if (!alive()) return;
   applause(1600);
@@ -308,17 +507,22 @@ async function runEpisode() {
   const ruling = await chooseRuling(); if (!alive()) return;
   const result = episodeRule(ep, ruling);
   gavel(ruling === 'both' ? 'BOTH IDIOTS!' : 'JUDGMENT!');
+  if (ruling === 'both') later(() => judgeMood('sigh'), 950);
   await wait(700); if (!alive()) return;
   await play(result.ruling); if (!alive()) return;
   await juryVote(result); if (!alive()) return;
+  if (result.agree * 2 < ep.jury.length) judgeMood('irked');
   await play(result.jury); if (!alive()) return;
   meters();
   if (ep.ratings >= 50) applause(2200);
   await play([result.audience]); if (!alive()) return;
-  tvStatic(500);
-  stage()?.classList.add('sc-hallway');
-  await wait(450); if (!alive()) return;
+  // Cut to the hall cam under the static; the announcer talks over the cut.
+  tvStatic(700);
+  enterHallway(result);
   await play(result.hallway); if (!alive()) return;
+  tvStatic(500);
+  await wait(260); if (!alive()) return;
+  leaveHallway();
   finish();
 }
 async function runHappening(h) {
@@ -383,7 +587,7 @@ async function juryVote(result) {
 
 /* ---------------- wrap ---------------- */
 function finish() {
-  const res = courtFinish(S, ep, Date.now());
+  const res = courtFinish(S, ep, Date.now()), heard = ep.guest ? hearing : null;
   save();
   const k = episodeCase(ep);
   const truth = res.truth === 'plaintiff' ? ep.p.name + ' was right.' : res.truth === 'defendant' ? ep.d.name + ' was right.' : 'They were both idiots.';
@@ -397,10 +601,12 @@ function finish() {
     (res.docket ? '<li class="souls">' + glyph('soul') + '+' + res.docket.bonus + ' for today’s docket' + (res.docket.streak > 1 ? ' · ' + res.docket.streak + ' days in session' : '') + '</li>' : '') +
     (res.trust ? '<li class="good">' + esc(res.trust) + ' trusts you a little more</li>' : '') +
     (res.grudge ? '<li class="bad">' + esc(res.grudge) + ' will remember this</li>' : '') +
-    (res.firstAir ? '<li>Episode ' + (courtCases(S).findIndex(c => c.id === k.id) + 1) + ' aired · ' + res.aired + ' of ' + res.total + '</li>' : '') + '</ul>' +
+    (res.firstAir ? '<li>Episode ' + (courtCases(S).findIndex(c => c.id === k.id) + 1) + ' aired · ' + res.aired + ' of ' + res.total + '</li>' : '') +
+    (heard ? '<li class="souls" data-sc-verdict>Sending the verdict to ' + esc(heard.summons.fromName || 'your friend') + '.</li>' : '') + '</ul>' +
     (escapadeView(S).active?.ready ? '<div class="sc-actions"><button class="btn btn-primary" type="button" data-escapade="open">Our story’s ending ↗</button></div>' : '') +
     '<div class="sc-actions"><button class="btn btn-primary sc-next" type="button" data-sc="next" disabled>Next episode</button><button class="btn" type="button" data-sc="lobby">Episode guide</button><button class="btn btn-ghost" type="button" data-sc="close">Back to the shelf</button></div></div>';
   (res.stars >= 3 ? playAchievement : res.correct ? playStar : playError)();
+  if (heard) deliverVerdict(heard, res, ep.ruling);
   const next = controls.querySelector('.sc-next');
   later(() => { if (next?.isConnected) { next.disabled = false; next.focus({ preventScroll: true }); } }, 650);
   refresh();
@@ -408,9 +614,10 @@ function finish() {
 
 /* ---------------- wiring ---------------- */
 function open() { if (!veil.classList.contains('open')) veil.classList.add('open'); }
-function close() { stopAll(); ep = null; veil.classList.remove('open'); refresh(); }
+function close() { stopAll(); ep = null; hearing = null; veil.classList.remove('open'); refresh(); }
 function roll() {
   stopAll();
+  hearing = null;
   ep = castEpisode(S, lobby);
   if (ep) runEpisode();
 }
@@ -420,10 +627,11 @@ export function openCourt(residentId, caseId) {
   if (caseId && COURT_BY_ID[caseId]) lobby.caseId = caseId;
   defaultLobby(residentId);
   showLobby();
+  fetchPost();
 }
 
-export function initCourt(state, onRefresh) {
-  S = state; refresh = onRefresh || refresh;
+export function initCourt(state, onRefresh, { social } = {}) {
+  S = state; refresh = onRefresh || refresh; courtSocial = social || null;
   window.addEventListener('shelflife:court', e => openCourt(e.detail?.petId, e.detail?.caseId));
   sheet.addEventListener('change', e => {
     const key = e.target.dataset?.scCast;
@@ -434,6 +642,10 @@ export function initCourt(state, onRefresh) {
     showLobby();
   });
   sheet.addEventListener('click', e => {
+    const take = e.target.closest('[data-sc-take]');
+    if (take) { takeSummons(take.dataset.scTake); return; }
+    const decline = e.target.closest('[data-sc-decline]');
+    if (decline) { declineSummons(decline.dataset.scDecline); return; }
     const pickCase = e.target.closest('[data-sc-case]');
     if (pickCase) { lobby.caseId = pickCase.dataset.scCase; showLobby(); return; }
     const choice = e.target.closest('[data-sc-choice]');

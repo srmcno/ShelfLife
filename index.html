@@ -8,8 +8,9 @@
 <title>Shelf Life — small creatures, long memories</title>
 <meta name="description" content="Grow or draw peculiar little immortal pets. Feed them, survive their emergencies, collect cursed curios and read the complaints. A free, offline-friendly creature game.">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/life.css">
@@ -33,6 +34,7 @@
 <link rel="stylesheet" href="css/court.css">
 <link rel="stylesheet" href="css/atmosphere.css">
 <link rel="stylesheet" href="css/cloud.css">
+<link rel="stylesheet" href="css/social.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
@@ -227,6 +229,7 @@
     <button class="btn tray-item" id="recoveryBtn" hidden><span>Download recovery file</span><small>Your unreadable old save</small></button>
     <input type="file" id="importFile" accept=".json,.txt,application/json,text/plain" hidden>
   </div></section>
+  <p class="tray-legal"><a href="privacy.html" target="_blank" rel="noopener">Privacy</a><a href="delete-account.html" target="_blank" rel="noopener">Delete account</a></p>
 </div>
 
 <!-- ============================================================================
@@ -485,6 +488,8 @@
   </section>
   <p class="hint cloud-stored">Stored: this shelf (the same data as a backup file), your email if you add one, and when it was last saved. Nothing else.</p>
 </div></div>
+<!-- Friends: built by ui/friends.js, and only when cloud save is configured. -->
+<div class="veil" id="friendsVeil"><div class="sheet sheet-friends" id="friendsSheet"></div></div>
 <div class="veil" id="cardVeil"><div class="sheet sheet-card" id="cardSheet"></div></div>
 <div class="veil" id="postcardVeil">
   <div class="sheet sheet-postcard">

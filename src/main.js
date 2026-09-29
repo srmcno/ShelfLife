@@ -3,8 +3,9 @@ import { initWelcome } from './ui/welcome.js';
 import { initEscapades } from './ui/escapades.js';
 import { createBackup } from './backup.js';
 import { initBackupTransfer } from './ui/backup.js';
-import { cloud, sync, connectCloud } from './cloud/index.js';
+import { cloud, sync, social, connectCloud } from './cloud/index.js';
 import { initCloudUI } from './ui/cloud.js';
+import { initFriends } from './ui/friends.js';
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
@@ -41,10 +42,11 @@ import { nudgesAvailable, enableNudges, syncNudges } from './notify.js';
 import { openCard, closeCard, getOpenPetId } from './ui/card.js';
 import { initSoundNoteHook, isMuted, toggleMuted } from './audio/sound.js';
 import { initNarrator, initNarratorUI, isNarratorOn, toggleNarrator, stopSpeech } from './audio/narrator.js';
+import { isNative, initNative, saveFile, hideSplash } from './native.js';
 
 // ---------- studio (pet creation) ----------
 
-initDialogs({ onOpen: dismissToast });
+const dialogs = initDialogs({ onOpen: dismissToast });
 document.getElementById('genMotion').addEventListener('click', () => previewMotion(document.getElementById('genMount')));
 const studio = initStudio({
   // `art` arrives in one of the studio's two shapes — `{ creature }` from the
@@ -172,6 +174,14 @@ function offerDownload(text, name) {
   setTimeout(() => a.remove(), 1000);
 }
 window.addEventListener('pagehide', () => { downloadUrls.splice(0).forEach(u => URL.revokeObjectURL(u)); });
+// In the app a WebView cannot download, so a file goes to the share sheet
+// instead. Resolves true once it has been handed over.
+const SAVE_RESULTS = { cancelled: 'No copy made. The residents noticed.', failed: 'The copy could not be made. Try Move to another device.' };
+async function offerSave(text, name) {
+  const result = await saveFile({ name, data: text, title: 'My Shelf Life backup' });
+  if (SAVE_RESULTS[result]) toast(SAVE_RESULTS[result]);
+  return result === 'shared';
+}
 
 // "1 pets and 1 pieces of furniture" is the kind of sentence that makes a player
 // trust the rest of the screen slightly less. Counts get their own noun.
@@ -191,7 +201,7 @@ function syncBackupBanner() {
   if (text) {
     text.textContent = state.lastBackup
       ? 'It has been a while since you took a copy of this shelf. They cannot be re-drawn.'
-      : countOf(state.pets.length, 'resident') + ' live only in this browser. Clearing site data ends them.';
+      : countOf(state.pets.length, 'resident') + (isNative() ? ' live only on this phone. Uninstalling the app ends them.' : ' live only in this browser. Clearing site data ends them.');
   }
 }
 document.getElementById('backupNow')?.addEventListener('click', () => {
@@ -210,8 +220,10 @@ function markBackup(created) {
   save();
   syncBackupBanner();
 }
-document.getElementById('exportBtn').addEventListener('click', () => {
+if (isNative()) document.querySelector('#exportBtn small').textContent = 'Save or send a copy';
+document.getElementById('exportBtn').addEventListener('click', async () => {
   const backup = createBackup(state);
+  if (isNative()) { if (await offerSave(backup.text, backup.name)) markBackup(backup.created); return; }
   offerDownload(backup.text, backup.name);
   markBackup(backup.created);
 });
@@ -257,6 +269,7 @@ const CLOUD_ARRIVALS = {
   undo: 'Swapped back. Everyone is pretending nothing happened.'
 };
 cloudUI = initCloudUI({ cloud, sync, getState: () => state, onChange: () => syncBackupBanner() });
+initFriends({ state, cloud, sync, social, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
 connectCloud({
   applyRemote: (next, { reason } = {}) => {
     applyRestoredState(next);
@@ -269,8 +282,11 @@ connectCloud({
 const recoveryBtn = document.getElementById('recoveryBtn');
 recoveryBtn.hidden = !Store.get(RECOVERY_KEY);
 document.getElementById('recoveryWarn').hidden = !loadFailed;
-recoveryBtn.addEventListener('click', () => offerDownload(Store.get(RECOVERY_KEY), 'shelf-life-recovery.json'));
+recoveryBtn.addEventListener('click', () => (isNative() ? offerSave : offerDownload)(Store.get(RECOVERY_KEY), 'shelf-life-recovery.json'));
 const importFile = document.getElementById('importFile');
+// Android's file picker filters by the type another app recorded, and a backup
+// saved from an email is often just "a file". Restore checks the contents anyway.
+if (isNative()) importFile.removeAttribute('accept');
 document.getElementById('importBtn').addEventListener('click', () => importFile.click());
 importFile.addEventListener('change', e => {
   const file = e.target.files[0];
@@ -403,8 +419,8 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 // ---------- wire the remaining self-contained widgets ----------
 
 initMayhem(state, () => renderAll(state));
-initArcade(state, () => renderAll(state));
-initCourt(state, () => renderAll(state));
+initArcade(state, () => renderAll(state), { social });
+initCourt(state, () => renderAll(state), { social });
 initSchemeUI(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
 initWelcome(state, () => renderAll(state));
@@ -506,8 +522,8 @@ setInterval(() => {
 }, 30000);
 
 // Catch up immediately after waking a sleeping phone or returning to the tab.
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { lifeState(state).lastSeen = Date.now(); save(); stopSpeech(); syncNudges(state); return; }
+function goingAway() { lifeState(state).lastSeen = Date.now(); save(); stopSpeech(); syncNudges(state); }
+function comingBack() {
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
@@ -515,14 +531,25 @@ document.addEventListener('visibilitychange', () => {
   welcomeBack(state);
   renderAll(state);
   if (!document.querySelector('.veil.open')) announceMayhem(newTrouble);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { goingAway(); return; }
+  comingBack();
 });
 window.addEventListener('pagehide', () => { lifeState(state).lastSeen = Date.now(); save(); syncNudges(state); });
+// The installed app's own pause and resume (src/native.js); never fired on the web.
+window.addEventListener('shelflife:pause', goingAway);
+window.addEventListener('shelflife:resume', comingBack);
+initNative({ closeSheet: dialogs.closeActive, save: () => { lifeState(state).lastSeen = Date.now(); save(); } });
+hideSplash();
 
 // ---------- service worker ----------
 // Without this the manifest still makes the game "installable", but there is no
 // offline support and no caching at all — service-worker.js was dead code.
 // Registered last so a failure here can never block the game from booting.
-if ('serviceWorker' in navigator) {
+// The installed app ships its own files and updates through the store, so it
+// has no worker and never offers "Save & refresh".
+if ('serviceWorker' in navigator && !isNative()) {
   // Listen from the first moment: a fresh worker can finish installing before
   // this page's own load event, and a controllerchange with nobody listening
   // is an update the player is never told about.

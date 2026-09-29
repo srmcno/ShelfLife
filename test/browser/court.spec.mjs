@@ -43,12 +43,22 @@ async function noHorizontalOverflow(page) {
 // is quick and never lands on the wrong button; every choice is a real
 // click. Questions: always the first on offer. Chaos: the gavel. The
 // ruling: whatever `ruling` says.
-async function playEpisode(page, ruling, seen = {}) {
+async function playEpisode(page, ruling, seen = {}, { stopAtHall = false } = {}) {
   for (let turn = 0; turn < 40; turn++) {
-    const state = await page.evaluate(async () => {
+    const state = await page.evaluate(async stopAtHall => {
       const sheet = document.getElementById('courtSheet');
+      let hall = null;
       for (let n = 0; n < 600; n++) {
-        if (sheet.querySelector('.sc-wrap')) return { wrap: true };
+        // The hall cam: its own set over the studio, with the loser in front.
+        const set = sheet.querySelector('.sc-stage.sc-hallway .sc-hall');
+        if (set) {
+          hall ||= { losers: set.querySelectorAll('.sc-hall-loser').length, hidden: set.getAttribute('aria-hidden'), name: '', reporter: false, overflow: 0, studioHidden: getComputedStyle(sheet.querySelector('.sc-bench')).visibility === 'hidden' };
+          hall.name ||= set.querySelector('[data-sc-hall-name]')?.textContent || '';
+          hall.reporter ||= sheet.querySelector('[data-sc-name]')?.textContent === 'Hall cam reporter';
+          hall.overflow = Math.max(hall.overflow, sheet.scrollWidth - sheet.clientWidth);
+          if (stopAtHall) return { atHall: true };
+        }
+        if (sheet.querySelector('.sc-wrap')) return { wrap: true, hall, back: !sheet.querySelector('.sc-hall, .sc-hallway') };
         const controls = sheet.querySelector('[data-sc-controls]:not([hidden])');
         const choices = controls ? [...controls.querySelectorAll('[data-sc-choice]')].map(b => b.dataset.scChoice) : [];
         if (choices.length) return { choices };
@@ -56,8 +66,9 @@ async function playEpisode(page, ruling, seen = {}) {
         await new Promise(resolve => setTimeout(resolve, 25));
       }
       return {};
-    });
-    if (state.wrap) return;
+    }, stopAtHall);
+    if (state.atHall) return;
+    if (state.wrap) { seen.hall = state.hall; seen.backInStudio = state.back; return; }
     if (!state.choices) continue;
     let value;
     if (state.choices.includes(ruling)) { value = ruling; seen.ruling = true; await noHorizontalOverflow(page); }
@@ -84,6 +95,11 @@ test('a whole episode of Shelf Court: questions, a ruling, a jury vote and a wra
   await playEpisode(page, k.truth, seen);
   expect(seen.questions).toBe(3);
   expect(seen.ruling).toBe(true);
+  // After the ruling the show cut to the hallway set and back again.
+  expect(seen.hall).toMatchObject({ losers: 1, hidden: 'true', reporter: true, studioHidden: true });
+  expect(snapshot.pets.map(p => p.name)).toContain(seen.hall.name);
+  expect(seen.hall.overflow).toBeLessThanOrEqual(1);
+  expect(seen.backInStudio).toBe(true);
   await expect(page.locator('#courtSheet .sc-seat.agree, #courtSheet .sc-seat.disagree')).toHaveCount(6);
   await expect(page.locator('#courtSheet .sc-wrap h3')).toHaveText('Justice, allegedly, was served');
   await expect(page.locator('#courtSheet .sc-wrap')).toContainText('souls');
@@ -109,7 +125,15 @@ test('the wrong ruling goes out live and the wronged resident holds a grudge', a
   const k = COURT_CASES.find(c => c.truth === 'plaintiff');
   await page.locator('#courtSheet [data-sc-case="' + k.id + '"]').click();
   await page.locator('#courtSheet [data-sc="roll"]').click();
-  await playEpisode(page, 'defendant');
+  await playEpisode(page, 'defendant', {}, { stopAtHall: true });
+  // The hallway advances from the keyboard like the rest of the show.
+  await expect(page.locator('#courtSheet .sc-stage.sc-hallway .sc-hall-loser.p')).toHaveCount(1);
+  for (let i = 0; i < 12 && !(await page.locator('#courtSheet .sc-wrap').count()); i++) {
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(250);
+  }
+  await expect(page.locator('#courtSheet .sc-wrap')).toBeVisible();
+  await expect(page.locator('#courtSheet .sc-hall')).toHaveCount(0);
   await expect(page.locator('#courtSheet .sc-wrap h3')).toHaveText('You got it wrong, live on air');
   await expect(page.locator('#courtSheet .sc-wrap .bad')).toContainText('will remember this');
   const after = await saved(page);
