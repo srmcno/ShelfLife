@@ -400,10 +400,12 @@ export function createSocial({ cloud, getState = () => null, now = Date.now } = 
   async function rule(id, { verdict, stars, ratings }) {
     if (!VERDICTS.includes(verdict)) throw refuse('bad_verdict');
     await call('rule_summons', { p_id: user(id), p_verdict: verdict, p_stars: count(stars, 3), p_ratings: count(ratings, 100) });
-    return true;
+    return handled();
   }
-  const decline = async id => { await call('decline_summons', { p_id: user(id) }); return true; };
-  const seen = async id => { const r = await call('mark_summons_seen', { p_id: user(id) }); return r?.ok === true; };
+  const decline = async id => { await call('decline_summons', { p_id: user(id) }); return handled(); };
+  const seen = async id => { const r = await call('mark_summons_seen', { p_id: user(id) }); handled(); return r?.ok === true; };
+  // One fewer thing waiting, until the next look at the inbox says otherwise.
+  function handled() { cloud.setMeta({ inboxCount: Math.max(0, inboxCount() - 1) }); emit(); return true; }
   async function inbox() {
     const box = readInbox(await call('inbox', {}));
     cloud.setMeta({ inboxCount: box.cases.length + box.results.length });

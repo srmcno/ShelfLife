@@ -11,8 +11,9 @@ import { PLAY_URL } from '../backup.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { RANKS } from '../content/mayhem.js';
 import { COURT_CASES } from '../content/court.js';
-import { COURT_BY_ID, docketToday } from '../engine/court.js';
+import { COURT_BY_ID, docketToday, summonsReward } from '../engine/court.js';
 import { renderPetSprite } from '../art/sprite.js';
+import { save } from '../state.js';
 import { timeAgo } from './cloud.js';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -30,6 +31,25 @@ export function guestSprite(resident) {
   if (!pet || pet.artMissing) holder.innerHTML = MISSING_ART;
   else holder.appendChild(renderPetSprite(pet));
   return holder;
+}
+
+export const guestPortrait = pet => guestSprite(pet).innerHTML;
+
+// What became of papers we served, as one plain sentence. Callers escape it.
+export function verdictLine(r) {
+  const title = COURT_BY_ID[r.caseId]?.title || 'a case this edition does not know';
+  const judge = r.toName || 'Your friend', p = r.plaintiff.name, d = r.defendant.name;
+  const found = r.verdict === 'both' ? judge + ' declared ' + p + ' and ' + d + ' both idiots in ' + title + '.'
+    : judge + ' found for ' + (r.verdict === 'plaintiff' ? p : d) + ' in ' + title + '.';
+  return found + ' ' + r.stars + (r.stars === 1 ? ' star' : ' stars') + ', ratings ' + r.ratings + '.' + (r.souls ? ' +' + r.souls + ' souls for the news.' : '');
+}
+// Pays for each verdict once (engine/court.js keeps count) and tells the
+// server it has been seen. Friends and the Court both show them this way.
+export function collectVerdicts(state, social, results, now = Date.now()) {
+  const out = results.map(r => ({ ...r, souls: summonsReward(state, r.id, 'verdict', now) }));
+  if (out.some(r => r.souls)) save();
+  for (const r of results) social.seen(r.id).catch(() => { /* shown again next time, never paid twice */ });
+  return out;
 }
 
 /* ---------------- markup (pure, so it can be checked without a page) ---------------- */
@@ -69,7 +89,7 @@ export function residentCard(r) {
 }
 
 /* ---------------- the sheet ---------------- */
-export function initFriends({ state, cloud, sync, social, openCloud = () => {} }) {
+export function initFriends({ state, cloud, sync, social, openCloud = () => {}, onRefresh = () => {} }) {
   if (!cloud?.configured || !social) return null;
   const $ = id => document.getElementById(id);
   const veil = $('friendsVeil'), sheet = $('friendsSheet');
@@ -85,7 +105,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {} }
 
   let view = 'main', message = '', busy = false, menuFor = '', confirm = null;
   let me = { code: '', name: '' }, friends = [], loaded = false, waiting = 0;
-  let visiting = null, serving = null, title = ['Friends', ''], drafts = {};
+  let visiting = null, serving = null, title = ['Friends', ''], drafts = {}, verdicts = [];
   // Built once: the head stays a direct child of the sheet (it sticks on
   // phones) and the status line stays put, so screen readers hear each change.
   sheet.innerHTML = '<div class="sheet-head"><div><span class="eyebrow" data-fr-kicker></span><h2 data-fr-title tabindex="-1">Friends</h2></div><button class="btn btn-ghost btn-sm" type="button" data-fr="close">Close</button></div>' +
@@ -115,6 +135,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {} }
       (share ? '<button class="btn" type="button" data-fr="share"' + (me.code ? '' : ' disabled') + '>Share</button>' : '') + '</div>' +
       '<form class="fr-form" data-fr-form="name"><label class="fr-label" for="frName">Your name, as friends see it</label><div class="fr-row"><input class="fr-input" id="frName" maxlength="24" autocomplete="nickname" value="' + esc(drafts.frName ?? me.name) + '" placeholder="Leave blank to go by your code"><button class="btn" type="submit">Save name</button></div></form></section>' +
       '<form class="fr-form fr-add" data-fr-form="add"><label class="fr-label" for="frAdd">Add a friend by code</label><div class="fr-row"><input class="fr-input fr-code-input" id="frAdd" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD EFGH" value="' + esc(drafts.frAdd || '') + '"><button class="btn btn-primary" type="submit">Add</button></div></form>' +
+      (verdicts.length ? '<section aria-labelledby="frVerdictsTitle"><h3 id="frVerdictsTitle">Verdicts</h3><ul class="fr-verdicts">' + verdicts.map(v => '<li>' + esc(verdictLine(v)) + '</li>').join('') + '</ul></section>' : '') +
       (waiting ? '<p class="fr-inbox"><b>' + waiting + (waiting === 1 ? ' set of papers waits' : ' sets of papers wait') + ' for you in Shelf Court.</b> <button class="btn btn-sm" type="button" data-fr="court">Open Shelf Court</button></p>' : '') +
       (incoming.length ? '<section aria-labelledby="frRequestsTitle"><h3 id="frRequestsTitle">Requests</h3><ul class="fr-list">' + incoming.map(f => requestRow(f, { confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul></section>' : '') +
       '<section aria-labelledby="frListTitle"><h3 id="frListTitle">Friends' + (list.length ? ' <small>' + list.length + '</small>' : '') + '</h3>' +
@@ -176,13 +197,15 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {} }
   async function reload() {
     const [list, box] = await Promise.all([social.friends(), social.inbox()]);
     friends = list; waiting = box.cases.length; loaded = true;
+    const fresh = collectVerdicts(state, social, box.results).filter(v => !verdicts.some(x => x.id === v.id));
+    if (fresh.length) { verdicts = [...fresh, ...verdicts]; onRefresh(); }
     return box;
   }
 
   async function open() {
     if (!social.signedIn()) { openCloud(); return; }
     social.optIn();
-    view = 'main'; message = ''; menuFor = ''; confirm = null; visiting = serving = null;
+    view = 'main'; message = ''; menuFor = ''; confirm = null; visiting = serving = null; verdicts = [];
     veil.classList.add('open');
     render();
     await act(async () => {

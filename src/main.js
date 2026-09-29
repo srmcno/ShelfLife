@@ -258,7 +258,7 @@ const CLOUD_ARRIVALS = {
   undo: 'Swapped back. Everyone is pretending nothing happened.'
 };
 cloudUI = initCloudUI({ cloud, sync, getState: () => state, onChange: () => syncBackupBanner() });
-initFriends({ state, cloud, sync, social, openCloud: () => cloudUI?.open() });
+initFriends({ state, cloud, sync, social, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
 connectCloud({
   applyRemote: (next, { reason } = {}) => {
     applyRestoredState(next);
@@ -405,8 +405,8 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 // ---------- wire the remaining self-contained widgets ----------
 
 initMayhem(state, () => renderAll(state));
-initArcade(state, () => renderAll(state));
-initCourt(state, () => renderAll(state));
+initArcade(state, () => renderAll(state), { social });
+initCourt(state, () => renderAll(state), { social });
 initSchemeUI(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
 initWelcome(state, () => renderAll(state));

@@ -1,9 +1,14 @@
 import { COURT_CASES } from './content/court.js';
 
 // Shelf Court records: episodes aired, correct rulings, and the best star
-// rating per case. Bounded and validated.
+// rating per case. Bounded and validated. The summons fields count today's
+// rewarded summonses and remember which ones have already paid.
 const CASE_IDS = new Set(COURT_CASES.map(c => c.id));
-export function blankCourtroom() { return { episodes: 0, justice: 0, best: {}, last: '', docketDay: '', docketStreak: 0, docketLastDay: '' }; }
+export const SUMMONS_REMEMBERED = 40;
+const SUMMONS_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export function blankCourtroom() {
+  return { episodes: 0, justice: 0, best: {}, last: '', docketDay: '', docketStreak: 0, docketLastDay: '', summonsDay: '', summonsHeard: 0, summonsVerdicts: 0, summonsPaid: [] };
+}
 export function courtroomState(state) {
   const c = state.courtroom && typeof state.courtroom === 'object' && !Array.isArray(state.courtroom) ? state.courtroom : blankCourtroom();
   c.best = c.best && typeof c.best === 'object' && !Array.isArray(c.best) ? c.best : {};
@@ -12,6 +17,10 @@ export function courtroomState(state) {
   if (typeof c.docketDay !== 'string') c.docketDay = '';
   if (!Number.isFinite(c.docketStreak)) c.docketStreak = 0;
   if (typeof c.docketLastDay !== 'string') c.docketLastDay = '';
+  if (typeof c.summonsDay !== 'string') c.summonsDay = '';
+  if (!Number.isFinite(c.summonsHeard)) c.summonsHeard = 0;
+  if (!Number.isFinite(c.summonsVerdicts)) c.summonsVerdicts = 0;
+  if (!Array.isArray(c.summonsPaid)) c.summonsPaid = [];
   state.courtroom = c;
   return c;
 }
@@ -30,5 +39,9 @@ export function normalizeCourtroom(raw) {
   out.docketDay = dayKey(raw.docketDay);
   out.docketLastDay = dayKey(raw.docketLastDay);
   out.docketStreak = count(raw.docketStreak);
+  out.summonsDay = dayKey(raw.summonsDay);
+  out.summonsHeard = Math.min(count(raw.summonsHeard), 99);
+  out.summonsVerdicts = Math.min(count(raw.summonsVerdicts), 99);
+  if (Array.isArray(raw.summonsPaid)) out.summonsPaid = [...new Set(raw.summonsPaid.filter(id => typeof id === 'string' && SUMMONS_ID.test(id)))].slice(-SUMMONS_REMEMBERED);
   return out;
 }

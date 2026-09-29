@@ -10,10 +10,10 @@ function memory() {
   return { getItem: k => items.get(k) ?? null, setItem: (k, v) => items.set(k, String(v)), removeItem: k => items.delete(k) };
 }
 
-export async function socialPlayer(fake, name, shelf = { pets: [] }, { social: optIn = true } = {}) {
-  const cloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory() });
+export async function socialPlayer(fake, name, shelf = { pets: [] }, { social: optIn = true, now = Date.now } = {}) {
+  const cloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory(), now });
   await cloud.signInAnonymously();
-  const social = createSocial({ cloud, getState: () => shelf });
+  const social = createSocial({ cloud, getState: () => shelf, now });
   // A player the page will become has not opened Friends anywhere yet.
   if (!optIn) return { cloud, social, shelf, name, code: '', id: cloud.userId(), session: cloud.session() };
   social.optIn();
