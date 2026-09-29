@@ -1,6 +1,6 @@
 # Shelf Life
 
-**[Play Shelf Life](https://srmcno.github.io/ShelfLife/)** · [Report a problem](https://github.com/srmcno/ShelfLife/issues/new/choose)
+**[Play Shelf Life](https://srmcno.github.io/ShelfLife/)** · [Report a problem](https://github.com/srmcno/ShelfLife/issues/new/choose) · [Privacy](https://srmcno.github.io/ShelfLife/privacy.html) · [Delete your account](https://srmcno.github.io/ShelfLife/delete-account.html)
 
 Small creatures. Long memories. A free, darkly comic creature game for phones and desktops.
 Make peculiar residents, look after them, play together and collect the evidence of a small life.
@@ -175,6 +175,9 @@ save**. Guest play is unchanged, and offline the game carries on and catches up 
   browser under `shelflife.cloud`, never inside the save or its backups.
 - **Sign out of this device** stops the copying and keeps the shelf. **Delete my cloud data and account**
   removes the cloud copy and the account from the server; the shelf on this device stays.
+- [privacy.html](privacy.html) says what is stored and where. [delete-account.html](delete-account.html) explains
+  deletion without the app and, when cloud save is set up, signs in with a code and deletes the account itself.
+  Both are published with the site and linked from More.
 
 After the first visit, the installed game also works offline. Returning players receive a
 **Save & refresh** banner when a new edition is available. An active interaction or failed save

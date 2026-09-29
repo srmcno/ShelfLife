@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0812">
+<meta name="color-scheme" content="dark">
+<title>Privacy · Shelf Life</title>
+<meta name="description" content="What Shelf Life keeps on your device, what reaches a server only if you turn on cloud save, and how to delete it.">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+<main>
+  <a class="wordmark" href="./">Shelf<em>Life</em></a>
+  <h1>Privacy</h1>
+  <p class="dated">Last changed 29 September 2026. This covers the game on the web and the Android app.</p>
+
+  <div class="card short">
+    <p class="lede">Your household lives on your device. Nothing goes to a server unless you turn on cloud save.</p>
+    <p>No ads. No analytics. No third-party trackers. Nothing is sold, rented or swapped, including you.</p>
+  </div>
+
+  <h2>What stays on your device</h2>
+  <p>The household: residents, drawings, notes, keepsakes, progress and settings. The browser keeps it in its
+    local storage (under <code>shelflife.v4</code>); the Android app keeps it in its own storage. It does not
+    leave the device unless you send it somewhere: a backup file, a postcard or cloud save. Backups and
+    postcards go only where you send them.</p>
+  <p>Clearing the site's data, or uninstalling the app, removes it. If Android's own backup is switched on,
+    your phone may include the app's storage in the backup it keeps in your Google account. That is between
+    you and Google; we never see it.</p>
+
+  <h2>What reaches a server, if you turn on cloud save</h2>
+  <p>Cloud save is off until you choose <strong>More → Cloud save → Turn on cloud save</strong>. Guest play
+    never needs an account. With it on, these are stored:</p>
+  <ul>
+    <li><strong>The save.</strong> The same data as a backup file, so your shelf can follow you to another
+      device.</li>
+    <li><strong>Your email address</strong>, only if you add one. It is used to send the 6 digit sign-in code
+      and for nothing else. There are no passwords.</li>
+    <li><strong>A random device id</strong>, such as <code>android-k2x9q4mz</code>, so the game can tell your own
+      devices apart. It is made up by the game, not read from your phone.</li>
+    <li><strong>An account id, a friend code and the name you choose</strong>, plus when the save was last
+      written.</li>
+  </ul>
+  <h3>Friends</h3>
+  <p>If you use the friend features, the server also keeps:</p>
+  <ul>
+    <li><strong>Friend codes and friend lists.</strong> Nobody is added without accepting.</li>
+    <li><strong>Shelf snapshots</strong>, shared only with friends you have accepted.</li>
+    <li><strong>Shelf Court summonses</strong> sent between friends.</li>
+    <li><strong>Daily arcade scores.</strong> The names beside them are visible only to your friends.</li>
+  </ul>
+  <p>There are no public profiles, no chat and no strangers. Other players see nothing of yours unless you
+    have accepted them as a friend.</p>
+  <h3>Who holds it</h3>
+  <p>Cloud save runs on <a href="https://supabase.com" rel="noopener">Supabase</a>, which stores the data and
+    sends the sign-in emails on our behalf, and handles them only to provide that service. The sign-in
+    session stays on your device under <code>shelflife.cloud</code>, never inside the save or its backups.</p>
+
+  <h2>What we do not do</h2>
+  <ul>
+    <li>No advertising, and no advertising identifiers.</li>
+    <li>No analytics, crash reporting services or tracking pixels.</li>
+    <li>No third-party trackers or SDKs of any kind. The fonts ship with the game.</li>
+    <li>No selling or sharing of data, for marketing or anything else.</li>
+    <li>No location, contacts, photos, camera or microphone.</li>
+  </ul>
+
+  <h2>Notifications and the narrator</h2>
+  <p><strong>Nudges</strong> in the Android app are local notifications. The phone schedules them from what the
+    game already knows; there is no push server and nothing is sent anywhere. They stay off until you switch
+    them on.</p>
+  <p><strong>The narrator</strong> uses your device's own voices. Some browsers also offer online voices that
+    send the text to the browser's maker to be spoken; the voice list marks those as online.</p>
+
+  <h2>Children</h2>
+  <p>Shelf Life is meant for players aged 13 and over. It is darkly comic: cartoon peril, curses and a great
+    many funerals. We do not knowingly collect anything from children under 13, and cloud save is not for
+    them. If a child under 13 has made an account, ask us and we will delete it.</p>
+
+  <h2>Keeping and deleting</h2>
+  <p>Cloud data is kept while the account exists. You can delete it at any time, with or without the app:
+    see <a href="delete-account.html">delete your account</a>. That removes the account, your email, the
+    cloud save, the device id, your friend code and name, friend links, shared snapshots, summonses and
+    scores. Copies in the provider's routine backups expire on its normal schedule. The household on your
+    device is left alone.</p>
+  <p>To see the cloud save itself, choose <strong>More → Back up</strong>: the file holds the same data.</p>
+
+  <h2>Questions</h2>
+  <p>Ask through the <a href="https://github.com/srmcno/ShelfLife/issues/new/choose" rel="noopener">issue form</a>.
+    Issues are public, so please do not post your email address there. Say you need a private word and we
+    will arrange one.</p>
+  <p>If this page changes, the date at the top will too.</p>
+
+  <footer><a href="./">Back to the shelf</a> · <a href="delete-account.html">Delete your account</a></footer>
+</main>
+</body>
+</html>

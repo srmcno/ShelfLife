@@ -1,0 +1,49 @@
+/* The plain pages beside the game: privacy.html and delete-account.html.
+   The same dark room, without the furniture. */
+:root{
+  --night:#0B0812; --panel:#1A1220; --panel-hi:#241830;
+  --ink:#F2E9DC; --ink-2:#C9BCAE; --ink-3:#9A8F84;
+  --key:#F2C083; --mint:#7FD8C0; --danger:#FF8A96;
+  --line:rgba(242,233,220,.14);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100dvh;color:var(--ink);
+  background:radial-gradient(70% 38% at 50% 0%,rgba(242,192,131,.13),transparent 72%),var(--night);
+  font:16px/1.6 'Karla',system-ui,-apple-system,'Segoe UI',sans-serif;
+  padding:max(22px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(44px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
+}
+main{max-width:680px;margin:0 auto}
+.wordmark{font:400 26px/1 'Gloock',Georgia,'Times New Roman',serif;color:var(--ink);text-decoration:none}
+.wordmark em{font-style:normal;color:var(--key);margin-left:.18em}
+h1{font:400 clamp(34px,8vw,50px)/1.08 'Gloock',Georgia,serif;margin:30px 0 8px;letter-spacing:-.01em}
+h2{font:400 23px/1.25 'Gloock',Georgia,serif;margin:38px 0 8px;color:var(--key)}
+h3{font:700 13px/1.4 'Karla',system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--mint);margin:22px 0 6px}
+.dated{color:var(--ink-3);font-size:14px;margin:0 0 22px}
+.lede{font-size:19px;line-height:1.55;color:var(--ink)}
+p,li,dd{color:var(--ink-2)}
+strong,b,dt{color:var(--ink)}
+a{color:var(--mint);text-underline-offset:3px}
+a:hover,a:focus-visible{color:var(--ink)}
+ul,ol{padding-left:22px}
+li{margin:7px 0}
+code{font-size:.92em;background:rgba(242,233,220,.08);padding:1px 6px;border-radius:5px;color:var(--ink)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px 18px;margin:18px 0}
+.card.short p{margin:12px 0}
+footer{margin-top:52px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:14px}
+footer a{color:var(--ink-2)}
+/* the delete form */
+form{margin:14px 0}
+label{display:block;font-weight:700;color:var(--ink);margin:0 0 6px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+input{flex:1 1 220px;min-width:0;font:inherit;color:var(--ink);background:var(--night);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+input:focus-visible,button:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+button{font:700 15px/1 'Karla',system-ui,sans-serif;color:#1A0A11;background:var(--key);border:0;border-radius:10px;padding:12px 16px;cursor:pointer}
+button[disabled]{opacity:.55;cursor:default}
+button.danger{background:var(--danger)}
+button.quiet{background:transparent;color:var(--ink-2);border:1px solid var(--line)}
+.status{min-height:1.6em;color:var(--ink);font-weight:600}
+[hidden]{display:none !important}
+@media (prefers-reduced-motion:no-preference){a,button{transition:color .15s,background-color .15s}}
