@@ -219,6 +219,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
 | `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js` | Shelf Court: cases, episode state machine, TV studio stage and the drawn cast |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
+| `src/native.js`, `capacitor.config.json`, `android/` | The Android app: native glue, Capacitor settings and the native project |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
 | `src/art/` | Creature/drawing data, SVG rendering, animation and the studio |
@@ -239,6 +240,25 @@ The Play Store edition wraps the same web build in [Capacitor 8](https://capacit
 native project Capacitor generated; it is committed, and `npx cap sync` only rewrites its generated files
 (`capacitor.build.gradle`, `capacitor.settings.gradle` and the copied web assets). The web game has no
 Capacitor imports: the npm packages exist only for the native project.
+
+`src/native.js` is the only native glue. It does nothing unless `Capacitor.isNativePlatform()` is true, and it
+reaches plugins through `window.Capacitor.Plugins`, which the native bridge provides. In the app:
+
+- **Back up**, **Move to another device** and postcards are written to the app's cache and handed to the
+  Android share sheet (Drive, Files, email and so on). No storage permission is needed. **Restore** uses the
+  system file picker.
+- The narrator reads through the phone's text-to-speech engine, preferring British English. With no engine,
+  its buttons are hidden.
+- The Back key closes the open sheet, then minimises the game after saving. Pausing the app saves, stops
+  the narrator and pauses an arcade run, as hiding a browser tab does.
+- There is no service worker and no **Save & refresh**: updates come from the store.
+- Other sites, and the privacy and account pages, open in a browser tab over the game rather than replacing it.
+- The status and gesture bars are drawn over the room; the SystemBars plugin supplies the insets as the
+  `--safe-area-inset-*` variables that `css/style.css` folds into `--sat`, `--sab`, `--sal` and `--sar`.
+- Nudges are inexact local notifications. The manifest removes the exact-alarm permission the plugin declares.
+
+`test/native.test.mjs` and `test/browser/native-app.spec.mjs` check those paths against a fake bridge. That
+is not a device test: try each of them on a real phone before a release.
 
 You need Node 22 or newer, JDK 21 and the Android SDK with platform 36 and its build tools. Android Studio
 Otter (2025.2.1) or newer bundles all of it.

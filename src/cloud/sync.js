@@ -390,6 +390,7 @@ export function createSync({
     events.addEventListener('shelflife:storage', onStored);
     events.addEventListener('visibilitychange', onVisibility);
     events.addEventListener('pagehide', onHidden);
+    events.addEventListener('shelflife:pause', onHidden);   // the installed app going to the background
     events.addEventListener('online', onOnline);
     INPUT_EVENTS.forEach(type => events.addEventListener(type, markDirty, true));
     unsubscribe = cloud.subscribe(onSession);
@@ -406,6 +407,7 @@ export function createSync({
     events.removeEventListener('shelflife:storage', onStored);
     events.removeEventListener('visibilitychange', onVisibility);
     events.removeEventListener('pagehide', onHidden);
+    events.removeEventListener('shelflife:pause', onHidden);
     events.removeEventListener('online', onOnline);
     INPUT_EVENTS.forEach(type => events.removeEventListener(type, markDirty, true));
     unsubscribe?.();

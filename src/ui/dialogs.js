@@ -132,4 +132,15 @@ export function initDialogs({ onOpen } = {}) {
     else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
+  // The app's hardware Back key, by the same route as the browser's: true when
+  // a sheet was open (closed, or kept because it cannot close just now).
+  return {
+    closeActive() {
+      sync();
+      if (!active) return false;
+      const close = closeControl(active);
+      if (close && !close.disabled) close.click();
+      return true;
+    }
+  };
 }

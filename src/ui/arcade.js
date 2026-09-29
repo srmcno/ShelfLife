@@ -382,6 +382,8 @@ export function initArcade(state, onRefresh) {
   });
   document.addEventListener('keyup', e => { if (run?.id === 'frenzy' && frenzyDirection(e.key) !== null) run.game.dir = 0; });
   document.addEventListener('visibilitychange', () => { if (document.hidden && run) pause(true); });
+  // The installed app going to the background (src/native.js).
+  window.addEventListener('shelflife:pause', () => { if (run) pause(true); });
   veil.addEventListener('click', e => { if (e.target === veil) close(); });
 }
 function aim(field, e) {

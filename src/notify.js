@@ -66,6 +66,9 @@ export function planNudges(state, now = Date.now()) {
 }
 
 const pluginFor = () => globalThis.Capacitor?.Plugins?.LocalNotifications || null;
+// Android drops a notification posted to a channel that does not exist, so the
+// channel is (re)made before scheduling. Making it again is harmless.
+export const NUDGE_CHANNEL = { id: 'shelf', name: 'Nudges', description: 'When something on the shelf needs you', importance: 3 };
 export const nudgesAvailable = (plugin = pluginFor()) => !!plugin;
 
 // Ask the phone once, when the player says yes. Resolves 'granted', 'denied' or 'unavailable'.
@@ -85,7 +88,10 @@ export async function syncNudges(state, plugin = pluginFor(), now = Date.now()) 
     await plugin.cancel({ notifications: Object.values(NUDGE_IDS).map(id => ({ id })) });
     const plan = planNudges(state, now);
     if (!plan.length) return 0;
-    await plugin.schedule({ notifications: plan.map(n => ({ id: n.id, title: n.title, body: n.body, schedule: { at: new Date(n.at), allowWhileIdle: true }, channelId: 'shelf' })) });
+    if (plugin.createChannel) await plugin.createChannel(NUDGE_CHANNEL);
+    // Inexact on purpose: the app does not ask for the exact-alarm permission,
+    // and a nudge a few minutes late is still a nudge.
+    await plugin.schedule({ notifications: plan.map(n => ({ id: n.id, title: n.title, body: n.body, schedule: { at: new Date(n.at), allowWhileIdle: true }, channelId: NUDGE_CHANNEL.id, isExactNotification: false })) });
     return plan.length;
   } catch { return 0; }
 }

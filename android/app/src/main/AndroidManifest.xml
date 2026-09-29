@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -37,5 +38,12 @@
 
     <!-- Permissions -->
 
+    <!-- Optional cloud save only. The game itself ships inside the app. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Nudges are local notifications, asked for only when the player turns them on. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Nudges are scheduled inexactly (src/notify.js), so the exact-alarm
+         permission the notifications plugin declares is taken back out. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" tools:node="remove" />
 </manifest>
