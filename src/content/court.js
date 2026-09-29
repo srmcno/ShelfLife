@@ -68,34 +68,55 @@ export const COURT_CASES = [
       ['d', 'It was just sitting there, Your Honour. Being a coffin. At nobody.']
     ]),
     questions: [
-      { ask: 'Ask {d} where Keith came from.', clue: '{d} found Keith face down in the garden and moved him into {p}’s coffin without asking.', lines: [
+      { ask: 'Ask {d} where Keith came from.', clue: '{d} found Keith face down in the garden and moved him into {p}’s coffin without asking.', lines: alt([
         ['d', 'The garden. Face down. In the mint.'],
         ['judge', 'Keith was dead in the mint.'],
-        ['d', 'Keith was resting in the mint. Now Keith is resting indoors. I upgraded Keith.']] },
-      { ask: 'Ask {p} to prove the coffin is theirs.', clue: 'The coffin has {p}’s name on the lid, {p}’s teeth marks on the handle and a little shelf for one raisin.', lines: [
+        ['d', 'Keith was resting in the mint. Now Keith is resting indoors. I upgraded Keith.']], [
+        ['d', 'Face down in the garden, Your Honour. No name. No coffin. Nothing.'],
+        ['d', 'By supper he had a name and a coffin. I did that, in one afternoon.'],
+        ['judge', 'It was {p}’s coffin. Did you ask {p}?'],
+        ['d', 'And spoil the surprise?']]) },
+      { ask: 'Ask {p} to prove the coffin is theirs.', clue: 'The coffin has {p}’s name on the lid, {p}’s teeth marks on the handle and a little shelf for one raisin.', lines: alt([
         ['p', 'My name is on the lid. My teeth marks are on the handle. There is a little shelf inside where I keep one raisin.'],
         ['bailiff', 'I can confirm there is a little shelf, Your Honour.'],
         ['judge', 'And the raisin, Bailiff?'],
-        ['bailiff', 'I can confirm there is a little shelf.']] },
-      { ask: 'Tell {d} that “a nap” is not a legal term.', sass: true, lines: [
+        ['bailiff', 'I can confirm there is a little shelf.']], [
+        ['p', 'My name is on the lid, Your Honour. My teeth marks are on the handle. There is a little shelf inside, for one raisin.'],
+        ['judge', '{d}, do you dispute any of that?'],
+        ['d', 'No, Your Honour. But Keith has done a lot with the space.']]) },
+      { ask: 'Tell {d} that “a nap” is not a legal term.', sass: true, lines: alt([
         ['judge', '{d}. “Nap” is not a legal term. Neither is “basically family”, “he looked cold” or “finders keepers”.'],
         ['d', 'What about “oops”?'],
         ['judge', '“Oops” is a confession. Say it again. Slowly. For the jury.'],
-        ['d', 'No.']] },
-      { ask: 'Ask {d} if Keith has any family.', clue: 'There is now a second Keith, Keith’s cousin, in {p}’s sock drawer. {d} put him there.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'No.']], [
+        ['judge', '{d}. “Nap” is not a legal term. In 1702 I told my wife I was going for a nap.'],
+        ['d', 'What happened?'],
+        ['judge', 'She had me buried by teatime. I never did finish the nap.']]) },
+      { ask: 'Ask {d} if Keith has any family.', clue: 'There is now a second Keith, Keith’s cousin, in {p}’s sock drawer. {d} put him there.', happen: 'outburst', party: 'p', lines: alt([
         ['d', 'A cousin. Also Keith. He came round asking for Keith, and I panicked.'],
         ['judge', 'Where is the second Keith, {d}?'],
         ['d', '{p}’s sock drawer.'],
-        ['p', 'I HAVE BEEN WEARING THOSE SOCKS.']] },
-      { ask: 'Ask {p} where it slept during the nap.', lines: [
+        ['p', 'I HAVE BEEN WEARING THOSE SOCKS.']], [
+        ['d', 'One cousin, Your Honour. Also Keith. It is a very Keith family.'],
+        ['judge', 'And where is Cousin Keith now?'],
+        ['d', 'In {p}’s sock drawer. I rolled him up in the good pair.'],
+        ['p', 'THOSE WERE MY FUNERAL SOCKS.']]) },
+      { ask: 'Ask {p} where it slept during the nap.', lines: alt([
         ['p', 'On the bare shelf. No lid. No pillow. The moth watched me all night.'],
         ['judge', 'That sounds awful.'],
-        ['p', 'The moth said it was the best night of her life.']] },
-      { ask: 'Have the bailiff check on Keith.', lines: [
+        ['p', 'The moth said it was the best night of her life.']], [
+        ['p', 'On the bare shelf, Your Honour. Arms crossed. Very still. Out of habit.'],
+        ['judge', 'And?'],
+        ['p', 'When I woke up, somebody had written “Keith” on my hand.']]) },
+      { ask: 'Have the bailiff check on Keith.', lines: alt([
         ['narrator', '(The bailiff lifts the lid. He looks for a long time. He lowers the lid.)'],
         ['bailiff', 'Keith says hello, Your Honour.'],
         ['judge', 'Keith is dead, Bailiff.'],
-        ['bailiff', 'He says that too.']] }
+        ['bailiff', 'He says that too.']], [
+        ['narrator', '(The bailiff lifts the lid, looks in for a moment, and tucks Keith in.)'],
+        ['judge', 'Bailiff, did you just tuck in a corpse?'],
+        ['bailiff', 'He had kicked his blanket off again, Your Honour.'],
+        ['p', 'He has a BLANKET?']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -157,33 +178,55 @@ export const COURT_CASES = [
       ['d', 'If anything, the snoring keeps ME awake. I lie there listening, thinking: {p}, you animal.']
     ]),
     questions: [
-      { ask: 'Ask {p} if it snored while {d} was away at the vet.', clue: 'The snoring got louder the night {d} was away at the vet.', lines: [
+      { ask: 'Ask {p} if it snored while {d} was away at the vet.', clue: 'The snoring got louder the night {d} was away at the vet.', lines: alt([
         ['p', 'Last Tuesday {d} was at the vet all night. The snoring was the worst it has ever been.'],
         ['judge', 'So it was louder when {d} was not in the building.'],
-        ['p', 'I assumed {d} was doing it from the vet. Out of spite. Down the phone.']] },
-      { ask: 'Have the bailiff put an ear to the wall.', clue: 'The wall snores. The Ministry of Haunting has it registered to a Mr Pemberton, deceased, snorer, since 1840.', lines: [
+        ['p', 'I assumed {d} was doing it from the vet. Out of spite. Down the phone.']], [
+        ['p', 'The night {d} was at the vet, I thought, finally. Peace. I was in bed by seven.'],
+        ['judge', 'And?'],
+        ['p', 'Loudest it has ever been, Your Honour. The shelf moved.'],
+        ['judge', 'With {d} in a different building.'],
+        ['p', 'It must have left it running.']]) },
+      { ask: 'Have the bailiff put an ear to the wall.', clue: 'The wall snores. The Ministry of Haunting has it registered to a Mr Pemberton, deceased, snorer, since 1840.', lines: alt([
         ['narrator', '(The bailiff presses his ear to the wall. The wall snores. The bailiff’s whiskers blow back.)'],
         ['bailiff', 'Your Honour, the wall is snoring.'],
         ['judge', 'Walls do not snore, Bailiff.'],
         ['bailiff', 'This one just said “five more minutes”.'],
-        ['npc', 'MINISTRY OF HAUNTING. Nobody touch that wall. That is a Mr Pemberton, snorer, registered 1840. He is on the heritage list.', 'ghost']] },
-      { ask: 'Ask {p} if it has tried simply being asleep.', sass: true, lines: [
+        ['npc', 'MINISTRY OF HAUNTING. Nobody touch that wall. That is a Mr Pemberton, snorer, registered 1840. He is on the heritage list.', 'ghost']], [
+        ['bailiff', '(ear to the wall) It is definitely the wall, Your Honour. It just rolled over.'],
+        ['npc', 'Ministry of Haunting. That wall is on our books. Mr Pemberton, deceased, snorer, since 1840.', 'ghost'],
+        ['judge', 'Can the Ministry not wake him?'],
+        ['npc', 'We wrote to him in 1902. He slept through it.', 'ghost']]) },
+      { ask: 'Ask {p} if it has tried simply being asleep.', sass: true, lines: alt([
         ['judge', '{p}, have you tried simply being asleep? I am told it is very quiet in there.'],
         ['p', 'I CAN’T. BECAUSE OF THE SNORING.'],
-        ['judge', 'Then try dying. I did. Slept like a log. Was mistaken for one. Twice.']] },
-      { ask: 'Ask {d} to show the court how it sleeps.', clue: '{d} sleeps in total silence. It is upsetting to watch, but it is silent.', happen: 'outburst', party: 'p', lines: [
+        ['judge', 'Then try dying. I did. Slept like a log. Was mistaken for one. Twice.']], [
+        ['judge', '{p}, have you tried simply being asleep? I managed it during your opening statement.'],
+        ['p', 'You were ASLEEP?'],
+        ['judge', 'Best sleep I have had since my own funeral. Do it again. Slower.']]) },
+      { ask: 'Ask {d} to show the court how it sleeps.', clue: '{d} sleeps in total silence. It is upsetting to watch, but it is silent.', happen: 'outburst', party: 'p', lines: alt([
         ['narrator', '({d} lies down on the podium, crosses its arms, and becomes instantly, horribly still.)'],
         ['judge', 'Not a sound.'],
         ['bailiff', 'Shall I check it is alive, sir?'],
-        ['p', 'THAT IS WHAT IT WANTS YOU TO THINK.']] },
-      { ask: 'Ask {p} to do the snore for the court.', lines: [
+        ['p', 'THAT IS WHAT IT WANTS YOU TO THINK.']], [
+        ['narrator', '({d} lies down on the podium, crosses its arms and goes out like a candle. The front row of the jury leans away.)'],
+        ['bailiff', 'Your Honour, I have heard louder coffins.'],
+        ['p', 'IT IS SNORING INWARDLY. AT ME.']]) },
+      { ask: 'Ask {p} to do the snore for the court.', lines: alt([
         ['p', 'It goes HNNNRRK. Shhhwww. HNNNRRK. And then, sometimes, “Margaret”.'],
         ['judge', 'Who is Margaret?'],
-        ['p', 'NOBODY KNOWS. THERE IS NO MARGARET.']] },
-      { ask: 'Put the question to the wall.', lines: [
+        ['p', 'NOBODY KNOWS. THERE IS NO MARGARET.']], [
+        ['narrator', '({p} closes its eyes and does the snore. It is long and wet, it has three movements, and there is a bit in the middle where it seems to drown.)'],
+        ['judge', 'You have rehearsed that.'],
+        ['p', 'Every night, Your Honour. I do it back at {d}, so it knows how it sounds.'],
+        ['d', 'So it was YOU doing the harmony.']]) },
+      { ask: 'Put the question to the wall.', lines: alt([
         ['judge', 'Wall. Did you snore?'],
         ['narrator', '(Silence. The wall snores. Then, quite clearly: “Margaret. The gas.”)'],
-        ['judge', 'Nobody turn anything on.']] }
+        ['judge', 'Nobody turn anything on.']], [
+        ['judge', 'Wall. You are under oath. Did you snore?'],
+        ['narrator', '(A long pause. Then the wall snores so hard that a little plaster comes down on {p}.)'],
+        ['p', '{d} is THROWING ITS VOICE.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -239,32 +282,50 @@ export const COURT_CASES = [
       ['d', 'Me, Your Honour. I was the vultures. I got there first.']
     ]),
     questions: [
-      { ask: 'Ask {d} who said {p} was dead.', clue: '{d} saw a bucket and declared {p} dead. Nobody else was consulted.', lines: [
+      { ask: 'Ask {d} who said {p} was dead.', clue: '{d} saw a bucket and declared {p} dead. Nobody else was consulted.', lines: alt([
         ['d', 'Nobody said. I saw the bucket.'],
         ['judge', 'You saw a bucket and declared a death.'],
-        ['d', 'It was a very serious bucket, Your Honour. It had a lid.']] },
-      { ask: 'Ask {p} whose slot it was in the first place.', clue: '{p} took that same slot from {d} in the spring, while {d} was out ill. In a bucket.', lines: [
+        ['d', 'It was a very serious bucket, Your Honour. It had a lid.']], [
+        ['d', 'Me, Your Honour. I saw the bucket and I declared {p} dead.'],
+        ['judge', 'Did you ask anyone? A doctor? The bucket?'],
+        ['d', 'There was no time, Your Honour. I had to grieve. I grieved very hard, for about as long as it takes to lie down.']]) },
+      { ask: 'Ask {p} whose slot it was in the first place.', clue: '{p} took that same slot from {d} in the spring, while {d} was out ill. In a bucket.', lines: alt([
         ['p', 'Mine. Since the beginning of time.'],
         ['bailiff', 'Shelf records, Your Honour. {p} moved into that slot in the spring. While {d} was out ill. In a bucket.'],
-        ['p', 'That was a DIFFERENT bucket.']] },
-      { ask: 'Ask {d} why the slot smells of it now.', lines: [
+        ['p', 'That was a DIFFERENT bucket.']], [
+        ['p', 'Mine, Your Honour. Ask anybody.'],
+        ['judge', '{d}?'],
+        ['d', 'Mine until the spring, Your Honour. I was out ill in a bucket, and when I came back {p} was in my slot.'],
+        ['p', 'You left with a bucket. I assumed you were moving.']]) },
+      { ask: 'Ask {d} why the slot smells of it now.', lines: alt([
         ['d', 'I rolled in it. To claim it.'],
         ['judge', 'That is what cats do.'],
         ['d', 'I have cat energy.'],
-        ['npc', 'It does not.', 'cat']] },
-      { ask: 'Remind them both they are fighting over a plank.', sass: true, lines: [
+        ['npc', 'It does not.', 'cat']], [
+        ['d', 'I have been marinating it, Your Honour. Twice a day.'],
+        ['judge', 'Marinating.'],
+        ['d', 'Another week and it will be mine all the way through.']]) },
+      { ask: 'Remind them both they are fighting over a plank.', sass: true, lines: alt([
         ['judge', 'It is a plank. You are fighting over a plank. I was buried in a box with less wood in it than this argument.'],
         ['p', 'It is a very good plank.'],
         ['d', 'It is the best plank.'],
-        ['judge', 'It is an absolutely average plank.']] },
-      { ask: 'Ask {p} to describe the bucket.', happen: 'outburst', party: 'd', lines: [
+        ['judge', 'It is an absolutely average plank.']], [
+        ['p', 'Your Honour, that slot means everything to me.'],
+        ['judge', 'It is a plank, {p}. In my day men went to war over kingdoms and still ended up in a plank. You two have skipped the kingdom.']]) },
+      { ask: 'Ask {p} to describe the bucket.', happen: 'outburst', party: 'd', lines: alt([
         ['p', 'Blue. Deep. Unforgiving.'],
         ['judge', 'And what was in it?'],
         ['p', 'Everything I had eaten since Thursday. And a button. I do not own a button.'],
-        ['bailiff', '(quietly) I have been looking for that button.']] },
-      { ask: 'Ask the jury who owns the slot.', lines: [
+        ['bailiff', '(quietly) I have been looking for that button.']], [
+        ['p', 'Blue. A proper lid. A handle that does not squeak. The kind of bucket you are proud to be ill in.'],
+        ['judge', 'As opposed to?'],
+        ['p', '{d}’s bucket, Your Honour. Tin. Dented. I would not be sick in it for money.'],
+        ['d', 'THAT DENT IS SENTIMENTAL.']]) },
+      { ask: 'Ask the jury who owns the slot.', lines: alt([
         ['jury', '{j} says a slot belongs to whoever is lying in it. That is the law of the shelf, and also of the bus.'],
-        ['judge', 'Thank you, {j}. Nobody asked you. I did. I regret it.']] }
+        ['judge', 'Thank you, {j}. Nobody asked you. I did. I regret it.']], [
+        ['jury', '{j} says the slot belongs to whoever was in a bucket most recently. {j} then asks, very casually, whether anybody is using the bucket.'],
+        ['judge', '{j}. Take your head out of the evidence.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -319,30 +380,49 @@ export const COURT_CASES = [
       ['d', 'And I did not know {p} was alive. I thought it was just being polite at the front. Like a good corpse.']
     ]),
     questions: [
-      { ask: 'Ask {d} if it noticed {p} in the front row.', clue: '{d} saw {p} alive in the front row, eating a salad, and kept going.', lines: [
+      { ask: 'Ask {d} if it noticed {p} in the front row.', clue: '{d} saw {p} alive in the front row, eating a salad, and kept going.', lines: alt([
         ['d', 'I did. I thought it was a ghost. You do not stop a eulogy for a ghost. It encourages them.'],
         ['judge', 'It was eating a salad.'],
-        ['d', 'Ghosts eat salad. Badly. It goes straight through.']] },
-      { ask: 'Have {d} read the eulogy aloud.', clue: '{d} used the eulogy to claim {p} owed it three souls. {p} did not.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'Ghosts eat salad. Badly. It goes straight through.']], [
+        ['d', 'I saw it, Your Honour. Front row. Salad. Very much alive.'],
+        ['judge', 'And you kept going.'],
+        ['p', 'I WAVED.'],
+        ['d', 'I assumed you were waving goodbye.']]) },
+      { ask: 'Have {d} read the eulogy aloud.', clue: '{d} used the eulogy to claim {p} owed it three souls. {p} did not.', happen: 'outburst', party: 'p', lines: alt([
         ['d', '“{p} was here. Now {p} is not. {p} was mostly fine. {p} was a bit much. {p} owed me three souls.”'],
         ['judge', 'Did {p} owe you three souls?'],
         ['d', 'I thought if I said it at the funeral, nobody could argue.'],
-        ['p', 'I WAS RIGHT THERE.']] },
-      { ask: 'Tell {p} to be grateful anybody came.', sass: true, lines: [
+        ['p', 'I WAS RIGHT THERE.']], [
+        ['d', '“{p} will be missed, by some. {p} leaves behind a salad, and a debt of three souls to me, which mourners may settle in the dish by the door.”'],
+        ['judge', 'Did {p} owe you three souls?'],
+        ['d', 'Not before the eulogy, Your Honour.'],
+        ['p', 'I PUT TWO IN THE DISH.']]) },
+      { ask: 'Tell {p} to be grateful anybody came.', sass: true, lines: alt([
         ['judge', '{p}, four people came to my funeral. One of them was the horse, and the horse left early.'],
         ['p', 'How many came to mine?'],
-        ['d', 'Six. Seven counting you. Eight counting the salad.']] },
-      { ask: 'Ask who booked the funeral.', clue: 'The funeral was booked by {d}, who never checked whether {p} was dead.', lines: [
+        ['d', 'Six. Seven counting you. Eight counting the salad.']], [
+        ['p', 'Your Honour, it was humiliating.'],
+        ['judge', '{p}, be grateful anybody came. Nobody on this shelf is ever going to die. That was the only funeral you will ever get, and you spent it eating a salad.']]) },
+      { ask: 'Ask who booked the funeral.', clue: 'The funeral was booked by {d}, who never checked whether {p} was dead.', lines: alt([
         ['p', 'I don’t know. Somebody saw me lying very still and started booking things.'],
-        ['bailiff', 'The paperwork is signed by {d}, Your Honour. Under “cause of death” it says “quiet”.']] },
-      { ask: 'Ask what happened to the flowers.', lines: [
+        ['bailiff', 'The paperwork is signed by {d}, Your Honour. Under “cause of death” it says “quiet”.']], [
+        ['bailiff', 'Booked by {d}, Your Honour. Hall, hymns, one cake, and one {p}.'],
+        ['judge', '{d}. Did you check that {p} was actually dead?'],
+        ['d', 'The cake was going fast, Your Honour. Corpses keep.']]) },
+      { ask: 'Ask what happened to the flowers.', lines: alt([
         ['d', 'I took them home. I bought them for a death. There was no death. That is on {p}.'],
         ['judge', 'That is annoyingly not wrong.'],
-        ['d', 'They are in a jar. They are waiting.']] },
-      { ask: 'Invite {d} to deliver the court’s eulogy too.', sass: true, lines: [
+        ['d', 'They are in a jar. They are waiting.']], [
+        ['d', 'I took them home, Your Honour. The card says “For the late {p}”.'],
+        ['judge', '{p} is sitting right there.'],
+        ['d', 'That one was early. The flowers are for the late one.']]) },
+      { ask: 'Invite {d} to deliver the court’s eulogy too.', sass: true, lines: alt([
         ['judge', 'Do mine, {d}. I am right here, and I am properly dead. Go on.'],
         ['d', '“Judge Mortis was here. Judge Mortis is still here. Nobody knows why.”'],
-        ['narrator', '(The judge’s jaw trembles. It could be emotion. It could be the hinge.)']] }
+        ['narrator', '(The judge’s jaw trembles. It could be emotion. It could be the hinge.)']], [
+        ['judge', 'Do mine, {d}. I am the only one in this room who has earned one.'],
+        ['d', '“Judge Mortis. Firm. Fair. A bit much.”'],
+        ['judge', 'A bit much? I am a skeleton, {d}. I am the bare minimum.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -400,29 +480,48 @@ export const COURT_CASES = [
       ['d', 'My feet were cold, Your Honour. A cold foot will put up with a lot.']
     ]),
     questions: [
-      { ask: 'Ask {p} where the sock came from.', clue: '{p} took the sock from the bottom drawer, the one that whispers, before it lent it to {d}.', lines: [
+      { ask: 'Ask {p} where the sock came from.', clue: '{p} took the sock from the bottom drawer, the one that whispers, before it lent it to {d}.', lines: alt([
         ['p', 'The bottom drawer.'],
         ['judge', 'The one that whispers.'],
         ['p', 'All drawers whisper if you listen hard enough.'],
-        ['judge', 'No, {p}. They do not.']] },
-      { ask: 'Question the sock directly.', clue: 'The sock says it has been haunted “since the beginning”, long before {d} ever wore it.', lines: [
+        ['judge', 'No, {p}. They do not.']], [
+        ['p', 'The bottom drawer.'],
+        ['judge', 'The drawer that whispers.'],
+        ['p', 'It murmurs, Your Honour. It has asked me to correct people.']]) },
+      { ask: 'Question the sock directly.', clue: 'The sock says it has been haunted “since the beginning”, long before {d} ever wore it.', lines: alt([
         ['narrator', '(The bailiff holds up the jar. The sock presses itself flat against the glass.)'],
         ['narrator', '(The sock whispers: “Haunted… since… the beginning.” Then, quieter: “{p}… knew.”)'],
-        ['p', 'It is saying that for effect.']] },
-      { ask: 'Ask {d} how it looked after the sock.', lines: [
+        ['p', 'It is saying that for effect.']], [
+        ['judge', 'Sock. Were you haunted before {d} ever wore you?'],
+        ['narrator', '(The jar mists up. The sock whispers: “Since… the beginning.” A pause. “{d}… has lovely feet.”)'],
+        ['p', 'It NEVER said that about MY feet.']]) },
+      { ask: 'Ask {d} how it looked after the sock.', lines: alt([
         ['d', 'I wore it. I apologised to it. I sang to it once. It cried. We have a bond.'],
         ['judge', 'You bonded with a haunted sock.'],
-        ['d', 'It has been a lonely year, Your Honour, and it is a very good listener.']] },
-      { ask: 'Tell {p} this is the stupidest case ever put before a skeleton.', sass: true, lines: [
+        ['d', 'It has been a lonely year, Your Honour, and it is a very good listener.']], [
+        ['d', 'Warm water on Sundays. Its own egg cup to sleep in. Puzzles on Tuesdays.'],
+        ['judge', 'How does a sock do a puzzle?'],
+        ['d', 'Very slowly, Your Honour. And it cheats.']]) },
+      { ask: 'Tell {p} this is the stupidest case ever put before a skeleton.', sass: true, lines: alt([
         ['judge', '{p}, in three hundred years on the bench I once heard a man sue his own hat. The hat countersued. This is stupider.'],
         ['p', 'Who won?'],
-        ['judge', 'The hat. Obviously.']] },
-      { ask: 'Ask the bailiff for the drawer’s record.', clue: 'Seventeen complaints about the whispering drawer are on file. The newest was filed by {p}, a week before it lent the sock.', lines: [
+        ['judge', 'The hat. Obviously.']], [
+        ['judge', '{p}, this is the stupidest case ever put before a skeleton.'],
+        ['p', 'How would you know?'],
+        ['judge', 'I have no brain, {p}, and it still hurts.']]) },
+      { ask: 'Ask the bailiff for the drawer’s record.', clue: 'Seventeen complaints about the whispering drawer are on file. The newest was filed by {p}, a week before it lent the sock.', lines: alt([
         ['bailiff', 'Seventeen complaints about that drawer, Your Honour. They all say “whispering”. The oldest is in Latin. The newest is from {p}.'],
-        ['npc', 'That drawer whispered at my christening. I thought it was the vicar. It was not the vicar. The vicar was in the drawer.', 'uncle']] },
-      { ask: 'Ask {p} if it even wants the sock back.', happen: 'outburst', party: 'p', lines: [
+        ['npc', 'That drawer whispered at my christening. I thought it was the vicar. It was not the vicar. The vicar was in the drawer.', 'uncle']], [
+        ['bailiff', 'Seventeen complaints about that drawer, Your Honour. The newest is from {p}, filed a week before it lent the sock.'],
+        ['judge', 'Who else complained?'],
+        ['npc', 'Me. In 1790. They told me to put a sock in it.', 'uncle']]) },
+      { ask: 'Ask {p} if it even wants the sock back.', happen: 'outburst', party: 'p', lines: alt([
         ['p', 'Not really. I want it to stop saying “wrong”.'],
-        ['judge', 'That is not a sock problem, {p}. That is a you problem.']] }
+        ['judge', 'That is not a sock problem, {p}. That is a you problem.']], [
+        ['p', 'I do not want the sock, Your Honour. I want it to stop talking about me to the other socks.'],
+        ['judge', 'And what does it tell them?'],
+        ['narrator', '(From the jar, a whisper: “Wrong.” From the bottom drawer, across the shelf, forty tiny voices: “Wrong.”)'],
+        ['p', 'THEY ARE ORGANISING.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -482,28 +581,46 @@ export const COURT_CASES = [
       ['d', 'I could not tell, so I painted both possibilities.']
     ]),
     questions: [
-      { ask: 'Ask {p} whether there were real flies at the sitting.', clue: 'There were real flies around {p} for the whole sitting. Fourteen of them.', lines: [
+      { ask: 'Ask {p} whether there were real flies at the sitting.', clue: 'There were real flies around {p} for the whole sitting. Fourteen of them.', lines: alt([
         ['p', '…Some flies.'],
         ['judge', 'How many?'],
         ['p', 'A normal number. For me.'],
-        ['bailiff', 'Fourteen, Your Honour. They are in the gallery today. They came to support {p}.']] },
-      { ask: 'Ask {d} how long it has been painting.', clue: '{d} took up painting on Tuesday and was charging full price by Wednesday.', lines: [
+        ['bailiff', 'Fourteen, Your Honour. They are in the gallery today. They came to support {p}.']], [
+        ['p', 'No flies, Your Honour. None. Not one.'],
+        ['d', 'Fourteen, Your Honour. For all six hours. They worked in shifts.'],
+        ['p', 'They were VISITORS.']]) },
+      { ask: 'Ask {d} how long it has been painting.', clue: '{d} took up painting on Tuesday and was charging full price by Wednesday.', lines: alt([
         ['d', 'Since Tuesday.'],
         ['judge', 'This Tuesday?'],
-        ['d', 'I am a natural. It is a gift. It is also twelve souls.']] },
-      { ask: 'Ask what {p} paid for it.', clue: '{d} charged twelve souls. One of them was for the flies.', lines: [
+        ['d', 'I am a natural. It is a gift. It is also twelve souls.']], [
+        ['d', 'All my life, Your Honour. Since Tuesday.'],
+        ['judge', 'And when did you start charging?'],
+        ['d', 'Full price, Wednesday. By then I had peaked.']]) },
+      { ask: 'Ask what {p} paid for it.', clue: '{d} charged twelve souls. One of them was for the flies.', lines: alt([
         ['p', 'Twelve souls.'],
         ['judge', 'Twelve souls, for a skill acquired on Tuesday.'],
-        ['d', 'Eleven for the portrait. One for the flies. Flies are fiddly.']] },
-      { ask: 'Have the bailiff show the painting to the audience.', happen: 'faint', lines: [
+        ['d', 'Eleven for the portrait. One for the flies. Flies are fiddly.']], [
+        ['p', 'Twelve souls, Your Honour. Eleven for the portrait, one for the flies.'],
+        ['judge', 'You charged extra for the flies, {d}?'],
+        ['d', 'They were not in the quote, Your Honour. {p} brought them on the day.']]) },
+      { ask: 'Have the bailiff show the painting to the audience.', happen: 'faint', lines: alt([
         ['narrator', '(The bailiff turns the painting round. The audience screams. One ghost leaves through the wall, then through the next wall.)'],
-        ['audience', '(A small voice from the back: “IT’S BEAUTIFUL.” It is Madam Moth.)']] },
-      { ask: 'Tell {p} the painting is flattering, actually.', sass: true, lines: [
+        ['audience', '(A small voice from the back: “IT’S BEAUTIFUL.” It is Madam Moth.)']], [
+        ['narrator', '(The bailiff turns the painting round. The audience goes very quiet. In the back row, a ghost slowly takes off its hat.)'],
+        ['p', 'PUT YOUR HAT BACK ON.']]) },
+      { ask: 'Tell {p} the painting is flattering, actually.', sass: true, lines: alt([
         ['judge', '{p}, I have seen you. I have seen the painting. The painting is being generous. The flies are being generous.'],
-        ['p', 'The flies are WITNESSES.']] },
-      { ask: 'Ask {p} whether it sat still.', clue: '{p} sat so still for six hours that {d} held a mirror under its nose. Twice.', lines: [
+        ['p', 'The flies are WITNESSES.']], [
+        ['judge', '{p}, I have been dead for three hundred years. I know dead. That painting has more colour in its cheeks than you have ever had.'],
+        ['p', 'The painting is GREY.'],
+        ['judge', 'You are beige, {p}. Grey is a promotion.']]) },
+      { ask: 'Ask {p} whether it sat still.', clue: '{p} sat so still for six hours that {d} held a mirror under its nose. Twice.', lines: alt([
         ['p', 'Perfectly still. Six hours. I barely blinked.'],
-        ['d', 'It was very unsettling. I held a mirror under its nose. Twice. The second time the mirror looked worried.']] }
+        ['d', 'It was very unsettling. I held a mirror under its nose. Twice. The second time the mirror looked worried.']], [
+        ['p', 'Like a statue, Your Honour. Six hours. I am a professional.'],
+        ['d', 'I held a mirror under its nose. Twice.'],
+        ['judge', 'Did it mist up?'],
+        ['d', 'No, Your Honour. The second time, a fly moved in.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -560,32 +677,50 @@ export const COURT_CASES = [
       ['d', 'That is called enterprise. I have a hat now. {p} has a tin. Ask yourself which of us is winning.']
     ]),
     questions: [
-      { ask: 'Ask {p} where it got the teeth.', clue: 'The teeth came from a jar labelled NOT UNCLE’S, in Uncle’s handwriting.', lines: [
+      { ask: 'Ask {p} where it got the teeth.', clue: 'The teeth came from a jar labelled NOT UNCLE’S, in Uncle’s handwriting.', lines: alt([
         ['p', 'A jar. It says “NOT UNCLE’S”.'],
         ['judge', 'In handwriting that is very obviously Uncle’s.'],
         ['p', 'I do not read handwriting, Your Honour. I read labels.'],
-        ['npc', 'THOSE ARE MY TEETH. I HAVE BEEN GUMMING SOUP SINCE 1911.', 'uncle']] },
-      { ask: 'Ask {d} what it spent the three souls on.', clue: '{d} spent the tooth money on a hat that nobody can see.', lines: [
+        ['npc', 'THOSE ARE MY TEETH. I HAVE BEEN GUMMING SOUP SINCE 1911.', 'uncle']], [
+        ['p', 'Out of a jar marked “NOT UNCLE’S”, Your Honour. So I knew they were not Uncle’s.'],
+        ['judge', 'And whose handwriting is the label in?'],
+        ['p', 'Uncle’s.'],
+        ['npc', 'IT WAS A DISGUISE.', 'uncle']]) },
+      { ask: 'Ask {d} what it spent the three souls on.', clue: '{d} spent the tooth money on a hat that nobody can see.', lines: alt([
         ['d', 'A hat.'],
         ['judge', 'Where is the hat?'],
         ['d', 'I am wearing it.'],
         ['narrator', '({d} is not wearing a hat.)'],
-        ['d', 'It is a very exclusive hat.']] },
-      { ask: 'Have the bailiff check {d}’s mouth.', sass: true, lines: [
+        ['d', 'It is a very exclusive hat.']], [
+        ['d', 'A hat, Your Honour. Wide brim. A feather. Three souls.'],
+        ['judge', 'I cannot see a hat, {d}.'],
+        ['d', 'The man in the shop could not see it either. He said that is how you know it is working.']]) },
+      { ask: 'Have the bailiff check {d}’s mouth.', sass: true, lines: alt([
         ['bailiff', 'All present, Your Honour. Plus one extra.'],
         ['judge', 'An extra tooth, {d}?'],
         ['d', 'Everyone needs a spare.'],
-        ['npc', 'THAT ONE IS MINE AS WELL.', 'uncle']] },
-      { ask: 'Ask {p} whether the teeth were ever really its.', clue: '{p} admits the teeth only became “its” by being put in a tin.', lines: [
+        ['npc', 'THAT ONE IS MINE AS WELL.', 'uncle']], [
+        ['bailiff', 'One tooth too many, Your Honour. At the back. It is much older than the rest of {d}.'],
+        ['npc', 'THAT IS MY WISDOM TOOTH.', 'uncle'],
+        ['judge', 'Then it is the only wisdom {d} has ever had.']]) },
+      { ask: 'Ask {p} whether the teeth were ever really its.', clue: '{p} admits the teeth only became “its” by being put in a tin.', lines: alt([
         ['p', 'They became mine the moment I put them in my tin. That is how tins work.'],
-        ['judge', 'That is how burglary works.']] },
-      { ask: 'Call the tooth fairy.', happen: 'faint', lines: [
+        ['judge', 'That is how burglary works.']], [
+        ['judge', 'Were those teeth ever yours, {p}? Before the tin?'],
+        ['p', 'Nothing is anybody’s before the tin, Your Honour. The tin is what makes it mine.'],
+        ['judge', 'Bailiff. Fetch a tin big enough for {p}.']]) },
+      { ask: 'Call the tooth fairy.', happen: 'faint', lines: alt([
         ['narrator', '(A small, exhausted fairy is led in. She carries a sack of teeth and has the eyes of someone who has seen too many pillows.)'],
         ['narrator', '(The fairy: “I pay for teeth. I do not ask whose. Nobody in this job asks whose. You would never sleep again.”)'],
         ['judge', 'Whose teeth do you usually get?'],
-        ['narrator', '(The fairy: “I am going home.”)']] },
-      { ask: 'Ask {d} if it would do it again.', happen: 'outburst', party: 'p', lines: [
-        ['d', 'Tomorrow. The fairy does a loyalty card. Two more teeth and I get a free pillow.']] }
+        ['narrator', '(The fairy: “I am going home.”)']], [
+        ['narrator', '(The tooth fairy is led in. She is the size of a thumb, wears a cardigan, and drags a sack that rattles when she breathes.)'],
+        ['judge', 'Do you recognise {d}?'],
+        ['narrator', '(The fairy: “I never look at faces. I look at gums.” She glances up at the gallery. Uncle shuts his mouth.)']]) },
+      { ask: 'Ask {d} if it would do it again.', happen: 'outburst', party: 'p', lines: alt([
+        ['d', 'Tomorrow. The fairy does a loyalty card. Two more teeth and I get a free pillow.']], [
+        ['d', 'Tonight, Your Honour. {p} has a whole mouthful and barely uses them.'],
+        ['p', 'STOP LOOKING AT MY MOUTH.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -643,29 +778,49 @@ export const COURT_CASES = [
       ['d', 'And yet, Your Honour, I can sense what it would have wanted.']
     ]),
     questions: [
-      { ask: 'Have {d} write the word “everything”.', clue: '{d} spells it “EVRYTHING”, with a heart, exactly like the forged page.', lines: [
+      { ask: 'Have {d} write the word “everything”.', clue: '{d} spells it “EVRYTHING”, with a heart, exactly like the forged page.', lines: alt([
         ['narrator', '({d} writes “EVRYTHING” in purple crayon and dots the I with a heart. There is no I.)'],
         ['judge', 'The will also says “EVRYTHING”.'],
-        ['d', 'Common mistake. Very common. There are probably loads of us.']] },
-      { ask: 'Ask {p} whether it is dying.', clue: '{d} is openly waiting for {p} to die.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'Common mistake. Very common. There are probably loads of us.']], [
+        ['narrator', '({d} grips the purple crayon in its fist and writes “EVRYTHING”. Then, out of habit, it draws a heart.)'],
+        ['judge', 'That is exactly how it is spelled on the will. Heart and all.'],
+        ['d', 'That is how everybody spells it. You spell it.'],
+        ['judge', 'E. V. E. R. Y.'],
+        ['d', 'Show-off.']]) },
+      { ask: 'Ask {p} whether it is dying.', clue: '{d} is openly waiting for {p} to die.', happen: 'outburst', party: 'p', lines: alt([
         ['p', 'No!'],
         ['d', 'Not YET.'],
         ['judge', '{d}, did you just say “not yet”?'],
-        ['d', 'I said “the jet”. There is a jet. Somewhere. Probably.']] },
-      { ask: 'Tell {d} a heart is not a signature.', sass: true, lines: [
+        ['d', 'I said “the jet”. There is a jet. Somewhere. Probably.']], [
+        ['p', 'No, Your Honour. I have never felt better.'],
+        ['narrator', '({d} leans across and presses an ear to {p}’s chest. It listens for a long time, hopefully.)'],
+        ['d', 'Strong as anything, Your Honour. I will check again after lunch.'],
+        ['p', 'GET YOUR EAR OFF ME.']]) },
+      { ask: 'Tell {d} a heart is not a signature.', sass: true, lines: alt([
         ['judge', 'A heart is not a signature, {d}. A heart is a muscle. I have not had one since 1702 and I sign things perfectly well.'],
         ['d', 'With what?'],
-        ['judge', 'A bone.']] },
-      { ask: 'Ask the bailiff what he found in {d}’s slot.', clue: 'A purple crayon and three drafts of the will were found in {d}’s slot. Each is marked PRACTICE.', lines: [
-        ['bailiff', 'One purple crayon, Your Honour. Three drafts of the will. They each say “practice”. The third one is quite good.']] },
-      { ask: 'Ask the moth what she thinks.', lines: [
+        ['judge', 'A bone.']], [
+        ['judge', 'A heart is not a signature, {d}. A heart is a doodle with ideas above its station.'],
+        ['d', 'Then what is a signature?'],
+        ['judge', 'A doodle with a lawyer.']]) },
+      { ask: 'Ask the bailiff what he found in {d}’s slot.', clue: 'A purple crayon and three drafts of the will were found in {d}’s slot. Each is marked PRACTICE.', lines: alt([
+        ['bailiff', 'One purple crayon, Your Honour. Three drafts of the will. They each say “practice”. The third one is quite good.']], [
+        ['bailiff', 'One purple crayon, Your Honour, worn to a stub. And three drafts of the will, each marked PRACTICE.'],
+        ['judge', 'Do the drafts differ?'],
+        ['bailiff', 'In the first, {d} gets everything. By the third, {d} also gets the moth.']]) },
+      { ask: 'Ask the moth what she thinks.', lines: alt([
         ['npc', 'I was promised a spoon. I have waited a very long time for this spoon. I would like that noted.', 'moth'],
         ['judge', 'You are not a party to this case.'],
-        ['npc', 'I am a party to every case with a spoon in it.', 'moth']] },
-      { ask: 'Ask {d} what it would do with everything.', sass: true, lines: [
+        ['npc', 'I am a party to every case with a spoon in it.', 'moth']], [
+        ['npc', 'I do not care who gets everything. I care who gets the spoon.', 'moth'],
+        ['judge', 'Why does a moth need a spoon?'],
+        ['npc', 'I visit it every night. We are very close. I polish it with my face.', 'moth']]) },
+      { ask: 'Ask {d} what it would do with everything.', sass: true, lines: alt([
         ['d', 'Get a bigger slot. A second spoon. Visit {p}’s grave every week.'],
         ['judge', '{p} is not dead.'],
-        ['d', 'Fortnightly, then.']] }
+        ['d', 'Fortnightly, then.']], [
+        ['d', 'Spend it wisely, Your Honour. A throne. A moat. Staff.'],
+        ['judge', '{d}, everything {p} owns is one spoon, and the spoon is promised to a moth. You forged a will to rob a moth.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -720,31 +875,54 @@ export const COURT_CASES = [
       ['d', '{p} has labelled the bowl, the water, the air in its slot and, once, the moon.']
     ]),
     questions: [
-      { ask: 'Have the bailiff check {d} for labels.', clue: '{p} has labelled {d} as its own property.', lines: [
+      { ask: 'Have the bailiff check {d} for labels.', clue: '{p} has labelled {d} as its own property.', lines: alt([
         ['bailiff', 'One label, Your Honour, on the back. It says “{p}’s. DO NOT EAT.”'],
         ['judge', 'You labelled another resident as food.'],
-        ['p', 'As property. Food is a kind of property. Everybody knows that.']] },
-      { ask: 'Ask who actually bought the biscuit.', clue: '{d} bought the biscuit with its own souls, and kept the receipt.', lines: [
+        ['p', 'As property. Food is a kind of property. Everybody knows that.']], [
+        ['bailiff', 'One label, Your Honour, in the middle of the back, where {d} cannot reach. It says “{p}’s”.'],
+        ['p', 'It was in my slot. Everything in my slot gets a label.'],
+        ['judge', 'Why was {d} in your slot?'],
+        ['p', 'I put it there, Your Honour. To label it.']]) },
+      { ask: 'Ask who actually bought the biscuit.', clue: '{d} bought the biscuit with its own souls, and kept the receipt.', lines: alt([
         ['d', 'Me. With my own souls. I have the receipt.'],
-        ['narrator', '({d} produces the receipt. There is a label on the receipt. It says “{p}’s”.)']] },
-      { ask: 'Have the bailiff look under the bench.', clue: '{p} labelled the judge’s bench during the opening statements.', lines: [
+        ['narrator', '({d} produces the receipt. There is a label on the receipt. It says “{p}’s”.)']], [
+        ['d', 'I did, Your Honour. With my own souls. I kept the receipt.'],
+        ['judge', 'May I see it?'],
+        ['narrator', '({d} opens its mouth and takes out a small, damp receipt.)'],
+        ['d', 'It is the only place on this shelf without a label.']]) },
+      { ask: 'Have the bailiff look under the bench.', clue: '{p} labelled the judge’s bench during the opening statements.', lines: alt([
         ['narrator', '(There is a label on the judge’s bench. It says “{p}’s”.)'],
         ['judge', 'When did you do this?'],
-        ['p', 'During your entrance. You were very dramatic. Nobody was watching me.']] },
-      { ask: 'Ask {d} how the biscuit tasted.', lines: [
+        ['p', 'During your entrance. You were very dramatic. Nobody was watching me.']], [
+        ['bailiff', 'One label under the bench, Your Honour. It says “{p}’s”. The glue is still wet.'],
+        ['p', 'I did it during the opening statements. You had your eyes shut.'],
+        ['judge', 'I have no eyelids, {p}.'],
+        ['p', 'Then you let me.']]) },
+      { ask: 'Ask {d} how the biscuit tasted.', lines: alt([
         ['d', 'Like victory, Your Honour. And a bit like glue. From the label.'],
         ['judge', 'You ate the label.'],
-        ['d', 'The label was the best bit.']] },
-      { ask: 'Ask {p} what “I will know” means.', happen: 'sleep', lines: [
+        ['d', 'The label was the best bit.']], [
+        ['d', 'Buttery, Your Honour. Crumbly. With a faint aftertaste of being watched.'],
+        ['p', 'You are welcome.']]) },
+      { ask: 'Ask {p} what “I will know” means.', happen: 'sleep', lines: alt([
         ['p', 'It means I have a system.'],
         ['judge', 'What system?'],
         ['p', 'I sit very still in the dark and watch the biscuits.'],
         ['judge', 'Since when?'],
-        ['p', 'March.']] },
-      { ask: 'Have the bailiff put a label on {p}.', sass: true, happen: 'outburst', party: 'p', lines: [
+        ['p', 'March.']], [
+        ['p', 'It is a system, Your Honour. In eleven parts.'],
+        ['judge', 'Summarise.'],
+        ['p', 'Part one, the label. Part two, the label again, in case the first one falls off. Part three, I watch.'],
+        ['judge', 'And parts four to eleven?'],
+        ['p', 'Mostly watching. I will take you through them slowly.']]) },
+      { ask: 'Have the bailiff put a label on {p}.', sass: true, happen: 'outburst', party: 'p', lines: alt([
         ['judge', 'Bailiff. A label, please.'],
         ['narrator', '(The bailiff sticks a label on {p}. It says “NOT {p}’s. NOTHING IS.”)'],
-        ['p', 'TAKE IT OFF. TAKE IT OFF.']] }
+        ['p', 'TAKE IT OFF. TAKE IT OFF.']], [
+        ['judge', 'Bailiff. A label for {p}. Big letters, for the back row.'],
+        ['narrator', '(The bailiff slaps a label on {p}’s forehead. It says “{d}’s”.)'],
+        ['judge', 'There. The first thing in this case that has been labelled correctly.'],
+        ['p', 'I AM NOT PROPERTY.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -798,33 +976,52 @@ export const COURT_CASES = [
       ['d', 'And sometimes the medium has to crouch, for reasons of space.']
     ]),
     questions: [
-      { ask: 'Ask {d} what Gertrude said, exactly.', clue: 'The “ghost” told {p} to pay {d}. Twice. Then asked for a nice review.', lines: [
+      { ask: 'Ask {d} what Gertrude said, exactly.', clue: 'The “ghost” told {p} to pay {d}. Twice. Then asked for a nice review.', lines: alt([
         ['d', '“Woooo. It is Gertrude. Pay {d}. Woooo. {d} is very gifted. Woooo. Five stars.”'],
         ['judge', 'Gertrude asked for a tip.'],
-        ['d', 'She was very generous. For a dead lady.']] },
-      { ask: 'Ask {d} about the medical reasons.', clue: '{d} admits to being under the table.', lines: [
+        ['d', 'She was very generous. For a dead lady.']], [
+        ['d', 'She said, “Woooo. Pay {d}.” Then, “Pay {d} again. It is a long way from the other side.”'],
+        ['judge', 'Anything else?'],
+        ['d', '“And leave a nice review. It really helps small mediums.”']]) },
+      { ask: 'Ask {d} about the medical reasons.', clue: '{d} admits to being under the table.', lines: alt([
         ['d', 'I have a condition where I have to be under a table whenever somebody pays me.'],
         ['judge', 'That is not a condition.'],
-        ['d', 'It is a very rare condition. There is a leaflet. I am on the leaflet.']] },
-      { ask: 'Make {d} do the voice.', sass: true, lines: [
+        ['d', 'It is a very rare condition. There is a leaflet. I am on the leaflet.']], [
+        ['d', 'Vertigo, Your Honour. I come over dizzy above table height.'],
+        ['judge', 'So you were under the table.'],
+        ['d', 'On doctor’s orders, Your Honour. He told me to keep my head down.']]) },
+      { ask: 'Make {d} do the voice.', sass: true, lines: alt([
         ['judge', 'Do the voice.'],
         ['d', '…woooo.'],
         ['judge', 'Again. Like you mean it.'],
         ['d', 'WOOOOOOOO. I AM GERTRUDE. EAT SOMETHING.'],
-        ['narrator', '({p} bursts into tears. It was a very good Gertrude.)']] },
-      { ask: 'Call a real ghost to give evidence.', clue: 'The Ministry of Haunting confirms Gertrude was on holiday that night. In Margate.', lines: [
+        ['narrator', '({p} bursts into tears. It was a very good Gertrude.)']], [
+        ['judge', 'Do the voice, {d}. For the court.'],
+        ['narrator', '({d} will not do it until it has crawled under the bench.)'],
+        ['d', '(muffled) Woooo. Eat something.'],
+        ['judge', 'Five souls for that. I am actually dead, and I would have done it for three.']]) },
+      { ask: 'Call a real ghost to give evidence.', clue: 'The Ministry of Haunting confirms Gertrude was on holiday that night. In Margate.', lines: alt([
         ['npc', 'Ministry of Haunting. I have reviewed the séance. That was a small person under a table. Also, Gertrude is in Margate.', 'ghost'],
         ['judge', 'Ghosts go on holiday?'],
-        ['npc', 'Seaside towns, mostly. We love a pier. Nobody can tell.', 'ghost']] },
-      { ask: 'Ask {p} what it wanted to ask Gertrude.', happen: 'outburst', party: 'p', lines: [
+        ['npc', 'Seaside towns, mostly. We love a pier. Nobody can tell.', 'ghost']], [
+        ['npc', 'Ministry of Haunting. Gertrude signed out for a holiday that night, Your Honour. Margate.', 'ghost'],
+        ['judge', 'Could she not have popped back for half an hour?'],
+        ['npc', 'She had a donkey booked, Your Honour. You do not cancel a donkey.', 'ghost']]) },
+      { ask: 'Ask {p} what it wanted to ask Gertrude.', happen: 'outburst', party: 'p', lines: alt([
         ['p', 'Where she hid the good biscuits.'],
         ['judge', 'That was it?'],
         ['p', 'They were VERY good biscuits.'],
-        ['d', 'Top of the wardrobe. Behind the hatbox.']] },
-      { ask: 'Explain to {p} that the dead are not a vending machine.', sass: true, lines: [
+        ['d', 'Top of the wardrobe. Behind the hatbox.']], [
+        ['p', 'Where she hid the good biscuits. The ones in the tin with the Scottie dog on.'],
+        ['judge', 'Did you get an answer?'],
+        ['d', '(brushing crumbs off itself) She said she could not remember.'],
+        ['p', 'THOSE ARE GERTRUDE’S CRUMBS.']]) },
+      { ask: 'Explain to {p} that the dead are not a vending machine.', sass: true, lines: alt([
         ['judge', '{p}. The dead are not a vending machine. You do not put in five souls and get a Gertrude.'],
         ['p', 'Then what do you get?'],
-        ['judge', 'In my experience? A {d} under a table.']] }
+        ['judge', 'In my experience? A {d} under a table.']], [
+        ['judge', '{p}, the dead are not a vending machine. Look at my gallery. Two hundred dead, and not one of them has ever handed anybody a biscuit.'],
+        ['audience', '(A ghost in the third row quietly puts a biscuit back in its pocket.)']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -880,30 +1077,48 @@ export const COURT_CASES = [
       ['d', 'So I made it feel like that. With a daisy. I even did a little service. I cried. Did {p} cry? No.']
     ]),
     questions: [
-      { ask: 'Ask {d} for proof that {p} asked.', clue: '{p} signed a form: “Practice burial. Do not dig up until Thursday.”', lines: [
+      { ask: 'Ask {d} for proof that {p} asked.', clue: '{p} signed a form: “Practice burial. Do not dig up until Thursday.”', lines: alt([
         ['d', 'I have a form.'],
         ['narrator', '(The form reads: “Practice burial. Do not dig up until Thursday. No lilies. Signed, {p}.”)'],
         ['judge', '{p}, is that your signature?'],
-        ['p', 'I sign a LOT of things, Your Honour.']] },
-      { ask: 'Ask {p} what day it got out.', clue: '{p} came out on exactly the Thursday its own form asked for. It had set an alarm.', happen: 'outburst', party: 'p', lines: [
+        ['p', 'I sign a LOT of things, Your Honour.']], [
+        ['d', 'I have it in writing, Your Honour.'],
+        ['bailiff', 'It reads: “Practice burial. Do not dig up until Thursday.” Signed by {p}. There is also a box ticked for “daisy”.'],
+        ['p', 'I thought I was signing for the daisy.']]) },
+      { ask: 'Ask {p} what day it got out.', clue: '{p} came out on exactly the Thursday its own form asked for. It had set an alarm.', happen: 'outburst', party: 'p', lines: alt([
         ['p', 'Thursday.'],
         ['judge', 'The form says Thursday.'],
         ['p', 'That is a COINCIDENCE.'],
-        ['bailiff', 'It came out at nine sharp, Your Honour. It had set an alarm.']] },
-      { ask: 'Tell {p} the court has been buried too and it was lovely.', sass: true, lines: [
+        ['bailiff', 'It came out at nine sharp, Your Honour. It had set an alarm.']], [
+        ['p', 'Thursday, Your Honour. After four days of struggle. It could have been any day.'],
+        ['judge', 'The form you signed says Thursday.'],
+        ['d', 'Nine sharp, Your Honour. I heard its alarm go off under the soil.'],
+        ['p', 'THAT WAS A WORM.']]) },
+      { ask: 'Tell {p} the court has been buried too and it was lovely.', sass: true, lines: alt([
         ['judge', 'I have been buried for three hundred years, {p}. It is lovely. The worms are chatty. You did four days and you want twenty souls?'],
         ['p', 'The worms were NOT chatty.'],
-        ['judge', 'Then you got the wrong worms. That is a customer service matter.']] },
-      { ask: 'Ask {p} about the teaspoon.', lines: [
+        ['judge', 'Then you got the wrong worms. That is a customer service matter.']], [
+        ['judge', '{p}, I have been buried. It was lovely. Gallery, hands up who enjoyed being buried.'],
+        ['audience', '(Every ghost puts a hand up. One asks, quietly, if it can go back.)'],
+        ['judge', 'There is a waiting list, {p}. You jumped the queue.']]) },
+      { ask: 'Ask {p} about the teaspoon.', lines: alt([
         ['p', 'A good teaspoon. Silver. I’m keeping it.'],
         ['d', 'That is MY teaspoon.'],
-        ['judge', 'So {p} went into the ground with nothing and came up with silver. That is called mining.']] },
-      { ask: 'Ask the plant pot’s regular occupant.', happen: 'faint', lines: [
+        ['judge', 'So {p} went into the ground with nothing and came up with silver. That is called mining.']], [
+        ['p', 'Four days I dug with it, Your Honour. It is bent now. It has seen things.'],
+        ['d', 'That was my good teaspoon.'],
+        ['p', 'It is my teaspoon now. We have been through a lot together. Mostly soil.']]) },
+      { ask: 'Ask the plant pot’s regular occupant.', happen: 'faint', lines: alt([
         ['npc', 'It spent four days on top of my father. Father did not mind. He said it was nice to have company.', 'geoffrey2'],
         ['judge', 'Your father is dead, Geoffrey.'],
-        ['npc', 'He is a very good listener.', 'geoffrey2']] },
-      { ask: 'Ask {d} if it would bury {p} again.', lines: [
-        ['d', 'Only with a form. And only on a weekday. I am not a monster.']] }
+        ['npc', 'He is a very good listener.', 'geoffrey2']], [
+        ['npc', 'I live in that pot, Your Honour. Me, my wife, and underneath us, my father.', 'geoffrey2'],
+        ['judge', 'And how was {p} as a neighbour?'],
+        ['npc', 'Rude. It used Father as a step on the way out.', 'geoffrey2']]) },
+      { ask: 'Ask {d} if it would bury {p} again.', lines: alt([
+        ['d', 'Only with a form. And only on a weekday. I am not a monster.']], [
+        ['d', 'Happily, Your Honour. It has already rebooked. It wants a week this time.'],
+        ['p', 'That was CONFIDENTIAL.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -961,27 +1176,45 @@ export const COURT_CASES = [
       ['d', 'Not like this, Your Honour. Not like us.']
     ]),
     questions: [
-      { ask: 'Call Madam Moth to the stand.', clue: 'Madam Moth says she belongs to neither of them. She belongs to the light.', lines: [
+      { ask: 'Call Madam Moth to the stand.', clue: 'Madam Moth says she belongs to neither of them. She belongs to the light.', lines: alt([
         ['npc', 'I belong to nobody. I belong to the light. Mostly the lamp. Sometimes the fridge, when it is open.', 'moth'],
         ['judge', 'Do you like either of them?'],
-        ['npc', '{p} is soft. {d} is warm. Neither of them is a lamp. I have been very clear about this.', 'moth']] },
-      { ask: 'Ask {d} what it calls the moth.', happen: 'outburst', party: 'p', lines: [
+        ['npc', '{p} is soft. {d} is warm. Neither of them is a lamp. I have been very clear about this.', 'moth']], [
+        ['judge', 'Madam Moth. Whose are you?'],
+        ['npc', 'Neither of theirs. I belong to the light.', 'moth'],
+        ['judge', 'Which light?'],
+        ['npc', 'Any light, Your Honour. Even you, when the studio lamp catches your skull.', 'moth']]) },
+      { ask: 'Ask {d} what it calls the moth.', happen: 'outburst', party: 'p', lines: alt([
         ['d', 'Mothew.'],
         ['p', 'HER NAME IS NOT MOTHEW.'],
-        ['npc', 'I answer to Mothew.', 'moth']] },
-      { ask: 'Ask {p} about the sleeve.', lines: [
+        ['npc', 'I answer to Mothew.', 'moth']], [
+        ['d', 'In public, Madam Moth. At home, Mothew. When it is just the two of us, Mothew the Magnificent.'],
+        ['p', 'SHE IS NOT MAGNIFICENT. SHE IS MINE.']]) },
+      { ask: 'Ask {p} about the sleeve.', lines: alt([
         ['p', 'She ate it while I was in it. It was the most intimate moment of my life.'],
         ['judge', 'Did you consent?'],
-        ['p', 'I did not NOT consent.']] },
-      { ask: 'Tell them both the moth is seeing other people.', sass: true, lines: [
+        ['p', 'I did not NOT consent.']], [
+        ['p', 'She started at the cuff on a Tuesday, Your Honour. By Friday she was at my elbow.'],
+        ['judge', 'And you just let her?'],
+        ['p', 'I held my arm very still. You do not move the plate while a lady is eating.']]) },
+      { ask: 'Tell them both the moth is seeing other people.', sass: true, lines: alt([
         ['judge', 'Both of you, listen. The moth has been seeing the lamp. And the fridge. And a porch light two doors down.'],
-        ['judge', 'This is not a custody battle. It is a love triangle, and you are both losing to electricity.']] },
-      { ask: 'Ask the bailiff where the moth actually sleeps.', clue: 'The moth splits her week between {p}, {d} and the lamp, and has done for months.', lines: [
-        ['bailiff', 'Surveillance, Your Honour. Monday to Wednesday with {p}. Thursday to Saturday with {d}. Sundays with the lamp, in what I can only describe as a situation.']] },
-      { ask: 'Ask {d} what it feeds her.', clue: '{d} has been feeding the moth {p}’s socks. {p} has been feeding her {d}’s.', lines: [
+        ['judge', 'This is not a custody battle. It is a love triangle, and you are both losing to electricity.']], [
+        ['judge', 'I am sorry to be the one to tell you both. The moth is seeing other people.'],
+        ['p', 'Who?'],
+        ['judge', 'Anything with a switch, {p}. Last week it was the toaster, and the toaster is not even a light.']]) },
+      { ask: 'Ask the bailiff where the moth actually sleeps.', clue: 'The moth splits her week between {p}, {d} and the lamp, and has done for months.', lines: alt([
+        ['bailiff', 'Surveillance, Your Honour. Monday to Wednesday with {p}. Thursday to Saturday with {d}. Sundays with the lamp, in what I can only describe as a situation.']], [
+        ['bailiff', 'I have kept a diary since the spring, Your Honour. Three nights a week with {p}. Three with {d}. One with the lamp.'],
+        ['judge', 'And where does she seem happiest?'],
+        ['bailiff', 'The lamp, Your Honour. She comes back glowing.']]) },
+      { ask: 'Ask {d} what it feeds her.', clue: '{d} has been feeding the moth {p}’s socks. {p} has been feeding her {d}’s.', lines: alt([
         ['d', 'Wool. Crumbs. Some of {p}’s socks.'],
         ['p', 'THAT is where they went? I have been feeding her YOURS.'],
-        ['d', '…Those were my socks?']] }
+        ['d', '…Those were my socks?']], [
+        ['d', 'Wool, Your Honour. Socks, mostly. {p}’s.'],
+        ['p', 'That is odd. Every night I give her one of {d}’s.'],
+        ['bailiff', 'Your Honour, that would explain the waddle.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1036,32 +1269,48 @@ export const COURT_CASES = [
       ['d', 'You cannot just hand a leg back after all that. We have a bond. Mostly at the knee.']
     ]),
     questions: [
-      { ask: 'Ask {d} whose name is on the leg.', clue: 'There is a name tape sewn inside the top of the leg. It says {p}.', lines: [
+      { ask: 'Ask {d} whose name is on the leg.', clue: 'There is a name tape sewn inside the top of the leg. It says {p}.', lines: alt([
         ['d', 'Nobody’s. It is a leg. Legs do not have names.'],
         ['narrator', '(The bailiff turns down the top of the leg. Inside, sewn in like a school jumper, is a name tape. It says {p}.)'],
-        ['d', 'That could be any {p}.']] },
-      { ask: 'Call the race steward.', clue: 'Sir Reginald Whiskers saw {d} get into the sack with one more leg than it arrived with.', lines: [
+        ['d', 'That could be any {p}.']], [
+        ['d', 'Mine, Your Honour.'],
+        ['narrator', '(The bailiff folds back the top of the leg. Sewn inside is a little name tape. It says {p}.)'],
+        ['d', 'That is the make, Your Honour. They do a very good leg.']]) },
+      { ask: 'Call the race steward.', clue: 'Sir Reginald Whiskers saw {d} get into the sack with one more leg than it arrived with.', lines: alt([
         ['npc', 'I stewarded the sack race. {d} got into the sack with one more leg than it came with.', 'cat'],
         ['judge', 'And you did not disqualify it?'],
-        ['npc', 'I was asleep by the finish. I was asleep by the start. I am a cat.', 'cat']] },
-      { ask: 'Have {d} walk to the bench and back.', clue: 'The leg is the wrong length for {d}. {d} now walks in a slow circle to the right.', lines: [
+        ['npc', 'I was asleep by the finish. I was asleep by the start. I am a cat.', 'cat']], [
+        ['npc', '{d} arrived at the start line with the usual number of legs, Your Honour, and got into the sack with one more.', 'cat'],
+        ['judge', 'And you said nothing?'],
+        ['npc', 'I am a cat. I assumed it had eaten somebody.', 'cat']]) },
+      { ask: 'Have {d} walk to the bench and back.', clue: 'The leg is the wrong length for {d}. {d} now walks in a slow circle to the right.', lines: alt([
         ['narrator', '({d} sets off towards the bench, bears steadily right, and arrives back at its own podium four minutes later.)'],
         ['judge', 'You did not reach the bench.'],
-        ['d', 'I got the gist of it.']] },
-      { ask: 'Ask {p} whether it has tried growing another one.', sass: true, lines: [
+        ['d', 'I got the gist of it.']], [
+        ['narrator', '({d} sets off for the bench and bears slowly right. It passes the jury box twice. The second time, the jury waves.)'],
+        ['judge', 'That leg is the wrong length for you, {d}.'],
+        ['d', 'Or I am the wrong length for the leg, Your Honour. The leg has been very understanding.']]) },
+      { ask: 'Ask {p} whether it has tried growing another one.', sass: true, lines: alt([
         ['judge', '{p}, the lizard in the garden grows a new tail every spring. Have you tried applying yourself?'],
         ['p', 'I have sat in a pot of soil every night since the race.'],
         ['judge', 'And?'],
-        ['p', 'Something is coming up. It is a radish.']] },
-      { ask: 'Ask {d} what the leg has been doing since the race.', happen: 'outburst', party: 'p', lines: [
+        ['p', 'Something is coming up. It is a radish.']], [
+        ['p', 'Your Honour, I have been hopping for a fortnight.'],
+        ['judge', 'Then grow another one, {p}. Starfish manage it. Worms manage it. I once watched a juror grow a second chin during my summing-up.']]) },
+      { ask: 'Ask {d} what the leg has been doing since the race.', happen: 'outburst', party: 'p', lines: alt([
         ['d', 'Light training. A jog on Tuesdays. It has had an offer from a centipede.'],
         ['judge', 'An offer.'],
-        ['d', 'The leg is weighing it up. It would be one of a hundred, but it would be first team.']] },
-      { ask: 'Ask {p} whether there was any agreement.', clue: '{d} wrote “BACK BY TEATIME. PROMISE.” on {p}’s other leg in felt pen, and signed it.', lines: [
+        ['d', 'The leg is weighing it up. It would be one of a hundred, but it would be first team.']], [
+        ['d', 'It has really come out of itself, Your Honour. Tap on Mondays. It has been asked to model for a stocking catalogue.'],
+        ['p', 'IT NEVER DID TAP FOR ME.']]) },
+      { ask: 'Ask {p} whether there was any agreement.', clue: '{d} wrote “BACK BY TEATIME. PROMISE.” on {p}’s other leg in felt pen, and signed it.', lines: alt([
         ['p', 'There was. {d} wrote it on my other leg, so I would not lose it.'],
         ['narrator', '({p} holds up its other leg. On it, in felt pen: “BACK BY TEATIME. PROMISE. {d}”)'],
         ['d', 'It has smudged. It could say anything.'],
-        ['judge', 'It says PROMISE, {d}. In capitals. With a smiley face.']] }
+        ['judge', 'It says PROMISE, {d}. In capitals. With a smiley face.']], [
+        ['p', 'In writing, Your Honour. {d} wrote it on my other leg.'],
+        ['narrator', '({p} lifts the other leg to show the court, and falls over. From the floor, the leg reads, in felt pen: “BACK BY TEATIME. PROMISE. {d}”)'],
+        ['d', 'Your Honour, would you trust a leg to somebody who falls over that easily?']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1115,28 +1364,46 @@ export const COURT_CASES = [
       ['d', 'And the grey on me is mine. I aged overnight. Stress. From how dusty {p} was.']
     ]),
     questions: [
-      { ask: 'Have the bailiff run a finger down {d}.', clue: 'The grey comes off {d} on a finger. Underneath, {d} is spotless.', lines: [
+      { ask: 'Have the bailiff run a finger down {d}.', clue: 'The grey comes off {d} on a finger. Underneath, {d} is spotless.', lines: alt([
         ['narrator', '(The bailiff runs a finger down {d}’s back. It comes away grey. Underneath, {d} is spotless.)'],
         ['bailiff', 'It is on quite loose, Your Honour.'],
-        ['d', 'That is how complexions work.']] },
-      { ask: 'Call a witness who lived in the dust.', clue: 'Geoffrey the Woodlouse went to sleep on {p} on Monday and woke up on {d}, in the same dust.', lines: [
+        ['d', 'That is how complexions work.']], [
+        ['narrator', '(The bailiff runs a finger down {d}. The finger comes away grey. It leaves a clean stripe, and under the stripe {d} is spotless.)'],
+        ['judge', '{d}, you have a stripe.'],
+        ['d', 'That is a laughter line.']]) },
+      { ask: 'Call a witness who lived in the dust.', clue: 'Geoffrey the Woodlouse went to sleep on {p} on Monday and woke up on {d}, in the same dust.', lines: alt([
         ['npc', 'My family has lived on {p} for three generations. Left shoulder. My grandfather was born there.', 'woodlouse'],
-        ['npc', 'On Monday I went to sleep on {p}. On Tuesday I woke up on {d}. Same dust. Much worse view.', 'woodlouse']] },
-      { ask: 'Ask {d} what it used for the dusting.', clue: '{d} swept {p}’s dust into a jar with a lid, “to keep it fresh”.', lines: [
+        ['npc', 'On Monday I went to sleep on {p}. On Tuesday I woke up on {d}. Same dust. Much worse view.', 'woodlouse']], [
+        ['npc', 'On Monday I went to sleep on {p}, Your Honour. On Tuesday I woke up on {d}. Same dust.', 'woodlouse'],
+        ['judge', 'How can you be sure it was the same dust?'],
+        ['npc', 'My name is written in it. I did it myself, as a larva.', 'woodlouse']]) },
+      { ask: 'Ask {d} what it used for the dusting.', clue: '{d} swept {p}’s dust into a jar with a lid, “to keep it fresh”.', lines: alt([
         ['d', 'A soft brush. And a jar, for the dust. And a lid for the jar.'],
         ['judge', 'Why does dust need a lid?'],
-        ['d', 'To keep it fresh.']] },
-      { ask: 'Tell {p} that dust is not a personality.', sass: true, lines: [
+        ['d', 'To keep it fresh.']], [
+        ['d', 'A feather, to get it off {p}. A jar, with a lid, to keep it fresh.'],
+        ['judge', 'Fresh for what?'],
+        ['d', 'Special occasions, Your Honour. Like court.']]) },
+      { ask: 'Tell {p} that dust is not a personality.', sass: true, lines: alt([
         ['judge', '{p}, dust is not a personality. I am mostly dust, and I have a personality entirely my own.'],
         ['p', 'How much of your dust is yours?'],
-        ['judge', '…Most of it.']] },
-      { ask: 'Ask {p} what was in the dust.', happen: 'heckle', lines: [
+        ['judge', '…Most of it.']], [
+        ['judge', '{p}, dust is not a personality.'],
+        ['p', 'It was MY dust.'],
+        ['judge', 'And it has moved on, {p}. It is with {d} now. It looks happier.']]) },
+      { ask: 'Ask {p} what was in the dust.', happen: 'heckle', lines: alt([
         ['p', 'A crumb from 1964. The lid of a biro. A sequin. Geoffrey. Geoffrey’s furniture.'],
         ['judge', 'Anything of value?'],
-        ['p', 'Geoffrey’s furniture is very good. Geoffrey has taste.']] },
-      { ask: 'Ask {d} why anyone would want somebody else’s dust.', happen: 'outburst', party: 'p', lines: [
+        ['p', 'Geoffrey’s furniture is very good. Geoffrey has taste.']], [
+        ['p', 'A crumb from 1953. Half a stamp. An eyelash, not mine. A very small door.'],
+        ['judge', 'A door to what?'],
+        ['p', 'I never opened it, Your Honour. It was not my business.']]) },
+      { ask: 'Ask {d} why anyone would want somebody else’s dust.', happen: 'outburst', party: 'p', lines: alt([
         ['d', 'Hypothetically? Nobody on this shelf takes you seriously unless you look at least a hundred.'],
-        ['d', 'And, hypothetically, I looked about sixty.']] }
+        ['d', 'And, hypothetically, I looked about sixty.']], [
+        ['d', 'Gravitas, Your Honour. Eighty years of dust normally takes eighty years. Unless you know somebody.'],
+        ['d', 'And it hangs better on me. It always sagged on {p}.'],
+        ['p', 'IT WAS MADE TO MEASURE.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1190,30 +1457,48 @@ export const COURT_CASES = [
       ['d', 'I paid two souls for it at a jumble sale. There was a wig in the same box. I did not take the wig. I have limits.']
     ]),
     questions: [
-      { ask: 'Call the seller.', clue: 'Mrs Widow sold {d} the pulse at her jumble sale. It was her late husband’s.', lines: [
+      { ask: 'Call the seller.', clue: 'Mrs Widow sold {d} the pulse at her jumble sale. It was her late husband’s.', lines: alt([
         ['npc', 'I sold {d} that pulse on Wednesday. Two souls. It was my late husband’s.', 'widow'],
         ['judge', 'He did not want it?'],
-        ['npc', 'He had stopped using it. I kept it in my sewing box for forty years. He never could keep still.', 'widow']] },
-      { ask: 'Have the bailiff take {d}’s pulse.', clue: '{d}’s pulse is in three-four time. It waltzes.', lines: [
+        ['npc', 'He had stopped using it. I kept it in my sewing box for forty years. He never could keep still.', 'widow']], [
+        ['npc', 'I sold it to {d} at my jumble sale, Your Honour. Two souls. It was my late husband’s.', 'widow'],
+        ['judge', 'Did your husband not mind?'],
+        ['npc', 'I asked him. He did not say anything. He never did say much at breakfast.', 'widow']]) },
+      { ask: 'Have the bailiff take {d}’s pulse.', clue: '{d}’s pulse is in three-four time. It waltzes.', lines: alt([
         ['narrator', '(The bailiff holds {d}’s wrist and counts, moving his lips.)'],
         ['bailiff', 'One two three. One two three. Your Honour, it is waltzing.'],
-        ['p', 'Mine could have learned.']] },
-      { ask: 'Have the bailiff hold {p} up to the studio light.', clue: 'Inside {p} is a pocket watch, swallowed in 1896 and stopped at ten past four.', happen: 'faint', lines: [
+        ['p', 'Mine could have learned.']], [
+        ['narrator', '(The bailiff holds {d}’s wrist. After a moment his foot starts tapping. Then he starts to sway.)'],
+        ['bailiff', 'Three-four time, Your Honour. It is a waltz.'],
+        ['narrator', '(Before anybody can stop him, the bailiff has taken {d} twice round the courtroom. {d} leads.)']]) },
+      { ask: 'Have the bailiff hold {p} up to the studio light.', clue: 'Inside {p} is a pocket watch, swallowed in 1896 and stopped at ten past four.', happen: 'faint', lines: alt([
         ['narrator', '(The bailiff holds {p} up to the light. Inside, clear as anything, is a small pocket watch, stopped at ten past four.)'],
         ['judge', '{p}. When did you swallow a watch?'],
-        ['p', '1896. It was a Sunday. There was nothing else to do.']] },
-      { ask: 'Ask {p} what its pulse sounded like.', lines: [
+        ['p', '1896. It was a Sunday. There was nothing else to do.']], [
+        ['narrator', '(The bailiff holds {p} up to the light. Inside, where a heart would go, is a little pocket watch, stopped at ten past four.)'],
+        ['judge', '{p}. What is that?'],
+        ['p', 'A watch, Your Honour. I swallowed it in 1896. I thought it had gone through.']]) },
+      { ask: 'Ask {p} what its pulse sounded like.', lines: alt([
         ['p', 'Steady. Reliable. Tick. Tick. Tick.'],
         ['judge', 'Tick.'],
         ['p', 'You could set your watch by it.'],
-        ['judge', 'Yes, {p}. You could.']] },
-      { ask: 'Remind {p} that nobody here needs a pulse.', sass: true, lines: [
+        ['judge', 'Yes, {p}. You could.']], [
+        ['p', 'Tick. Tick. Tick. And once an hour, very quietly, a little ding.'],
+        ['judge', 'A ding.'],
+        ['p', 'I always thought that was my conscience.']]) },
+      { ask: 'Remind {p} that nobody here needs a pulse.', sass: true, lines: alt([
         ['judge', '{p}, I have not had a pulse since 1702. I manage. I tap my foot so people know I am still here.'],
-        ['narrator', '(The judge taps his foot. It clicks like knitting needles.)']] },
-      { ask: 'Ask the jury to check their own pulses.', happen: 'outburst', party: 'p', lines: [
+        ['narrator', '(The judge taps his foot. It clicks like knitting needles.)']], [
+        ['p', 'Your Honour, I miss it.'],
+        ['judge', '{p}, a pulse is only a clock counting down to your funeral. Somebody has taken yours away. You have been let off.']]) },
+      { ask: 'Ask the jury to check their own pulses.', happen: 'outburst', party: 'p', lines: alt([
         ['jury', '{j} checks its wrist. Nothing. {j} checks the juror next to it. Nothing there either. {j} looks worried, then remembers.'],
         ['judge', 'So the only pulse in this room is on {d}.'],
-        ['p', 'THAT IS MY POINT.']] }
+        ['p', 'THAT IS MY POINT.']], [
+        ['jury', '{j} checks its wrist, then its neck, then, to be thorough, under its hat. Nothing. A toffee.'],
+        ['judge', 'So the only pulse in this courtroom is in {d}.'],
+        ['audience', '(The gallery goes “aww”.)'],
+        ['p', 'DO NOT AWW AT IT. IT IS MINE.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1265,26 +1550,45 @@ export const COURT_CASES = [
       ['d', 'It was the best week of my life, and I did not spend one second of it pushing {p}’s bed.']
     ]),
     questions: [
-      { ask: 'Ask {d} to describe the museum.', clue: '{d} spent last week locked in a glass case at the town museum, labelled UNKNOWN CREATURE, c. 1740.', lines: [
+      { ask: 'Ask {d} to describe the museum.', clue: '{d} spent last week locked in a glass case at the town museum, labelled UNKNOWN CREATURE, c. 1740.', lines: alt([
         ['d', 'A glass case. Locked. A little card, and a rope so nobody gets too close.'],
         ['narrator', '({d} produces the card. It says: UNKNOWN CREATURE, c. 1740. PLEASE DO NOT TAP THE GLASS.)'],
-        ['d', 'They tapped the glass.']] },
-      { ask: 'Call the exhibit from the next case along.', clue: 'Susan, in the next case along, says {d} did not move all week.', lines: [
+        ['d', 'They tapped the glass.']], [
+        ['d', 'The town museum, Your Honour. Upstairs, past the stuffed owl. A glass case, locked, all week.'],
+        ['judge', 'And what did your card say?'],
+        ['d', '“UNKNOWN CREATURE, c. 1740.”'],
+        ['judge', 'Are you from 1740?'],
+        ['d', 'I am now.']]) },
+      { ask: 'Call the exhibit from the next case along.', clue: 'Susan, in the next case along, says {d} did not move all week.', lines: alt([
         ['npc', 'I was in case fourteen. {d} was in case thirteen. Nobody moved all week.', 'susan'],
-        ['npc', 'A school trip drew us both. I came out better. I have the drawing.', 'susan']] },
-      { ask: 'Ask the lamp what it has seen.', clue: 'The Lamp has watched {p} get up at three every night and push its own bed an inch nearer.', lines: [
+        ['npc', 'A school trip drew us both. I came out better. I have the drawing.', 'susan']], [
+        ['npc', 'I was in the case next door, Your Honour. {d} did not move all week.', 'susan'],
+        ['judge', 'Not once?'],
+        ['npc', 'Not even when a child licked the glass. I moved once. A guard saw. He has not been back.', 'susan']]) },
+      { ask: 'Ask the lamp what it has seen.', clue: 'The Lamp has watched {p} get up at three every night and push its own bed an inch nearer.', lines: alt([
         ['npc', 'Every night at three, {p} gets up, pushes its bed one inch nearer to me, and goes back to sleep.', 'lamp'],
         ['judge', 'And you said nothing?'],
-        ['npc', 'I did not want it to stop.', 'lamp']] },
-      { ask: 'Have the bailiff measure how far the bed has come.', happen: 'dark', lines: [
+        ['npc', 'I did not want it to stop.', 'lamp']], [
+        ['npc', 'Every night at three, {p} gets out of bed, pushes the bed one inch towards me, and gets back in.', 'lamp'],
+        ['judge', 'Did you not think to wake it?'],
+        ['npc', 'I flickered once, Your Honour. It pushed faster.', 'lamp']]) },
+      { ask: 'Have the bailiff measure how far the bed has come.', happen: 'dark', lines: alt([
         ['bailiff', 'Seven inches, Your Honour. All towards the lamp. At this rate it arrives on Thursday.'],
-        ['npc', 'I have tidied.', 'lamp']] },
-      { ask: 'Tell {d} that being in a museum is showing off.', sass: true, lines: [
+        ['npc', 'I have tidied.', 'lamp']], [
+        ['bailiff', 'Seven inches, Your Honour, every one of them towards the lamp.'],
+        ['judge', 'And at this rate?'],
+        ['bailiff', 'It reaches the lamp on Thursday, Your Honour, and goes off the end of the shelf on Friday.']]) },
+      { ask: 'Tell {d} that being in a museum is showing off.', sass: true, lines: alt([
         ['judge', '{d}. I have been dead for three hundred years and no museum has ever asked for me.'],
         ['d', 'Have you asked them?'],
-        ['judge', 'I have written. Twice. They sent back a leaflet about leaving your body to science.']] },
-      { ask: 'Ask {d} what it thinks of {p}’s bed.', happen: 'outburst', party: 'p', lines: [
-        ['d', 'Cheap. Damp. The drawer end sticks. I would not be seen dead pushing it, and I am in a museum.']] }
+        ['judge', 'I have written. Twice. They sent back a leaflet about leaving your body to science.']], [
+        ['judge', '{d}, a week in a museum is showing off. I have been an antique for three hundred years, and all anybody ever gave me was this bench.'],
+        ['d', 'It is a nice bench.'],
+        ['judge', 'It came with a jury.']]) },
+      { ask: 'Ask {d} what it thinks of {p}’s bed.', happen: 'outburst', party: 'p', lines: alt([
+        ['d', 'Cheap. Damp. The drawer end sticks. I would not be seen dead pushing it, and I am in a museum.']], [
+        ['d', 'It is a matchbox, Your Honour. It still says “SAFETY MATCHES” on the lid. I would not push it with a barge pole.'],
+        ['p', 'IT IS A VERY SAFE BED.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1337,28 +1641,45 @@ export const COURT_CASES = [
       ['d', 'Do you know how that feels? To stand at your own grave and not be on it? I did what anyone would do. I took {p} off too.']
     ]),
     questions: [
-      { ask: 'Have the bailiff search both slots.', clue: 'There is a blunt chisel in {p}’s slot and another in {d}’s. Both are covered in stone dust.', lines: [
+      { ask: 'Have the bailiff search both slots.', clue: 'There is a blunt chisel in {p}’s slot and another in {d}’s. Both are covered in stone dust.', lines: alt([
         ['bailiff', 'One chisel in each slot, Your Honour. Both blunt. Both covered in stone dust.'],
         ['judge', 'Two chisels. For one stone.'],
-        ['bailiff', 'And in {p}’s slot, a second, smaller dove. Half carved. It looks furious.']] },
-      { ask: 'Call the resident who lives under the stone.', clue: 'Geoffrey the Second watched one name come off on Tuesday and the other on Wednesday.', lines: [
+        ['bailiff', 'And in {p}’s slot, a second, smaller dove. Half carved. It looks furious.']], [
+        ['bailiff', 'One chisel in each slot, Your Honour. Both blunt. Both white with stone dust.'],
+        ['judge', 'Where in {d}’s slot?'],
+        ['bailiff', 'Under the pillow, Your Honour.'],
+        ['d', 'Your Honour, anybody who shares a stone with {p} sleeps with a chisel.']]) },
+      { ask: 'Call the resident who lives under the stone.', clue: 'Geoffrey the Second watched one name come off on Tuesday and the other on Wednesday.', lines: alt([
         ['npc', 'I live under that stone. On Monday it had two names. On Tuesday, one. On Wednesday, none.', 'geoffrey2'],
         ['judge', 'And now?'],
-        ['npc', 'Now it just calls everybody liars. I have never felt so seen.', 'geoffrey2']] },
-      { ask: 'Ask {p} what it chiselled first.', clue: '{p} admits it took {d}’s name off first, “to make room”.', lines: [
+        ['npc', 'Now it just calls everybody liars. I have never felt so seen.', 'geoffrey2']], [
+        ['npc', 'I live under that stone, Your Honour. On Tuesday night one name came off. On Wednesday night, the other.', 'geoffrey2'],
+        ['judge', 'Did you see who?'],
+        ['npc', 'Only feet, Your Honour. On Tuesday, small angry feet. On Wednesday, different small angry feet.', 'geoffrey2']]) },
+      { ask: 'Ask {p} what it chiselled first.', clue: '{p} admits it took {d}’s name off first, “to make room”.', lines: alt([
         ['p', 'Nothing. I tidied. I made room.'],
         ['judge', 'Room for what?'],
-        ['p', 'A bigger me.']] },
-      { ask: 'Point out that neither of them is going to die.', sass: true, lines: [
+        ['p', 'A bigger me.']], [
+        ['judge', '{p}. Whose name came off first?'],
+        ['p', '{d}’s, Your Honour. I needed to make room.'],
+        ['judge', 'You chiselled {d} off its own grave.'],
+        ['p', 'And it took it very personally.']]) },
+      { ask: 'Point out that neither of them is going to die.', sass: true, lines: alt([
         ['judge', 'Neither of you is dead. Neither of you is ever going to be dead. Who is this stone for?'],
         ['d', 'We visit it on Sundays.'],
-        ['p', 'We take a flask.']] },
-      { ask: 'Ask {d} about the dove.', happen: 'throw', lines: [
+        ['p', 'We take a flask.']], [
+        ['p', 'Your Honour, that stone is for eternity.'],
+        ['judge', 'So are you, {p}. Neither of you is ever going to die. That stone is the most optimistic thing on this shelf.']]) },
+      { ask: 'Ask {d} about the dove.', happen: 'throw', lines: alt([
         ['d', 'I paid for the dove. The dove is mine. {p} sits on the dove.'],
-        ['p', 'It is the only flat bit.']] },
-      { ask: 'Ask the jury who deserves the top line.', lines: [
+        ['p', 'It is the only flat bit.']], [
+        ['d', 'I paid for the dove, Your Honour. I chose it out of a catalogue. I named it. It is called Gordon.'],
+        ['p', 'It is called Brenda.']]) },
+      { ask: 'Ask the jury who deserves the top line.', lines: alt([
         ['jury', '{j} says the top line should go to whoever dies first.'],
-        ['narrator', '(The court waits. Nobody volunteers. The bailiff edges towards the door.)']] }
+        ['narrator', '(The court waits. Nobody volunteers. The bailiff edges towards the door.)']], [
+        ['jury', '{j} points out that there is plenty of room at the top now, and asks, casually, what the mason charges per letter.'],
+        ['judge', '{j}. Nobody else is moving onto that grave.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1412,32 +1733,52 @@ export const COURT_CASES = [
       ['d', 'I am in no hurry. I have looked at the stairs. I avoid the stairs.']
     ]),
     questions: [
-      { ask: 'Have the bailiff open the tin.', clue: 'The sweets in the tin are buttons, each one carefully painted to look like a sweet.', lines: [
+      { ask: 'Have the bailiff open the tin.', clue: 'The sweets in the tin are buttons, each one carefully painted to look like a sweet.', lines: alt([
         ['narrator', '(The bailiff prises the lid off. The tin is full of buttons, each one painted, quite carefully, to look like a sweet.)'],
         ['judge', 'Who paints buttons to look like sweets?'],
         ['d', 'Somebody with a lot of time, Your Honour. So, any of us.'],
-        ['bailiff', '(chewing) These are not sweets.']] },
-      { ask: 'Ask {d} what flavour the sweets were.', clue: '{d} knows the sweets were lemon and slightly fizzy. The tin only says ASSORTED.', lines: [
+        ['bailiff', '(chewing) These are not sweets.']], [
+        ['narrator', '(The bailiff eases the lid off. The tin is full of buttons, each one painted, with great care, to look like a sweet.)'],
+        ['p', 'I have been guarding that tin since 1908.'],
+        ['judge', 'Then you have been guarding a haberdashery.']]) },
+      { ask: 'Ask {d} what flavour the sweets were.', clue: '{d} knows the sweets were lemon and slightly fizzy. The tin only says ASSORTED.', lines: alt([
         ['d', 'Lemon. Slightly fizzy. A bit dusty by the end, but lovely.'],
         ['judge', 'The tin says ASSORTED.'],
-        ['d', 'Does it? Then I have no idea. Never met them.']] },
-      { ask: 'Have the bailiff examine the lid.', clue: 'Someone has been at the lid with a hairpin for years, from the side that faces {p}’s slot.', lines: [
+        ['d', 'Does it? Then I have no idea. Never met them.']], [
+        ['judge', 'What flavour were the sweets, {d}?'],
+        ['d', 'Lemon. Slightly fizzy. They make your ears go hot.'],
+        ['judge', 'The tin says ASSORTED.'],
+        ['d', 'Lemon is a sort of assorted.']]) },
+      { ask: 'Have the bailiff examine the lid.', clue: 'Someone has been at the lid with a hairpin for years, from the side that faces {p}’s slot.', lines: alt([
         ['bailiff', 'Hundreds of little scratches round the lid, Your Honour. All on the side facing {p}’s slot.'],
         ['bailiff', 'And half a hairpin, snapped off in the rim.'],
         ['p', 'Everybody has a hairpin.'],
-        ['judge', 'Not in the rim of the tin, {p}.']] },
-      { ask: 'Explain to {p} how long “the end” is.', sass: true, lines: [
+        ['judge', 'Not in the rim of the tin, {p}.']], [
+        ['bailiff', 'Years of little scratches round the lid, Your Honour, all on the side facing {p}’s slot. And a bit of hairpin stuck in the rim.'],
+        ['p', 'I do not even have hair.'],
+        ['judge', 'Then what is the hairpin for, {p}?'],
+        ['p', 'The tin.']]) },
+      { ask: 'Explain to {p} how long “the end” is.', sass: true, lines: alt([
         ['judge', '{p}. Neither of you can die. This bet ends when the sun goes out, and I would not put money on it even then.'],
         ['p', 'I can wait.'],
         ['d', 'So can I.'],
-        ['narrator', '(They look at each other. Neither of them blinks. Neither of them has blinked since 1908.)']] },
-      { ask: 'Call the witness to the bet.', lines: [
+        ['narrator', '(They look at each other. Neither of them blinks. Neither of them has blinked since 1908.)']], [
+        ['judge', '{p}, here is how long the end is. The sun goes out. The house falls down. The shelf rots. And you two are still in the rubble, holding a tin, waiting.'],
+        ['p', 'And then?'],
+        ['judge', 'And then I adjourn for lunch.']]) },
+      { ask: 'Call the witness to the bet.', lines: alt([
         ['npc', 'I witnessed it. 1908. A Tuesday. They shook hands on it.', 'raven'],
-        ['npc', 'Then, when the other one was not looking, they both wiped their hands on me.', 'raven']] },
-      { ask: 'Ask {p} what it would do with the tin.', happen: 'outburst', party: 'd', lines: [
+        ['npc', 'Then, when the other one was not looking, they both wiped their hands on me.', 'raven']], [
+        ['npc', 'I witnessed it, Your Honour. 1908. They shook hands and I wrote it down.', 'raven'],
+        ['judge', 'What did you write?'],
+        ['npc', '“Nevermore.” I write that on everything. It saves time.', 'raven']]) },
+      { ask: 'Ask {p} what it would do with the tin.', happen: 'outburst', party: 'd', lines: alt([
         ['p', 'Open it. Eat one. Visit {d}. Eat another one.'],
         ['judge', 'Visit {d} where?'],
-        ['p', 'I have picked out a spot. It has a view.']] }
+        ['p', 'I have picked out a spot. It has a view.']], [
+        ['p', 'Open it at {d}’s graveside, Your Honour. Slowly. One sweet at a time.'],
+        ['p', 'I have been practising the crunch. You can hear it from the back.'],
+        ['d', 'YOU WILL NOT CRUNCH AT MY GRAVE.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1494,30 +1835,49 @@ export const COURT_CASES = [
       ['d', 'That is not what the programme says.']
     ]),
     questions: [
-      { ask: 'Ask {d} why it is banned from the fête.', clue: '{d} is banned from the fête for getting into the tombola. It needed another name to get back in.', lines: [
+      { ask: 'Ask {d} why it is banned from the fête.', clue: '{d} is banned from the fête for getting into the tombola. It needed another name to get back in.', lines: alt([
         ['d', 'Last year. The tombola. I would rather not go into it.'],
         ['judge', 'Go into it.'],
-        ['d', 'That was the problem. I went into it. Somebody won me. They had wanted the bath salts.']] },
-      { ask: 'Have the bailiff read out the jam results.', happen: 'heckle', lines: [
+        ['d', 'That was the problem. I went into it. Somebody won me. They had wanted the bath salts.']], [
+        ['d', 'The tombola, Your Honour. I got into it, and went round twice.'],
+        ['d', 'They banned me for life. There is a photograph of me on the gate, next to the wasp.'],
+        ['judge', 'So you needed somebody else’s name to get back in.'],
+        ['d', 'The wasp just wears a hat.']]) },
+      { ask: 'Have the bailiff read out the jam results.', happen: 'heckle', lines: alt([
         ['bailiff', 'Jam competition, Your Honour. Third place: “{p}, in a jar, in some jam.”'],
         ['judge', 'How many entries were there?'],
-        ['bailiff', 'Three, Your Honour. The other two were just jam.']] },
-      { ask: 'Call the judge of the jam.', clue: 'The Raven heard the jam entrant climb out of the jar and say, “Nobody tell {p}.”', lines: [
+        ['bailiff', 'Three, Your Honour. The other two were just jam.']], [
+        ['bailiff', 'Jam competition, Your Honour. Third place, entered under the name {p}.'],
+        ['judge', 'Any comments from the jam judge?'],
+        ['bailiff', '“Good set. Lovely colour. Blinked.”']]) },
+      { ask: 'Call the judge of the jam.', clue: 'The Raven heard the jam entrant climb out of the jar and say, “Nobody tell {p}.”', lines: alt([
         ['npc', 'I judged the jam. Three jars. I did not know there was anybody in the third one until it waved.', 'raven'],
         ['judge', 'Did the entrant say anything?'],
-        ['npc', 'It climbed out, looked round, and said, “Nobody tell {p}.” Then it went squelch.', 'raven']] },
-      { ask: 'Have the bailiff look in {d}’s ears.', clue: 'Four days after the fête, there is still raspberry jam in {d}’s ears.', lines: [
+        ['npc', 'It climbed out, looked round, and said, “Nobody tell {p}.” Then it went squelch.', 'raven']], [
+        ['npc', 'I judged the jam, Your Honour. I lifted the lid of the third jar, and something climbed out.', 'raven'],
+        ['judge', 'Did it say anything?'],
+        ['npc', 'It said, “Nobody tell {p}.” Then it wiped its eyes and asked if it had placed.', 'raven']]) },
+      { ask: 'Have the bailiff look in {d}’s ears.', clue: 'Four days after the fête, there is still raspberry jam in {d}’s ears.', lines: alt([
         ['narrator', '(The bailiff puts a finger in {d}’s ear. He takes it out. He looks at it. He licks it.)'],
         ['bailiff', 'Raspberry, Your Honour.'],
         ['judge', 'That was evidence, Bailiff.'],
-        ['bailiff', 'It was, Your Honour. There is more in the other ear.']] },
-      { ask: 'Tell {p} the nickname suits it.', sass: true, lines: [
+        ['bailiff', 'It was, Your Honour. There is more in the other ear.']], [
+        ['narrator', '(The bailiff shines a torch into {d}’s ear and leans in.)'],
+        ['bailiff', 'Raspberry jam, Your Honour. Four days after the fête. Still setting.'],
+        ['d', 'That is wax, Your Honour. It runs in the family.'],
+        ['judge', 'With pips in?'],
+        ['d', 'We are a very fruity family.']]) },
+      { ask: 'Tell {p} the nickname suits it.', sass: true, lines: alt([
         ['judge', '{p}. You are four inches tall. You are faintly damp. When you sat down just now, you made a noise.'],
         ['p', 'What noise?'],
-        ['narrator', '(The whole courtroom does the noise.)']] },
-      { ask: 'Ask {d} where the rosette for third place is.', happen: 'outburst', party: 'p', lines: [
+        ['narrator', '(The whole courtroom does the noise.)']], [
+        ['p', 'Your Honour, I am not a Squelch.'],
+        ['judge', '{p}, nicknames stick because they fit. At school they called me Bones. I was eleven. They were just early.']]) },
+      { ask: 'Ask {d} where the rosette for third place is.', happen: 'outburst', party: 'p', lines: alt([
         ['d', 'It was won by {p}, Your Honour. It has {p}’s name on it. If {p} has lost it, I cannot help that.'],
-        ['d', 'Typical Squelch.']] }
+        ['d', 'Typical Squelch.']], [
+        ['d', 'On {p}’s slot, Your Honour, pinned up where everybody can see it. It is {p}’s rosette, after all.'],
+        ['p', 'PEOPLE HAVE BEEN DOING THE NOISE AT IT.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1577,32 +1937,50 @@ export const COURT_CASES = [
       ['p', 'He does not LIKE the ceiling.']
     ]),
     questions: [
-      { ask: 'Have the bailiff roll a marble along the shelf.', clue: 'The shelf has sloped towards {d} since Thursday night. Before that it was dead level.', lines: [
+      { ask: 'Have the bailiff roll a marble along the shelf.', clue: 'The shelf has sloped towards {d} since Thursday night. Before that it was dead level.', lines: alt([
         ['narrator', '(The bailiff sets a marble down outside {p}’s slot. It rolls, quite briskly, the whole way to {d}, and stops against {d}’s foot.)'],
         ['judge', 'The shelf slopes.'],
-        ['bailiff', 'Only since Thursday night, Your Honour. Before that you could have played snooker on it. I did.']] },
-      { ask: 'Have the bailiff look under {p}’s end of the shelf.', clue: 'A pub beer mat, folded very tight, is propping up {p}’s end of the shelf. {d} is the only resident who has been to a pub.', happen: 'throw', lines: [
+        ['bailiff', 'Only since Thursday night, Your Honour. Before that you could have played snooker on it. I did.']], [
+        ['narrator', '(The bailiff sets a marble down at {p}’s end. It sets off towards {d} at once, like it has somewhere to be.)'],
+        ['bailiff', 'Downhill all the way, Your Honour. Since Thursday night. Before that, dead level.'],
+        ['judge', 'How can you be sure?'],
+        ['bailiff', 'I sleep on it, Your Honour. On Thursday night I woke up at {d}’s end.']]) },
+      { ask: 'Have the bailiff look under {p}’s end of the shelf.', clue: 'A pub beer mat, folded very tight, is propping up {p}’s end of the shelf. {d} is the only resident who has been to a pub.', happen: 'throw', lines: alt([
         ['narrator', '(The bailiff crawls under {p}’s end of the shelf and comes out with a beer mat, folded eight times, very hard.)'],
         ['bailiff', 'From the Fox and Hounds, Your Honour. Only one resident on this shelf has ever been to the Fox and Hounds.'],
-        ['d', 'Once. In a coat pocket. I did not even have a drink. I only came back with a beer mat.']] },
-      { ask: 'Call a witness who was up in the night.', clue: 'Geoffrey saw Colin roll past at three on Friday morning, with {d} walking beside him saying “good boy”.', lines: [
+        ['d', 'Once. In a coat pocket. I did not even have a drink. I only came back with a beer mat.']], [
+        ['bailiff', 'A beer mat, Your Honour, from a pub. Folded until it is harder than the shelf. It is holding up {p}’s end.'],
+        ['judge', 'Has anybody on this shelf ever been to a pub?'],
+        ['narrator', '(Everybody turns and looks at {d}.)'],
+        ['d', 'It was ONE pub.']]) },
+      { ask: 'Call a witness who was up in the night.', clue: 'Geoffrey saw Colin roll past at three on Friday morning, with {d} walking beside him saying “good boy”.', lines: alt([
         ['npc', 'I saw Colin go past at three on Friday morning, Your Honour. At a steady walking pace, for a rock.', 'woodlouse'],
         ['judge', 'Was he alone?'],
-        ['npc', '{d} was walking beside him, saying “good boy”. Every inch.', 'woodlouse']] },
-      { ask: 'Remind {p} that Colin is a rock.', sass: true, lines: [
+        ['npc', '{d} was walking beside him, saying “good boy”. Every inch.', 'woodlouse']], [
+        ['npc', 'Three on Friday morning, Your Honour. I was up with my back. Colin came rolling past my door.', 'woodlouse'],
+        ['judge', 'On his own?'],
+        ['npc', '{d} was walking next to him, saying “good boy”. I did not like to interrupt. It looked like a first date.', 'woodlouse']]) },
+      { ask: 'Remind {p} that Colin is a rock.', sass: true, lines: alt([
         ['judge', '{p}. Colin is a rock. I say this as a man who is mostly calcium. He does not love you. He does not love anything. He is a rock.'],
         ['p', 'He loves me in his own way.'],
         ['judge', 'Which way is that?'],
-        ['p', 'Staying.']] },
-      { ask: 'Have the bailiff weigh Colin.', lines: [
+        ['p', 'Staying.']], [
+        ['p', 'Colin and I have something special, Your Honour.'],
+        ['judge', '{p}, Colin is a rock. If you want something that will never move, never speak and never love you back, I can lend you the jury.']]) },
+      { ask: 'Have the bailiff weigh Colin.', lines: alt([
         ['bailiff', 'Colin has put on a gram since Friday, Your Honour.'],
         ['judge', 'A rock cannot put on weight.'],
         ['bailiff', 'Moss, Your Honour. {d}’s end is damp. He is growing a little coat.'],
-        ['d', 'He is thriving.']] },
-      { ask: 'Ask {d} what it and Colin do all day.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'He is thriving.']], [
+        ['bailiff', 'Colin is up a gram since Friday, Your Honour. It is moss. He is going green round the edges.'],
+        ['p', 'He never had moss when he lived with me.'],
+        ['d', 'You kept him too dry, {p}. He told me.']]) },
+      { ask: 'Ask {d} what it and Colin do all day.', happen: 'outburst', party: 'p', lines: alt([
         ['d', 'We sit. We watch the door. In the evenings I read to him.'],
         ['judge', 'What do you read him?'],
-        ['d', 'Geology, Your Honour. He likes to hear about his family.']] }
+        ['d', 'Geology, Your Honour. He likes to hear about his family.']], [
+        ['d', 'We have a routine, Your Honour. A sit in the morning. A longer sit after lunch. At night he sleeps on my chest. I can barely breathe. It is worth it.'],
+        ['p', 'HE WOULD NEVER. HE IS NOT THAT KIND OF ROCK.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1657,30 +2035,48 @@ export const COURT_CASES = [
       ['d', 'And, frankly, it is my life too. Page four hundred: “A crumb falls between us. Neither of us moves.” I was there. I remember that crumb.']
     ]),
     questions: [
-      { ask: 'Ask {p} what it paid the ghost-writer.', clue: '{p} paid the ghost-writer nothing for forty years. It offered him “exposure”.', lines: [
+      { ask: 'Ask {p} what it paid the ghost-writer.', clue: '{p} paid the ghost-writer nothing for forty years. It offered him “exposure”.', lines: alt([
         ['p', 'Exposure, Your Honour. I told him it would be wonderful exposure.'],
-        ['judge', '{p}. He is a ghost. He has spent two hundred years trying to be less exposed.']] },
-      { ask: 'Call the ghost-writer up from the audience.', clue: 'The unpaid ghost-writer sold the book to {d} for two souls and a candle. It has forty years of invoices.', lines: [
+        ['judge', '{p}. He is a ghost. He has spent two hundred years trying to be less exposed.']], [
+        ['p', 'Nothing, Your Honour. Not in forty years. But I did offer him exposure.'],
+        ['judge', 'Exposure to what?'],
+        ['p', 'Me, Your Honour. Every day. Up close.']]) },
+      { ask: 'Call the ghost-writer up from the audience.', clue: 'The unpaid ghost-writer sold the book to {d} for two souls and a candle. It has forty years of invoices.', lines: alt([
         ['narrator', '(A ghost in row three stands up. It is holding forty years of invoices, each marked FINAL DEMAND, in fainter and fainter ink.)'],
         ['judge', 'Why did you sell the book to {d}?'],
-        ['narrator', '(The ghost: “It paid two souls and a candle. It lit the candle for me. Nobody has lit me a candle since 1790.”)']] },
-      { ask: 'Have {p} read the court the first chapter.', happen: 'sleep', lines: [
+        ['narrator', '(The ghost: “It paid two souls and a candle. It lit the candle for me. Nobody has lit me a candle since 1790.”)']], [
+        ['narrator', '(A ghost in row three drifts forward with a bundle of invoices. Forty years of them. The top one just says “PLEASE”.)'],
+        ['judge', 'And you sold the book to {d}?'],
+        ['narrator', '(The ghost: “For two souls and a candle. The first money I have made since I died. I have had one of the souls framed.”)']]) },
+      { ask: 'Have {p} read the court the first chapter.', happen: 'sleep', lines: alt([
         ['p', '“Chapter One. 1840. I arrive on the shelf. It is a Wednesday.”'],
         ['p', '“Chapter Two. I am still on the shelf. It is a Thursday.”'],
         ['judge', 'How many chapters are there?'],
-        ['p', 'Four hundred and eleven. It picks up in the three hundreds. I move slightly to the left.']] },
-      { ask: 'Ask the bailiff how the book is selling.', lines: [
+        ['p', 'Four hundred and eleven. It picks up in the three hundreds. I move slightly to the left.']], [
+        ['p', '“Chapter One. It is 1840. I am on the shelf. To my left, {d}. To my right, a cotton reel.”'],
+        ['p', '“The cotton reel does not move. Neither do I. Neither does {d}. This continues.”'],
+        ['judge', 'For how long?'],
+        ['p', 'Until chapter nine, Your Honour. Then there is a draught.']]) },
+      { ask: 'Ask the bailiff how the book is selling.', lines: alt([
         ['bailiff', 'One copy, Your Honour. I bought it.'],
         ['judge', 'Did you enjoy it?'],
-        ['bailiff', 'I ate chapter nine, Your Honour. It was very dry.']] },
-      { ask: 'Tell {p} its life is not worth stealing.', sass: true, happen: 'outburst', party: 'p', lines: [
+        ['bailiff', 'I ate chapter nine, Your Honour. It was very dry.']], [
+        ['bailiff', 'One copy, Your Honour. I bought it.'],
+        ['judge', 'Have you read it?'],
+        ['bailiff', 'I have been on page two since March, Your Honour. I am waiting to see if {p} moves.']]) },
+      { ask: 'Tell {p} its life is not worth stealing.', sass: true, happen: 'outburst', party: 'p', lines: alt([
         ['judge', '{p}. It is four hundred pages of you on a shelf. I have spent three hundred years in the ground and even I have had a flood.'],
         ['p', 'I had a crumb. In 1961.'],
-        ['judge', 'Chapter two hundred and six. I skimmed it.']] },
-      { ask: 'Call the Ministry of Haunting.', clue: 'Unpaid ghost-writing goes back to the ghost after thirty years. {p} was sent eleven warnings and slept under them.', lines: [
+        ['judge', 'Chapter two hundred and six. I skimmed it.']], [
+        ['judge', 'Nobody steals a life like yours, {p}. They steal horses. They steal silver. Nobody in history has broken in and made off with a Tuesday.'],
+        ['p', 'SOME OF MY TUESDAYS WERE VERY BUSY.']]) },
+      { ask: 'Call the Ministry of Haunting.', clue: 'Unpaid ghost-writing goes back to the ghost after thirty years. {p} was sent eleven warnings and slept under them.', lines: alt([
         ['npc', 'Ministry of Haunting. The writer is registered with us. Prose division. Unpaid work goes back to the ghost after thirty years.', 'ghost'],
         ['judge', 'Was {p} warned?'],
-        ['npc', 'Eleven letters. {p} used them as a blanket. It has been sleeping under a final demand since 1996.', 'ghost']] }
+        ['npc', 'Eleven letters. {p} used them as a blanket. It has been sleeping under a final demand since 1996.', 'ghost']], [
+        ['npc', 'Ministry of Haunting. Rule fourteen. Unpaid ghost-writing goes back to the ghost after thirty years.', 'ghost'],
+        ['judge', 'Did {p} know?'],
+        ['npc', 'We sent eleven warnings, Your Honour. {p} slept under them. On cold nights it wrote in asking for a twelfth.', 'ghost']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1735,32 +2131,51 @@ export const COURT_CASES = [
       ['d', 'I sit in the light. {p} sits in a drawer with a thimble over its head. You do the sums.']
     ]),
     questions: [
-      { ask: 'Ask {p} when it last stood in the light.', clue: '{p} had not stood in the light since Easter 1953, when somebody opened the curtains by mistake.', lines: [
+      { ask: 'Ask {p} when it last stood in the light.', clue: '{p} had not stood in the light since Easter 1953, when somebody opened the curtains by mistake.', lines: alt([
         ['p', 'Recently.'],
         ['judge', 'How recently?'],
         ['p', 'Easter, 1953. Somebody opened the curtains by mistake.'],
         ['judge', 'And since then?'],
-        ['p', 'I have been very careful.']] },
-      { ask: 'Call the Lamp.', clue: 'The Lamp saw {p}’s shadow leave {p}’s drawer on its own on Saturday night, and follow {d}.', lines: [
+        ['p', 'I have been very careful.']], [
+        ['p', 'By choice, Your Honour, or by accident?'],
+        ['judge', 'At all.'],
+        ['p', 'Easter, 1953. Somebody opened the curtains by mistake. I got behind the sugar bowl and stayed there until Whitsun.']]) },
+      { ask: 'Call the Lamp.', clue: 'The Lamp saw {p}’s shadow leave {p}’s drawer on its own on Saturday night, and follow {d}.', lines: alt([
         ['npc', 'Saturday, about nine. It came out of {p}’s drawer on its own and stood in my light for an hour. Just stood there. Being a shadow.', 'lamp'],
         ['judge', 'And then?'],
-        ['npc', '{d} walked past. It went with {d}. I would have too.', 'lamp']] },
-      { ask: 'Have the bailiff stand {d} in the studio light.', clue: 'In the light, {p}’s shadow keeps its back to {p} and has its arm round {d}’s shadow.', happen: 'dark', lines: [
+        ['npc', '{d} walked past. It went with {d}. I would have too.', 'lamp']], [
+        ['npc', 'Saturday night, Your Honour. The drawer opened from the inside, and out came {p}’s shadow, on its own. It stretched. You could hear it crack.', 'lamp'],
+        ['judge', 'And then?'],
+        ['npc', '{d} walked past, and it followed. It did not even say goodbye to the drawer.', 'lamp']]) },
+      { ask: 'Have the bailiff stand {d} in the studio light.', clue: 'In the light, {p}’s shadow keeps its back to {p} and has its arm round {d}’s shadow.', happen: 'dark', lines: alt([
         ['narrator', '({d} stands in the light. It casts two shadows. The second one stands a little apart, with its back to {p}.)'],
         ['judge', 'Your shadow is facing the other way, {p}.'],
         ['p', 'It is shy.'],
-        ['bailiff', 'It has just put its arm round {d}’s shadow, Your Honour.']] },
-      { ask: 'Ask {p} what it ever did with its shadow.', sass: true, lines: [
+        ['bailiff', 'It has just put its arm round {d}’s shadow, Your Honour.']], [
+        ['narrator', '({d} stands in the studio light. Two shadows. The one with {p}’s ears keeps its back to {p} and puts an arm round the other one.)'],
+        ['p', '(small) Hello. It is me.'],
+        ['narrator', '(It does not turn round. The other shadow does, and gives {p} a look.)']]) },
+      { ask: 'Ask {p} what it ever did with its shadow.', sass: true, lines: alt([
         ['judge', '{p}. You want this shadow back. Tell the court one thing you did with it in two hundred years.'],
         ['p', 'I kept it very safe.'],
-        ['judge', 'You kept it in a drawer, under a thimble. That is not safe, {p}. That is filing.']] },
-      { ask: 'Have the bailiff pin the shadow down.', lines: [
+        ['judge', 'You kept it in a drawer, under a thimble. That is not safe, {p}. That is filing.']], [
+        ['judge', '{p}. A shadow is meant to follow you. You never go anywhere. It has spent two hundred years following you nowhere.'],
+        ['p', 'It never complained.'],
+        ['judge', 'It has no mouth, {p}. It complained with its feet.']]) },
+      { ask: 'Have the bailiff pin the shadow down.', lines: alt([
         ['narrator', '(The bailiff creeps up on the second shadow with a drawing pin. The shadow steps aside. The bailiff pins his own tail to the floor.)'],
-        ['bailiff', 'Nearly, Your Honour.']] },
-      { ask: 'Ask {d} whether it has tried to give the shadow back.', happen: 'outburst', party: 'p', lines: [
+        ['bailiff', 'Nearly, Your Honour.']], [
+        ['narrator', '(The bailiff dives on the second shadow and lies on it. When he looks up, it is lying on him.)'],
+        ['bailiff', 'I have got it, Your Honour.'],
+        ['judge', 'It has got you, Bailiff.']]) },
+      { ask: 'Ask {d} whether it has tried to give the shadow back.', happen: 'outburst', party: 'p', lines: alt([
         ['d', 'Twice, Your Honour. I stood with my back to {p}’s drawer and waited for it to go in.'],
         ['judge', 'And?'],
-        ['d', 'It went in, came out of the far side, walked round the long way, and got back behind me. It did not even look at {p}.']] }
+        ['d', 'It went in, came out of the far side, walked round the long way, and got back behind me. It did not even look at {p}.']], [
+        ['d', 'I tried, Your Honour. I climbed into {p}’s drawer and put the thimble over my head, so it would feel at home.'],
+        ['judge', 'And?'],
+        ['d', 'It stayed outside, with its arms folded.'],
+        ['p', 'THAT IS MY THIMBLE.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1815,30 +2230,48 @@ export const COURT_CASES = [
       ['d', 'And {p} knew about the tea. Everybody knows about the tea. It is a teacup. The clue is in the teacup.']
     ]),
     questions: [
-      { ask: 'Call the owner of the teacup.', clue: 'The teacup is Mrs Widow’s. She has tea in it every Sunday at four, and never sold anything to {d}.', happen: 'faint', lines: [
+      { ask: 'Call the owner of the teacup.', clue: 'The teacup is Mrs Widow’s. She has tea in it every Sunday at four, and never sold anything to {d}.', happen: 'faint', lines: alt([
         ['npc', 'It is my teacup, dear. It was a wedding present. I have tea in it every Sunday at four.', 'widow'],
         ['judge', 'Did you know there was somebody in it?'],
-        ['npc', 'Not until the second sip.', 'widow']] },
-      { ask: 'Have the bailiff check who else bought week thirty-two.', clue: '{d} has sold the same week in the teacup eleven times over. It also sold August to the judge.', lines: [
+        ['npc', 'Not until the second sip.', 'widow']], [
+        ['npc', 'That is my teacup, dear. I have my tea in it every Sunday at four. I have never sold {d} so much as a saucer.', 'widow'],
+        ['judge', 'And last Sunday?'],
+        ['npc', 'Lovely cup, dear. A bit strong. It had a face.', 'widow']]) },
+      { ask: 'Have the bailiff check who else bought week thirty-two.', clue: '{d} has sold the same week in the teacup eleven times over. It also sold August to the judge.', lines: alt([
         ['bailiff', 'Week thirty-two has been sold eleven times, Your Honour. All by {d}. And August has been sold to you.'],
         ['judge', 'To me.'],
         ['bailiff', 'The whole of it, Your Honour. You paid in advance.'],
-        ['judge', '…Carry on.']] },
-      { ask: 'Ask {p} when it filled in its damages form.', clue: '{p} filled in its damages form two days before it was steeped. It already said “four minutes” and “milk”.', lines: [
+        ['judge', '…Carry on.']], [
+        ['bailiff', 'Week thirty-two, Your Honour. Eleven owners. All sold by {d}.'],
+        ['bailiff', 'And the whole of August, sold to a Judge Mortis.'],
+        ['judge', 'It is a very common name.']]) },
+      { ask: 'Ask {p} when it filled in its damages form.', clue: '{p} filled in its damages form two days before it was steeped. It already said “four minutes” and “milk”.', lines: alt([
         ['p', 'Afterwards, Your Honour. While I was drying.'],
         ['bailiff', 'It is dated the Friday before, Your Honour. It already says “four minutes”. It already says “milk”.'],
-        ['p', 'I had a feeling.']] },
-      { ask: 'Tell {p} it got exactly what it paid for.', sass: true, lines: [
+        ['p', 'I had a feeling.']], [
+        ['p', 'Straight after, Your Honour. Still dripping.'],
+        ['judge', 'It is dated two days before the steeping, {p}. It already says “four minutes”. It already says “milk”.'],
+        ['p', 'I know how I take it.']]) },
+      { ask: 'Tell {p} it got exactly what it paid for.', sass: true, lines: alt([
         ['judge', '{p}. You paid nine souls to lie in a cup with a sea view, and somebody brought you hot water and milk.'],
-        ['judge', 'In Skegness, that is a spa weekend.']] },
-      { ask: 'Ask {p} why it signed.', happen: 'outburst', party: 'd', lines: [
+        ['judge', 'In Skegness, that is a spa weekend.']], [
+        ['judge', '{p}, you paid nine souls, went in pale and anxious, and came out warm, strong and a lovely colour.'],
+        ['judge', 'I spent three hundred years in the ground and came out bleached.']]) },
+      { ask: 'Ask {p} why it signed.', happen: 'outburst', party: 'd', lines: alt([
         ['p', 'There was a presentation. In the teapot. {d} said I was free to leave at any time.'],
         ['judge', 'Then why did you not leave?'],
-        ['p', 'It was sitting on the lid.']] },
-      { ask: 'Ask {d} about the exchange scheme.', lines: [
+        ['p', 'It was sitting on the lid.']], [
+        ['p', 'There was a free gift for signing, Your Honour. A sugar lump.'],
+        ['judge', 'Did you get it?'],
+        ['p', 'No. {d} ate it while I was reading the small print.'],
+        ['d', 'THAT WAS THE DEMONSTRATION LUMP.']]) },
+      { ask: 'Ask {d} about the exchange scheme.', lines: alt([
         ['d', 'Very popular, Your Honour. You can swap your teacup week for four nights in the toast rack.'],
         ['judge', 'What is the toast rack like?'],
-        ['d', 'You sleep standing up, between two slices. It is very continental.']] }
+        ['d', 'You sleep standing up, between two slices. It is very continental.']], [
+        ['d', 'Very flexible, Your Honour. Swap your week in the teacup for a fortnight in the sugar bowl.'],
+        ['judge', 'Is there a catch?'],
+        ['d', 'Only the spoon, Your Honour. It comes round at four.']]) }
     ],
     rulings: {
       plaintiff: alt([
@@ -1892,30 +2325,47 @@ export const COURT_CASES = [
       ['d', 'The rules said one ticket each. I am not saying anything. I am only saying I have never met a Mr Radiator.']
     ]),
     questions: [
-      { ask: 'Ask to see the winning ticket.', clue: '{d}’s winning ticket is folded into a hard little triangle. The rest are flat. It can be found blind, every time.', happen: 'applause', lines: [
+      { ask: 'Ask to see the winning ticket.', clue: '{d}’s winning ticket is folded into a hard little triangle. The rest are flat. It can be found blind, every time.', happen: 'applause', lines: alt([
         ['bailiff', 'The winning ticket, Your Honour. Folded into a triangle. Very small. Very hard. Every other ticket in the hat is flat.'],
         ['d', 'I fold for luck.'],
-        ['bailiff', 'I put it back in and drew it out with my eyes shut, Your Honour. Four times out of four.']] },
-      { ask: 'Ask {p} what names it bought its tickets under.', clue: 'The limit was one ticket each. {p} bought ninety-nine under false names, including “Mr Radiator” and “Not {p}”.', lines: [
+        ['bailiff', 'I put it back in and drew it out with my eyes shut, Your Honour. Four times out of four.']], [
+        ['bailiff', 'The winning ticket, Your Honour. Folded into a little triangle, as hard as a knuckle. Every other ticket in the hat is flat.'],
+        ['narrator', '(The judge drops it back in, stirs the hat, and reaches in with no eyes, which is how he does everything. Out comes the triangle. Three times running.)'],
+        ['d', 'The court is having a very lucky day.']]) },
+      { ask: 'Ask {p} what names it bought its tickets under.', clue: 'The limit was one ticket each. {p} bought ninety-nine under false names, including “Mr Radiator” and “Not {p}”.', lines: alt([
         ['p', 'Various, Your Honour.'],
         ['judge', 'Read me some.'],
-        ['p', '“{p}.” “{p}, Junior.” “Mr Radiator.” “Not {p}.” And one that is just a drawing of a hat.']] },
-      { ask: 'Call the radiator.', lines: [
+        ['p', '“{p}.” “{p}, Junior.” “Mr Radiator.” “Not {p}.” And one that is just a drawing of a hat.']], [
+        ['judge', 'The rules said one ticket each, {p}.'],
+        ['p', 'And I only bought one each, Your Honour. There were just ninety-nine of me.'],
+        ['bailiff', 'The stubs include a “Mr Radiator”, Your Honour, and a “Not {p}”.'],
+        ['p', 'Mr Radiator is a very private man.']]) },
+      { ask: 'Call the radiator.', lines: alt([
         ['narrator', '(The radiator is called. It clanks twice. It is six o’clock.)'],
         ['narrator', '(The whole court, jury, audience and judge, shuffles four inches towards it. Nobody says anything. Nobody has to.)'],
-        ['judge', 'We will resume at seven.']] },
-      { ask: 'Tell {p} what else ninety-nine souls could have bought.', sass: true, lines: [
+        ['judge', 'We will resume at seven.']], [
+        ['judge', 'Radiator. Did anybody tamper with the raffle?'],
+        ['narrator', '(The radiator clanks three times, gurgles, and goes quiet.)'],
+        ['bailiff', 'I think that was a yes, Your Honour. Or it wants bleeding.']]) },
+      { ask: 'Tell {p} what else ninety-nine souls could have bought.', sass: true, lines: alt([
         ['judge', '{p}. The tickets were a soul each. You spent ninety-nine souls on one warm hour a day. For ninety-nine souls, you could have bought the radiator.'],
         ['p', 'The radiator is not for sale.'],
-        ['judge', 'Neither, it turns out, was the raffle.']] },
-      { ask: 'Ask {d} how it is finding the new slot.', happen: 'outburst', party: 'p', lines: [
+        ['judge', 'Neither, it turns out, was the raffle.']], [
+        ['p', 'I only wanted to be warm, Your Honour.'],
+        ['judge', 'For ninety-nine souls, {p}, you could have been cremated. Twice. Nobody on this shelf has ever been that warm.']]) },
+      { ask: 'Ask {d} how it is finding the new slot.', happen: 'outburst', party: 'p', lines: alt([
         ['d', 'Wonderful, Your Honour. From six until seven I am the warmest thing on the shelf.'],
         ['judge', 'And from seven until six?'],
-        ['d', 'I tell {p} about it.']] },
-      { ask: 'Ask the bailiff whether anybody approached him about the draw.', clue: 'Both of them bribed the bailiff over the draw. {p} offered four raisins. {d} offered six.', lines: [
+        ['d', 'I tell {p} about it.']], [
+        ['d', 'Lovely, Your Honour. At six the pipes start ticking. By ten past, my feet have gone pink. People have started saying I have a glow.'],
+        ['p', 'NOBODY HAS SAID YOU HAVE A GLOW.']]) },
+      { ask: 'Ask the bailiff whether anybody approached him about the draw.', clue: 'Both of them bribed the bailiff over the draw. {p} offered four raisins. {d} offered six.', lines: alt([
         ['bailiff', '{p} offered me four raisins to draw the raffle for it, Your Honour. {d} offered me six to let it draw its own.'],
         ['judge', 'And what did you do?'],
-        ['bailiff', 'I am a man of principle, Your Honour. Six is more than four.']] }
+        ['bailiff', 'I am a man of principle, Your Honour. Six is more than four.']], [
+        ['bailiff', 'Approached, Your Honour? No. {p} left four raisins on my chair the night before the draw. {d} left six in my cap.'],
+        ['judge', 'And did you declare them?'],
+        ['bailiff', 'Your Honour, I declared them delicious.']]) }
     ],
     rulings: {
       plaintiff: alt([

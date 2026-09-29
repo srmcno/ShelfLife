@@ -252,6 +252,7 @@ test('every case comes in several takes so a rerun does not replay word for word
     assert.ok(lineSets(k.plaintiff).length >= 2 && lineSets(k.defendant).length >= 2, k.id + ' opening takes');
     for (const r of ['plaintiff', 'defendant', 'both']) assert.ok(lineSets(k.rulings[r]).length >= 2, k.id + ' ruling takes ' + r);
     for (const side of ['p', 'd']) assert.ok([].concat(k.hallway[side]).length >= 3, k.id + ' hallway lines ' + side);
+    k.questions.forEach((q, i) => assert.ok(lineSets(q.lines).length >= 2, k.id + ' question ' + i + ' has one take'));
     for (const set of [k.plaintiff, k.defendant, ...Object.values(k.rulings)].flatMap(lineSets)) assert.ok(set.length, k.id + ' empty take');
   }
 });
