@@ -1,7 +1,7 @@
 import {
   COURT_CASES, COURT_CAST, JURY_EXTRAS, STAND_INS, QUESTIONS_PER_EPISODE, RULINGS, HAPPENINGS, RANDOM_HAPPENINGS,
   OPENERS, ALL_RISE, JUDGE_ENTRANCES, PLAINTIFF_CUE, DEFENDANT_CUE, ADS, BREAK_IN, BREAK_OUT,
-  JURY_AGREE, JURY_DISAGREE, AUDIENCE_REACTIONS, HALLWAY_IN
+  JURY_AGREE, JURY_DISAGREE, JURY_ALL_AGREE, JURY_ALL_DISAGREE, AUDIENCE_REACTIONS, HALLWAY_IN
 } from '../content/court.js';
 import { courtroomState, SUMMONS_REMEMBERED } from '../court-state.js';
 import { grantBonusTrust, petById, localDayKey, dayKeyOffset } from '../state.js';
@@ -20,6 +20,13 @@ export const COURT_BY_ID = Object.fromEntries(COURT_CASES.map(c => [c.id, c]));
 export const JURY_SEATS = 6;
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const pick = (list, rnd) => list[Math.floor(rnd() * list.length) % list.length];
+// A beat of script can come in several takes, written alt(take, take); each
+// episode plays one, so a rerun of a case does not replay word for word.
+export const lineSets = v => (v && Array.isArray(v.alt) ? v.alt : [v || []]);
+const take = (v, rnd) => pick(lineSets(v), rnd);
+const oneOf = (v, rnd) => (Array.isArray(v) ? pick(v, rnd) : v);
+// Neighbours who give evidence in a case never sit on its jury or stand in.
+export const caseWitnesses = k => new Set((k ? k.questions : []).flatMap(q => lineSets(q.lines).flat()).filter(l => l[0] === 'npc').map(l => l[2]));
 const DELTA = { clue: { respect: 6, ratings: 1 }, sass: { ratings: 8, respect: -2 }, plain: { ratings: 3 }, gavel: { respect: 8, ratings: -2 }, let: { ratings: 10, respect: -6 } };
 
 function nudge(ep, change = {}) {
@@ -80,7 +87,7 @@ export function nextCaseId(state, rnd = Math.random, not = '') {
 // the episode can deliver it.
 export function standInFor(caseId, salt = 0) {
   const k = COURT_BY_ID[caseId];
-  const witnesses = new Set((k ? k.questions : []).flatMap(q => q.lines.filter(l => l[0] === 'npc').map(l => l[2])));
+  const witnesses = caseWitnesses(k);
   const eligible = STAND_INS.filter(id => !witnesses.has(id));
   return eligible[Math.abs(Math.floor(salt)) % eligible.length];
 }
@@ -92,7 +99,7 @@ export function castEpisode(state, { caseId, plaintiffId, defendantId, standInSa
   if (!plaintiff) return null;
   const others = pets.filter(p => p.id !== plaintiff.id);
   const defendantPet = petById(state, defendantId) && defendantId !== plaintiff.id ? petById(state, defendantId) : others.length ? pick(others, rnd) : null;
-  const witnesses = new Set(k.questions.flatMap(q => q.lines.filter(l => l[0] === 'npc').map(l => l[2])));
+  const witnesses = caseWitnesses(k);
   const d = defendantPet ? person(defendantPet) : extra(Number.isFinite(standInSalt) ? standInFor(k.id, standInSalt) : pick(STAND_INS.filter(id => !witnesses.has(id)), rnd));
   const jury = pets.filter(p => p.id !== plaintiff.id && p.id !== d.id).slice(0, JURY_SEATS).map(person);
   for (const id of JURY_EXTRAS) {
@@ -116,7 +123,7 @@ function castGuestEpisode(state, k, guest, residentId, rnd) {
   if (!home || !guest.pet || typeof guest.pet.name !== 'string' || typeof guest.pet.id !== 'string') return null;
   const side = guest.side === 'd' ? 'd' : 'p';
   const visitor = { kind: 'guest', id: guest.pet.id, name: guest.pet.name };
-  const witnesses = new Set(k.questions.flatMap(q => q.lines.filter(l => l[0] === 'npc').map(l => l[2])));
+  const witnesses = caseWitnesses(k);
   const jury = (state.pets || []).filter(p => p.id !== home.id).slice(0, JURY_SEATS).map(person);
   for (const id of JURY_EXTRAS) {
     if (jury.length >= JURY_SEATS) break;
@@ -138,9 +145,9 @@ export function episodeOpening(ep, rnd = Math.random) {
     { s: 'judge', t: pick(JUDGE_ENTRANCES, rnd) },
     { s: 'announcer', t: fill(ep, k.claim) + ' Asking: ' + fill(ep, k.asking) + '.' },
     { s: 'judge', t: fill(ep, pick(PLAINTIFF_CUE, rnd)) },
-    ...lines(ep, k.plaintiff),
+    ...lines(ep, take(k.plaintiff, rnd)),
     { s: 'judge', t: fill(ep, pick(DEFENDANT_CUE, rnd)) },
-    ...lines(ep, k.defendant)
+    ...lines(ep, take(k.defendant, rnd))
   ];
 }
 
@@ -160,7 +167,7 @@ export function episodeAsk(ep, index, rnd = Math.random) {
   if (clue) ep.clues.push(clue);
   nudge(ep, DELTA[clue ? 'clue' : q.sass ? 'sass' : 'plain']);
   if (clue && q.sass) nudge(ep, { ratings: DELTA.sass.ratings });
-  const out = { lines: lines(ep, q.lines), clue, happening: null };
+  const out = { lines: lines(ep, take(q.lines, rnd)), clue, happening: null };
   if (q.happen && !ep.happened.includes(q.happen)) out.happening = startHappening(ep, q.happen, rnd, q.party);
   return out;
 }
@@ -172,18 +179,21 @@ export function startHappening(ep, id, rnd = Math.random, party = null) {
   ep.happened.push(id);
   ep.juror = pick(ep.jury, rnd);
   const x = party || (rnd() < 0.5 ? 'p' : 'd');
-  const intro = lines(ep, h.intro, x);
+  // A scene plays one take start to finish, so the response fits the setup.
+  const t = h.takes ? Math.floor(rnd() * h.takes.length) % h.takes.length : null;
+  const intro = lines(ep, take((t === null ? h : h.takes[t]).intro, rnd), x);
   if (h.rants) intro.push({ s: x, t: pick(h.rants, rnd), who: null });
   if (!h.choice) nudge(ep, { ratings: h.ratings || 0 });
-  return { id, anim: h.anim, choice: !!h.choice, x, juror: ep.juror, lines: intro };
+  return { id, anim: h.anim, choice: !!h.choice, x, juror: ep.juror, take: t, lines: intro };
 }
-export function resolveHappening(ep, happening, choice) {
+export function resolveHappening(ep, happening, choice, rnd = Math.random) {
   const h = HAPPENINGS[happening?.id];
   if (!h?.choice) return [];
   const way = choice === 'gavel' ? 'gavel' : 'let';
   nudge(ep, DELTA[way]);
   ep.juror = happening.juror || ep.juror;
-  return lines(ep, h[way], happening.x);
+  const script = h.takes ? h.takes[happening.take] || h.takes[0] : h;
+  return lines(ep, take(script[way], rnd), happening.x);
 }
 export function randomHappening(ep, rnd = Math.random) {
   const pool = RANDOM_HAPPENINGS.filter(id => !ep.happened.includes(id));
@@ -218,12 +228,12 @@ export function episodeRule(ep, ruling, rnd = Math.random) {
     return { s: 'jury', t: pick(list, rnd).replace(/\{j\}/g, j.name), who: null };
   };
   const juryLines = [voice(JURY_AGREE, true), voice(JURY_DISAGREE, false)].filter(Boolean);
-  juryLines.push({ s: 'jury', t: agree === ep.jury.length ? 'The jury agrees with you. All of them. Even the one that was asleep.' : agree === 0 ? 'The jury disagrees with you. Unanimously. One of them is writing to its MP.' : 'The jury agrees, ' + agree + ' to ' + (ep.jury.length - agree) + '.', who: null });
+  juryLines.push({ s: 'jury', t: agree === ep.jury.length ? pick(JURY_ALL_AGREE, rnd) : agree === 0 ? pick(JURY_ALL_DISAGREE, rnd) : 'The jury agrees, ' + agree + ' to ' + (ep.jury.length - agree) + '.', who: null });
   const losers = ruling === 'plaintiff' ? ['d'] : ruling === 'defendant' ? ['p'] : ['p', 'd'];
-  const hallway = [{ s: 'announcer', t: pick(HALLWAY_IN, rnd) }, ...losers.map(side => ({ s: side, t: fill(ep, k.hallway[side]), who: null }))];
+  const hallway = [{ s: 'announcer', t: pick(HALLWAY_IN, rnd) }, ...losers.map(side => ({ s: side, t: fill(ep, oneOf(k.hallway[side], rnd)), who: null }))];
   return {
     correct, truth: k.truth, votes, agree, stars,
-    ruling: lines(ep, k.rulings[ruling]),
+    ruling: lines(ep, take(k.rulings[ruling], rnd)),
     jury: juryLines,
     audience: { s: 'audience', t: pick(AUDIENCE_REACTIONS[Math.min(3, Math.floor(ep.ratings / 25))], rnd), who: null },
     hallway
