@@ -35,6 +35,7 @@ import { applyDecor, initDecorUI } from './ui/decorUI.js';
 import { initDrag } from './ui/drag.js';
 import { renderAll, renderStatus, renderShelf, renderNotes, escapeHtml } from './ui/render.js';
 import { toast, dismissToast } from './ui/toast.js';
+import { nudgesAvailable, enableNudges, syncNudges } from './notify.js';
 import { openCard, closeCard, getOpenPetId } from './ui/card.js';
 import { initSoundNoteHook, isMuted, toggleMuted } from './audio/sound.js';
 import { initNarrator, initNarratorUI, isNarratorOn, toggleNarrator, stopSpeech } from './audio/narrator.js';
@@ -291,6 +292,24 @@ function syncAudioButtons() {
   narratorBtn.setAttribute('aria-pressed', String(isNarratorOn()));
   setTrayLabel(narratorBtn, isNarratorOn() ? 'Narrator' : 'Narrator off', isNarratorOn() ? 'Reads the notes aloud' : 'The notes stay on paper');
 }
+// Nudges: local notifications, only in the installed app where the plugin exists.
+const nudgeBtn = document.getElementById('nudgeBtn');
+function syncNudgeButton() {
+  nudgeBtn.hidden = !nudgesAvailable();
+  nudgeBtn.setAttribute('aria-pressed', String(!!state.settings.nudges));
+  setTrayLabel(nudgeBtn, state.settings.nudges ? 'Nudges on' : 'Nudges off', state.settings.nudges ? 'A buzz when something goes wrong' : 'Silence, until something goes wrong');
+}
+nudgeBtn.addEventListener('click', async () => {
+  if (!state.settings.nudges) {
+    const answer = await enableNudges();
+    if (answer !== 'granted') { toast('The phone said no. You can change that in its settings.'); return; }
+    state.settings.nudges = true;
+  } else state.settings.nudges = false;
+  state.settings.nudgeAsked = true;
+  save(); syncNudgeButton(); syncNudges(state);
+});
+window.addEventListener('shelflife:nudges', () => { syncNudgeButton(); syncNudges(state); });
+syncNudgeButton();
 muteBtn.addEventListener('click', () => { if (toggleMuted()) stopSpeech(); syncAudioButtons(); });
 narratorBtn.addEventListener('click', () => { toggleNarrator(); syncAudioButtons(); });
 
@@ -461,7 +480,7 @@ setInterval(() => {
 
 // Catch up immediately after waking a sleeping phone or returning to the tab.
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { lifeState(state).lastSeen = Date.now(); save(); stopSpeech(); return; }
+  if (document.hidden) { lifeState(state).lastSeen = Date.now(); save(); stopSpeech(); syncNudges(state); return; }
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
@@ -470,7 +489,7 @@ document.addEventListener('visibilitychange', () => {
   renderAll(state);
   if (!document.querySelector('.veil.open')) announceMayhem(newTrouble);
 });
-window.addEventListener('pagehide', () => { lifeState(state).lastSeen = Date.now(); save(); });
+window.addEventListener('pagehide', () => { lifeState(state).lastSeen = Date.now(); save(); syncNudges(state); });
 
 // ---------- service worker ----------
 // Without this the manifest still makes the game "installable", but there is no

@@ -19,6 +19,7 @@ const SHELL = [
   "./src/content/arcade.js",
   "./src/engine/arcade.js",
   "./src/engine/daily.js",
+  "./src/notify.js",
   "./src/engine/seasons.js",
   "./src/content/seasons.js",
   "./src/content/daily.js",

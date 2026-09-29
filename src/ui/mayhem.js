@@ -17,6 +17,7 @@ import { reactTo } from '../art/animator.js';
 import { playAchievement, playPowerUp, playStar, playStomp, playFeud, playUnlock } from '../audio/sound.js';
 import { save } from '../state.js';
 import { toast } from './toast.js';
+import { nudgesAvailable, enableNudges } from '../notify.js';
 
 /* The mayhem loop's surfaces: a souls counter in the top bar, an alarm strip
    over the cabinet, a small desk under the actions, and one sheet that shows an
@@ -114,7 +115,7 @@ function renderDesk(state, now = Date.now()) {
   const todayTile = docketCase && ch
     ? '<div class="mh-tile mh-today"><span class="mh-tile-kicker">Today in the Playroom</span>' +
       todayRow('court', docket.done, 'Shelf Court docket', docketCase.title + (docket.done ? ' · filed' : ' · +' + DOCKET_SOULS + ' souls')) +
-      todayRow('arcade', ch.claimed, 'Arcade challenge', ARCADE_BY_ID[ch.game].title + ': ' + ch.mod.title + (ch.claimed ? ' · done' : ' · +' + DAILY_SOULS + ' souls'), ' data-game="' + ch.game + '"') + '</div>'
+      todayRow('arcade', ch.claimed, 'Arcade challenge', ARCADE_BY_ID[ch.game].title + ': ' + ch.mod.title + (ch.claimed ? ' · done' : ' · +' + DAILY_SOULS + ' souls'), ' data-mh-game="' + ch.game + '"') + '</div>'
     : '';
   setHTML(deskEl, seasonStrip + omenTile + choresTile + coffinTile + todayTile + cabinetTile);
 }
@@ -219,6 +220,7 @@ function choose(state, index) {
   card.querySelector('.mh-choices').outerHTML = '<div class="mh-outcome"><div class="mh-stamp tone-' + result.tone + '">' + esc(result.stamp) + '</div>' +
     '<p class="mh-text">' + esc(result.text) + '</p>' + rewardList(result) +
     (result.curio ? '<div class="mh-drop"><span class="mh-drop-kicker">Something was left behind</span>' + curioCard(result.curio) + '</div>' : '') +
+    (nudgesAvailable() && !state.settings.nudges && !state.settings.nudgeAsked ? '<p class="mh-nudge"><span>Want a buzz when something goes wrong?</span><button class="btn btn-sm" type="button" data-mh="nudge">Yes, nudge me</button><button class="btn btn-ghost btn-sm" type="button" data-mh="nudge-no">Not now</button></p>' : '') +
     '<div class="mh-next">' + (left ? '<button class="btn btn-primary" type="button" data-mh="emergency">Next emergency <small>(' + left + ' left)</small></button>' : mayhemState(state).souls >= POKE_COST ? '<button class="btn btn-primary" type="button" data-mh="poke">Poke the drawer · ' + POKE_COST + '</button><button class="btn" type="button" data-mh="close">Back to the shelf</button>' : '<button class="btn btn-primary" type="button" data-mh="close">Back to the shelf</button>') +
     '<button class="btn btn-ghost" type="button" data-mh="cabinet">Cabinet</button></div></div>';
   card.querySelector('.mh-fineprint')?.remove();
@@ -422,7 +424,7 @@ export function initMayhem(state, onRefresh) {
     if (control.dataset.curio) { showCurio(control.dataset.curio); return; }
     if (control.dataset.mhToday) {
       if (control.dataset.mhToday === 'court') window.dispatchEvent(new CustomEvent('shelflife:court', { detail: {} }));
-      else window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: control.dataset.game } }));
+      else window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: control.dataset.mhGame } }));
       return;
     }
     if (control.dataset.order) { showOrder(control.dataset.order); return; }
@@ -437,6 +439,15 @@ export function initMayhem(state, onRefresh) {
     else if (action === 'omen') showOmen(S);
     else if (action === 'omen-view') showOmen(S);
     else if (action === 'flip') flip(S);
+    else if (action === 'nudge-no') { S.settings.nudgeAsked = true; save(); control.closest('.mh-nudge')?.remove(); }
+    else if (action === 'nudge') {
+      enableNudges().then(answer => {
+        S.settings.nudgeAsked = true;
+        if (answer === 'granted') { S.settings.nudges = true; toast('Nudges on. The shelf will buzz when it needs you.'); }
+        else toast('The phone said no. You can change that in its settings.');
+        save(); control.closest('.mh-nudge')?.remove(); window.dispatchEvent(new CustomEvent('shelflife:nudges'));
+      });
+    }
     else if (action === 'poke') { if (pokeDrawer(S)) { save(); playFeud(); showEmergency(S); refresh(); } else showQuiet(S); }
   });
   hud?.addEventListener('click', () => showCabinet(S));

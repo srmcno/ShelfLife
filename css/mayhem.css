@@ -317,3 +317,7 @@ button.mh-shelf-item:hover{border-color:var(--rc);transform:translateY(-2px)}
 .mh-today-row.done{color:var(--ink-3)}
 .mh-today-row.done .mh-check{background:var(--mh-good);border-color:var(--mh-good)}
 @media (min-width:901px){.mh-today{flex-direction:row;flex-wrap:wrap;align-items:center}.mh-today .mh-tile-kicker{flex:0 0 100%}.mh-today-row{flex:1 1 260px;width:auto}}
+
+/* ---- nudge offer ---- */
+.mh-nudge{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 0;font:500 13px/1.4 var(--body);color:var(--ink-2)}
+.mh-nudge span{flex:1 1 180px}
