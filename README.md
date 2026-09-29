@@ -10,7 +10,10 @@ They cannot die. They have looked into it.
 
 Every twelve minutes something goes wrong on the shelf. Somebody finds the rat poison, starts a cult,
 writes you out of their will or holds a funeral for a raisin. Up to three emergencies pile up while you
-are away. Each one is a card with two choices and a random, usually regrettable, result.
+are away. Each one is a card with two choices and a random, usually regrettable, result. Who is
+involved changes the odds: cute residents tend to get good endings, menacing ones bad endings, mysterious
+ones strange endings, and trust turns disasters aside. Each choice shows a plain risk read, from
+*Safe enough* to *Ill-advised*.
 
 Every result pays **souls**. Souls buy **coffins**, and every coffin holds a cursed curio for the
 **Cabinet of Curiosities**: 34 of them, from Common to Unholy. Souls earned for life set what the
@@ -19,8 +22,23 @@ Playroom games pay a few souls too, so the slow loop feeds the fast one.
 
 Turn over **tonight’s omen** once a night for free souls and a daily twist: double pay, cheaper coffins,
 better luck or one extra disaster. Nights in a row pay more, and the seventh leaves something rare on the
-step. Three **unholy chores** a day pay souls each and a free curio for the set. Nothing is ever taken
-away: a missed night only restarts the count.
+step. Miss one night and the candle gutters but holds, once, until the next seventh night. Three
+**unholy chores** a day pay souls each and a free curio for the set. Nothing is ever taken away.
+
+Missing a particular curio? A **special order** buys it outright, priced by rarity. A long run of
+coffins without anything cursed ends in one, and the coffin gets heavy when it is due. Doing the rounds
+pays for the first five each day.
+
+### Coming back tomorrow
+
+The shelf desk lists **today in the Playroom**. **The daily challenge** puts one arcade game in a
+modifier (snack storm, slim coffins, a chatty spirit, a funeral crowd) that is the same for everyone
+on the same date. It keeps its own best, and the first scoring run each day pays a bonus that grows
+with your streak. **The docket** is one Shelf Court case a day that pays a bonus for airing it.
+**Seasons** recur every year: from 15 October to 2 November, *The Thin Season* lets some coffins hold
+six seasonal curios, which stay in the cabinet once you have them. Streaks and sets are recorded as
+incidents. In the installed Android app, optional **nudges** (local notifications, no server) can tell
+you when the next emergency is due; they stay quiet overnight.
 
 ## Make yourself at home
 
@@ -120,7 +138,7 @@ explain what belongs there and how to add it.
 
 On desktop, **P** opens the Playroom. Frenzy uses ← → or A/D, Coffin Stack uses Space, the Séance uses 1 to 4 and
 Grave Whack uses 1 to 9. In Shelf Court, Enter or Space advances dialogue. P pauses any run; a long stall or a hidden tab pauses it for you.
-**Escape** closes the current sheet and returns focus to its opener. Motion follows your system
+**Escape** closes the current sheet and returns focus to its opener; the Back button does the same on a phone. Motion follows your system
 preference; More also offers Automatic, Light and Full effects. The narrator is off until enabled.
 Light retains brief gameplay reactions and scene movement while simplifying decoration.
 See [the expedition and paperwork design notes](docs/hearings-and-expeditions.md).
