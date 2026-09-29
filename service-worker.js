@@ -19,6 +19,8 @@ const SHELL = [
   "./src/content/arcade.js",
   "./src/engine/arcade.js",
   "./src/engine/daily.js",
+  "./src/engine/seasons.js",
+  "./src/content/seasons.js",
   "./src/content/daily.js",
   "./src/arcade-state.js",
   "./src/ui/arcade.js",

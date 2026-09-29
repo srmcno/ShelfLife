@@ -1,4 +1,5 @@
 import { EMERGENCIES, CURIOS, CHORES, OMENS, RANKS } from './content/mayhem.js';
+import { SEASONAL_CURIOS } from './content/seasons.js';
 
 /* Save data for the mayhem loop (engine/mayhem.js). Everything here is bounded
    and validated so a hand-edited or older backup can never break the shelf. */
@@ -11,7 +12,7 @@ const safeId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.te
 export const QUEUE_MAX = 4;
 export const LOG_MAX = 16;
 const EMERGENCY_IDS = new Set(EMERGENCIES.map(e => e.id));
-const CURIO_IDS = new Set(CURIOS.map(c => c.id));
+const CURIO_IDS = new Set([...CURIOS, ...SEASONAL_CURIOS].map(c => c.id));
 const CHORE_IDS = new Set(CHORES.map(c => c.id));
 const OMEN_IDS = new Set(OMENS.map(o => o.id));
 const TONES = new Set(['good', 'bad', 'weird']);

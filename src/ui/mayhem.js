@@ -5,6 +5,8 @@ import {
 } from '../engine/mayhem.js';
 import { mayhemState } from '../mayhem-state.js';
 import { CURIOS, RARITIES, RANKS, QUIET_LINES } from '../content/mayhem.js';
+import { SEASONS } from '../content/seasons.js';
+import { activeSeason, seasonProgress } from '../engine/seasons.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { glyph } from '../art/mayhem-glyphs.js';
 import { reactTo } from '../art/animator.js';
@@ -20,6 +22,7 @@ const byId = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const plural = (n, one, many = one + 's') => n + ' ' + (n === 1 ? one : many);
 const clock = ms => { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const quiet = () => QUIET_LINES[Math.floor(Date.now() / 60000) % QUIET_LINES.length];
 
 let S = null, refresh = () => {};
@@ -100,7 +103,9 @@ function renderDesk(state, now = Date.now()) {
   const short = Math.max(0, cost - m.souls);
   const coffinTile = '<button class="mh-tile mh-coffin-tile" type="button" data-mh="coffin"' + (short ? ' aria-disabled="true"' : '') + '><span class="mh-coffin-art">' + glyph('coffin') + '</span><span><span class="mh-tile-kicker">Open a coffin</span><b>' + cost + ' souls</b><small>' + (short ? short + ' more souls needed' : 'Something inside is knocking') + '</small></span></button>';
   const cabinetTile = '<button class="mh-tile mh-cabinet-tile" type="button" data-mh="cabinet"><span class="mh-tile-kicker">Cabinet of Curiosities</span><b>' + owned + ' / ' + CURIOS.length + '</b><span class="mh-meter"><i style="width:' + Math.round(owned / CURIOS.length * 100) + '%"></i></span><small>' + esc(rankInfo(state).rank.title) + '</small></button>';
-  setHTML(deskEl, omenTile + choresTile + coffinTile + cabinetTile);
+  const season = activeSeason(now);
+  const seasonStrip = season ? (p => '<div class="mh-season"><b>' + esc(season.name) + '</b><span>' + esc(season.blurb) + ' Some coffins hold something seasonal (' + p.owned + '/' + p.total + '). Until ' + season.to[1] + ' ' + MONTHS[season.to[0]] + '.</span></div>')(seasonProgress(m, season)) : '';
+  setHTML(deskEl, seasonStrip + omenTile + choresTile + coffinTile + cabinetTile);
 }
 
 // The count of waiting disasters follows you: onto the Shelf tab, into the
@@ -223,7 +228,7 @@ function showCoffin(state) {
     '<div class="mh-coffin-stage"><button class="mh-coffin-box" type="button" data-mh="pry"' + (short > 0 ? ' disabled' : '') + ' aria-label="Pry the coffin open for ' + cost + ' souls">' + glyph('coffin') + '</button></div>' +
     '<p class="mh-coffin-note">' + (short > 0 ? 'You need ' + short + ' more souls. Deal with a few emergencies. Someone always digs something up.' : 'Tap the coffin to pry it open. <b>' + cost + ' souls.</b> You have ' + m.souls + '.') + '</p>' +
     (pityActive(state) ? '<p class="mh-coffin-note mh-heavy">This one is heavier than the others. Something old is in there, and it has waited long enough.</p>' : '') +
-    '<p class="mh-odds">' + RARITIES.map(r => '<span class="rarity-' + r.id + '">' + esc(r.label) + '</span>').join(' · ') + '</p>';
+    '<p class="mh-odds">' + RARITIES.map(r => '<span class="rarity-' + r.id + '">' + esc(r.label) + '</span>').join(' · ') + (activeSeason() ? ' · <span class="rarity-season">Seasonal</span>' : '') + '</p>';
   open();
   sheet.querySelector('.mh-coffin-box:not([disabled])')?.focus({ preventScroll: true });
 }
@@ -298,6 +303,16 @@ function showCabinet(state) {
     const have = CURIOS.filter(c => c.rarity === r.id && m.curios[c.id]).length, total = CURIOS.filter(c => c.rarity === r.id).length;
     return '<section class="mh-shelf-group"><h3 class="rarity-' + r.id + '">' + esc(r.label) + ' <small>' + have + '/' + total + '</small></h3><div class="mh-shelf-grid">' + items + '</div></section>';
   }).join('');
+  const nowSeason = activeSeason();
+  const seasonGroups = SEASONS.map(season => {
+    const live = nowSeason === season, p = seasonProgress(m, season);
+    if (!live && !p.owned) return '';
+    const items = season.curios.map(c => m.curios[c.id]
+      ? '<button class="mh-shelf-item rarity-season" type="button" data-curio="' + c.id + '"><span class="mh-curio-art">' + glyph(c.glyph) + '</span><b>' + esc(c.name) + '</b>' + (m.curios[c.id] > 1 ? '<em>×' + m.curios[c.id] + '</em>' : '') + '</button>'
+      : '<span class="mh-shelf-item missing rarity-season"><span class="mh-curio-art">' + glyph(c.glyph) + '</span><b>???</b></span>').join('');
+    return '<section class="mh-shelf-group"><h3 class="rarity-season">' + esc(season.name) + ' <small>' + p.owned + '/' + p.total + '</small></h3>' +
+      '<p class="mh-season-note">' + (live ? 'In season now. Some coffins hold these.' : 'Out of season. They return every year.') + '</p><div class="mh-shelf-grid">' + items + '</div></section>';
+  }).join('');
   const log = m.log.slice(0, 6).map(entry => '<li class="tone-' + entry.tone + '"><span class="mh-mini-stamp">' + esc(entry.stamp) + '</span><span><b>' + esc(entry.title) + '</b> ' + esc(entry.text) + '</span></li>').join('');
   sheet.innerHTML = head('Souls earned in this house: ' + m.lifetime, 'Cabinet of Curiosities') +
     '<section class="mh-rank-card"><span class="mh-tile-kicker">The neighbours call this house</span><h3>' + esc(info.rank.title) + '</h3><p>' + esc(info.rank.line) + '</p>' +
@@ -307,7 +322,7 @@ function showCabinet(state) {
     '<p class="mh-stats">' + plural(m.resolved, 'emergency', 'emergencies') + ' survived · ' + plural(m.coffins, 'coffin') + ' opened · ' + m.souls + ' souls in hand</p></section>' +
     '<div class="mh-cabinet-actions"><button class="btn btn-primary" type="button" data-mh="coffin">Open a coffin · ' + coffinCost(state) + '</button>' + (m.queue.length ? '<button class="btn" type="button" data-mh="emergency">' + plural(m.queue.length, 'emergency', 'emergencies') + ' waiting</button>' : '') + '</div>' +
     '<div class="mh-curio-detail" id="mhCurioDetail" hidden></div>' +
-    groups +
+    groups + seasonGroups +
     (log ? '<section class="mh-log"><h3>The incident reports</h3><ul>' + log + '</ul></section>' : '');
   open();
 }

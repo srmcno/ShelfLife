@@ -301,3 +301,9 @@ button.mh-shelf-item:hover{border-color:var(--rc);transform:translateY(-2px)}
   #cabinet .pet.mh-trouble::before,.mh-curio-card,.mh-actor,.mh-stamp,.mh-rankup.show .mh-rankup-card,.souls-hud.pulse,.mh-tarot.flipping{animation:none!important}
   .souls-float{display:none}
 }
+
+/* ---- seasons ---- */
+.rarity-season{--rc:#ff9a3c}
+.mh-season{grid-column:1/-1;order:-2;display:flex;flex-direction:column;gap:3px;padding:10px 14px;border-radius:12px;border:1px solid #ff9a3c66;background:linear-gradient(120deg,#ff9a3c1f,#0000);font:500 13px/1.45 var(--body);color:var(--ink-2)}
+.mh-season b{font:700 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:#ff9a3c}
+.mh-season-note{margin:-4px 0 10px;font-size:12.5px;color:var(--ink-3)}
