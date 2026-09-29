@@ -40,8 +40,11 @@
   /* geometry */
   --shell:1180px; --r:10px; --r-lg:16px;
   --topbar-h:58px; --tabbar-h:64px;
-  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
-  --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
+  /* Safe areas. The Android app's SystemBars plugin writes --safe-area-inset-*
+     because older WebViews report env() wrongly edge to edge; browsers never
+     set them, so the web keeps using env() exactly as before. */
+  --sat:var(--safe-area-inset-top,env(safe-area-inset-top,0px)); --sab:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));
+  --sal:var(--safe-area-inset-left,env(safe-area-inset-left,0px)); --sar:var(--safe-area-inset-right,env(safe-area-inset-right,0px));
   /* the bulb, and the one direction every shadow agrees on */
   --key:var(--room-key);
   --key-x:32%; --key-y:-8%; --cast-dx:22px; --cast-dy:16px;

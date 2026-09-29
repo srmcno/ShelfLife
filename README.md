@@ -1,6 +1,6 @@
 # Shelf Life
 
-**[Play Shelf Life](https://srmcno.github.io/ShelfLife/)** · [Report a problem](https://github.com/srmcno/ShelfLife/issues/new/choose)
+**[Play Shelf Life](https://srmcno.github.io/ShelfLife/)** · [Report a problem](https://github.com/srmcno/ShelfLife/issues/new/choose) · [Privacy](https://srmcno.github.io/ShelfLife/privacy.html) · [Delete your account](https://srmcno.github.io/ShelfLife/delete-account.html)
 
 Small creatures. Long memories. A free, darkly comic creature game for phones and desktops.
 Make peculiar residents, look after them, play together and collect the evidence of a small life.
@@ -110,7 +110,7 @@ Then you rule: for the plaintiff, for the defendant, or "you're both idiots". On
 truth and the clues point at it. The jury votes, the audience reacts, and the loser gives a
 hallway interview. Stars come from the right verdict, ratings of 70 or more, and a jury of five or
 more agreeing. Rule justly and the winner trusts you a little more; rule against the resident who
-was right and they hold a real grudge. Eighteen hand-written cases, six of each verdict.
+was right and they hold a real grudge. Twenty-four hand-written cases, eight of each verdict, each with alternate takes so reruns rarely repeat.
 
 | Game | What you do |
 | --- | --- |
@@ -118,7 +118,7 @@ was right and they hold a real grudge. Eighteen hand-written cases, six of each 
 | Coffin Stack | Drop coffins onto a growing tower. Overhang is sawn off; three perfect drops in a row win some width back. |
 | The Séance | Candles light in sequence. Repeat it. Each round adds one. The spirits forgive one mistake. |
 | Grave Whack | Push the hands back into their graves before they climb out. Never tap the widow. The landlord is worth five. |
-| Shelf Court | Judge your residents' petty lawsuits on live daytime TV. The rest of the shelf is the jury. Eighteen cases. |
+| Shelf Court | Judge your residents' petty lawsuits on live daytime TV. The rest of the shelf is the jury. Twenty-four cases. |
 | Expeditions | Pack a tool, choose a crew and recover parts for working household objects. |
 
 Every scoring run pays souls from a daily purse, beating your best pays a bonus, and a good run
@@ -175,6 +175,9 @@ save**. Guest play is unchanged, and offline the game carries on and catches up 
   browser under `shelflife.cloud`, never inside the save or its backups.
 - **Sign out of this device** stops the copying and keeps the shelf. **Delete my cloud data and account**
   removes the cloud copy and the account from the server; the shelf on this device stays.
+- [privacy.html](privacy.html) says what is stored and where. [delete-account.html](delete-account.html) explains
+  deletion without the app and, when cloud save is set up, signs in with a code and deletes the account itself.
+  Both are published with the site and linked from More.
 
 ### Friends (optional, needs cloud save)
 
@@ -243,9 +246,10 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/state.js`, `src/life-state.js` | Saves, validation, migration and bounded history |
 | `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
 | `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
-| `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js` | Shelf Court: cases, episode state machine, TV studio stage and the drawn cast |
+| `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js`, `src/art/court-hallway.js` | Shelf Court: cases, episode state machine, TV studio stage, the drawn cast and the hall cam's corridor set |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
 | `src/cloud/social.js`, `src/ui/friends.js`, `css/social.css` | Friends, shelves on show, Shelf Court summonses and daily boards |
+| `src/native.js`, `capacitor.config.json`, `android/` | The Android app: native glue, Capacitor settings and the native project |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
 | `src/art/` | Creature/drawing data, SVG rendering, animation and the studio |
@@ -260,6 +264,71 @@ development files and writes the commit to `release.json`; the same revision ide
 cache. Add new production assets to `service-worker.js` and bump its development cache version.
 The tests check that the offline shell is complete.
 
+### The Android app
+
+The Play Store edition wraps the same web build in [Capacitor 8](https://capacitorjs.com). `android/` is the
+native project Capacitor generated; it is committed, and `npx cap sync` only rewrites its generated files
+(`capacitor.build.gradle`, `capacitor.settings.gradle` and the copied web assets). The web game has no
+Capacitor imports: the npm packages exist only for the native project.
+
+`src/native.js` is the only native glue. It does nothing unless `Capacitor.isNativePlatform()` is true, and it
+reaches plugins through `window.Capacitor.Plugins`, which the native bridge provides. In the app:
+
+- **Back up**, **Move to another device** and postcards are written to the app's cache and handed to the
+  Android share sheet (Drive, Files, email and so on). No storage permission is needed. **Restore** uses the
+  system file picker.
+- The narrator reads through the phone's text-to-speech engine, preferring British English. With no engine,
+  its buttons are hidden.
+- The Back key closes the open sheet, then minimises the game after saving. Pausing the app saves, stops
+  the narrator and pauses an arcade run, as hiding a browser tab does.
+- There is no service worker and no **Save & refresh**: updates come from the store.
+- Other sites, and the privacy and account pages, open in a browser tab over the game rather than replacing it.
+- The status and gesture bars are drawn over the room; the SystemBars plugin supplies the insets as the
+  `--safe-area-inset-*` variables that `css/style.css` folds into `--sat`, `--sab`, `--sal` and `--sar`.
+- Nudges are inexact local notifications. The manifest removes the exact-alarm permission the plugin declares.
+
+`test/native.test.mjs` and `test/browser/native-app.spec.mjs` check those paths against a fake bridge. That
+is not a device test: try each of them on a real phone before a release.
+
+You need Node 22 or newer, JDK 21 and the Android SDK with platform 36 and its build tools. Android Studio
+Otter (2025.2.1) or newer bundles all of it.
+
+```sh
+npm ci
+npm run android:sync     # npm run build, then copy dist/ into android/
+npm run android:open     # open the project in Android Studio
+npm run android:apk      # debug APK in android/app/build/outputs/apk/debug/
+npm run android:bundle   # release AAB in android/app/build/outputs/bundle/release/
+```
+
+The version lives in one place: `version` in `package.json`. The app's `versionName` is that string and its
+`versionCode` is `major * 10000 + minor * 100 + patch` (1.0.0 is 10000, 1.2.3 is 10203), worked out in
+`android/app/build.gradle`. Play refuses a versionCode it has seen before, so bump `version` before every upload.
+
+#### Signing a release
+
+Play only accepts signed bundles. Make an upload key once, keep it outside the repository and back it up
+with its passwords somewhere safe:
+
+```sh
+keytool -genkeypair -v -keystore ~/keys/shelflife-upload.jks -alias upload \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Then create `android/keystore.properties` (gitignored, as are `*.jks` and `*.keystore`):
+
+```properties
+storeFile=/home/you/keys/shelflife-upload.jks
+storePassword=the store password
+keyAlias=upload
+keyPassword=the key password
+```
+
+`android/app/build.gradle` reads that file only if it exists, so without it `npm run android:bundle` still
+builds an unsigned bundle. With it, the bundle is signed with the upload key. Enrol in Play App Signing when
+you create the app: Google keeps the key that signs what players install, and a lost upload key can be
+reset from the Play Console rather than ending the app.
+
 ### The icon
 
 The resident on the icon is drawn once, as Android adaptive-icon layers in `icons/src/`:
@@ -271,11 +340,14 @@ render again:
 ```sh
 node scripts/render_icons.mjs      # web, maskable, Apple, Play listing and Android launcher icons
 node scripts/render_store_art.mjs  # store/feature-graphic.jpg, drawn with the game's own residents
+node scripts/store_screenshots.mjs # store/screenshots/: eight 1080x1920 phone screenshots for Play
 ```
 
-Both use Playwright's Chromium (set `CHROMIUM_PATH` to use another). `render_icons.mjs` writes
-the Android launcher resources only when an `android/` project exists. `store/` is not published
-with the site.
+All three use Playwright's Chromium (set `CHROMIUM_PATH` to use another). `render_icons.mjs` writes
+the Android launcher resources only when an `android/` project exists. The screenshots use a synthetic
+household, a fixed afternoon and a seeded random, so a commit always shows the same scenes; any over
+1 MB is saved as a JPEG instead. `store/listing.md` drafts the Play listing, the content rating and Data
+safety answers and the release checklist. `store/` is not published with the site.
 
 ### Connecting your own Supabase project
 

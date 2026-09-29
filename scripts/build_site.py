@@ -6,7 +6,7 @@ import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parent.parent
-PUBLIC = ("index.html", "manifest.webmanifest", "service-worker.js", "css", "src", "icons", "assets")
+PUBLIC = ("index.html", "privacy.html", "delete-account.html", "manifest.webmanifest", "service-worker.js", "css", "src", "icons", "assets")
 
 
 def build(output=None):

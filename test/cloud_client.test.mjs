@@ -142,6 +142,14 @@ test('linking an email that already has an account says so', async () => {
   assert.equal(fake.users.size, 2);
 });
 
+test('the deletion page asks for a code without ever creating an account', async () => {
+  const { fake, cloud } = setup();
+  await assert.rejects(cloud.requestEmailCode('nobody@example.com', { mode: 'signin', create: false }), err => err.status === 422);
+  assert.deepEqual(JSON.parse(fake.requests.at(-1).body), { email: 'nobody@example.com', create_user: false });
+  assert.equal(fake.users.size, 0);
+  assert.equal(cloud.pendingEmail(), null);
+});
+
 test('signing in by code uses otp with create_user and reports a switched account', async () => {
   const { fake, cloud } = setup();
   const anon = await cloud.signInAnonymously();

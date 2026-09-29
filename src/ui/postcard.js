@@ -14,6 +14,7 @@ import { STAMP_SVG, CANVAS_SIZE, STAMP_SCALE } from '../art/stamps.js';
 import { moodOf, isAsleep } from '../engine/tick.js';
 import { totalBond } from '../engine/unlocks.js';
 import { toast } from './toast.js';
+import { isNative, saveFile, shareFile } from '../native.js';
 
 const W = 1080, H = 1350;
 const COLS = 6;
@@ -356,6 +357,7 @@ function fileName() {
 }
 
 function canShareFiles() {
+  if (isNative()) return true;
   try {
     if (!navigator.share || !navigator.canShare) return false;
     return navigator.canShare({ files: [new File([new Blob(['x'])], 'x.png', { type: 'image/png' })] });
@@ -394,8 +396,14 @@ export function initPostcard() {
   veil.addEventListener('click', e => { if (e.target === veil) closePostcard(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && veil.classList.contains('open')) closePostcard(); });
   againBtn.addEventListener('click', present);
-  saveBtn.addEventListener('click', () => {
+  saveBtn.addEventListener('click', async () => {
     if (!lastBlob) return;
+    if (isNative()) {
+      const result = await saveFile({ name: fileName(), blob: lastBlob, title: 'Shelf Life', text: lastCaption, dialogTitle: 'Keep the postcard' });
+      if (result === 'shared') toast('Handed over. They will want to see it.');
+      else if (result === 'failed') toast('The postcard would not save. Try Share instead.');
+      return;
+    }
     const a = document.createElement('a');
     a.href = lastUrl; a.download = fileName();
     document.body.appendChild(a); a.click(); a.remove();
@@ -403,6 +411,10 @@ export function initPostcard() {
   });
   shareBtn.addEventListener('click', async () => {
     if (!lastBlob) return;
+    if (isNative()) {
+      if (await shareFile({ name: fileName(), blob: lastBlob, title: 'Shelf Life', text: lastCaption, dialogTitle: 'Send the postcard' }) === 'failed') toast('Sharing did not go through. Save it instead.');
+      return;
+    }
     try {
       const file = new File([lastBlob], fileName(), { type: 'image/png' });
       await navigator.share({ files: [file], title: 'Shelf Life', text: lastCaption });
