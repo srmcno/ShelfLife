@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status bar icon for nudges: the resident from the app icon as a plain white
+     silhouette (Android tints it and ignores colour). Coordinates are those of
+     icons/src/monochrome.svg, recentred on a 24dp canvas. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="240"
+    android:viewportHeight="240">
+    <group android:translateX="-85" android:translateY="-91">
+        <!-- ears, with their inner holes -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M121,126a26,26 0,1 0,52 0a26,26 0,1 0,-52 0ZM136,126a11,11 0,1 0,22 0a11,11 0,1 0,-22 0ZM227,126a26,26 0,1 0,52 0a26,26 0,1 0,-52 0ZM242,126a11,11 0,1 0,22 0a11,11 0,1 0,-22 0Z" />
+        <!-- arms -->
+        <path
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="22"
+            android:strokeLineCap="round"
+            android:pathData="M136,244C122,252 116,266 120,278M262,236C276,234 286,238 294,244" />
+        <!-- feet -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M160,310a18,13 0,1 0,36 0a18,13 0,1 0,-36 0ZM208,310a18,13 0,1 0,36 0a18,13 0,1 0,-36 0Z" />
+        <!-- body, with the eyes left out -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M200,110C241,110 263,139 263,171C263,194 254,204 270,226C289,252 285,300 200,302C115,300 111,252 130,226C146,204 137,194 137,171C137,139 159,110 200,110ZM157,176a21,24 0,1 0,42 0a21,24 0,1 0,-42 0ZM215,182a14,16 0,1 0,28 0a14,16 0,1 0,-28 0Z" />
+    </group>
+</vector>

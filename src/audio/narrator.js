@@ -1,4 +1,5 @@
 import { state, save, onNote } from '../state.js';
+import { isNative, speechAvailable, deviceVoices, speak as deviceSpeak, stopSpeaking as deviceStop } from '../native.js';
 
 /* ---------------------------------------------------------------------------
    Shelf Life — the narrator
@@ -21,9 +22,16 @@ import { state, save, onNote } from '../state.js';
       cancel()-ing per utterance chopped every line in half. Lines are queued
       with a small cap instead, newest kept, so a burst reads as a few complete
       sentences rather than a stutter.
+
+   In the Android app the WebView has no working speechSynthesis, so the notes
+   go to the phone's own text-to-speech engine through src/native.js, with the
+   same voice scoring and prosody. If the app has no engine to talk to, the
+   narrator's buttons are hidden rather than left to fail.
 --------------------------------------------------------------------------- */
 
-const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
+// The app never touches the WebView's speechSynthesis: it exists but is silent.
+const deviceMode = isNative();
+const synth = typeof window !== 'undefined' && !deviceMode ? window.speechSynthesis : null;
 
 // Tuned against Daniel (en-GB) — the only British voice most macOS installs
 // have. Slightly under natural rate, slightly under natural pitch: unhurried
@@ -103,7 +111,58 @@ function markReady() {
   cbs.forEach(fn => { try { fn(); } catch (e) {} });
 }
 
+// ---------- the app's speech engine ----------
+
+const DEVICE_ATTEMPTS = 6;
+const DEVICE_RETRY_MS = 500;
+// Google's English voices are named like en-gb-x-rjs-local; the middle part is
+// the only thing that tells two "English United Kingdom" voices apart.
+function deviceVoice(v) {
+  const code = /-x-([a-z0-9]+)/i.exec(v.voiceURI || '')?.[1];
+  return {
+    name: (v.name || 'Phone voice') + (code ? ' ' + code : ''),
+    lang: String(v.lang || 'en-GB').replace('_', '-'),
+    voiceURI: 'device:' + (v.voiceURI || v.index),
+    localService: v.localService !== false,
+    device: true,
+    index: v.index
+  };
+}
+const DEVICE_DEFAULT = { name: 'The phone voice', lang: 'en-GB', voiceURI: 'device:default', localService: true, device: true, index: -1 };
+
+let deviceSilent = false;   // the app found no speech engine to talk to
+function hideNarratorControls() {
+  deviceSilent = true;
+  if (typeof document === 'undefined') return;
+  for (const id of ['narratorBtn', 'voiceBtn', 'voiceHint']) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = true;
+  }
+}
+
+async function loadDeviceVoices() {
+  for (let attempt = 0; attempt < DEVICE_ATTEMPTS; attempt++) {
+    try {
+      // The engine starts up in the background; until it has, the list is refused.
+      const list = (await deviceVoices()).filter(v => /^en/i.test(v.lang || ''));
+      voices = list.length ? list.map(deviceVoice) : [DEVICE_DEFAULT];
+      resolved = true;
+      markReady();
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('shelflife:voiceschanged'));
+      return true;
+    } catch { await new Promise(resolve => setTimeout(resolve, DEVICE_RETRY_MS)); }
+  }
+  hideNarratorControls();
+  return false;
+}
+
 export function initNarrator() {
+  if (deviceMode) {
+    if (!speechAvailable()) { hideNarratorControls(); return false; }
+    loadDeviceVoices();
+    onNote(note => { if (isNarratorOn()) speak(note.text); });
+    return true;
+  }
   if (!synth) return;
   discoverNativeVoice();
   refreshVoices();
@@ -149,6 +208,7 @@ export function scoreVoice(v) {
   if (ENGLISH_MALE.test(name) || /\bmale\b/i.test(name)) s += 150;
   if (ENHANCED.test(name)) s += 120;
   if (v.native) s += 100;
+  if (v.device && v.localService) s += 20; // works offline, starts at once
   if (/^daniel\b/i.test(name)) s += 40; // the known-good British man on macOS
   // Enough to sink them below every serious voice, not enough to zero them:
   // a score of 0 means "not usable at all", and Boing is still a last resort.
@@ -258,7 +318,7 @@ export function splitForSpeech(line, max = CHUNK_CHARS) {
 
 export function speak(text, opts) {
   const o = opts || {};
-  if (!synth) return false;
+  if ((!synth && !deviceMode) || deviceSilent) return false;
   if ((!isNarratorOn() || state.settings.muted) && !o.force) return false;
   // A background tab does not narrate. The note is on the board when they return.
   if (typeof document !== 'undefined' && document.hidden && !o.force) return false;
@@ -291,7 +351,7 @@ export function speakPreview(text) {
 }
 
 function pump() {
-  if (!synth || speaking || !queue.length) return;
+  if ((!synth && !deviceMode) || speaking || !queue.length) return;
   if (!ready) {
     if (!pumpPending) {
       pumpPending = true;
@@ -300,6 +360,11 @@ function pump() {
     return;
   }
   const line = queue.shift().text;
+  if (deviceMode) {
+    speaking = true;
+    speakDevice(line, pickBestVoice() || DEVICE_DEFAULT);
+    return;
+  }
   if (pickBestVoice()?.native) {
     speaking = true;
     speakNative(line, speechEpoch);
@@ -357,6 +422,25 @@ async function speakNative(line, epoch) {
   } finally { clearTimeout(timeout); }
 }
 
+// The engine's promise settles when the line has been read. A stopped line
+// never settles, so each one carries a serial and a generous deadline.
+async function speakDevice(line, voice) {
+  const mine = ++utterSerial;
+  const p = prosodyFor(voice);
+  lastUtterance = { text: line, voice, rate: p.rate, pitch: p.pitch, volume: p.volume };
+  const words = line.split(/\s+/).length;
+  const guard = setTimeout(() => { if (mine === utterSerial) { deviceStop(); finish(); } }, (words / (2.6 * PROSODY.rate)) * 1000 + 4000);
+  playbackStatus('Speaking with ' + voice.name + '.');
+  try {
+    await deviceSpeak({ text: line, lang: voice.lang || 'en-GB', rate: p.rate, pitch: p.pitch, volume: p.volume, voice: voice.index });
+    if (mine === utterSerial) finish();
+  } catch {
+    if (mine !== utterSerial) return;
+    finish();
+    playbackStatus('The phone could not read that aloud. You can still read every note.');
+  } finally { clearTimeout(guard); }
+}
+
 function clearNativeAudio() {
   if (nativeAudio) {
     nativeAudio.onended = nativeAudio.onerror = null;
@@ -406,6 +490,7 @@ export function stopSpeech() {
   unwatch();
   speaking = false;
   if (synth) { try { synth.cancel(); } catch (e) {} }
+  if (deviceMode) deviceStop();
 }
 
 export function narratorDebug() {
@@ -454,7 +539,7 @@ export function voiceQualityHint() {
   const mac = typeof navigator !== 'undefined' &&
     /mac/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent);
   if (!v) return null;
-  if (ENHANCED.test(v.name)) return null;
+  if (v.device || ENHANCED.test(v.name)) return null;
   if (typeof window !== 'undefined' && window.location.hostname !== '127.0.0.1') {
     return {
       id: 'browser-voices',
@@ -552,7 +637,7 @@ export function initNarratorUI() {
     const auto = !state.settings.narratorVoiceURI;
     const p = prosodyFor(v);
     meta.textContent = (auto ? 'Chosen for you: ' : 'Your pick: ') + v.name + ' (' + (v.lang || '??') + '). ' +
-      (v.native ? 'Full-quality speech generated on your Mac. Works offline. ' : 'Browser voice. ') +
+      (v.native ? 'Full-quality speech generated on your Mac. Works offline. ' : v.device ? 'This phone\'s own voice. ' : 'Browser voice. ') +
       (isNarratorOn() ? '' : 'The narrator is currently switched off.');
     const up = voiceQualityHint();
     if (upgrade) {

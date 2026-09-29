@@ -1,0 +1,31 @@
+{
+  "appId": "io.github.srmcno.shelflife",
+  "appName": "Shelf Life",
+  "webDir": "dist",
+  "backgroundColor": "#0B0812",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0B0812"
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover",
+      "style": "DARK",
+      "hidden": false
+    },
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 2000,
+      "launchFadeOutDuration": 200,
+      "backgroundColor": "#1A1220",
+      "showSpinner": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_shelf",
+      "iconColor": "#F2C083"
+    }
+  }
+}

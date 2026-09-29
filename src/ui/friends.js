@@ -8,6 +8,7 @@
 // and is printed through esc(). Nothing from the server is ever markup.
 import { formatCode, socialText, guestPet } from '../cloud/social.js';
 import { PLAY_URL } from '../backup.js';
+import { isNative, shareText } from '../native.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
 import { RANKS } from '../content/mayhem.js';
 import { COURT_CASES } from '../content/court.js';
@@ -127,7 +128,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   function mainMarkup() {
     const incoming = friends.filter(f => f.status === 'pending');
     const list = accepted();
-    const share = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+    const share = isNative() || (typeof navigator !== 'undefined' && typeof navigator.share === 'function');
     title = ['Friends', 'Seen by friends. Nobody else.'];
     return '<section class="fr-me" aria-labelledby="frCodeTitle"><h3 id="frCodeTitle">Your friend code</h3>' +
       '<p class="fr-code" data-fr-code>' + (me.code ? esc(formatCode(me.code)) : '<span class="fr-wait">Fetching</span>') + '</p>' +
@@ -301,8 +302,11 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     render('[data-fr="copy"]');
   }
   async function shareCode() {
+    const note = { title: 'Shelf Life', text: 'Add me on Shelf Life. My friend code is ' + formatCode(me.code) + '.', url: PLAY_URL };
+    // The app's WebView has no Web Share; the Android share sheet does the same job.
+    if (isNative()) { await shareText({ ...note, dialogTitle: 'Send your friend code' }); return; }
     try {
-      await navigator.share({ title: 'Shelf Life', text: 'Add me on Shelf Life. My friend code is ' + formatCode(me.code) + '.', url: PLAY_URL });
+      await navigator.share(note);
     } catch { /* the player changed their mind */ }
   }
 

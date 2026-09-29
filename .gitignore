@@ -7,3 +7,7 @@ live-check-results/
 node_modules/
 test-results/
 playwright-report/
+# Android release signing (see README): never committed
+*.jks
+*.keystore
+keystore.properties

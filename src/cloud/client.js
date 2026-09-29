@@ -171,11 +171,13 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
   }
   // 'link' adds the email to the current (anonymous) account; 'signin' reaches
   // an existing account, or makes one, from a signed-out or different session.
-  async function requestEmailCode(address, { mode } = {}) {
+  // create: false only reaches an account that already exists (the account
+  // deletion page must never make one).
+  async function requestEmailCode(address, { mode, create = true } = {}) {
     const target = cleanEmail(address);
     const how = mode === 'link' || mode === 'signin' ? mode : isAnonymous() ? 'link' : 'signin';
     if (how === 'link') await authed('/auth/v1/user', { method: 'PUT', body: { email: target } });
-    else await send('/auth/v1/otp', { method: 'POST', body: { email: target, create_user: true } });
+    else await send('/auth/v1/otp', { method: 'POST', body: { email: target, create_user: create !== false } });
     setMeta({ pending: { email: target, mode: how, at: now() } });
     return { email: target, mode: how };
   }
