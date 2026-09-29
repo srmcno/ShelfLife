@@ -53,18 +53,15 @@ try {
       await page.reload();await expect(page.locator('#cabinet .pet')).toHaveCount(1);
       assert.equal((await saved()).paperwork.entries.length,1);assert.equal((await saved()).life.outing.step,1);
       await page.locator('.tabbar .tab[data-tab="shelf"]').click();
-      await page.locator('#hangoutBtn').click();await page.locator('#rugAction').click();
-      await expect.poll(async()=>(await saved()).rug.residents[0]?.tricks.map(t=>t.id),{timeout:15000}).toContain('first-catch');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
-      await page.screenshot({path:'live-check-results/'+label+'-rug.png'});
-      await page.locator('#rugClose').click();await page.evaluate(()=>navigator.serviceWorker.ready);
+      await page.evaluate(()=>navigator.serviceWorker.ready);
       await expect.poll(()=>page.evaluate(()=>caches.keys())).toContain('shelflife-'+revision.slice(0,12));
       await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
       await context.setOffline(true);await page.reload();await expect(page.locator('#cabinet .pet')).toHaveCount(1);
-      await page.locator('#hangoutBtn').click();await expect(page.locator('#rugTally')).toHaveText('1 / 6');
-      const art = await page.evaluate(async()=>{const response=await fetch(new URL('assets/rooms/play-rug.webp',document.baseURI));return response.ok&&(await response.arrayBuffer()).byteLength>100000;});
-      assert.ok(art,'The installed room artwork must be readable offline');assert.deepEqual(errors,[]);
-      console.log(JSON.stringify({viewport:label,revision,arcade:'real drop',expedition:'saved first stop',paperwork:'persisted',rug:'real catch',offline:'saved game and artwork',errors}));
+      assert.equal((await saved()).paperwork.entries.length,1);
+      const font = await page.evaluate(async()=>{const response=await fetch(new URL('assets/fonts/gloock-400-normal.woff2',document.baseURI));return response.ok&&(await response.arrayBuffer()).byteLength>1000;});
+      assert.ok(font,'The installed fonts must be readable offline');assert.deepEqual(errors,[]);
+      console.log(JSON.stringify({viewport:label,revision,arcade:'real drop',expedition:'saved first stop',paperwork:'persisted',offline:'saved game and fonts',errors}));
     } catch(error) {
       await page.screenshot({path:'live-check-results/'+label+'-failure.png',fullPage:true}).catch(()=>{});
       throw error;

@@ -46,22 +46,6 @@ together, share plots, then stage a scene to see the ending. Rivals tell a diffe
 story after a feud and a truce. Their case file stays in each resident's relationship
 card and the Memory museum even after the rolling note board fills up.
 
-## The play rug
-
-Take any resident onto a lamplit rug with a patchwork ball and an improbable number of bubbles.
-These are your actual creatures, including the ones you drew. They scamper, jump, catch and pop;
-you can give them a snack, some attention or a wash without leaving the room.
-
-Tap to toss, or drag and release to aim your own throw. Try **Soft toss**, **Sky high** and
-**Bounce pass**, or blow bubbles and race your resident to pop them. The toy controls also work
-with a keyboard. Six little tricks belong to each resident, from their first catch to five
-catches in one visit. Each new trick earns one discovery, saves immediately and becomes a
-memory in the scene journal. Repeating it is for the pleasure of being very good at something.
-
-There is no timer or penalty for leaving. Backgrounding pauses the toys; reopening starts a
-fresh rug with your earned tricks intact. The rug is free play. Little adventures still ask
-you to finish one of the games in the Playroom.
-
 ## Little adventures
 
 Your residents now have plans. Share a personal care moment, finish a game together and
@@ -124,8 +108,8 @@ earns a little trust (within the usual daily cap). Little adventures ask for a s
 the resident who invited you. Expeditions show your crew, packed equipment, route and exact
 choice consequences; two distinct recovered parts build a permanent household project.
 
-Crumb Chase, Handshake, The Alibi, the old Shelf Court hearings and the Night Market have been
-retired. Saves keep their lifetime counts and earned achievements; unfinished hearings and market
+Crumb Chase, Handshake, The Alibi, the old Shelf Court hearings, the Night Market and the play rug
+have been retired. Saves keep their lifetime counts and earned achievements; unfinished hearings and market
 trips are dropped. Shelf Court returns rebuilt from scratch, above.
 
 **Notes → Paperwork** keeps the latest 120 filed documents independently of the temporary
@@ -183,7 +167,7 @@ npm run build
 The browser suite uses isolated synthetic households and a separate local server. It checks
 creation, saved appearance, care, every arcade game, a full Shelf Court episode ruled rightly and one ruled wrongly, expeditions, completed adventure endings,
 abandoned runs, emergencies, coffins and the curio cabinet, expedition returns, report persistence,
-replay identity, all sixteen keepsakes, real rug catches and bubble pops,
+replay identity, all sixteen keepsakes,
 cancelled gestures, failed saves, responsive layouts and runtime errors
 in desktop Chromium and phone-sized Chromium/WebKit. Offline reload is tested in Chromium;
 Playwright does not support WebKit service-worker tooling. This is browser automation, not physical-device
@@ -192,7 +176,6 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | Location | Responsibility |
 | --- | --- |
 | `src/state.js`, `src/life-state.js` | Saves, validation, migration and bounded history |
-| `src/play-rug-state.js`, `src/engine/play-rug.js` | Resident trick collections and a bounded toy simulation |
 | `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
 | `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
 | `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js` | Shelf Court: cases, episode state machine, TV studio stage and the drawn cast |

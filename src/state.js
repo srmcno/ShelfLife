@@ -4,7 +4,6 @@ import { blankLife, normalizeLife } from './life-state.js';
 import { PROPS } from './content/props.js';
 import { normalizeTheatre } from './theatre-state.js';
 import { blankEscapades, normalizeEscapades } from './escapade-state.js';
-import { blankRug, normalizeRug } from './play-rug-state.js';
 import { blankMayhem, normalizeMayhem } from './mayhem-state.js';
 import { blankArcade, normalizeArcade } from './arcade-state.js';
 import { blankCourtroom, normalizeCourtroom } from './court-state.js';
@@ -174,7 +173,7 @@ export function defaultLedger() { return { meeting: 1, carried: 0, struck: {}, a
 
 export function blankState() {
   return {
-    v: 4, life: blankLife(), escapades: blankEscapades(), rug: blankRug(), mayhem: blankMayhem(), arcade: blankArcade(), courtroom: blankCourtroom(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
+    v: 4, life: blankLife(), escapades: blankEscapades(), mayhem: blankMayhem(), arcade: blankArcade(), courtroom: blankCourtroom(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
     notes: [], paperwork: blankPaperwork(), seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
@@ -395,7 +394,7 @@ export function normalizeState(raw) {
   });
   s.theatre = normalizeTheatre(s.theatre, s, now);
   s.escapades = normalizeEscapades(s.escapades, s, now);
-  s.rug = normalizeRug(s.rug, s, now);
+  delete s.rug; // The retired play rug kept trick journals here; earned discoveries stay in life.
   s.mayhem = normalizeMayhem(s.mayhem, s, now);
   s.arcade = normalizeArcade(s.arcade);
   s.courtroom = normalizeCourtroom(s.courtroom);

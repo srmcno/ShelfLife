@@ -4,7 +4,6 @@ import { initEscapades } from './ui/escapades.js';
 import { createBackup } from './backup.js';
 import { initBackupTransfer } from './ui/backup.js';
 import { initPlayroom } from './ui/playroom.js';
-import { initPlayRug } from './ui/play-rug.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
 import { artPersonality } from './engine/personality.js';
@@ -42,7 +41,6 @@ import { initNarrator, initNarratorUI, isNarratorOn, toggleNarrator, stopSpeech 
 
 // ---------- studio (pet creation) ----------
 
-initPlayRug(state, () => renderAll(state));
 initDialogs({ onOpen: dismissToast });
 document.getElementById('genMotion').addEventListener('click', () => previewMotion(document.getElementById('genMount')));
 const studio = initStudio({

@@ -18,7 +18,7 @@ test('every room, wood and wallpaper changes the shelf and agrees with the live 
   for(const button of await page.locator('#'+group+' button').all()){
    await button.click();await expect(button).toHaveAttribute('aria-pressed','true');
    await expect(page.locator('#'+group+' button[aria-pressed="true"]')).toHaveCount(1);
-   const appearance=await background(page,target);expect(appearance).not.toContain('play-rug.webp');appearances.add(appearance);
+   const appearance=await background(page,target);appearances.add(appearance);
    expect(await background(page,group==='woodOpts'?'.decor-preview-plank':'#decorPreview')).toBe(appearance);
   }
   expect(appearances.size).toBe(await page.locator('#'+group+' button').count());
@@ -26,13 +26,12 @@ test('every room, wood and wallpaper changes the shelf and agrees with the live 
  for(const button of await page.locator('#accentOpts button').all()){
   await button.click();
   const swatch=await button.locator('.dot').evaluate(el=>getComputedStyle(el).backgroundColor);
-  await expect(page.locator('#hangoutBtn')).toHaveCSS('background-color',swatch);
+  await expect(page.locator('#roundsBtn')).toHaveCSS('background-color',swatch);
  }
  const before=await saved(page);const cabinet=await background(page,'#cabinet');const plank=await background(page,'#cabinet .plank');
  await page.locator('#decorClose').click();await page.reload();
  expect((await saved(page)).decor).toEqual(before.decor);expect((await saved(page)).slots).toEqual(before.slots);
  expect(await background(page,'#cabinet')).toBe(cabinet);expect(await background(page,'#cabinet .plank')).toBe(plank);
- await page.locator('#hangoutBtn').click();expect(await background(page,'.rug-stage')).toContain('play-rug.webp');
 });
 test('decoration keeps keyboard focus, fits narrow screens and survives failed storage honestly',async({page,browserName})=>{
  await household(page);await open(page);

@@ -152,7 +152,6 @@ export function openCard(state, id, keepScroll) {
     return '<button class="btn care-' + need + (storyMoment ? ' escapade-care-action' : '') + '" data-care="' + need + '"' + (preview.gain <= .01 && !storyMoment ? ' disabled' : '') + '>' + careNames[need] + '<small>' + (storyMoment && preview.gain <= .01 ? 'A moment together' : '+' + Math.round(preview.gain) + ' · ' + (preview.useful ? 'trust care' : asleep ? 'sleepy' : 'top-up')) + '</small></button>';
   }).join('') + '</div>';
   html += '<p class="care-explainer">' + (pet.bond >= 25 ? 'Trust is full. The attachment is permanent.' : (3 - (pet.cared % 3)) + ' useful care actions until +1 trust. Care below 72 counts.') + (asleep ? ' Asleep: care has half effect.' : '') + '</p>';
-  html += '<button class="play-invite rug-card-invite" id="rugPetInvite"><span><b>Take '+escapeHtml(pet.name)+' to the play rug</b><small>Toss a ball, pop bubbles, discover little tricks</small></span><span aria-hidden="true">✧</span></button>';
   html += '<button class="play-invite" id="playPet"><span><b>Play together</b><small>Feeding Frenzy, Coffin Stack, the Séance or Grave Whack</small></span><span aria-hidden="true">↗</span></button>';
   html += '<details class="care-record" id="careRecord"><summary id="careRecordSummary">Care & games together</summary><p>Fed ' + (pet.careLog?.food || 0) + ' · Fussed ' + (pet.careLog?.fuss || 0) + ' · Cleaned ' + (pet.careLog?.clean || 0) + '</p><p>Arcade runs together: ' + (pet.arcadeRuns || 0) + ' · Court appearances: ' + (pet.courtCases || 0) + '.</p></details>';
   html += positionControl(state, pet.id);
@@ -250,7 +249,6 @@ export function openCard(state, id, keepScroll) {
     });
   });
   document.getElementById('playPet')?.addEventListener('click', () => { closeCard(); window.dispatchEvent(new CustomEvent('shelflife:play', { detail: { petId: pet.id } })); });
-  document.getElementById('rugPetInvite')?.addEventListener('click', () => { closeCard(); window.dispatchEvent(new CustomEvent('shelflife:rug', { detail: { petId: pet.id } })); });
   document.getElementById('onFileMore')?.addEventListener('click', () => {
     closeCard();
     setPetFilter(state, pet.name);

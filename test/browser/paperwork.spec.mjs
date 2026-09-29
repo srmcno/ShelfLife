@@ -25,8 +25,8 @@ test('file a real household report, retain it across clear notes and reload, and
   await page.locator('[data-filter="all"]').click();await page.locator('#clearNotes').click();
   await page.reload();await papers(page);
   await expect(page.locator('#notes .document-title')).toHaveCount(1);await expect(page.locator('[data-file-report]')).toBeDisabled();
-  await page.locator('.tabbar .tab[data-tab="shelf"]').click();await page.locator('#hangoutBtn').click();
-  await page.locator('[data-rug-care="food"]').click();await page.locator('#rugClose').click();
+  await page.locator('.tabbar .tab[data-tab="shelf"]').click();await page.locator('#cabinet .piece[data-id="qa0"]').click();
+  await page.locator('#cardVeil [data-care="food"]').click();await page.keyboard.press('Escape');await expect(page.locator('#cardVeil')).not.toBeVisible();
   await papers(page);await expect(page.locator('[data-file-report]')).toBeEnabled();await page.locator('[data-file-report]').click();
   await expect(page.locator('#notes .document-title')).toHaveCount(2);
   expect((await saved(page)).paperwork.entries).toHaveLength(2);await fits(page);

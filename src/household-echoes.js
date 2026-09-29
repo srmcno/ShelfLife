@@ -3,7 +3,7 @@ const validVariant = event => event.kind==='welcome' ? ['share','keep','sleep-sh
 export function normalizeEchoes(raw, pets=[], now=Date.now()) {
  const ids=new Set(pets.map(p=>p.id));
  const events=(Array.isArray(raw?.events)?raw.events:[]).filter(e=>e&&KINDS.includes(e.kind)&&ids.has(e.petId)&&Number.isFinite(e.at)&&e.at>=0&&e.at<=now&&typeof e.id==='string').slice(-24).map(e=>({id:e.id.slice(0,120),kind:e.kind,petId:e.petId,at:e.at,...(validVariant(e)?{variant:e.variant}:{})}));
- return {version:1,events,openingDone:raw?.openingDone===true,callbacks:(Array.isArray(raw?.callbacks)?raw.callbacks:[]).filter(v=>typeof v==='string').slice(-24)};
+ return {version:1,events,openingDone:raw?.openingDone===true};
 }
 export function rememberEcho(state,kind,petId,id,now=Date.now(),variant=null) {
  if(!KINDS.includes(kind)||!state.pets.some(p=>p.id===petId)||!Number.isFinite(now)||now<0)return false;
@@ -14,16 +14,6 @@ export function rememberEcho(state,kind,petId,id,now=Date.now(),variant=null) {
  journal.events.push({id,kind,petId,at:now,...(validVariant({kind,variant})?{variant}:{})});journal.events=journal.events.slice(-24);
  if(kind==='opening'||kind==='welcome')journal.openingDone=true;
  return true;
-}
-// Keep a short per-household reading history across visits, not a new counter or reward.
-export function rememberRugLine(state, petId, lineId) {
- if(!state.pets.some(p=>p.id===petId)||typeof lineId!=='string')return;
- const journal=state.householdEchoes=normalizeEchoes(state.householdEchoes,state.pets);
- const key=petId+':'+lineId;
- journal.callbacks=[...journal.callbacks.filter(value=>value!==key),key].slice(-24);
-}
-export function rugMemoryFact(facts,petId) {
- return facts.findLast(e=>e.petId===petId&&(['bath','market','expedition'].includes(e.kind)||e.kind==='court'&&e.variant==='convicted'));
 }
 export function householdAftermath(state,petId=null) {
  const journal=normalizeEchoes(state.householdEchoes,state.pets);
