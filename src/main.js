@@ -3,6 +3,8 @@ import { initWelcome } from './ui/welcome.js';
 import { initEscapades } from './ui/escapades.js';
 import { createBackup } from './backup.js';
 import { initBackupTransfer } from './ui/backup.js';
+import { cloud, sync, connectCloud } from './cloud/index.js';
+import { initCloudUI } from './ui/cloud.js';
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
@@ -35,6 +37,7 @@ import { applyDecor, initDecorUI } from './ui/decorUI.js';
 import { initDrag } from './ui/drag.js';
 import { renderAll, renderStatus, renderShelf, renderNotes, escapeHtml } from './ui/render.js';
 import { toast, dismissToast } from './ui/toast.js';
+import { nudgesAvailable, enableNudges, syncNudges } from './notify.js';
 import { openCard, closeCard, getOpenPetId } from './ui/card.js';
 import { initSoundNoteHook, isMuted, toggleMuted } from './audio/sound.js';
 import { initNarrator, initNarratorUI, isNarratorOn, toggleNarrator, stopSpeech } from './audio/narrator.js';
@@ -177,10 +180,12 @@ function countOf(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one 
 // The reminder itself (when a shelf is worth nagging about) lives in state.js so
 // it can be tested without a DOM; this end only paints it.
 const backupBanner = document.getElementById('backupBanner');
+let cloudUI = null;
 function syncBackupBanner() {
   if (!backupBanner) return;
-  const due = backupDue(state);
+  const due = backupDue(state) && !cloudUI?.covers();
   backupBanner.hidden = !due;
+  cloudUI?.nudge();
   if (!due) return;
   const text = document.getElementById('backupBannerText');
   if (text) {
@@ -218,15 +223,16 @@ function cancelRestore() { pendingRestore = null; restoreVeil.classList.remove('
 document.getElementById('restoreCancel').addEventListener('click', cancelRestore);
 restoreVeil.addEventListener('click', e => { if (e.target === restoreVeil) cancelRestore(); });
 document.getElementById('restoreBackup').addEventListener('click', () => document.getElementById('exportBtn').click());
-document.getElementById('restoreConfirm').addEventListener('click', () => {
-  if (!pendingRestore) return;
+// Replaces the live shelf with one that has already been through normalizeState.
+// A restored backup and a chosen cloud copy both arrive this way.
+function applyRestoredState(normalized) {
   stopSpeech();
   closeCard();
   clearedNotes = null;
   document.getElementById('clearNotes').dataset.undo = '';
   document.getElementById('clearNotes').textContent = 'Clear notes';
   Object.keys(state).forEach(k => delete state[k]);
-  Object.assign(state, pendingRestore);
+  Object.assign(state, normalized);
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
@@ -235,8 +241,30 @@ document.getElementById('restoreConfirm').addEventListener('click', () => {
   syncNight();
   renderAll(state);
   syncAudioButtons();
+}
+document.getElementById('restoreConfirm').addEventListener('click', () => {
+  if (!pendingRestore) return;
+  applyRestoredState(pendingRestore);
   cancelRestore();
   toast('Shelf restored. Everyone has an opinion about the journey.');
+});
+
+// ---------- cloud save (inert unless src/cloud/config.js is filled in) ----------
+const CLOUD_ARRIVALS = {
+  arrived: 'Your shelf has arrived from the cloud. Everyone is accounted for.',
+  newer: 'Caught up with your other device. Nobody noticed you were gone.',
+  chosen: 'The cloud copy is on the shelf now.',
+  undo: 'Swapped back. Everyone is pretending nothing happened.'
+};
+cloudUI = initCloudUI({ cloud, sync, getState: () => state, onChange: () => syncBackupBanner() });
+connectCloud({
+  applyRemote: (next, { reason } = {}) => {
+    applyRestoredState(next);
+    toast(CLOUD_ARRIVALS[reason] || CLOUD_ARRIVALS.chosen);
+    return true;
+  },
+  // Never swap the shelf out from under a game or a resident's card.
+  canApply: () => !document.querySelector('.veil.open:not(#cloudVeil)')
 });
 const recoveryBtn = document.getElementById('recoveryBtn');
 recoveryBtn.hidden = !Store.get(RECOVERY_KEY);
@@ -291,6 +319,24 @@ function syncAudioButtons() {
   narratorBtn.setAttribute('aria-pressed', String(isNarratorOn()));
   setTrayLabel(narratorBtn, isNarratorOn() ? 'Narrator' : 'Narrator off', isNarratorOn() ? 'Reads the notes aloud' : 'The notes stay on paper');
 }
+// Nudges: local notifications, only in the installed app where the plugin exists.
+const nudgeBtn = document.getElementById('nudgeBtn');
+function syncNudgeButton() {
+  nudgeBtn.hidden = !nudgesAvailable();
+  nudgeBtn.setAttribute('aria-pressed', String(!!state.settings.nudges));
+  setTrayLabel(nudgeBtn, state.settings.nudges ? 'Nudges on' : 'Nudges off', state.settings.nudges ? 'A buzz when something goes wrong' : 'Silence, until something goes wrong');
+}
+nudgeBtn.addEventListener('click', async () => {
+  if (!state.settings.nudges) {
+    const answer = await enableNudges();
+    if (answer !== 'granted') { toast('The phone said no. You can change that in its settings.'); return; }
+    state.settings.nudges = true;
+  } else state.settings.nudges = false;
+  state.settings.nudgeAsked = true;
+  save(); syncNudgeButton(); syncNudges(state);
+});
+window.addEventListener('shelflife:nudges', () => { syncNudgeButton(); syncNudges(state); });
+syncNudgeButton();
 muteBtn.addEventListener('click', () => { if (toggleMuted()) stopSpeech(); syncAudioButtons(); });
 narratorBtn.addEventListener('click', () => { toggleNarrator(); syncAudioButtons(); });
 
@@ -461,7 +507,7 @@ setInterval(() => {
 
 // Catch up immediately after waking a sleeping phone or returning to the tab.
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { lifeState(state).lastSeen = Date.now(); save(); stopSpeech(); return; }
+  if (document.hidden) { lifeState(state).lastSeen = Date.now(); save(); stopSpeech(); syncNudges(state); return; }
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
@@ -470,7 +516,7 @@ document.addEventListener('visibilitychange', () => {
   renderAll(state);
   if (!document.querySelector('.veil.open')) announceMayhem(newTrouble);
 });
-window.addEventListener('pagehide', () => { lifeState(state).lastSeen = Date.now(); save(); });
+window.addEventListener('pagehide', () => { lifeState(state).lastSeen = Date.now(); save(); syncNudges(state); });
 
 // ---------- service worker ----------
 // Without this the manifest still makes the game "installable", but there is no

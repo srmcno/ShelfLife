@@ -697,6 +697,324 @@ export const COURT_CASES = [
         ['audience', '(The moth takes a bow. It is a very small bow. The audience weeps.)']]
     },
     hallway: { p: 'She’ll come back to me. They always come back to the soft one.', d: 'Mothew knows who loves her.' }
+  },
+  {
+    id: 'loaned-leg', title: 'The Loaned Leg', truth: 'plaintiff',
+    claim: '{p} is suing {d} for one leg, lent for the sack race and never given back.',
+    asking: 'The leg, and half of the medal the leg won',
+    plaintiff: [
+      ['p', 'I lent {d} my left leg for the sack race. One race. Back by teatime.'],
+      ['p', 'That was a fortnight ago. I have been hopping ever since. You try hopping to a bowl.'],
+      ['judge', 'Why would anyone lend out a leg?'],
+      ['p', '{d} said it was for charity. The charity was {d}.']
+    ],
+    defendant: [
+      ['d', 'The leg does not want to come back. It has stood on a podium. It has tasted victory.'],
+      ['d', 'And it has settled in. It knows where everything is. It kicks when it dreams.']
+    ],
+    questions: [
+      { ask: 'Ask {d} whose name is on the leg.', clue: 'There is a name tape sewn inside the top of the leg. It says {p}.', lines: [
+        ['d', 'Nobody’s. It is a leg. Legs do not have names.'],
+        ['narrator', '(The bailiff turns down the top of the leg. Sewn inside, like a school jumper, is a name tape. It says {p}.)'],
+        ['d', 'That could be any {p}.']] },
+      { ask: 'Call the race steward.', clue: 'Sir Reginald Whiskers saw {d} get into the sack with one more leg than it arrived with.', lines: [
+        ['npc', 'I stewarded the sack race. {d} got into the sack with one more leg than it arrived with.', 'cat'],
+        ['judge', 'And you did not disqualify it?'],
+        ['npc', 'I was asleep by the finish. I was asleep for most of it. I am a cat.', 'cat']] },
+      { ask: 'Have {d} walk to the bench and back.', clue: 'The leg is the wrong length for {d}. {d} now walks in a slow circle to the right.', lines: [
+        ['narrator', '({d} sets off towards the bench, bears steadily right, and arrives back at its own podium four minutes later.)'],
+        ['judge', 'You did not reach the bench.'],
+        ['d', 'I got near it.']] },
+      { ask: 'Ask {p} whether it has tried growing another one.', sass: true, lines: [
+        ['judge', '{p}, the lizard in the garden grows a new tail every spring. Have you tried applying yourself?'],
+        ['p', 'I have sat in a pot of soil every night since the race.'],
+        ['judge', 'And?'],
+        ['p', 'Something is coming up. It is a radish.']] },
+      { ask: 'Ask {d} what the leg has been doing since the race.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'Light training. A jog on Tuesdays. It has had an offer from a centipede.'],
+        ['judge', 'An offer.'],
+        ['d', 'The leg is weighing it up.']] },
+      { ask: 'Ask {p} whether there was any agreement.', clue: '{d} wrote “BACK BY TEATIME. PROMISE.” on {p}’s other leg in felt pen, and signed it.', lines: [
+        ['p', 'There was. {d} wrote it on my other leg, so I would not lose it.'],
+        ['narrator', '({p} holds up its other leg. On it, in felt pen: “BACK BY TEATIME. PROMISE. {d}”)'],
+        ['d', 'It has smudged. It could say anything.'],
+        ['judge', 'It says PROMISE, {d}. In capitals.']] }
+    ],
+    rulings: {
+      plaintiff: [
+        ['judge', 'Judgment for {p}. A leg lent for one race is lent for one race. It goes back tonight, medal and all.'],
+        ['d', 'What if it does not want to go?'],
+        ['judge', 'Then it can walk. It is a leg.']],
+      defendant: [
+        ['judge', 'Judgment for {d}. The leg has made its choice, and this court will not stand in the way of a leg.'],
+        ['narrator', '({p} hops out of the courtroom. It takes some time. The audience applauds every hop.)']],
+      both: [
+        ['judge', 'You are both ridiculous. {p}, never lend a leg to anyone who says “charity”. {d}, you walk in circles now. That is its own sentence.'],
+        ['judge', 'The court will hold the leg. The bailiff has always wanted to be taller.'],
+        ['narrator', '(The bailiff puts it on. He is now taller on one side.)']]
+    },
+    hallway: { p: 'I’m entering the sack race again next year. On one leg. In a smaller sack.', d: 'I’ll miss that leg. It always knew where it was going. Mostly right.' }
+  },
+  {
+    id: 'stolen-dust', title: 'The Dusting', truth: 'plaintiff',
+    claim: '{p} is suing {d} for dusting {p} in the night, without asking, and keeping the dust.',
+    asking: 'Eighty years of dust, returned, in the right order',
+    plaintiff: [
+      ['p', 'I had eighty years of dust on me. A proper layer. It had a crust. You could write in it.'],
+      ['p', 'On Tuesday I woke up clean. I could see my own knees. Nobody should have to see their own knees.'],
+      ['judge', 'And you blame {d}.'],
+      ['p', '{d} is suddenly very grey, for someone who was not grey on Monday.']
+    ],
+    defendant: [
+      ['d', 'I cleaned {p} as a kindness. Things were living in that dust.'],
+      ['d', 'And I have always been this grey. I have a naturally dusty complexion.']
+    ],
+    questions: [
+      { ask: 'Have the bailiff wipe a finger down {d}.', clue: 'The grey comes off {d} on a finger. Underneath, {d} is spotless.', lines: [
+        ['narrator', '(The bailiff runs a finger down {d}’s back. It comes away grey. Underneath, {d} is spotless.)'],
+        ['bailiff', 'It is on quite loose, Your Honour.'],
+        ['d', 'That is how dust works.']] },
+      { ask: 'Call a witness who lived in the dust.', clue: 'Geoffrey the Woodlouse went to sleep on {p} on Monday and woke up on {d}, in the same dust.', lines: [
+        ['npc', 'My family has lived on {p} for three generations. Left shoulder. My grandfather was born there.', 'woodlouse'],
+        ['npc', 'On Monday I went to sleep on {p}. On Tuesday I woke up on {d}. Same dust. Much worse view.', 'woodlouse']] },
+      { ask: 'Ask {d} what it used for the dusting.', clue: '{d} swept {p}’s dust into a jar with a lid, “to keep it fresh”.', lines: [
+        ['d', 'A soft brush. And a jar, for the dust. And a lid for the jar.'],
+        ['judge', 'Why does dust need a lid?'],
+        ['d', 'To keep it fresh.']] },
+      { ask: 'Tell {p} that dust is not a personality.', sass: true, lines: [
+        ['judge', '{p}, dust is not a personality. I am mostly dust, and I have a personality entirely of my own.'],
+        ['p', 'How much of your dust is yours?'],
+        ['judge', '…Most of it.']] },
+      { ask: 'Ask {p} what was in the dust.', happen: 'heckle', lines: [
+        ['p', 'A crumb from 1964. The lid of a biro. A sequin. Geoffrey. Geoffrey’s furniture.'],
+        ['judge', 'Anything of value?'],
+        ['p', 'Geoffrey’s furniture is very good.']] },
+      { ask: 'Ask {d} why anyone would want somebody else’s dust.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'I would not know. But hypothetically, nobody on this shelf takes you seriously unless you look a hundred.'],
+        ['d', 'And hypothetically I looked about sixty.']] }
+    ],
+    rulings: {
+      plaintiff: [
+        ['judge', 'Judgment for {p}. You do not dust a resident without asking, and you certainly do not wear it afterwards.'],
+        ['judge', '{d} puts back every speck tonight. Including Geoffrey. Including Geoffrey’s furniture.'],
+        ['npc', 'I would like the left shoulder again, if it is going.', 'woodlouse']],
+      defendant: [
+        ['judge', 'Judgment for {d}. {p} is clean, and it suits {p}. The court can see {p}’s knees, and frankly so can everybody.'],
+        ['p', 'I DID NOT ASK TO BE SEEN.']],
+      both: [
+        ['judge', 'You are both filthy, in opposite directions. The dust goes in a jar, the jar goes on the shelf, and nobody wears it.'],
+        ['narrator', '(By morning the jar is empty and both of them are very slightly grey.)']]
+    },
+    hallway: { p: 'I’m not washing again. Ever. Give me eighty years. I’ll be back.', d: 'I still look distinguished round the edges. Where I missed.' }
+  },
+  {
+    id: 'jumble-pulse', title: 'The Pulse', truth: 'defendant',
+    claim: '{p} is suing {d} for stealing a pulse. {p}’s stopped on Tuesday. On Wednesday, {d} had one.',
+    asking: 'The pulse back, and every beat it has missed since',
+    plaintiff: [
+      ['p', 'I had a pulse. Small. Regular. At night I used to lie in my slot and listen to it.'],
+      ['p', 'On Tuesday it stopped. On Wednesday {d} had one. Nobody else on this shelf has one.'],
+      ['judge', 'So you assume it is yours.'],
+      ['p', 'I have not had much to go on. It has been very quiet in here.']
+    ],
+    defendant: [
+      ['d', 'I bought it. Mrs Widow’s jumble sale, Wednesday morning. It was in a box with a wig and three spoons.'],
+      ['d', 'I have been very happy with it. I feel things now. Mostly the pulse.']
+    ],
+    questions: [
+      { ask: 'Call the seller.', clue: 'Mrs Widow sold {d} the pulse at her jumble sale. It was her late husband’s.', lines: [
+        ['npc', 'I sold {d} that pulse on Wednesday. Two souls. It was my late husband’s.', 'widow'],
+        ['judge', 'He did not want it?'],
+        ['npc', 'He had stopped using it. I kept it in my sewing box for forty years. He never could keep still.', 'widow']] },
+      { ask: 'Have the bailiff take {d}’s pulse.', clue: '{d}’s pulse is in three-four time. It waltzes.', lines: [
+        ['narrator', '(The bailiff holds {d}’s wrist and counts, moving his lips.)'],
+        ['bailiff', 'One two three. One two three. Your Honour, it is waltzing.'],
+        ['p', 'Mine could have learned.']] },
+      { ask: 'Have the bailiff hold {p} up to the studio light.', clue: 'Inside {p} is a pocket watch, swallowed in 1896 and stopped at ten past four.', happen: 'faint', lines: [
+        ['narrator', '(The bailiff holds {p} up to the light. Inside, clear as anything, is a small pocket watch, stopped at ten past four.)'],
+        ['judge', '{p}. When did you swallow a watch?'],
+        ['p', '1896. It was a Sunday. There was nothing else to do.']] },
+      { ask: 'Ask {p} what its pulse sounded like.', lines: [
+        ['p', 'Steady. Reliable. Tick. Tick. Tick.'],
+        ['judge', 'Tick.'],
+        ['p', 'You could set your watch by it.']] },
+      { ask: 'Remind {p} that nobody here needs a pulse.', sass: true, lines: [
+        ['judge', '{p}, I have not had a pulse since 1702. I manage. I tap my foot so people know I am still here.'],
+        ['narrator', '(The judge taps his foot. It clicks like knitting.)']] },
+      { ask: 'Ask the jury to check their own pulses.', happen: 'outburst', party: 'p', lines: [
+        ['jury', '{j} checks its own wrist. Nothing. {j} checks the juror next to it. Nothing there either.'],
+        ['judge', 'So the only pulse in this room is on {d}.'],
+        ['p', 'THAT IS MY POINT.']] }
+    ],
+    rulings: {
+      plaintiff: [
+        ['judge', 'Judgment for {p}. {d} hands over the pulse.'],
+        ['narrator', '({d} hands it over. {p} holds it to its chest. It waltzes. {p} has never waltzed in its life. {p} is waltzing.)']],
+      defendant: [
+        ['judge', 'Judgment for {d}. That pulse was bought, paid for, and it waltzes. {p}, yours did not stop. It ran down.'],
+        ['judge', 'Bailiff. Find a key.'],
+        ['narrator', '(The bailiff winds {p}. Somewhere inside {p}, something goes tick.)']],
+      both: [
+        ['judge', 'You are both wrong. One of you mistook a watch for a pulse. The other bought a dead man’s pulse off his widow and never asked if he wanted it back.'],
+        ['judge', 'The pulse goes back to Mrs Widow. {p} gets wound on Sundays.']]
+    },
+    hallway: { p: 'It was a watch. I know that now. It was still a very good pulse.', d: 'I had a pulse for a week. I felt everything. Mostly a bit dizzy.' }
+  },
+  {
+    id: 'museum-piece', title: 'The Museum Piece', truth: 'defendant',
+    claim: '{p} is suing {d} for pushing {p}’s bed one inch nearer the lamp, every night, for a week.',
+    asking: 'Seven inches back, and a lock for the bed',
+    plaintiff: [
+      ['p', 'Every morning my bed is one inch nearer the lamp. Every morning. Seven inches this week.'],
+      ['p', 'I did not do it. The lamp cannot do it. That leaves {d}. It always leaves {d}.'],
+      ['judge', 'What is your bed?'],
+      ['p', 'A matchbox. A very good matchbox. It slides beautifully.']
+    ],
+    defendant: [
+      ['d', 'Your Honour, I was not on the shelf last week. I was in a museum.'],
+      ['d', 'A man came round asking if we had any antiques. I put my hand up.']
+    ],
+    questions: [
+      { ask: 'Ask {d} to describe the museum.', clue: '{d} spent all last week locked in a glass case at the town museum, labelled UNKNOWN CREATURE, c. 1740.', lines: [
+        ['d', 'A glass case. Locked. A little card, and a rope in front so nobody gets too close.'],
+        ['narrator', '({d} produces the card. It says: UNKNOWN CREATURE, c. 1740. PLEASE DO NOT TAP THE GLASS.)'],
+        ['d', 'They tapped the glass.']] },
+      { ask: 'Call the exhibit from the next case.', clue: 'Susan, in the next case along, says {d} did not move all week.', lines: [
+        ['npc', 'I was in case fourteen. {d} was in case thirteen. Nobody moved all week.', 'susan'],
+        ['npc', 'A school party drew us both. I came out better.', 'susan']] },
+      { ask: 'Ask the lamp what it has seen.', clue: 'The Lamp has watched {p} get up at three every night and push its own bed an inch nearer.', lines: [
+        ['npc', 'Every night at three, {p} gets up, pushes its bed one inch nearer to me, and goes back to sleep.', 'lamp'],
+        ['judge', 'And you said nothing?'],
+        ['npc', 'I did not want it to stop.', 'lamp']] },
+      { ask: 'Have the bailiff measure how far the bed has come.', happen: 'dark', lines: [
+        ['bailiff', 'Seven inches, Your Honour. Every one of them towards the lamp. At this rate it gets there on Thursday.'],
+        ['npc', 'I have tidied.', 'lamp']] },
+      { ask: 'Tell {d} that being in a museum is showing off.', sass: true, lines: [
+        ['judge', '{d}. I have been dead for three hundred years and no museum has ever asked for me.'],
+        ['d', 'Have you asked them?'],
+        ['judge', 'I have written. Twice.']] },
+      { ask: 'Ask {d} what it thinks of {p}’s bed.', happen: 'outburst', party: 'p', lines: [
+        ['d', 'Cheap. Damp. The drawer end sticks. I would not be seen dead pushing it.']] }
+    ],
+    rulings: {
+      plaintiff: [
+        ['judge', 'Judgment for {p}. {d} will keep its hands off the bed.'],
+        ['narrator', '(That night, at three, the bed moves one inch nearer the lamp. {d} is asleep on the far side of the shelf, under an upturned glass.)']],
+      defendant: [
+        ['judge', 'Judgment for {d}, who was in a locked case with a card and a witness. It is the best alibi this court has ever heard, and I have heard “I was dead”.'],
+        ['judge', '{p}, it is you. It has been you every night. The lamp would like you to know it is flattered.'],
+        ['npc', 'Deeply.', 'lamp']],
+      both: [
+        ['judge', 'You are both peculiar. One of you pushes furniture at a lamp in its sleep. The other one hires itself out as an antique.'],
+        ['judge', 'The bed will be nailed down, and {d} goes back in its case until somebody claims it.']]
+    },
+    hallway: { p: 'I’ve tied the bed down with a shoelace. It was next to the lamp this morning. So was the shoelace.', d: 'I’m going back to the museum. They appreciate me there. There’s a little rope.' }
+  },
+  {
+    id: 'shared-headstone', title: 'Here Lie', truth: 'both',
+    claim: '{p} is suing {d} for chiselling {p}’s name off the headstone they bought together.',
+    asking: 'The name put back, in letters the same size as {d}’s',
+    plaintiff: [
+      ['p', 'We bought a headstone together. For eventually. Two names, one stone, a little carved dove.'],
+      ['p', 'Last week {d} chiselled my name off. Now it just says HERE LIE, and a dove.'],
+      ['judge', 'Here lie.'],
+      ['p', 'That is all it says.']
+    ],
+    defendant: [
+      ['d', '{p} started it. On Tuesday my name came off. I was only evening things up.'],
+      ['d', 'And the dove is mine. I paid for the dove.']
+    ],
+    questions: [
+      { ask: 'Have the bailiff search both slots.', clue: 'There is a blunt chisel in {p}’s slot and another in {d}’s. Both are covered in stone dust.', lines: [
+        ['bailiff', 'One chisel in each slot, Your Honour. Both blunt. Both covered in stone dust.'],
+        ['judge', 'Two chisels. For one stone.'],
+        ['bailiff', 'And a second, smaller dove in {p}’s. Half carved.']] },
+      { ask: 'Call the resident who lives under the stone.', clue: 'Geoffrey the Second watched one name come off on Tuesday and the other on Wednesday.', lines: [
+        ['npc', 'I live under that stone. On Monday it had two names on it. On Tuesday, one. On Wednesday, none.', 'geoffrey2'],
+        ['judge', 'And now?'],
+        ['npc', 'Now it just calls us all liars.', 'geoffrey2']] },
+      { ask: 'Ask {p} what it chiselled first.', clue: '{p} admits it took {d}’s name off first, “to make room”.', lines: [
+        ['p', 'Nothing. I tidied. I made room.'],
+        ['judge', 'Room for what?'],
+        ['p', 'A bigger me.']] },
+      { ask: 'Point out that neither of them is going to die.', sass: true, lines: [
+        ['judge', 'Neither of you is dead. Neither of you is ever going to be dead. Who is this stone for?'],
+        ['d', 'We visit it on Sundays.'],
+        ['p', 'We take a flask.']] },
+      { ask: 'Ask {d} about the dove.', happen: 'throw', lines: [
+        ['d', 'I paid for the dove. The dove is mine. {p} sits on the dove.'],
+        ['p', 'It is the only flat bit.']] },
+      { ask: 'Ask the jury who should get the top line.', lines: [
+        ['jury', '{j} says the top line should go to whoever dies first.'],
+        ['narrator', '(The court waits. Nobody volunteers.)']] }
+    ],
+    rulings: {
+      plaintiff: [
+        ['judge', 'Judgment for {p}. {d} will carve {p}’s name back on, in full, in letters the same size.'],
+        ['narrator', '(The stone now reads HERE LIE {p}. {p} is delighted with it. Nobody has the heart.)']],
+      defendant: [
+        ['judge', 'Judgment for {d}. {p} started it, and you do not chisel a friend on a Tuesday.'],
+        ['d', 'Can I have the top line?'],
+        ['judge', 'There is no top line. There is a dove.']],
+      both: [
+        ['judge', 'You are both vandals. The stone says HERE LIE, and it is the only honest thing either of you owns.'],
+        ['judge', 'Both names go back on, side by side, the same size. The dove stays in the middle, to keep you apart.']]
+    },
+    hallway: { p: 'I’m still going on Sunday. So is {d}. We’ll sit at opposite ends. I’m bringing the flask.', d: 'I’m getting my own stone. Just me. Enormous. Two doves.' }
+  },
+  {
+    id: 'tontine', title: 'The Tontine', truth: 'both',
+    claim: '{p} is suing {d} for not dying. They have had a bet since 1908: the last one left gets the tin.',
+    asking: 'One tin of travel sweets, unopened since 1908, and for {d} to get on with it',
+    plaintiff: [
+      ['p', 'In 1908 {d} and I had a bet. One tin of travel sweets. Whoever is left at the end gets the tin.'],
+      ['p', 'That was a very long time ago. {d} is still here. I have been extremely patient.'],
+      ['judge', 'That is called a tontine. They were banned. People kept falling down the stairs.'],
+      ['p', 'I have not pushed anybody. I have only been hopeful.']
+    ],
+    defendant: [
+      ['d', 'I am not dying for a tin of sweets. I have looked into dying. It is not worth it for sweets.'],
+      ['d', 'And a bet is a bet. I intend to be the one left. I am very good at being left.']
+    ],
+    questions: [
+      { ask: 'Have the bailiff open the tin.', clue: 'The travel sweets in the tin are buttons, each one painted to look like a sweet.', lines: [
+        ['narrator', '(The bailiff prises the lid off. The tin is full of buttons, each one painted, quite carefully, to look like a sweet.)'],
+        ['judge', 'Who paints buttons to look like sweets?'],
+        ['d', 'Someone with a lot of time, Your Honour. So, any of us.']] },
+      { ask: 'Ask {d} what flavour the sweets were.', clue: '{d} knows the sweets were lemon and slightly fizzy. The tin only says ASSORTED.', lines: [
+        ['d', 'Lemon. Slightly fizzy. A bit dusty by the end, but lovely.'],
+        ['judge', 'The tin says ASSORTED.'],
+        ['d', 'Does it? Then I have no idea.']] },
+      { ask: 'Have the bailiff examine the lid.', clue: 'Someone has been at the lid with a hairpin for years, from the side that faces {p}’s slot.', lines: [
+        ['bailiff', 'Hundreds of little scratches round the lid, Your Honour. All on the side that faces {p}’s slot.'],
+        ['bailiff', 'And half a hairpin, snapped off in the rim.'],
+        ['p', 'Everybody has a hairpin.'],
+        ['judge', 'Not in the rim of the tin, {p}.']] },
+      { ask: 'Explain to {p} how long “the end” is.', sass: true, lines: [
+        ['judge', '{p}. Neither of you can die. This bet ends when the sun goes out, and I would not put money on it then.'],
+        ['p', 'I can wait.'],
+        ['d', 'So can I.']] },
+      { ask: 'Call the witness to the bet.', lines: [
+        ['npc', 'I witnessed it. 1908. A Tuesday. They shook hands on it.', 'raven'],
+        ['npc', 'Then, when the other one was not looking, they both wiped their hands.', 'raven']] },
+      { ask: 'Ask {p} what it would do with the tin.', happen: 'outburst', party: 'd', lines: [
+        ['p', 'Open it. Eat one. Visit {d}. Eat another one.'],
+        ['judge', 'Visit {d} where?'],
+        ['p', 'I have picked out a spot.']] }
+    ],
+    rulings: {
+      plaintiff: [
+        ['judge', 'Judgment for {p}. {d} is declared to have lost. It is as close to dead as this court can get you.'],
+        ['narrator', '({p} opens the tin. It is buttons.)'],
+        ['p', 'I would like to appeal my own win.']],
+      defendant: [
+        ['judge', 'Judgment for {d}. This court does not hurry anybody along. Not even for sweets.'],
+        ['narrator', '({d} takes the tin home and gives it a shake. It rattles like buttons. {d} does not look surprised.)']],
+      both: [
+        ['judge', 'You are both cheats. One of you has been at the lid with a hairpin for sixty years. The other ate the prize and painted the buttons.'],
+        ['judge', 'The bet stands. It will outlive everyone in this room, and I am already dead.']]
+    },
+    hallway: { p: 'I can wait. I’ve waited since 1908. The tin will rust before I do.', d: 'Lemon. They were lemon. I think about them most days.' }
   }
 ];
 

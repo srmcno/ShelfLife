@@ -1,6 +1,6 @@
 /* ================= MAYHEM =================
    The short-session loop. Something goes wrong on the shelf roughly every
-   quarter of an hour (three can pile up while you are away). Each emergency is a
+   twelve minutes (three can pile up while you are away). Each emergency is a
    card with two choices; each choice rolls one of its outcomes. Outcomes pay
    Souls, which buy Coffins, which hold Curios, which fill the Cabinet of
    Curiosities. Souls earned for life set the household's Infamy.
@@ -501,6 +501,184 @@ export const EMERGENCIES = [
       { label: 'Compliment the outfit', outcomes: [
         { tone: 'good', stamp: 'STYLISH', text: '{a} does a twirl. It has been waiting weeks for anyone to notice the veil. It wears it to every meal now.', souls: 16, a: { fuss: 25 } },
         { tone: 'bad', stamp: 'INSENSITIVE', text: '“This is a very difficult time,” says {a}, and turns so you can see the back, which is also very nice.', souls: 12, grudge: 'a' }
+      ] }
+    ] },
+  { id: 'plughole', title: '{a} has gone down the plughole. It is fine. It is waving from the U-bend.', art: 'ink',
+    choices: [
+      { label: 'Fish it out with a fork', outcomes: [
+        { tone: 'good', stamp: 'LANDED', text: '{a} comes up on the third go, clutching a hairgrip and a lentil. It says the lentil put up a fight.', souls: 14, curio: true },
+        { tone: 'weird', stamp: 'NEXT DOOR', text: 'The fork comes up empty. Twenty minutes later {a} can be heard in next door’s sink, being polite about their plates.', souls: 20 }
+      ] },
+      { label: 'Leave it, it seems happy', outcomes: [
+        { tone: 'bad', stamp: 'PLUMBED IN', text: '{a} has furnished the U-bend with a bottle top and half a sponge. It says “morning” up the plughole every time you brush your teeth. It says it at night as well.', souls: 14 },
+        { tone: 'good', stamp: 'SOAKED THROUGH', text: 'It climbs out at bedtime, soaked and smelling of the drain, and falls asleep on your hand. You leave it there. You smell of the drain now too.', souls: 16, bond: 'a' }
+      ] }
+    ] },
+  { id: 'hot-wash', title: '{a} has been through the wash on forty. It has come out a size smaller and very soft.', art: 'clock',
+    choices: [
+      { label: 'Tumble dry it', outcomes: [
+        { tone: 'weird', stamp: 'STATIC', text: '{a} comes out twice as wide and crackling. It sticks to the ceiling, then to the cat, who walks off wearing it.', souls: 20 },
+        { tone: 'bad', stamp: 'SHRUNK', text: 'It comes out smaller again. {a} now fits in a thimble, has moved into one, and is not taking visitors.', souls: 14, grudge: 'a' }
+      ] },
+      { label: 'Dry it on the radiator', outcomes: [
+        { tone: 'good', stamp: 'AIRED', text: '{a} spends the afternoon on the radiator, steaming gently like a pudding. By six it is its old size and smells of your jumper.', souls: 16, a: { clean: 30 } },
+        { tone: 'weird', stamp: 'RIBBED', text: 'It dries in the shape of the radiator. It has ridges now. It says it is more aerodynamic.', souls: 18 }
+      ] }
+    ] },
+  { id: 'doorframe', title: '{a} has measured itself against the doorframe. It is a quarter of an inch shorter than last year.', art: 'door',
+    choices: [
+      { label: 'Measure it again', outcomes: [
+        { tone: 'weird', stamp: 'ON RECORD', text: 'Same again. There is a pencil mark for every year, going up the frame, back to 1790. The oldest one is above the handle.', souls: 22 },
+        { tone: 'good', stamp: 'RECOUNTED', text: 'You measure from the floor this time, not the skirting board. It has grown an eighth of an inch. {a} tells everyone, twice.', souls: 14, bond: 'a' }
+      ] },
+      { label: 'Draw the line a bit higher', outcomes: [
+        { tone: 'good', stamp: 'TALLER', text: '{a} stands against the new line for a long time, very straight, then goes to show the others. It walks taller all day. It is the same height.', souls: 16, a: { fuss: 20 } },
+        { tone: 'bad', stamp: 'CAUGHT', text: '{a} sees the pencil in your hand. It says nothing. It measures itself in private now, with its own ruler, facing the wall.', souls: 12, grudge: 'a' }
+      ] }
+    ] },
+  { id: 'loose-thread', title: '{a} has found a loose thread on itself and is pulling it. It is still coming.', art: 'thimble',
+    choices: [
+      { label: 'Snip it off', outcomes: [
+        { tone: 'good', stamp: 'TIED OFF', text: 'You snip it and tie a knot. {a} is left with a two-inch tail of thread it did not have this morning. It wags it at visitors.', souls: 14, a: { fuss: 20 } },
+        { tone: 'bad', stamp: 'UNPICKED', text: 'You snip the wrong thread. A seam gives and a little stuffing gets out. {a} pushes it back in, looking at you the whole time.', souls: 12, grudge: 'a' }
+      ] },
+      { label: 'See where it goes', outcomes: [
+        { tone: 'weird', stamp: 'FOLLOWED', text: 'The thread runs under the skirting board, along the hall and down into the cellar. Something at the other end is pulling too.', souls: 22, curio: true },
+        { tone: 'good', stamp: 'KNITWEAR', text: 'It keeps pulling until it is noticeably thinner, then knits the thread into a scarf and puts it on. It is mostly scarf now. It looks well.', souls: 18, bond: 'a' }
+      ] }
+    ] },
+  { id: 'teapot-voice', title: '{a} has lost its voice. You can hear it in the teapot.', art: 'ear',
+    choices: [
+      { label: 'Pour it out now', outcomes: [
+        { tone: 'good', stamp: 'STEWED', text: 'You pour it into a cup and {a} drinks it. Its voice is back, a little lower than before, and stewed.', souls: 16, a: { food: 15 } },
+        { tone: 'weird', stamp: 'MILK IN', text: 'You pour it out with a splash of milk. {a}’s voice comes back noticeably posher. It has started saying “one”.', souls: 18 }
+      ] },
+      { label: 'Leave it to brew', outcomes: [
+        { tone: 'weird', stamp: 'STRONG', text: 'By teatime the teapot is talking in {a}’s voice and saying nicer things than {a} ever has. {a} sits beside it, mouthing along, furious.', souls: 20 },
+        { tone: 'bad', stamp: 'OVERBREWED', text: 'You leave it too long. {a} gets its voice back dark and bitter, and uses it mainly to describe you.', souls: 14, grudge: 'a' }
+      ] }
+    ] },
+  { id: 'undertaker', title: '{a} has booked the undertaker. He has measured it three times and does not believe his tape.', art: 'coffin',
+    choices: [
+      { label: 'Order the standard coffin', outcomes: [
+        { tone: 'good', stamp: 'ROOMY', text: 'The coffin arrives. It takes {a} four minutes to walk from the head end to the foot. It has put a chair halfway, for the journey.', souls: 18 },
+        { tone: 'bad', stamp: 'BILLED', text: 'He charges by the foot. {a} is billed for six. {a} would like it known that it intends to use all six.', souls: 10 }
+      ] },
+      { label: 'Ask for something in its size', outcomes: [
+        { tone: 'weird', stamp: 'MADE TO MEASURE', text: 'He comes back with a spectacles case with a brass handle at each end. {a} lies down in it. It fits. There is a little cloth for its face.', souls: 18, curio: true },
+        { tone: 'bad', stamp: 'SMALLER?', text: '{a} hears the word “smaller” and takes it very personally. It now stands on a matchbox whenever the undertaker is mentioned.', souls: 12, grudge: 'a' }
+      ] }
+    ] },
+  { id: 'medium', title: 'A medium has phoned with an urgent message from {a}. {a} is sitting next to you.', art: 'planchette',
+    choices: [
+      { label: 'Take the message', outcomes: [
+        { tone: 'good', stamp: 'RELAYED', text: 'The message is “move the bowl two inches to the left”. You move it. {a} eats the lot.', souls: 16, a: { food: 25 } },
+        { tone: 'bad', stamp: 'PREMIUM RATE', text: 'It is {a}, from beyond, listing everything you have done wrong since March. The line is premium rate. {a}, beside you, nods along.', souls: 18, grudge: 'a' }
+      ] },
+      { label: 'Put {a} on the phone', outcomes: [
+        { tone: 'weird', stamp: 'GENTLY BROKEN', text: '{a} and the medium talk for an hour. Near the end {a} gently breaks some news to her. The line goes quiet. She thanks it. She had wondered.', souls: 24 },
+        { tone: 'good', stamp: 'BOOKED', text: 'The medium is so impressed she books {a} for her Thursday evenings. {a} is the spirit now. It has never been busier.', souls: 18, bond: 'a' }
+      ] }
+    ] },
+  { id: 'mummified', title: '{a} has mummified itself. It used nine toilet rolls. It is now the size of a loaf.', art: 'veil',
+    choices: [
+      { label: 'Unwrap it', outcomes: [
+        { tone: 'good', stamp: 'UNEARTHED', text: 'Forty minutes and a lot of paper later you find {a} in the middle, holding a note it wrote for whoever found it. The note says “hello”.', souls: 16, bond: 'a' },
+        { tone: 'bad', stamp: 'TOMB CURSE', text: 'You unwrap it. {a} curses whoever opened the tomb. Every drawer you have opened since has had slightly the wrong thing in it.', souls: 14, grudge: 'a' }
+      ] },
+      { label: 'Leave it to cure', outcomes: [
+        { tone: 'weird', stamp: 'PRESERVED', text: 'A week later {a} steps out, papery and pleased, and asks where its jars are. It expected jars.', souls: 20 },
+        { tone: 'good', stamp: 'OFFERINGS', text: 'Offerings appear on top of it each morning: a crumb, a button, a coin from 1890. {a} stays in until Sunday to be polite.', souls: 16, curio: true }
+      ] }
+    ] },
+  { id: 'census', title: 'The census form has arrived. {a} is filling it in. Under “age” it has written “yes”.', art: 'scroll',
+    choices: [
+      { label: 'Help it fill it in', outcomes: [
+        { tone: 'weird', stamp: 'HEADCOUNT', text: 'Number in household: {a} counts the shelf, the man in the wall, the thing under the stairs and the lady in the drawer. It gets one more than you do. You both count again.', souls: 20 },
+        { tone: 'good', stamp: 'COUNTED', text: 'Nationality: “shelf”. Occupation: “resident”. Date of birth: a small drawing of a candle. {a} is very proud to be counted.', souls: 16, bond: 'a' }
+      ] },
+      { label: 'Post it as it is', outcomes: [
+        { tone: 'weird', stamp: 'FOLLOW-UP', text: 'A man from the council comes to ask about the resident aged “yes”. {a} answers the door. He looks down, and down, and leaves.', souls: 18 },
+        { tone: 'bad', stamp: 'INCOMPLETE', text: 'The form comes back stamped INCOMPLETE. {a} reads the word several times and lies face down in the bowl.', souls: 10 }
+      ] }
+    ] },
+  { id: 'dust-sheet', title: '{a} has put a dust sheet over itself. It says it is closed for the winter.', art: 'ghost',
+    choices: [
+      { label: 'Lift the sheet', outcomes: [
+        { tone: 'weird', stamp: 'DO NOT SIT', text: 'Underneath, {a} is perfectly still with its eyes shut and a label on it that says DO NOT SIT. The cat sits.', souls: 18, curio: true },
+        { tone: 'bad', stamp: 'TRESPASSED', text: '{a} opens one eye and says “we are closed” in the voice of a much larger house. You put the sheet back. It stays down until March.', souls: 12, grudge: 'a' }
+      ] },
+      { label: 'Leave it closed', outcomes: [
+        { tone: 'good', stamp: 'REOPENED', text: 'It reopens a week later under a fresh coat of dust, with a small sign: UNDER NEW MANAGEMENT. The management is also {a}.', souls: 18, a: { fuss: 20 } },
+        { tone: 'weird', stamp: 'FURNITURE', text: 'By Friday the others treat it as furniture. Somebody has put a cup of tea on it. There will be a ring.', souls: 16 }
+      ] }
+    ] },
+  { id: 'vicar', title: 'The vicar has come round to bless the house. {a} has gone very quiet in the fruit bowl.', art: 'bottle',
+    choices: [
+      { label: 'Let him bless {a}', outcomes: [
+        { tone: 'weird', stamp: 'FIZZING', text: 'A drop of holy water lands on {a}. It fizzes gently, like a tablet in a glass, and asks him to do that again.', souls: 18 },
+        { tone: 'bad', stamp: 'BLESSED', text: 'He blesses {a} thoroughly. {a} steams for an hour and says it has never felt so clean or so betrayed.', souls: 14, grudge: 'a', a: { clean: 30 } }
+      ] },
+      { label: 'Offer him tea instead', outcomes: [
+        { tone: 'good', stamp: 'TWO SUGARS', text: 'He has two cups and a scone and notices nothing. On the way out he blesses the drawer without being asked.', souls: 16 },
+        { tone: 'weird', stamp: 'FIVE A DAY', text: 'He reaches into the fruit bowl for an apple and comes out holding {a}. They look at each other for a long time.', souls: 20 }
+      ] }
+    ] },
+  { id: 'downstairs-curse', title: 'The woman downstairs has cursed {a} for stamping. {a} is lighter than a teaspoon.', art: 'skull',
+    choices: [
+      { label: 'Apologise to her', outcomes: [
+        { tone: 'good', stamp: 'LIFTED', text: 'She lifts the curse and sends up a slice of cake cut to exactly {a}’s size. She has been listening very carefully.', souls: 16, a: { food: 25 } },
+        { tone: 'weird', stamp: 'MOSTLY LIFTED', text: 'She lifts most of it and keeps a little back, in case. Everything {a} eats now tastes faintly of her carpet.', souls: 18 }
+      ] },
+      { label: 'Stamp back', outcomes: [
+        { tone: 'bad', stamp: 'INAUDIBLE', text: '{a} stamps all evening with everything it has. Downstairs nobody hears a thing. {a} has to be carried to bed.', souls: 14 },
+        { tone: 'weird', stamp: 'SQUEAK', text: 'At midnight the curse comes back up through the floor, twice the size. {a} now squeaks when it walks.', souls: 20 },
+        { tone: 'good', stamp: 'HEARD', text: '{a} stamps once, very hard, at three in the morning. Downstairs a light goes on. {a} has never been prouder of anything.', souls: 18, a: { fuss: 20 } }
+      ] }
+    ] },
+  { id: 'jam-stuck', title: '{a} and {b} have been stuck together with jam since breakfast.', pair: true, art: 'jar',
+    choices: [
+      { label: 'Soak them apart', outcomes: [
+        { tone: 'good', stamp: 'UNSTUCK', text: 'They come apart in the washing-up bowl with a noise like a plaster. Each keeps a patch of the other’s colour. Neither is giving it back.', souls: 16, a: { clean: 20 }, b: { clean: 20 } },
+        { tone: 'bad', stamp: 'PRUNED', text: 'It takes four soaks. {b} comes out wrinkled like a fingertip and blames {a} for all of it, including the wrinkles.', souls: 14, grudge: 'b' }
+      ] },
+      { label: 'Let them get used to it', outcomes: [
+        { tone: 'weird', stamp: 'ONE ANIMAL', text: 'By lunch they walk about as one animal with all of their legs. It is very fast. It cannot agree on a direction.', souls: 20 },
+        { tone: 'good', stamp: 'INSEPARABLE', text: 'They sleep stuck back to back and wake up still arguing about whose jam it was. By Friday neither of them can remember.', souls: 18, bond: 'a', a: { fuss: 20 }, b: { fuss: 20 } }
+      ] }
+    ] },
+  { id: 'straw-doctor', title: '{a} has listened to {b}’s chest through a drinking straw and declared {b} dead.', pair: true, art: 'heart',
+    choices: [
+      { label: 'Get a second opinion', outcomes: [
+        { tone: 'weird', stamp: 'NOT YET', text: 'The raven listens to {b}’s chest for a long time, says “not yet”, and leaves. {b} is delighted to be interesting.', souls: 20, curio: true },
+        { tone: 'good', stamp: 'CLEARED', text: 'The moth listens and says {b} is “no deader than anyone else here”. {b} gets up and has a sandwich.', souls: 16, b: { food: 25 } }
+      ] },
+      { label: 'Treat {b}', outcomes: [
+        { tone: 'good', stamp: 'RECOVERED', text: 'You prescribe soup. {b} makes a full recovery from death in forty minutes. {a} writes it up for a journal.', souls: 18, bond: 'a', b: { food: 20 } },
+        { tone: 'bad', stamp: 'LAID OUT', text: 'You take {b}’s temperature. It is room temperature. {a} lays a hanky over {b}’s face, and {b} lies under it all afternoon to be polite.', souls: 14, grudge: 'b' }
+      ] }
+    ] },
+  { id: 'hide-and-seek', title: '{a} has been hiding from {b} since 1987. {b} stopped looking in 1988 and never said.', pair: true, art: 'shadow',
+    choices: [
+      { label: 'Tell {a} it is over', outcomes: [
+        { tone: 'bad', stamp: 'FORFEIT', text: '{a} comes out from behind the bread bin, grey with dust, and asks {b} where it went. {b} says it went to get a snack. In 1988.', souls: 14, grudge: 'a' },
+        { tone: 'good', stamp: 'CHAMPION', text: '{a} comes out and everyone declares it the winner at once. It gets a medal and a bath. It needed the bath more.', souls: 16, bond: 'a', a: { clean: 25 } }
+      ] },
+      { label: 'Find {a} yourself', outcomes: [
+        { tone: 'weird', stamp: 'FOUND', text: 'You find {a} inside the grandfather clock, riding the minute hand. It has been doing laps since the eighties. It looks very fit.', souls: 22, curio: true },
+        { tone: 'good', stamp: 'FLAT OUT', text: 'You find {a} under the doormat, flat as a bus ticket and thrilled to be found. {b} says it knew all along and hugs it until it is a bit less flat.', souls: 18, a: { fuss: 25 }, b: { fuss: 15 } },
+        { tone: 'bad', stamp: 'RETRIEVED', text: 'You look for an hour. The cat finds {a} first and brings it to you in its mouth, very pleased with itself. {a} is damp and not speaking.', souls: 12, grudge: 'a' }
+      ] }
+    ] },
+  { id: 'posted', title: '{a} has put {b} in an envelope and posted it. It is addressed to {a}. It should arrive tomorrow.', pair: true, art: 'box',
+    choices: [
+      { label: 'Wait for the post', outcomes: [
+        { tone: 'good', stamp: 'FIRST CLASS', text: '{b} arrives at nine, slightly flat, with a postmark across its middle. It had a lovely time in the van and would like to go again.', souls: 18, b: { fuss: 15 } },
+        { tone: 'bad', stamp: 'UNDERPAID', text: '{b} arrives three days later, stamped “insufficient postage”. {a} has had to pay the difference and has sent {b} the bill.', souls: 12, grudge: 'b' }
+      ] },
+      { label: 'Fetch it from the sorting office', outcomes: [
+        { tone: 'weird', stamp: 'MISC', text: '{b} has been sorted into a pigeonhole marked MISC, between a boot and a tortoise. The tortoise has been there since 1970 and says it is fine.', souls: 20, curio: true },
+        { tone: 'good', stamp: 'SIGNED FOR', text: 'They hand {b} over at the counter. {b} has been signed for. It shows everyone the signature for the rest of the week.', souls: 16, b: { fuss: 20 } }
       ] }
     ] }
 ];

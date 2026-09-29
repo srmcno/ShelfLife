@@ -1,7 +1,9 @@
 import { EMERGENCIES, CURIOS, RARITIES, RANKS, OMENS, CHORES, DUPLICATE_LINES } from '../content/mayhem.js';
 import { mayhemState, QUEUE_MAX, LOG_MAX } from '../mayhem-state.js';
-import { addNote, clamp, grantBonusTrust, localDayKey, petById } from '../state.js';
+import { addNote, clamp, dayKeyOffset, grantBonusTrust, localDayKey, petById } from '../state.js';
 import { fileGrudge } from './achievements.js';
+import { SEASON_RARITY, SEASONAL_CURIOS } from '../content/seasons.js';
+import { activeSeason } from './seasons.js';
 
 /* ================= THE MAYHEM LOOP =================
    A short loop layered over the slow one. The slow loop (needs, trust, notes)
@@ -21,6 +23,12 @@ export const COFFIN_COST = 40;
 export const CHORE_SOULS = 15;
 export const CARE_SOULS = 2;
 export const ROUNDS_SOULS = 3;
+// Rounds pay for the first few each day; after that they are still good for the shelf.
+export const ROUNDS_PAID_PER_DAY = 5;
+// A run of curios without anything cursed or better ends in one, rather than never.
+export const PITY_DRY_AT = 30;
+// A special order: the exact curio you are missing, for a price that grows with its rarity.
+export const COMMISSION_COST = { common: 80, uncommon: 160, rare: 320, cursed: 640, unholy: 1400 };
 export const GAME_SOULS = 10;
 export const BONUS_CURIO_CHANCE = 0.14;
 export const FALLOUT = 22;
@@ -30,8 +38,8 @@ const listeners = [];
 export function onMayhem(listener) { listeners.push(listener); return () => { const i = listeners.indexOf(listener); if (i >= 0) listeners.splice(i, 1); }; }
 function emit(event) { for (const fn of listeners.slice()) { try { fn(event); } catch { /* a broken listener must not break the game */ } } }
 
-export const CURIO_BY_ID = Object.fromEntries(CURIOS.map(c => [c.id, c]));
-export const RARITY_BY_ID = Object.fromEntries(RARITIES.map(r => [r.id, r]));
+export const CURIO_BY_ID = Object.fromEntries([...CURIOS, ...SEASONAL_CURIOS].map(c => [c.id, c]));
+export const RARITY_BY_ID = Object.fromEntries([...RARITIES, SEASON_RARITY].map(r => [r.id, r]));
 export const EMERGENCY_BY_ID = Object.fromEntries(EMERGENCIES.map(e => [e.id, e]));
 const OMEN_BY_ID = Object.fromEntries(OMENS.map(o => [o.id, o]));
 const CHORE_BY_ID = Object.fromEntries(CHORES.map(c => [c.id, c]));
@@ -74,16 +82,19 @@ export function drawOmen(state, now = Date.now(), rnd = Math.random) {
   const m = mayhemState(state);
   const day = localDayKey(now);
   if (m.omen.day === day) return null;
-  const yesterday = localDayKey(now - 86400000);
-  const streak = m.omen.lastDay === yesterday ? m.omen.streak + 1 : 1;
+  const yesterday = dayKeyOffset(now, -1), twoDaysAgo = dayKeyOffset(now, -2);
+  // Miss one night and the candle gutters but holds, once, until the next seventh night.
+  let streak = 1, graceUsed = false;
+  if (m.omen.lastDay === yesterday) streak = m.omen.streak + 1;
+  else if (m.omen.lastDay === twoDaysAgo && m.omen.streak >= 2 && m.omen.grace > 0) { streak = m.omen.streak + 1; graceUsed = true; }
   const omen = choose(OMENS.filter(o => o.id !== m.omen.id), rnd);
-  m.omen = { day, id: omen.id, streak, lastDay: day };
+  m.omen = { day, id: omen.id, streak, lastDay: day, grace: streak % 7 === 0 ? 1 : graceUsed ? 0 : m.omen.grace };
   const gift = omenGift(streak);
   const rankUp = addSouls(state, gift);
   // Every seventh night in a row the house leaves something rarer on the step.
-  const bonus = streak % 7 === 0 ? rollCurio(state, rnd, true) : null;
+  const bonus = streak % 7 === 0 ? rollCurio(state, rnd, true, now) : null;
   ensureChores(state, now, rnd);
-  return { omen, streak, gift, bonus, rankUp };
+  return { omen, streak, gift, bonus, rankUp, graceUsed };
 }
 
 /* ---------- souls ---------- */
@@ -104,23 +115,51 @@ export function addSouls(state, amount) {
 }
 
 /* ---------- curios ---------- */
-export function rollCurio(state, rnd = Math.random, lucky = false) {
+export function rollCurio(state, rnd = Math.random, lucky = false, now = Date.now()) {
   const m = mayhemState(state);
+  // In season, some rolls are the season's own curios, preferring one you do not have yet.
+  const season = activeSeason(now);
+  if (season && rnd() < season.chance) {
+    const fresh = season.curios.filter(c => !m.curios[c.id]);
+    const curio = choose(fresh.length && rnd() < 0.7 ? fresh : season.curios, rnd);
+    const duplicate = !!m.curios[curio.id];
+    m.dry += 1;
+    m.curios[curio.id] = (m.curios[curio.id] || 0) + 1;
+    const refund = duplicate ? SEASON_RARITY.refund : 0;
+    const rankUp = duplicate ? addSouls(state, refund) : null;
+    return { curio, rarity: SEASON_RARITY, duplicate, refund, rankUp, pity: false, seasonal: season.id, quip: duplicate ? choose(DUPLICATE_LINES, rnd) : '' };
+  }
   const luck = lucky || omenEffect(state, 'luck');
-  const weights = RARITIES.map(r => r.weight * (luck && r.id !== 'common' ? (r.id === 'uncommon' ? 1.4 : 2.6) : 1));
+  const pity = m.dry >= PITY_DRY_AT;
+  const weights = RARITIES.map(r => pity && !CURSED_UP.has(r.id) ? 0 : r.weight * (luck && r.id !== 'common' ? (r.id === 'uncommon' ? 1.4 : 2.6) : 1));
   let roll = rnd() * weights.reduce((a, b) => a + b, 0), rarity = RARITIES[0];
-  for (let i = 0; i < RARITIES.length; i++) { roll -= weights[i]; if (roll <= 0) { rarity = RARITIES[i]; break; } }
+  for (let i = 0; i < RARITIES.length; i++) { roll -= weights[i]; if (weights[i] > 0 && roll <= 0) { rarity = RARITIES[i]; break; } }
   const pool = CURIOS.filter(c => c.rarity === rarity.id);
   // Prefer something new within the rolled rarity, so a lucky roll is not wasted on a repeat.
   const fresh = pool.filter(c => !m.curios[c.id]);
   const curio = choose(fresh.length && rnd() < 0.7 ? fresh : pool, rnd);
   const duplicate = !!m.curios[curio.id];
+  m.dry = CURSED_UP.has(rarity.id) ? 0 : m.dry + 1;
   m.curios[curio.id] = (m.curios[curio.id] || 0) + 1;
   let refund = 0, rankUp = null;
   if (duplicate) { refund = rarity.refund; rankUp = addSouls(state, refund); }
-  return { curio, rarity, duplicate, refund, rankUp, quip: duplicate ? choose(DUPLICATE_LINES, rnd) : '' };
+  return { curio, rarity, duplicate, refund, rankUp, pity, quip: duplicate ? choose(DUPLICATE_LINES, rnd) : '' };
 }
-export function curioCount(state) { return Object.keys(mayhemState(state).curios).length; }
+const CURSED_UP = new Set(['cursed', 'unholy']);
+// True when the next coffin is guaranteed to hold something cursed or worse.
+export function pityActive(state) { return mayhemState(state).dry >= PITY_DRY_AT; }
+
+// A special order for a curio the cabinet is missing. Duplicates cannot be ordered.
+export function commissionCost(curioId) { const c = CURIO_BY_ID[curioId]; return c ? COMMISSION_COST[c.rarity] || 0 : 0; }
+export function commissionCurio(state, curioId) {
+  const m = mayhemState(state), curio = CURIO_BY_ID[curioId], cost = commissionCost(curioId);
+  if (!curio || !cost || m.curios[curioId] || m.souls < cost) return null;
+  m.souls -= cost;
+  m.curios[curioId] = 1;
+  emit({ type: 'commission', curio });
+  return { curio, rarity: RARITY_BY_ID[curio.rarity], cost };
+}
+export function curioCount(state) { const m = mayhemState(state); return CURIOS.filter(c => m.curios[c.id]).length; }
 
 export function coffinCost(state, now = Date.now()) { return omenEffect(state, 'coffin', now) ? COFFIN_COST / 2 : COFFIN_COST; }
 export function openCoffin(state, now = Date.now(), rnd = Math.random) {
@@ -129,7 +168,7 @@ export function openCoffin(state, now = Date.now(), rnd = Math.random) {
   if (m.souls < cost) return null;
   m.souls -= cost;
   m.coffins += 1;
-  const result = rollCurio(state, rnd);
+  const result = rollCurio(state, rnd, false, now);
   const chores = deed(state, 'coffin', 1, now, rnd);
   return { ...result, cost, chores };
 }
@@ -202,12 +241,43 @@ export function fill(text, a, b) {
   return String(text).replace(/\{a\}/g, a ? a.name : 'Someone').replace(/\{b\}/g, b ? b.name : 'someone else');
 }
 
+/* ---------- who is involved changes the odds ----------
+   A good outcome leans on how cute the resident is, a bad one on how much menace
+   they have, a strange one on their mystique. Trust turns disasters aside and
+   nudges the good ones. A resident with nothing special (stat 5, no trust) rolls
+   every outcome equally, which is how the cards were written. */
+const TONE_STAT = { good: 'cute', bad: 'menace', weird: 'mystique' };
+export function outcomeWeight(pet, outcome) {
+  const raw = pet?.stats?.[TONE_STAT[outcome.tone]];
+  const stat = Number.isFinite(raw) ? raw : 5;
+  const bond = clamp(Number.isFinite(pet?.bond) ? pet.bond : 0, 0, 25);
+  let w = 1 + 0.1 * (stat - 5);
+  if (outcome.tone === 'bad') w *= 1 - 0.02 * bond;
+  if (outcome.tone === 'good') w *= 1 + 0.012 * bond;
+  return clamp(w, 0.2, 2);
+}
+function pickOutcome(outcomes, pet, rnd) {
+  const weights = outcomes.map(o => outcomeWeight(pet, o));
+  let roll = rnd() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < outcomes.length; i++) { roll -= weights[i]; if (roll < 0) return outcomes[i]; }
+  return outcomes[outcomes.length - 1];
+}
+// Chance of each tone for one choice, and a plain-English read of the risk.
+export function choiceOdds(choice, pet) {
+  const weights = choice.outcomes.map(o => outcomeWeight(pet, o));
+  const total = weights.reduce((a, b) => a + b, 0);
+  const p = { good: 0, bad: 0, weird: 0 };
+  choice.outcomes.forEach((o, i) => { p[o.tone] += weights[i] / total; });
+  const label = p.bad === 0 ? 'Safe enough' : p.bad < 0.3 ? 'Probably fine' : p.bad < 0.55 ? 'Could go wrong' : 'Ill-advised';
+  return { ...p, label, level: p.bad === 0 ? 0 : p.bad < 0.3 ? 1 : p.bad < 0.55 ? 2 : 3 };
+}
+
 export function describeEmergency(state, entry) {
   const template = EMERGENCY_BY_ID[entry?.id];
   if (!template) return null;
   const a = petById(state, entry.a), b = entry.b ? petById(state, entry.b) : null;
   if (!a || (template.pair && !b)) return null;
-  return { entry, template, a, b, title: fill(template.title, a, b), choices: template.choices.map(c => fill(c.label, a, b)) };
+  return { entry, template, a, b, title: fill(template.title, a, b), choices: template.choices.map(c => fill(c.label, a, b)), odds: template.choices.map(c => choiceOdds(c, a)) };
 }
 
 function applyNeeds(pet, delta) {
@@ -229,8 +299,8 @@ export function resolveEmergency(state, uid, choiceIndex, now = Date.now(), rnd 
   if (!info) return null;
   const choice = info.template.choices[choiceIndex];
   if (!choice) return null;
-  const outcome = choose(choice.outcomes, rnd);
   const { a, b } = info;
+  const outcome = pickOutcome(choice.outcomes, a, rnd);
   const text = fill(outcome.text, a, b);
   const souls = (outcome.souls || 0) * (omenEffect(state, 'mayhem', now) ? 2 : 1);
   applyNeeds(a, outcome.a);
@@ -249,7 +319,7 @@ export function resolveEmergency(state, uid, choiceIndex, now = Date.now(), rnd 
   if (grudger && fileGrudge(state, grudger, info.title.slice(0, 70), now)) grudge = grudger.name;
   const rankUp = addSouls(state, souls);
   let curio = null;
-  if (outcome.curio || rnd() < BONUS_CURIO_CHANCE) curio = rollCurio(state, rnd);
+  if (outcome.curio || rnd() < BONUS_CURIO_CHANCE) curio = rollCurio(state, rnd, false, now);
   m.resolved += 1;
   m.log.unshift({ at: now, title: info.title, stamp: outcome.stamp, tone: outcome.tone, text, souls });
   if (m.log.length > LOG_MAX) m.log.length = LOG_MAX;
@@ -303,7 +373,7 @@ export function deed(state, kind, amount = 1, now = Date.now(), rnd = Math.rando
   }
   if (!chores.bonus && chores.list.length && chores.list.every(c => c.done)) {
     chores.bonus = true;
-    const prize = rollCurio(state, rnd);
+    const prize = rollCurio(state, rnd, false, now);
     completed.push({ bonus: true, prize });
     emit({ type: 'chores-complete', prize });
   }
@@ -318,7 +388,14 @@ export function rewardCare(state, need, gained, now = Date.now()) {
   deed(state, 'care:' + need, 1, now);
   return souls;
 }
-export function rewardRounds(state, now = Date.now()) { addSouls(state, ROUNDS_SOULS); deed(state, 'rounds', 1, now); return ROUNDS_SOULS; }
+export function rewardRounds(state, now = Date.now()) {
+  const m = mayhemState(state), day = localDayKey(now);
+  if (m.roundsDay !== day) { m.roundsDay = day; m.roundsPaid = 0; }
+  const paid = m.roundsPaid < ROUNDS_PAID_PER_DAY ? ROUNDS_SOULS : 0;
+  if (paid) { m.roundsPaid += 1; addSouls(state, paid); }
+  deed(state, 'rounds', 1, now);
+  return paid;
+}
 // Games share one daily purse, so replaying a quick game cannot empty the
 // undertaker's back room in an afternoon.
 export const GAME_SOULS_PER_DAY = 160;

@@ -165,7 +165,7 @@ export function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 export function defaultNeeds() { return { food: 78, fuss: 78, clean: 82 }; }
 export function defaultDecor() { return { room: 'aubergine', wall: 'damask', wood: 'rosewood', accent: 'blood' }; }
 export function defaultStreak() { return { count: 0, lastCheckin: 0 }; }
-export function defaultSettings() { return { muted: false, narratorOn: false, narratorVoiceURI: null, effects: 'auto' }; }
+export function defaultSettings() { return { muted: false, narratorOn: false, narratorVoiceURI: null, effects: 'auto', nudges: false, nudgeAsked: false }; }
 export function defaultCareLog() { return { food: 0, fuss: 0, clean: 0 }; }
 // meeting: how many times the shelf has convened over you. carried: how many times
 // Item 4 has been carried forward. struck: petId -> when that pet closed the matter.
@@ -328,7 +328,7 @@ export function normalizeState(raw) {
   if (!['auto', 'light', 'full'].includes(s.settings.effects)) s.settings.effects = 'auto';
   delete s.settings.matureMode; // Retired setting from older backups.
   if (typeof s.settings.theatreOn !== 'boolean') s.settings.theatreOn = true;
-  for (const key of ['muted', 'narratorOn']) {
+  for (const key of ['muted', 'narratorOn', 'nudges', 'nudgeAsked']) {
     if (typeof s.settings[key] !== 'boolean') s.settings[key] = defaultSettings()[key];
   }
   s.streak.count = Math.floor(finite(s.streak.count, 0));
@@ -414,6 +414,12 @@ export function localDayKey(ts = Date.now()) {
   const d = new Date(ts);
   return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
 }
+// The day key `n` calendar days from `ts`, stepping by date rather than by 24 hours so DST cannot skip or repeat a day.
+export function dayKeyOffset(ts, n) {
+  const d = new Date(ts);
+  d.setDate(d.getDate() + n);
+  return localDayKey(d.getTime());
+}
 
 // Trust from games and conspiracies, rationed per resident per local day.
 // Returns how much was actually granted, so the caller can say so honestly.
@@ -440,8 +446,8 @@ export const VISIT_GAP_MS = 2 * HOUR;   // a gap this long starts a new visit
 export const BRIEFING_AT = 12;          // total grudges at which new arrivals get briefed
 
 /* ================= THE BACKUP REMINDER =================
-   Everything in this game lives in one browser's localStorage: no account, no
-   sync, and no way back from a cleared site-data dialog. The game has always
+   Unless the player turns on cloud save, everything in this game lives in one
+   browser's localStorage, with no way back from a cleared site-data dialog. The game has always
    offered a backup under More and has never once suggested taking one, so the
    players most likely to lose a shelf were exactly the ones who never opened that
    menu. These rules ask — but only once a shelf is old enough and populated

@@ -1,6 +1,7 @@
 import { VISITORS } from '../content/stories.js';
 import { ARCADE_GAMES } from '../content/arcade.js';
 import { COURT_CASES } from '../content/court.js';
+import { SEASONS } from '../content/seasons.js';
 import { remember } from './stories.js';
 import { FEUDS, FEUD_LINES, ESCALATION_LINES, TRUCE_LINES } from '../content/feuds.js';
 import { GRUDGE_LINES, STREAK_LINES } from '../content/copy.js';
@@ -189,6 +190,11 @@ export const ACHIEVEMENTS = [
   { id: 'promises-five', hint: 'Keep five promises across the shelf.', label: 'Dependable, Apparently', desc: 'Five requests fulfilled.', toastLine: 'Five kept promises. Somebody has started a different kind of list.', check: state => state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0) >= 5 },
   { id: 'archivist', hint: 'Keep a postcard in the memory museum.', label: 'Archivist', desc: 'Filed a postcard in the museum.', toastLine: 'A picture of the shelf, kept on purpose. They noticed you noticing.', check: state => ((state.stories || {}).postcards || []).length >= 1 },
   { id: 'dreamt-of', hint: 'Catch a sleeping resident mid-dream on the board.', label: 'Unsaid', desc: 'Read a resident’s inner voice.', toastLine: 'You were not supposed to see that one. It is on the board anyway.', check: state => (state.notes || []).some(n => n.form === 'thought') },
+  { id: 'docket-3', hint: 'Air the day’s Shelf Court docket three days running.', label: 'Court Is In Session', desc: 'Aired the docket three days running.', toastLine: 'Three days on the docket. The bailiff has started recognising you, which he says is not a compliment.', check: state => (state.courtroom?.docketStreak || 0) >= 3 },
+  { id: 'docket-7', hint: 'Air the day’s Shelf Court docket seven days running.', label: 'Permanent Fixture', desc: 'Aired the docket seven days running.', toastLine: 'A full week on the docket. The judge has started leaving you the good wig.', check: state => (state.courtroom?.docketStreak || 0) >= 7 },
+  { id: 'challenge-3', hint: 'Finish the daily arcade challenge three days running.', label: 'Habit Forming', desc: 'Three challenge days in a row.', toastLine: 'Three challenges in a row. The arcade has put your name on the good coffin.', check: state => (state.arcade?.dailyStreak || 0) >= 3 },
+  { id: 'challenge-7', hint: 'Finish the daily arcade challenge seven days running.', label: 'Daily Bread', desc: 'Seven challenge days in a row.', toastLine: 'Seven in a row. The dead have started setting your place before you arrive.', check: state => (state.arcade?.dailyStreak || 0) >= 7 },
+  { id: 'season-set', hint: 'Collect every curio from one season.', label: 'Thin Enough To Walk Through', desc: 'Completed a seasonal set.', toastLine: 'The whole set. The wall between here and everywhere else has, technically, gone.', check: state => SEASONS.some(s => s.curios.every(c => state.mayhem?.curios?.[c.id])) },
   { id: 'full-house', hint: 'Eighteen residents and no furniture. Somehow.', label: 'Standing Room Only', desc: 'Eighteen residents at once.', toastLine: 'Eighteen. Every slot is a resident and none of them can leave.', check: state => state.pets.length >= 18 }
 ];
 

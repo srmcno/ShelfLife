@@ -4,7 +4,7 @@ import { blankState, normalizeState } from '../src/state.js';
 import { ARCADE_GAMES, ARCADE_QUIPS, FRENZY_ITEMS } from '../src/content/arcade.js';
 import { GLYPH_NAMES } from '../src/art/mayhem-glyphs.js';
 import {
-  seededRandom, frenzyStart, frenzyStep, stackStart, stackStep, stackDrop, STACK, seanceStart, seanceShown, seanceInput,
+  seededRandom, frenzyDirection, frenzyStart, frenzyStep, stackStart, stackStep, stackDrop, STACK, seanceStart, seanceShown, seanceInput,
   whackStart, whackStep, whackHit, finishRun, tierFor, normalizeArcade, startGame
 } from '../src/engine/arcade.js';
 import { GAME_SOULS_PER_DAY } from '../src/engine/mayhem.js';
@@ -133,7 +133,7 @@ test('arcade records survive reload and hostile data', () => {
   finishRun(s, 'seance', 9, 'g0', NOW);
   const restored = normalizeState(JSON.parse(JSON.stringify(s)));
   assert.equal(restored.arcade.best.seance, 9);
-  assert.deepEqual(normalizeArcade({ best: { frenzy: -3, nope: 5, stack: 'x', whack: 12 }, lastGame: 'court' }), { best: { whack: 12 }, plays: {}, lastGame: '' });
+  assert.deepEqual(normalizeArcade({ best: { frenzy: -3, nope: 5, stack: 'x', whack: 12 }, lastGame: 'court' }), { best: { whack: 12 }, plays: {}, lastGame: '', daily: null, dailyStreak: 0, dailyLastDay: '' });
 });
 
 test('arcade trust is rationed by the same daily cap as every other bonus', async () => {
@@ -143,4 +143,14 @@ test('arcade trust is rationed by the same daily cap as every other bonus', asyn
   for (let i = 0; i < 10; i++) finishRun(s, 'frenzy', 90, 'g0', NOW, () => 0);
   assert.equal(s.pets[0].bond - before, BONUS_TRUST_PER_DAY);
   assert.equal(s.pets[0].arcadeRuns, 10);
+});
+
+test('Feeding Frenzy keys point the right way, including the arrows', () => {
+  assert.equal(frenzyDirection('ArrowLeft'), -1);
+  assert.equal(frenzyDirection('a'), -1);
+  assert.equal(frenzyDirection('A'), -1);
+  assert.equal(frenzyDirection('ArrowRight'), 1);
+  assert.equal(frenzyDirection('d'), 1);
+  assert.equal(frenzyDirection('D'), 1);
+  for (const key of ['ArrowUp', ' ', 'Enter', 'p', 'b']) assert.equal(frenzyDirection(key), null);
 });

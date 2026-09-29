@@ -1,16 +1,23 @@
 import {
   accrueMayhem, nextEmergencyIn, describeEmergency, resolveEmergency, openCoffin, coffinCost, drawOmen,
   omenPending, todaysOmen, ensureChores, choreInfo, rankInfo, curioCount, onMayhem, CURIO_BY_ID, RARITY_BY_ID,
-  queueCap, pokeDrawer, POKE_COST
+  queueCap, pokeDrawer, POKE_COST, commissionCost, commissionCurio, pityActive
 } from '../engine/mayhem.js';
 import { mayhemState } from '../mayhem-state.js';
 import { CURIOS, RARITIES, RANKS, QUIET_LINES } from '../content/mayhem.js';
+import { SEASONS } from '../content/seasons.js';
+import { COURT_BY_ID, docketToday, DOCKET_SOULS } from '../engine/court.js';
+import { challengeToday } from '../engine/arcade.js';
+import { ARCADE_BY_ID } from '../content/arcade.js';
+import { DAILY_SOULS } from '../content/daily.js';
+import { activeSeason, seasonProgress } from '../engine/seasons.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { glyph } from '../art/mayhem-glyphs.js';
 import { reactTo } from '../art/animator.js';
 import { playAchievement, playPowerUp, playStar, playStomp, playFeud, playUnlock } from '../audio/sound.js';
 import { save } from '../state.js';
 import { toast } from './toast.js';
+import { nudgesAvailable, enableNudges } from '../notify.js';
 
 /* The mayhem loop's surfaces: a souls counter in the top bar, an alarm strip
    over the cabinet, a small desk under the actions, and one sheet that shows an
@@ -20,6 +27,7 @@ const byId = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const plural = (n, one, many = one + 's') => n + ' ' + (n === 1 ? one : many);
 const clock = ms => { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const quiet = () => QUIET_LINES[Math.floor(Date.now() / 60000) % QUIET_LINES.length];
 
 let S = null, refresh = () => {};
@@ -100,7 +108,16 @@ function renderDesk(state, now = Date.now()) {
   const short = Math.max(0, cost - m.souls);
   const coffinTile = '<button class="mh-tile mh-coffin-tile" type="button" data-mh="coffin"' + (short ? ' aria-disabled="true"' : '') + '><span class="mh-coffin-art">' + glyph('coffin') + '</span><span><span class="mh-tile-kicker">Open a coffin</span><b>' + cost + ' souls</b><small>' + (short ? short + ' more souls needed' : 'Something inside is knocking') + '</small></span></button>';
   const cabinetTile = '<button class="mh-tile mh-cabinet-tile" type="button" data-mh="cabinet"><span class="mh-tile-kicker">Cabinet of Curiosities</span><b>' + owned + ' / ' + CURIOS.length + '</b><span class="mh-meter"><i style="width:' + Math.round(owned / CURIOS.length * 100) + '%"></i></span><small>' + esc(rankInfo(state).rank.title) + '</small></button>';
-  setHTML(deskEl, omenTile + choresTile + coffinTile + cabinetTile);
+  const season = activeSeason(now);
+  const seasonStrip = season ? (p => '<div class="mh-season"><b>' + esc(season.name) + '</b><span>' + esc(season.blurb) + ' Some coffins hold something seasonal (' + p.owned + '/' + p.total + '). Until ' + season.to[1] + ' ' + MONTHS[season.to[0]] + '.</span></div>')(seasonProgress(m, season)) : '';
+  const docket = docketToday(state, now), ch = challengeToday(state, now), docketCase = COURT_BY_ID[docket.caseId];
+  const todayRow = (kind, done, title, detail, extra = '') => '<button type="button" class="mh-today-row' + (done ? ' done' : '') + '" data-mh-today="' + kind + '"' + extra + '><span class="mh-check" aria-hidden="true">' + (done ? '✓' : '') + '</span><span><b>' + esc(title) + '</b><small>' + esc(detail) + '</small></span></button>';
+  const todayTile = docketCase && ch
+    ? '<div class="mh-tile mh-today"><span class="mh-tile-kicker">Today in the Playroom</span>' +
+      todayRow('court', docket.done, 'Shelf Court docket', docketCase.title + (docket.done ? ' · filed' : ' · +' + DOCKET_SOULS + ' souls')) +
+      todayRow('arcade', ch.claimed, 'Arcade challenge', ARCADE_BY_ID[ch.game].title + ': ' + ch.mod.title + (ch.claimed ? ' · done' : ' · +' + DAILY_SOULS + ' souls'), ' data-mh-game="' + ch.game + '"') + '</div>'
+    : '';
+  setHTML(deskEl, seasonStrip + omenTile + choresTile + coffinTile + todayTile + cabinetTile);
 }
 
 // The count of waiting disasters follows you: onto the Shelf tab, into the
@@ -150,8 +167,8 @@ function showEmergency(state) {
   sheet.innerHTML = head('Emergency ' + index + ' of ' + m.queue.length, 'Something has happened', 'Later') +
     '<div class="mh-card"><div class="mh-scene"><div class="mh-prop">' + glyph(info.template.art) + '</div></div>' +
     '<h3 class="mh-title">' + esc(info.title) + '</h3>' +
-    '<div class="mh-choices">' + info.choices.map((label, i) => '<button class="mh-choice" type="button" data-choice="' + i + '"><span>' + (i ? 'B' : 'A') + '</span>' + esc(label) + '</button>').join('') + '</div>' +
-    '<p class="mh-fineprint">Every choice pays souls. Not every choice goes well.</p></div>';
+    '<div class="mh-choices">' + info.choices.map((label, i) => '<button class="mh-choice" type="button" data-choice="' + i + '" aria-describedby="mhOdds' + i + '"><span>' + (i ? 'B' : 'A') + '</span><span class="mh-choice-text">' + esc(label) + '</span><em class="mh-odds-tag odds-' + info.odds[i].level + '" id="mhOdds' + i + '">' + esc(info.odds[i].label) + '</em></button>').join('') + '</div>' +
+    '<p class="mh-fineprint">Every choice pays souls. Who is involved changes the odds: menace makes things worse, trust turns them aside.</p></div>';
   const scene = sheet.querySelector('.mh-scene');
   scene.prepend(sprite(info.a, 'mh-actor-a'));
   if (info.b) scene.appendChild(sprite(info.b, 'mh-actor-b'));
@@ -203,6 +220,7 @@ function choose(state, index) {
   card.querySelector('.mh-choices').outerHTML = '<div class="mh-outcome"><div class="mh-stamp tone-' + result.tone + '">' + esc(result.stamp) + '</div>' +
     '<p class="mh-text">' + esc(result.text) + '</p>' + rewardList(result) +
     (result.curio ? '<div class="mh-drop"><span class="mh-drop-kicker">Something was left behind</span>' + curioCard(result.curio) + '</div>' : '') +
+    (nudgesAvailable() && !state.settings.nudges && !state.settings.nudgeAsked ? '<p class="mh-nudge"><span>Want a buzz when something goes wrong?</span><button class="btn btn-sm" type="button" data-mh="nudge">Yes, nudge me</button><button class="btn btn-ghost btn-sm" type="button" data-mh="nudge-no">Not now</button></p>' : '') +
     '<div class="mh-next">' + (left ? '<button class="btn btn-primary" type="button" data-mh="emergency">Next emergency <small>(' + left + ' left)</small></button>' : mayhemState(state).souls >= POKE_COST ? '<button class="btn btn-primary" type="button" data-mh="poke">Poke the drawer · ' + POKE_COST + '</button><button class="btn" type="button" data-mh="close">Back to the shelf</button>' : '<button class="btn btn-primary" type="button" data-mh="close">Back to the shelf</button>') +
     '<button class="btn btn-ghost" type="button" data-mh="cabinet">Cabinet</button></div></div>';
   card.querySelector('.mh-fineprint')?.remove();
@@ -222,7 +240,8 @@ function showCoffin(state) {
   sheet.innerHTML = head('The undertaker’s back room', 'Open a coffin') +
     '<div class="mh-coffin-stage"><button class="mh-coffin-box" type="button" data-mh="pry"' + (short > 0 ? ' disabled' : '') + ' aria-label="Pry the coffin open for ' + cost + ' souls">' + glyph('coffin') + '</button></div>' +
     '<p class="mh-coffin-note">' + (short > 0 ? 'You need ' + short + ' more souls. Deal with a few emergencies. Someone always digs something up.' : 'Tap the coffin to pry it open. <b>' + cost + ' souls.</b> You have ' + m.souls + '.') + '</p>' +
-    '<p class="mh-odds">' + RARITIES.map(r => '<span class="rarity-' + r.id + '">' + esc(r.label) + '</span>').join(' · ') + '</p>';
+    (pityActive(state) ? '<p class="mh-coffin-note mh-heavy">This one is heavier than the others. Something old is in there, and it has waited long enough.</p>' : '') +
+    '<p class="mh-odds">' + RARITIES.map(r => '<span class="rarity-' + r.id + '">' + esc(r.label) + '</span>').join(' · ') + (activeSeason() ? ' · <span class="rarity-season">Seasonal</span>' : '') + '</p>';
   open();
   sheet.querySelector('.mh-coffin-box:not([disabled])')?.focus({ preventScroll: true });
 }
@@ -264,7 +283,7 @@ function showOmen(state, revealed = null) {
   sheet.innerHTML = head('Night ' + m.omen.streak + (m.omen.streak > 1 ? ' in a row' : ''), 'Tonight’s omen') +
     '<div class="mh-tarot-stage"><div class="mh-tarot face' + (revealed ? ' flipping' : '') + '"><span class="mh-tarot-face"><span class="mh-tarot-art">' + glyph(omenGlyph(omen.id)) + '</span><b>' + esc(omen.name) + '</b></span></div></div>' +
     '<p class="mh-omen-line">' + esc(omen.line) + '</p>' +
-    (revealed ? '<ul class="mh-rewards"><li class="souls">' + glyph('soul') + '+' + revealed.gift + ' souls for showing up</li>' + (m.omen.streak < 7 ? '<li>Night ' + m.omen.streak + ' of 7. The seventh night leaves something rare on the step.</li>' : '') + '</ul>' : '') +
+    (revealed ? '<ul class="mh-rewards"><li class="souls">' + glyph('soul') + '+' + revealed.gift + ' souls for showing up</li>' + (revealed.graceUsed ? '<li class="good">The candle guttered while you were away. It held. One missed night is forgiven, and you get another after the next seventh night.</li>' : '') + (m.omen.streak < 7 ? '<li>Night ' + m.omen.streak + ' of 7. The seventh night leaves something rare on the step.</li>' : '') + '</ul>' : '') +
     (revealed?.bonus ? '<div class="mh-drop"><span class="mh-drop-kicker">Seven nights. Something was left on the step.</span>' + curioCard(revealed.bonus) + '</div>' : '') +
     '<div class="mh-next"><button class="btn btn-primary" type="button" data-mh="' + (mayhemState(state).queue.length ? 'emergency' : 'close') + '">' + (mayhemState(state).queue.length ? 'See what went wrong' : 'Back to the shelf') + '</button></div>';
   open();
@@ -292,10 +311,20 @@ function showCabinet(state) {
       const n = m.curios[c.id] || 0;
       return n
         ? '<button class="mh-shelf-item rarity-' + r.id + '" type="button" data-curio="' + c.id + '"><span class="mh-curio-art">' + glyph(c.glyph) + '</span><b>' + esc(c.name) + '</b>' + (n > 1 ? '<em>×' + n + '</em>' : '') + '</button>'
-        : '<span class="mh-shelf-item missing rarity-' + r.id + '"><span class="mh-curio-art">' + glyph(c.glyph) + '</span><b>???</b></span>';
+        : '<button class="mh-shelf-item missing rarity-' + r.id + '" type="button" data-order="' + c.id + '" aria-label="A missing ' + esc(r.label.toLowerCase()) + ' curio. Special order for ' + commissionCost(c.id) + ' souls."><span class="mh-curio-art">' + glyph(c.glyph) + '</span><b>???</b></button>';
     }).join('');
     const have = CURIOS.filter(c => c.rarity === r.id && m.curios[c.id]).length, total = CURIOS.filter(c => c.rarity === r.id).length;
     return '<section class="mh-shelf-group"><h3 class="rarity-' + r.id + '">' + esc(r.label) + ' <small>' + have + '/' + total + '</small></h3><div class="mh-shelf-grid">' + items + '</div></section>';
+  }).join('');
+  const nowSeason = activeSeason();
+  const seasonGroups = SEASONS.map(season => {
+    const live = nowSeason === season, p = seasonProgress(m, season);
+    if (!live && !p.owned) return '';
+    const items = season.curios.map(c => m.curios[c.id]
+      ? '<button class="mh-shelf-item rarity-season" type="button" data-curio="' + c.id + '"><span class="mh-curio-art">' + glyph(c.glyph) + '</span><b>' + esc(c.name) + '</b>' + (m.curios[c.id] > 1 ? '<em>×' + m.curios[c.id] + '</em>' : '') + '</button>'
+      : '<span class="mh-shelf-item missing rarity-season"><span class="mh-curio-art">' + glyph(c.glyph) + '</span><b>???</b></span>').join('');
+    return '<section class="mh-shelf-group"><h3 class="rarity-season">' + esc(season.name) + ' <small>' + p.owned + '/' + p.total + '</small></h3>' +
+      '<p class="mh-season-note">' + (live ? 'In season now. Some coffins hold these.' : 'Out of season. They return every year.') + '</p><div class="mh-shelf-grid">' + items + '</div></section>';
   }).join('');
   const log = m.log.slice(0, 6).map(entry => '<li class="tone-' + entry.tone + '"><span class="mh-mini-stamp">' + esc(entry.stamp) + '</span><span><b>' + esc(entry.title) + '</b> ' + esc(entry.text) + '</span></li>').join('');
   sheet.innerHTML = head('Souls earned in this house: ' + m.lifetime, 'Cabinet of Curiosities') +
@@ -306,9 +335,29 @@ function showCabinet(state) {
     '<p class="mh-stats">' + plural(m.resolved, 'emergency', 'emergencies') + ' survived · ' + plural(m.coffins, 'coffin') + ' opened · ' + m.souls + ' souls in hand</p></section>' +
     '<div class="mh-cabinet-actions"><button class="btn btn-primary" type="button" data-mh="coffin">Open a coffin · ' + coffinCost(state) + '</button>' + (m.queue.length ? '<button class="btn" type="button" data-mh="emergency">' + plural(m.queue.length, 'emergency', 'emergencies') + ' waiting</button>' : '') + '</div>' +
     '<div class="mh-curio-detail" id="mhCurioDetail" hidden></div>' +
-    groups +
+    groups + seasonGroups +
     (log ? '<section class="mh-log"><h3>The incident reports</h3><ul>' + log + '</ul></section>' : '');
   open();
+}
+function showOrder(id) {
+  const curio = CURIO_BY_ID[id], box = byId('mhCurioDetail');
+  if (!curio || !box || !S) return;
+  const m = mayhemState(S), rarity = RARITY_BY_ID[curio.rarity], cost = commissionCost(id), short = Math.max(0, cost - m.souls);
+  box.hidden = false;
+  box.innerHTML = '<div class="mh-curio-card rarity-' + rarity.id + ' fresh"><span class="mh-curio-flag">Special order</span><span class="mh-curio-art">' + glyph(curio.glyph) + '</span>' +
+    '<span class="mh-rarity">' + esc(rarity.label) + '</span><b>???</b><p>The undertaker can find this one for you. He will not say what it is until it is on the counter.</p>' +
+    '<button class="btn btn-primary" type="button" data-order-buy="' + esc(id) + '"' + (short ? ' disabled' : '') + '>' + (short ? 'Need ' + short + ' more souls' : 'Order it · ' + cost + ' souls') + '</button></div>';
+  box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+function buyOrder(state, id) {
+  const result = commissionCurio(state, id);
+  if (!result) { showOrder(id); return; }
+  save();
+  playAchievement();
+  showCabinet(state);
+  const box = byId('mhCurioDetail');
+  if (box) { box.hidden = false; box.innerHTML = curioCard({ curio: result.curio, rarity: result.rarity, duplicate: false, refund: 0 }).replace('New curio', 'Delivered · ' + result.cost + ' souls'); box.scrollIntoView({ block: 'nearest' }); }
+  refresh();
 }
 function showCurio(id) {
   const curio = CURIO_BY_ID[id], box = byId('mhCurioDetail');
@@ -367,12 +416,19 @@ export function initMayhem(state, onRefresh) {
     else if (event.type === 'chores-complete') later('All three chores done. A free curio: ' + event.prize.curio.name + (event.prize.duplicate ? ' (duplicate, +' + event.prize.refund + ' souls)' : '') + '.');
   });
   document.addEventListener('click', event => {
-    const control = event.target.closest?.('[data-mh],[data-choice],[data-curio]');
+    const control = event.target.closest?.('[data-mh],[data-choice],[data-curio],[data-order],[data-order-buy],[data-mh-today]');
     if (!control || !S) return;
     if (control.closest('#mayhemVeil') === null && !control.closest('#mayhemAlert,#mayhemDesk')) return;
     if (control.getAttribute('aria-disabled') === 'true' && control.dataset.mh === 'coffin') { showCoffin(S); return; }
     if (control.dataset.choice != null) { choose(S, Number(control.dataset.choice)); return; }
     if (control.dataset.curio) { showCurio(control.dataset.curio); return; }
+    if (control.dataset.mhToday) {
+      if (control.dataset.mhToday === 'court') window.dispatchEvent(new CustomEvent('shelflife:court', { detail: {} }));
+      else window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: control.dataset.mhGame } }));
+      return;
+    }
+    if (control.dataset.order) { showOrder(control.dataset.order); return; }
+    if (control.dataset.orderBuy) { buyOrder(S, control.dataset.orderBuy); return; }
     const action = control.dataset.mh;
     if (action === 'close') close();
     else if (action === 'emergency') showEmergency(S);
@@ -383,6 +439,15 @@ export function initMayhem(state, onRefresh) {
     else if (action === 'omen') showOmen(S);
     else if (action === 'omen-view') showOmen(S);
     else if (action === 'flip') flip(S);
+    else if (action === 'nudge-no') { S.settings.nudgeAsked = true; save(); control.closest('.mh-nudge')?.remove(); }
+    else if (action === 'nudge') {
+      enableNudges().then(answer => {
+        S.settings.nudgeAsked = true;
+        if (answer === 'granted') { S.settings.nudges = true; toast('Nudges on. The shelf will buzz when it needs you.'); }
+        else toast('The phone said no. You can change that in its settings.');
+        save(); control.closest('.mh-nudge')?.remove(); window.dispatchEvent(new CustomEvent('shelflife:nudges'));
+      });
+    }
     else if (action === 'poke') { if (pokeDrawer(S)) { save(); playFeud(); showEmergency(S); refresh(); } else showQuiet(S); }
   });
   hud?.addEventListener('click', () => showCabinet(S));

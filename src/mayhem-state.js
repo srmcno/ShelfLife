@@ -1,4 +1,5 @@
 import { EMERGENCIES, CURIOS, CHORES, OMENS, RANKS } from './content/mayhem.js';
+import { SEASONAL_CURIOS } from './content/seasons.js';
 
 /* Save data for the mayhem loop (engine/mayhem.js). Everything here is bounded
    and validated so a hand-edited or older backup can never break the shelf. */
@@ -11,7 +12,7 @@ const safeId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.te
 export const QUEUE_MAX = 4;
 export const LOG_MAX = 16;
 const EMERGENCY_IDS = new Set(EMERGENCIES.map(e => e.id));
-const CURIO_IDS = new Set(CURIOS.map(c => c.id));
+const CURIO_IDS = new Set([...CURIOS, ...SEASONAL_CURIOS].map(c => c.id));
 const CHORE_IDS = new Set(CHORES.map(c => c.id));
 const OMEN_IDS = new Set(OMENS.map(o => o.id));
 const TONES = new Set(['good', 'bad', 'weird']);
@@ -20,9 +21,9 @@ export function blankMayhem() {
   return {
     v: 1, souls: 0, lifetime: 0, resolved: 0, coffins: 0, rank: 0,
     queue: [], nextAt: 0, serial: 0, recent: [], curios: {},
-    omen: { day: '', id: '', streak: 0, lastDay: '' },
+    omen: { day: '', id: '', streak: 0, lastDay: '', grace: 1 },
     chores: { day: '', list: [], bonus: false },
-    log: [], gameDay: '', gameSouls: 0
+    log: [], gameDay: '', gameSouls: 0, roundsDay: '', roundsPaid: 0, dry: 0
   };
 }
 
@@ -52,7 +53,9 @@ export function normalizeMayhem(raw, state = {}, now = Date.now()) {
       day: typeof raw.omen.day === 'string' ? raw.omen.day.slice(0, 20) : '',
       id: OMEN_IDS.has(raw.omen.id) ? raw.omen.id : '',
       streak: Math.floor(finite(raw.omen.streak, 0, 0, 100000)),
-      lastDay: typeof raw.omen.lastDay === 'string' ? raw.omen.lastDay.slice(0, 20) : ''
+      lastDay: typeof raw.omen.lastDay === 'string' ? raw.omen.lastDay.slice(0, 20) : '',
+      // One missed night is forgiven until the next seventh night; older saves start with it.
+      grace: raw.omen.grace === 0 ? 0 : 1
     };
     if (!out.omen.id) out.omen.day = '';
   }
@@ -64,6 +67,9 @@ export function normalizeMayhem(raw, state = {}, now = Date.now()) {
   }
   out.gameDay = typeof raw.gameDay === 'string' ? raw.gameDay.slice(0, 20) : '';
   out.gameSouls = Math.floor(finite(raw.gameSouls, 0, 0, 1e6));
+  out.roundsDay = typeof raw.roundsDay === 'string' ? raw.roundsDay.slice(0, 20) : '';
+  out.roundsPaid = Math.floor(finite(raw.roundsPaid, 0, 0, 999));
+  out.dry = Math.floor(finite(raw.dry, 0, 0, 9999));
   out.log = (Array.isArray(raw.log) ? raw.log : []).filter(entry => object(entry) && typeof entry.text === 'string')
     .slice(0, LOG_MAX)
     .map(entry => ({

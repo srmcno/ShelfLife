@@ -4,8 +4,9 @@ import {
   JURY_AGREE, JURY_DISAGREE, AUDIENCE_REACTIONS, HALLWAY_IN
 } from '../content/court.js';
 import { courtroomState } from '../court-state.js';
-import { grantBonusTrust, petById } from '../state.js';
-import { payGameSouls, deed } from './mayhem.js';
+import { grantBonusTrust, petById, localDayKey, dayKeyOffset } from '../state.js';
+import { payGameSouls, addSouls, deed } from './mayhem.js';
+import { dayNumber } from './daily.js';
 import { recordGameLife, recordScene } from './life.js';
 import { recordEscapadeEvent } from '../escapade-state.js';
 import { fileGrudge } from './achievements.js';
@@ -43,6 +44,27 @@ export function courtCases(state) {
   const c = courtroomState(state);
   return COURT_CASES.map((k, i) => ({ id: k.id, number: i + 1, title: k.title, claim: k.claim, asking: k.asking, stars: c.best[k.id] || 0, aired: k.id in c.best }));
 }
+// Today's docket: one case a day that pays a small bonus for airing it. The
+// case is a pure function of the date, so it needs no server. The stride is the
+// smallest number of at least five that shares no factor with the case count,
+// which visits every case before repeating and avoids running in book order.
+export const DOCKET_SOULS = 20;
+export const DOCKET_STREAK_SOULS = 5;
+export const DOCKET_STREAK_CAP = 4;
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+export function docketCaseId(dayKey) {
+  const n = dayNumber(dayKey), count = COURT_CASES.length;
+  if (n === null || !count) return '';
+  let stride = 5;
+  while (gcd(stride, count) !== 1) stride++;
+  return COURT_CASES[(((n * stride) % count) + count) % count].id;
+}
+export function docketToday(state, now = Date.now()) {
+  const c = courtroomState(state), day = localDayKey(now);
+  const streak = c.docketLastDay === day || c.docketLastDay === dayKeyOffset(now, -1) ? c.docketStreak : 0;
+  return { day, caseId: docketCaseId(day), done: c.docketDay === day, streak };
+}
+
 // Unaired cases first, then the least recently seen.
 export function nextCaseId(state, rnd = Math.random, not = '') {
   const c = courtroomState(state);
@@ -53,7 +75,16 @@ export function nextCaseId(state, rnd = Math.random, not = '') {
 
 // Cast the episode. The chosen resident sues; another resident is sued (or,
 // in a household of one, a neighbour stands in). Everyone else is the jury.
-export function castEpisode(state, { caseId, plaintiffId, defendantId } = {}, rnd = Math.random) {
+// The neighbour who stands in when a household has no second resident. The
+// same salt always names the same neighbour, so the lobby can promise one and
+// the episode can deliver it.
+export function standInFor(caseId, salt = 0) {
+  const k = COURT_BY_ID[caseId];
+  const witnesses = new Set((k ? k.questions : []).flatMap(q => q.lines.filter(l => l[0] === 'npc').map(l => l[2])));
+  const eligible = STAND_INS.filter(id => !witnesses.has(id));
+  return eligible[Math.abs(Math.floor(salt)) % eligible.length];
+}
+export function castEpisode(state, { caseId, plaintiffId, defendantId, standInSalt } = {}, rnd = Math.random) {
   const k = COURT_BY_ID[caseId] || COURT_BY_ID[nextCaseId(state, rnd)];
   const pets = state.pets || [];
   const plaintiff = petById(state, plaintiffId) || pets[0];
@@ -61,7 +92,7 @@ export function castEpisode(state, { caseId, plaintiffId, defendantId } = {}, rn
   const others = pets.filter(p => p.id !== plaintiff.id);
   const defendantPet = petById(state, defendantId) && defendantId !== plaintiff.id ? petById(state, defendantId) : others.length ? pick(others, rnd) : null;
   const witnesses = new Set(k.questions.flatMap(q => q.lines.filter(l => l[0] === 'npc').map(l => l[2])));
-  const d = defendantPet ? person(defendantPet) : extra(pick(STAND_INS.filter(id => !witnesses.has(id)), rnd));
+  const d = defendantPet ? person(defendantPet) : extra(Number.isFinite(standInSalt) ? standInFor(k.id, standInSalt) : pick(STAND_INS.filter(id => !witnesses.has(id)), rnd));
   const jury = pets.filter(p => p.id !== plaintiff.id && p.id !== d.id).slice(0, JURY_SEATS).map(person);
   for (const id of JURY_EXTRAS) {
     if (jury.length >= JURY_SEATS) break;
@@ -192,6 +223,17 @@ export function courtFinish(state, ep, now = Date.now()) {
   c.best[k.id] = Math.max(c.best[k.id] || 0, stars);
   const souls = payGameSouls(state, 10 + stars * 12 + Math.floor(ep.ratings / 10) + (firstAir ? 10 : 0), now);
   deed(state, 'game', 1, now);
+  // Airing today's docket case pays a flat bonus once a day, outside the purse.
+  let docket = null;
+  const today = docketToday(state, now);
+  if (k.id === today.caseId && !today.done) {
+    c.docketDay = today.day;
+    c.docketStreak = today.streak + 1;
+    c.docketLastDay = today.day;
+    const bonus = DOCKET_SOULS + DOCKET_STREAK_SOULS * Math.min(c.docketStreak - 1, DOCKET_STREAK_CAP);
+    addSouls(state, bonus);
+    docket = { bonus, streak: c.docketStreak };
+  }
   const pet = side => ep[side].kind === 'pet' ? petById(state, ep[side].id) : null;
   const P = pet('p'), D = pet('d');
   let trust = null, grudge = null;
@@ -214,5 +256,5 @@ export function courtFinish(state, ep, now = Date.now()) {
     recordScene(state, 'court', 'Shelf Court: ' + k.title, ep.p.name + ' v. ' + ep.d.name + '. ' + verdict + (correct ? ' Justice, allegedly, was served.' : ' The jury is still talking about it.'),
       cast.map(r => r.id), now, { key: 'court', branch: loser ? 'convicted' : 'witness' });
   }
-  return { correct, stars, agree, ratings: ep.ratings, souls, trust, grudge, firstAir, truth: k.truth, aired: Object.keys(c.best).length, total: COURT_CASES.length };
+  return { correct, stars, agree, ratings: ep.ratings, souls, docket, trust, grudge, firstAir, truth: k.truth, aired: Object.keys(c.best).length, total: COURT_CASES.length };
 }

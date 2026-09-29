@@ -4,6 +4,30 @@ export function initDialogs({ onOpen } = {}) {
   let active = null, returnTo = null, returnPet = null, returnId = null, pendingTrigger = null;
   let triggerGeneration = 0;
   let locked = [];
+  // The Back button (a phone's hardware key, a browser's arrow) closes the open
+  // sheet instead of leaving the game. One history entry stands for "a sheet is
+  // open"; closing by any other route removes it again.
+  let pushed = false, ignorePops = 0;
+  const closeControl = panel => panel.id === 'moreTray' ? document.getElementById('moreClose') :
+    panel.id === 'restoreVeil' ? document.getElementById('restoreCancel') : panel.querySelector('.sheet-head button');
+  function trackHistory(next) {
+    try {
+      if (next && !pushed) { history.pushState({ shelflifeDialog: true }, ''); pushed = true; }
+      else if (!next && pushed) {
+        pushed = false;
+        if (history.state?.shelflifeDialog) { ignorePops++; history.back(); }
+      }
+    } catch { /* history can be unavailable in embedded views */ }
+  }
+  try { if (history.state?.shelflifeDialog) history.replaceState(null, ''); } catch { /* as above */ }
+  globalThis.window?.addEventListener('popstate', () => {
+    if (ignorePops) { ignorePops--; return; }
+    if (!pushed || !active) return;
+    pushed = false; // the browser has already taken our entry away
+    const close = closeControl(active);
+    if (close && !close.disabled) close.click();
+    else trackHistory(active); // nothing to close with: keep the sheet and the entry
+  });
   const controls = 'button, input, select, textarea, summary, a[href], [tabindex]';
   function usable(el) {
     if (!el?.isConnected || el.disabled || el.closest('[hidden],[inert]') || !el.getClientRects().length) return false;
@@ -46,6 +70,7 @@ export function initDialogs({ onOpen } = {}) {
     const next = panels.find(el => el.classList.contains('open') && el.id !== 'moreTray') ||
       panels.find(el => el.classList.contains('open')) || null;
     if (next === active) return;
+    trackHistory(next);
     // Shelf remarks belong to the previous screen. Fresh messages produced
     // inside the active sheet remain visible through its ordinary redraws.
     if (next) onOpen?.();
@@ -84,7 +109,7 @@ export function initDialogs({ onOpen } = {}) {
   panels.forEach(panel => {
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'true');
-    panel.setAttribute('aria-label', ({ escapadeVeil: 'Little adventures', playroomVeil: 'The playroom', lifeVeil: 'Your small world', museumVeil: 'Memory museum', playVeil: 'Play together', studioVeil: 'Make a pet', cardVeil: 'Resident details', decorVeil: 'Decorate', voiceVeil: 'Narrator voice', incidentsVeil: 'Incidents', mayhemVeil: 'Emergencies and curios', arcadeVeil: 'The arcade', courtVeil: 'Shelf Court', helpVeil: 'A small field guide', restoreVeil: 'Restore a shelf', transferVeil: 'Email or share your shelf', postcardVeil: 'A postcard', moreTray: 'Everything else' })[panel.id] || 'Dialog');
+    panel.setAttribute('aria-label', ({ escapadeVeil: 'Little adventures', playroomVeil: 'The playroom', lifeVeil: 'Your small world', museumVeil: 'Memory museum', playVeil: 'Play together', studioVeil: 'Make a pet', cardVeil: 'Resident details', decorVeil: 'Decorate', voiceVeil: 'Narrator voice', incidentsVeil: 'Incidents', mayhemVeil: 'Emergencies and curios', arcadeVeil: 'The arcade', courtVeil: 'Shelf Court', helpVeil: 'A small field guide', restoreVeil: 'Restore a shelf', transferVeil: 'Email or share your shelf', cloudVeil: 'Cloud save', postcardVeil: 'A postcard', moreTray: 'Everything else' })[panel.id] || 'Dialog');
     new MutationObserver(sync).observe(panel, { attributes: true, attributeFilter: ['class'] });
   });
   document.addEventListener('keydown', e => {
@@ -96,8 +121,7 @@ export function initDialogs({ onOpen } = {}) {
       // must not reset games when Escape closes a different dialog.
       e.stopImmediatePropagation();
       if (e.defaultPrevented || e.isComposing || e.repeat || e.target.closest?.('select,[aria-expanded="true"][role="combobox"]')) return;
-      const close = active.id === 'moreTray' ? document.getElementById('moreClose') :
-        active.id === 'restoreVeil' ? document.getElementById('restoreCancel') : active.querySelector('.sheet-head button');
+      const close = closeControl(active);
       if (close && !close.disabled) { e.preventDefault(); close.click(); }
       return;
     }

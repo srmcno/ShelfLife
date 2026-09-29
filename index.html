@@ -32,6 +32,7 @@
 <link rel="stylesheet" href="css/games.css">
 <link rel="stylesheet" href="css/court.css">
 <link rel="stylesheet" href="css/atmosphere.css">
+<link rel="stylesheet" href="css/cloud.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
@@ -58,6 +59,7 @@
 
 <div class="update-banner" id="updateBanner" hidden><span>A fresh edition of the shelf is ready.</span><button class="btn btn-sm" id="refreshGame">Save & refresh</button></div>
 <div class="update-banner" id="backupBanner" hidden><span id="backupBannerText">This shelf only exists in this browser. Keep a copy.</span><button class="btn btn-sm" id="backupNow">Back up</button><button class="btn btn-ghost btn-sm" id="backupLater">Not now</button></div>
+<div class="update-banner cloud-nudge" id="cloudNudge" hidden><span id="cloudNudgeText"></span><button class="btn btn-sm" id="cloudNudgeOpen">Cloud save</button><button class="btn btn-ghost btn-sm" id="cloudNudgeLater">Not now</button></div>
 <div class="storage-warn" id="recoveryWarn" hidden>Your previous save could not be read. Its original contents are kept in a recovery file under More. You can also restore a backup.</div>
 <div class="storage-warn" id="storageWarn" hidden>Your latest changes are only in memory: browser storage is unavailable or full. Use More → Back up before closing this page.</div>
 
@@ -215,8 +217,10 @@
     <button class="btn tray-item" id="muteBtn" aria-pressed="false"><span>Sound</span><small>Small noises</small></button>
     <button class="btn tray-item" id="narratorBtn" aria-pressed="false"><span>Narrator</span><small>Reads the notes aloud</small></button>
     <button class="btn tray-item" id="voiceBtn" title="Choose who reads the notes out loud."><span>Voice</span><small>Who does the reading</small></button>
+    <button class="btn tray-item" id="nudgeBtn" aria-pressed="false" hidden><span>Nudges</span><small>A buzz when something goes wrong</small></button>
   </div></section>
   <section class="tray-section" aria-labelledby="traySaves"><h3 id="traySaves">Your save</h3><p class="tray-explainer">Saved on this device. A backup keeps your household safe.</p><div class="tray-grid">
+    <button class="btn tray-item" id="cloudBtn" aria-haspopup="dialog" hidden><span>Cloud save</span><small id="cloudBtnSub">Off</small></button>
     <button class="btn tray-item" id="exportBtn"><span>Back up</span><small>Download this shelf</small></button>
     <button class="btn tray-item" id="transferBtn"><span>Move to another device</span><small>Email or share a backup</small></button>
     <button class="btn tray-item" id="importBtn"><span>Restore</span><small>Load a backup file</small></button>
@@ -423,6 +427,63 @@
   <div class="sheet-head"><h2>Replace this shelf?</h2></div>
   <p id="restoreSummary"></p><p class="hint">Keep a backup of your current residents if you might want them back.</p>
   <div class="studio-actions"><button class="btn btn-ghost" id="restoreCancel">Cancel</button><button class="btn" id="restoreBackup">Back up current shelf</button><button class="btn btn-primary" id="restoreConfirm">Replace shelf</button></div>
+</div></div>
+<!-- Only reachable when src/cloud/config.js is filled in. ui/cloud.js shows one part at a time. -->
+<div class="veil" id="cloudVeil"><div class="sheet sheet-cloud">
+  <div class="sheet-head"><div><span class="eyebrow">Entirely optional</span><h2>Cloud save</h2></div><button class="btn btn-ghost btn-sm" id="cloudClose">Close</button></div>
+  <p class="cloud-status" id="cloudStatus" role="status" aria-live="polite"></p>
+  <section class="cloud-part" id="cloudOff" aria-label="Cloud save is off">
+    <p>Cloud save keeps a copy of this shelf on a server, so it can follow you to a phone or another browser.</p>
+    <p class="hint">Nothing leaves this device until you turn it on. No account is needed to play, now or later.</p>
+    <div class="cloud-actions"><button class="btn btn-primary" id="cloudEnable">Turn on cloud save</button></div>
+  </section>
+  <section class="cloud-part cloud-conflict" id="cloudConflict" aria-labelledby="cloudConflictTitle" hidden>
+    <h3 id="cloudConflictTitle">Two shelves, one household</h3>
+    <p>This device and the cloud copy have both moved on without each other. Choose the shelf to keep. The other is kept on this device for a week, if there is room, so you can undo.</p>
+    <div class="cloud-compare">
+      <article class="cloud-shelf"><h4>This device</h4><p id="cloudLocalSummary"></p></article>
+      <article class="cloud-shelf"><h4>The cloud copy</h4><p id="cloudRemoteSummary"></p></article>
+    </div>
+    <div class="cloud-actions"><button class="btn" id="cloudKeepLocal">Keep this device</button><button class="btn" id="cloudUseRemote">Use the cloud copy</button></div>
+  </section>
+  <section class="cloud-part" id="cloudRepair" hidden>
+    <p>The cloud copy could not be read, so it was left alone. The shelf on this device is untouched.</p>
+    <div class="cloud-actions"><button class="btn" id="cloudRepairBtn">Replace the cloud copy with this shelf</button></div>
+  </section>
+  <section class="cloud-part" id="cloudAnon" hidden>
+    <p>Cloud save is on. This browser holds the only key. Add an email so you can get back in from anywhere.</p>
+  </section>
+  <section class="cloud-part" id="cloudSignIn" aria-labelledby="cloudSignInTitle" hidden>
+    <h3 id="cloudSignInTitle">Sign in on this device</h3>
+    <p class="hint">We email a code. If this device and the account both have residents, you choose which shelf stays.</p>
+  </section>
+  <form class="cloud-part cloud-form" id="cloudEmailForm" novalidate hidden>
+    <label for="cloudEmail">Your email</label>
+    <div class="cloud-row"><input type="email" id="cloudEmail" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" maxlength="254" placeholder="you@example.com"><button class="btn" type="submit" id="cloudSendCode">Send me a code</button></div>
+  </form>
+  <form class="cloud-part cloud-form" id="cloudCodeForm" novalidate hidden>
+    <label for="cloudCode">6 digit code</label>
+    <div class="cloud-row"><input type="text" id="cloudCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="123456"><button class="btn btn-primary" type="submit" id="cloudConfirm">Confirm</button></div>
+  </form>
+  <section class="cloud-part" id="cloudAccount" hidden>
+    <dl class="cloud-facts"><div><dt>Email</dt><dd id="cloudEmailShown"></dd></div><div><dt>Last synced</dt><dd id="cloudSynced"></dd></div></dl>
+    <div class="cloud-actions"><button class="btn btn-primary" id="cloudSyncNow">Sync now</button><button class="btn" id="cloudSignOut">Sign out of this device</button></div>
+    <p class="hint" id="cloudSignOutHint">Signing out stops the copying. The shelf on this device stays put.</p>
+  </section>
+  <section class="cloud-part" id="cloudUndo" hidden>
+    <p id="cloudUndoText"></p>
+    <div class="cloud-actions"><button class="btn" id="cloudUndoBtn">Undo</button></div>
+  </section>
+  <div class="cloud-part cloud-more" id="cloudSignInLink" hidden><button class="btn btn-ghost" id="cloudSignInOpen">Already have an account? Sign in on this device</button></div>
+  <div class="cloud-part cloud-more" id="cloudSignInBack" hidden><button class="btn btn-ghost" id="cloudSignInCancel">Back</button></div>
+  <section class="cloud-part cloud-danger" id="cloudDelete" hidden>
+    <button class="btn btn-ghost" id="cloudDeleteStart">Delete my cloud data and account</button>
+    <div id="cloudDeleteConfirm" role="group" aria-labelledby="cloudDeleteQuestion" hidden>
+      <p id="cloudDeleteQuestion"><b>Delete the cloud copy and the account?</b> The shelf on this device stays exactly as it is. There is no undo for this part.</p>
+      <div class="cloud-actions"><button class="btn" id="cloudDeleteCancel">Keep the account</button><button class="btn cloud-destroy" id="cloudDeleteConfirmBtn">Delete for good</button></div>
+    </div>
+  </section>
+  <p class="hint cloud-stored">Stored: this shelf (the same data as a backup file), your email if you add one, and when it was last saved. Nothing else.</p>
 </div></div>
 <div class="veil" id="cardVeil"><div class="sheet sheet-card" id="cardSheet"></div></div>
 <div class="veil" id="postcardVeil">
