@@ -33,13 +33,69 @@ test('every emergency is well formed, fits its cast and ships a known glyph', ()
       for (const o of c.outcomes) {
         assert.ok(['good', 'bad', 'weird'].includes(o.tone));
         assert.ok(o.stamp && o.stamp.length <= 16, e.id + ' stamp too long: ' + o.stamp);
-        assert.ok(o.souls > 0 && o.souls <= 40);
+        assert.ok(o.souls >= 6 && o.souls <= 30, e.id + ' pays ' + o.souls + ' souls');
         assert.ok(o.text.length <= 280, e.id + ' outcome over budget');
         if (o.grudge === 'b' || o.b) assert.ok(e.pair, e.id + ' affects {b} without a pair');
+        if (o.bond !== undefined) assert.equal(o.bond, 'a', e.id + ' bond is rationed to {a}');
+        if (o.grudge !== undefined) assert.ok(['a', 'b'].includes(o.grudge), e.id + ' grudge ' + o.grudge);
+        if (o.curio !== undefined) assert.equal(o.curio, true, e.id + ' curio is a flag');
+        for (const who of ['a', 'b']) for (const [need, delta] of Object.entries(o[who] || {})) {
+          assert.ok(['food', 'fuss', 'clean'].includes(need), e.id + ' unknown need ' + need);
+          assert.ok(Number.isFinite(delta) && Math.abs(delta) <= 40, e.id + ' need delta ' + delta);
+        }
       }
     }
   }
-  assert.ok(EMERGENCIES.length >= 40);
+  assert.ok(EMERGENCIES.length >= 60);
+  assert.ok(EMERGENCIES.filter(e => e.pair).length >= 13, 'enough pair cards for a full shelf');
+});
+
+test('emergency copy uses only {a} and {b}, curly quotes, stamped headings and no dashes', () => {
+  assert.ok(!/[—–]/.test(JSON.stringify(EMERGENCIES)), 'a dash crept into an emergency');
+  for (const e of EMERGENCIES) {
+    const all = [e.title, ...e.choices.flatMap(c => [c.label, ...c.outcomes.map(o => o.text)])];
+    for (const text of all) {
+      for (const [slot] of text.matchAll(/\{[^}]*\}/g)) assert.ok(['{a}', '{b}'].includes(slot), e.id + ' uses ' + slot);
+      assert.ok(!/["']/.test(text), e.id + ' uses a straight quote in: ' + text);
+    }
+    assert.ok(e.title.length <= 110, e.id + ' title too long for the card');
+    for (const c of e.choices) {
+      assert.ok(c.label.length <= 40, e.id + ' choice label too long: ' + c.label);
+      for (const o of c.outcomes) assert.match(o.stamp, /^[A-Z][A-Z0-9 ?!’-]*$/, e.id + ' stamp ' + o.stamp);
+    }
+  }
+});
+
+test('every emergency resolves on every choice and every outcome, with every name filled', () => {
+  for (const e of EMERGENCIES) {
+    e.choices.forEach((choice, ci) => {
+      choice.outcomes.forEach((outcome, oi) => {
+        const s = household(2);
+        s.mayhem.queue.push({ uid: 900, id: e.id, a: 'm0', ...(e.pair ? { b: 'm1' } : {}), at: NOW });
+        const before = s.pets.map(p => ({ ...p.needs }));
+        // The first roll picks the outcome; later rolls stay high so no bonus curio sneaks in.
+        let first = true;
+        const rnd = () => { if (first) { first = false; return (oi + 0.5) / choice.outcomes.length; } return 0.99; };
+        const r = resolveEmergency(s, 900, ci, NOW, rnd);
+        const label = e.id + ' choice ' + ci + ' outcome ' + oi;
+        assert.ok(r, label + ' did not resolve');
+        assert.equal(r.stamp, outcome.stamp, label);
+        assert.equal(r.souls, outcome.souls, label);
+        for (const text of [r.title, r.choice, r.text, s.notes[0].text]) assert.ok(!/\{[a-z]+\}/.test(text), label + ' left a name blank: ' + text);
+        if (outcome.text.includes('{a}')) assert.ok(r.text.includes('Agnes'), label);
+        if (outcome.text.includes('{b}')) assert.ok(r.text.includes('Pip'), label);
+        assert.equal(!!r.curio, !!outcome.curio, label + ' curio');
+        if (outcome.grudge) assert.equal(r.grudge, outcome.grudge === 'a' ? 'Agnes' : 'Pip', label + ' grudge');
+        ['a', 'b'].forEach((who, i) => {
+          for (const [need, delta] of Object.entries(outcome[who] || {})) {
+            const now = s.pets[i].needs[need];
+            assert.ok(delta > 0 ? now > before[i][need] : now < before[i][need], label + ' ' + who + ' ' + need);
+          }
+        });
+        assert.equal(s.mayhem.queue.length, 0, label);
+      });
+    });
+  }
 });
 
 test('curios, ranks, omens and chores are consistent', () => {

@@ -33,13 +33,16 @@ function playAll(s, caseId, ruling, choice = 'gavel', rnd = seededRandom(3)) {
   return { ep, result, said };
 }
 
-test('twelve cases, fairly split, each with six questions, clues that point at the truth and three rulings', () => {
-  assert.equal(COURT_CASES.length, 12);
+test('eighteen cases, fairly split, each with six questions, clues that point at the truth and three rulings', () => {
+  assert.equal(COURT_CASES.length, 18);
+  assert.equal(new Set(COURT_CASES.map(k => k.id)).size, COURT_CASES.length, 'case ids are unique');
   const truths = COURT_CASES.map(k => k.truth);
-  for (const t of ['plaintiff', 'defendant', 'both']) assert.equal(truths.filter(x => x === t).length, 4, t);
+  for (const t of ['plaintiff', 'defendant', 'both']) assert.equal(truths.filter(x => x === t).length, 6, t);
   for (const k of COURT_CASES) {
     assert.equal(k.questions.length, 6, k.id);
     assert.ok(k.questions.filter(q => q.clue).length >= 2, k.id + ' needs at least two clues');
+    assert.ok(k.questions.filter(q => !q.clue).length >= 2, k.id + ' needs at least two questions that are just for laughs');
+    for (const q of k.questions) if (q.party) assert.ok(['p', 'd'].includes(q.party), k.id + ' party ' + q.party);
     assert.ok(k.questions.some(q => q.sass), k.id + ' needs a zinger');
     for (const r of ['plaintiff', 'defendant', 'both']) assert.ok(k.rulings[r]?.length, k.id + ' ruling ' + r);
     assert.ok(k.hallway.p && k.hallway.d, k.id + ' hallway');
@@ -57,6 +60,58 @@ test('twelve cases, fairly split, each with six questions, clues that point at t
 
 test('the script never uses a dash as punctuation', () => {
   assert.ok(!/[—–]/.test(JSON.stringify([COURT_CASES, HAPPENINGS, ADS])));
+});
+
+// Every string a case can put on screen.
+const caseStrings = k => [k.title, k.claim, k.asking, ...k.plaintiff.map(l => l[1]), ...k.defendant.map(l => l[1]),
+  ...k.questions.flatMap(q => [q.ask, q.clue || '', ...q.lines.map(l => l[1])]), ...Object.values(k.rulings).flat().map(l => l[1]), k.hallway.p, k.hallway.d];
+
+test('cases only use the names the engine fills, curly quotes, and stay readable aloud', () => {
+  for (const k of COURT_CASES) {
+    for (const text of caseStrings(k)) {
+      for (const [slot] of text.matchAll(/\{[^}]*\}/g)) assert.ok(['{p}', '{d}', '{j}'].includes(slot), k.id + ' uses ' + slot + ' in: ' + text);
+      assert.ok(!/["']/.test(text), k.id + ' uses a straight quote in: ' + text);
+      assert.ok(text.length <= 280, k.id + ' line over budget: ' + text);
+    }
+    for (const q of k.questions) if (q.clue) assert.ok(q.clue.length <= 140, k.id + ' clue too long for the notes: ' + q.clue);
+  }
+});
+
+// Ask a chosen set of questions, settle every scene, rule, and collect every line and note.
+function playQuestions(s, caseId, indices, ruling, choice, rnd, cast = { plaintiffId: 'g0', defendantId: 'g1' }) {
+  const ep = castEpisode(s, { caseId, ...cast }, rnd);
+  const said = [...episodeOpening(ep, rnd)];
+  for (const index of indices) {
+    const r = episodeAsk(ep, index, rnd);
+    assert.ok(r, caseId + ' question ' + index + ' could not be asked');
+    said.push(...r.lines);
+    if (r.happening) { said.push(...r.happening.lines); said.push(...resolveHappening(ep, r.happening, choice)); }
+  }
+  const result = episodeRule(ep, ruling, rnd);
+  said.push(...result.ruling, ...result.jury, result.audience, ...result.hallway);
+  return { ep, said: [...said, ...ep.clues.map(t => ({ t }))], result };
+}
+
+test('every question, every ruling and every scene choice plays with every name filled, even with a neighbour standing in', () => {
+  const halves = [[0, 1, 2], [3, 4, 5], [5, 3, 1], [4, 2, 0]];
+  for (const k of COURT_CASES) {
+    const witnesses = new Set(k.questions.flatMap(q => q.lines.filter(l => l[0] === 'npc').map(l => l[2])));
+    for (const ruling of ['plaintiff', 'defendant', 'both']) {
+      halves.forEach((indices, i) => {
+        const choice = i % 2 ? 'let' : 'gavel';
+        const { said, result, ep } = playQuestions(household(3), k.id, indices, ruling, choice, seededRandom(k.id.length * 7 + i));
+        assert.deepEqual(said.filter(line => /\{[a-z]+\}/.test(line.t)), [], k.id + ' ' + ruling + ' ' + indices);
+        assert.equal(result.correct, ruling === k.truth, k.id);
+        for (const line of said) if (line.s === 'npc') assert.ok(COURT_CAST[line.who], k.id + ' npc ' + line.who);
+        assert.equal(ep.clues.length, indices.filter(n => k.questions[n].clue).length, k.id + ' notes one clue per clue question');
+        const solo = playQuestions(household(1), k.id, indices, ruling, choice, seededRandom(i + 11), { plaintiffId: 'g0' });
+        assert.equal(solo.ep.d.kind, 'npc');
+        assert.ok(!witnesses.has(solo.ep.d.id), k.id + ' cast a witness as the defendant');
+        assert.ok(!solo.ep.jury.some(j => witnesses.has(j.id)), k.id + ' seated a witness on the jury');
+        assert.deepEqual(solo.said.filter(line => /\{[a-z]+\}/.test(line.t)), [], k.id + ' solo ' + ruling + ' ' + indices);
+      });
+    }
+  }
 });
 
 test('the shelf is the jury: other residents first, neighbours fill the rest, witnesses never sit', () => {
