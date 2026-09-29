@@ -92,7 +92,7 @@ test('a coffin holds a curio that lands in the cabinet', async ({ page }) => {
   expect((await saved(page)).mayhem.souls).toBe(160);
   await page.locator('#mayhemSheet [data-mh="cabinet"]').first().click();
   await expect(page.locator('#mayhemSheet .mh-rank-card h3')).toBeVisible();
-  await expect(page.locator('#mayhemSheet button.mh-shelf-item')).toHaveCount(1);
+  await expect(page.locator('#mayhemSheet button.mh-shelf-item:not(.missing)')).toHaveCount(1);
   await noHorizontalOverflow(page);
   await page.keyboard.press('Escape');
   await expect(page.locator('#mayhemVeil')).not.toHaveClass(/open/);

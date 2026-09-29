@@ -1,7 +1,7 @@
 import {
   accrueMayhem, nextEmergencyIn, describeEmergency, resolveEmergency, openCoffin, coffinCost, drawOmen,
   omenPending, todaysOmen, ensureChores, choreInfo, rankInfo, curioCount, onMayhem, CURIO_BY_ID, RARITY_BY_ID,
-  queueCap, pokeDrawer, POKE_COST
+  queueCap, pokeDrawer, POKE_COST, commissionCost, commissionCurio, pityActive
 } from '../engine/mayhem.js';
 import { mayhemState } from '../mayhem-state.js';
 import { CURIOS, RARITIES, RANKS, QUIET_LINES } from '../content/mayhem.js';
@@ -150,8 +150,8 @@ function showEmergency(state) {
   sheet.innerHTML = head('Emergency ' + index + ' of ' + m.queue.length, 'Something has happened', 'Later') +
     '<div class="mh-card"><div class="mh-scene"><div class="mh-prop">' + glyph(info.template.art) + '</div></div>' +
     '<h3 class="mh-title">' + esc(info.title) + '</h3>' +
-    '<div class="mh-choices">' + info.choices.map((label, i) => '<button class="mh-choice" type="button" data-choice="' + i + '"><span>' + (i ? 'B' : 'A') + '</span>' + esc(label) + '</button>').join('') + '</div>' +
-    '<p class="mh-fineprint">Every choice pays souls. Not every choice goes well.</p></div>';
+    '<div class="mh-choices">' + info.choices.map((label, i) => '<button class="mh-choice" type="button" data-choice="' + i + '" aria-describedby="mhOdds' + i + '"><span>' + (i ? 'B' : 'A') + '</span><span class="mh-choice-text">' + esc(label) + '</span><em class="mh-odds-tag odds-' + info.odds[i].level + '" id="mhOdds' + i + '">' + esc(info.odds[i].label) + '</em></button>').join('') + '</div>' +
+    '<p class="mh-fineprint">Every choice pays souls. Who is involved changes the odds: menace makes things worse, trust turns them aside.</p></div>';
   const scene = sheet.querySelector('.mh-scene');
   scene.prepend(sprite(info.a, 'mh-actor-a'));
   if (info.b) scene.appendChild(sprite(info.b, 'mh-actor-b'));
@@ -222,6 +222,7 @@ function showCoffin(state) {
   sheet.innerHTML = head('The undertaker’s back room', 'Open a coffin') +
     '<div class="mh-coffin-stage"><button class="mh-coffin-box" type="button" data-mh="pry"' + (short > 0 ? ' disabled' : '') + ' aria-label="Pry the coffin open for ' + cost + ' souls">' + glyph('coffin') + '</button></div>' +
     '<p class="mh-coffin-note">' + (short > 0 ? 'You need ' + short + ' more souls. Deal with a few emergencies. Someone always digs something up.' : 'Tap the coffin to pry it open. <b>' + cost + ' souls.</b> You have ' + m.souls + '.') + '</p>' +
+    (pityActive(state) ? '<p class="mh-coffin-note mh-heavy">This one is heavier than the others. Something old is in there, and it has waited long enough.</p>' : '') +
     '<p class="mh-odds">' + RARITIES.map(r => '<span class="rarity-' + r.id + '">' + esc(r.label) + '</span>').join(' · ') + '</p>';
   open();
   sheet.querySelector('.mh-coffin-box:not([disabled])')?.focus({ preventScroll: true });
@@ -264,7 +265,7 @@ function showOmen(state, revealed = null) {
   sheet.innerHTML = head('Night ' + m.omen.streak + (m.omen.streak > 1 ? ' in a row' : ''), 'Tonight’s omen') +
     '<div class="mh-tarot-stage"><div class="mh-tarot face' + (revealed ? ' flipping' : '') + '"><span class="mh-tarot-face"><span class="mh-tarot-art">' + glyph(omenGlyph(omen.id)) + '</span><b>' + esc(omen.name) + '</b></span></div></div>' +
     '<p class="mh-omen-line">' + esc(omen.line) + '</p>' +
-    (revealed ? '<ul class="mh-rewards"><li class="souls">' + glyph('soul') + '+' + revealed.gift + ' souls for showing up</li>' + (m.omen.streak < 7 ? '<li>Night ' + m.omen.streak + ' of 7. The seventh night leaves something rare on the step.</li>' : '') + '</ul>' : '') +
+    (revealed ? '<ul class="mh-rewards"><li class="souls">' + glyph('soul') + '+' + revealed.gift + ' souls for showing up</li>' + (revealed.graceUsed ? '<li class="good">The candle guttered while you were away. It held. One missed night is forgiven, and you get another after the next seventh night.</li>' : '') + (m.omen.streak < 7 ? '<li>Night ' + m.omen.streak + ' of 7. The seventh night leaves something rare on the step.</li>' : '') + '</ul>' : '') +
     (revealed?.bonus ? '<div class="mh-drop"><span class="mh-drop-kicker">Seven nights. Something was left on the step.</span>' + curioCard(revealed.bonus) + '</div>' : '') +
     '<div class="mh-next"><button class="btn btn-primary" type="button" data-mh="' + (mayhemState(state).queue.length ? 'emergency' : 'close') + '">' + (mayhemState(state).queue.length ? 'See what went wrong' : 'Back to the shelf') + '</button></div>';
   open();
@@ -292,7 +293,7 @@ function showCabinet(state) {
       const n = m.curios[c.id] || 0;
       return n
         ? '<button class="mh-shelf-item rarity-' + r.id + '" type="button" data-curio="' + c.id + '"><span class="mh-curio-art">' + glyph(c.glyph) + '</span><b>' + esc(c.name) + '</b>' + (n > 1 ? '<em>×' + n + '</em>' : '') + '</button>'
-        : '<span class="mh-shelf-item missing rarity-' + r.id + '"><span class="mh-curio-art">' + glyph(c.glyph) + '</span><b>???</b></span>';
+        : '<button class="mh-shelf-item missing rarity-' + r.id + '" type="button" data-order="' + c.id + '" aria-label="A missing ' + esc(r.label.toLowerCase()) + ' curio. Special order for ' + commissionCost(c.id) + ' souls."><span class="mh-curio-art">' + glyph(c.glyph) + '</span><b>???</b></button>';
     }).join('');
     const have = CURIOS.filter(c => c.rarity === r.id && m.curios[c.id]).length, total = CURIOS.filter(c => c.rarity === r.id).length;
     return '<section class="mh-shelf-group"><h3 class="rarity-' + r.id + '">' + esc(r.label) + ' <small>' + have + '/' + total + '</small></h3><div class="mh-shelf-grid">' + items + '</div></section>';
@@ -309,6 +310,26 @@ function showCabinet(state) {
     groups +
     (log ? '<section class="mh-log"><h3>The incident reports</h3><ul>' + log + '</ul></section>' : '');
   open();
+}
+function showOrder(id) {
+  const curio = CURIO_BY_ID[id], box = byId('mhCurioDetail');
+  if (!curio || !box || !S) return;
+  const m = mayhemState(S), rarity = RARITY_BY_ID[curio.rarity], cost = commissionCost(id), short = Math.max(0, cost - m.souls);
+  box.hidden = false;
+  box.innerHTML = '<div class="mh-curio-card rarity-' + rarity.id + ' fresh"><span class="mh-curio-flag">Special order</span><span class="mh-curio-art">' + glyph(curio.glyph) + '</span>' +
+    '<span class="mh-rarity">' + esc(rarity.label) + '</span><b>???</b><p>The undertaker can find this one for you. He will not say what it is until it is on the counter.</p>' +
+    '<button class="btn btn-primary" type="button" data-order-buy="' + esc(id) + '"' + (short ? ' disabled' : '') + '>' + (short ? 'Need ' + short + ' more souls' : 'Order it · ' + cost + ' souls') + '</button></div>';
+  box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+function buyOrder(state, id) {
+  const result = commissionCurio(state, id);
+  if (!result) { showOrder(id); return; }
+  save();
+  playAchievement();
+  showCabinet(state);
+  const box = byId('mhCurioDetail');
+  if (box) { box.hidden = false; box.innerHTML = curioCard({ curio: result.curio, rarity: result.rarity, duplicate: false, refund: 0 }).replace('New curio', 'Delivered · ' + result.cost + ' souls'); box.scrollIntoView({ block: 'nearest' }); }
+  refresh();
 }
 function showCurio(id) {
   const curio = CURIO_BY_ID[id], box = byId('mhCurioDetail');
@@ -367,12 +388,14 @@ export function initMayhem(state, onRefresh) {
     else if (event.type === 'chores-complete') later('All three chores done. A free curio: ' + event.prize.curio.name + (event.prize.duplicate ? ' (duplicate, +' + event.prize.refund + ' souls)' : '') + '.');
   });
   document.addEventListener('click', event => {
-    const control = event.target.closest?.('[data-mh],[data-choice],[data-curio]');
+    const control = event.target.closest?.('[data-mh],[data-choice],[data-curio],[data-order],[data-order-buy]');
     if (!control || !S) return;
     if (control.closest('#mayhemVeil') === null && !control.closest('#mayhemAlert,#mayhemDesk')) return;
     if (control.getAttribute('aria-disabled') === 'true' && control.dataset.mh === 'coffin') { showCoffin(S); return; }
     if (control.dataset.choice != null) { choose(S, Number(control.dataset.choice)); return; }
     if (control.dataset.curio) { showCurio(control.dataset.curio); return; }
+    if (control.dataset.order) { showOrder(control.dataset.order); return; }
+    if (control.dataset.orderBuy) { buyOrder(S, control.dataset.orderBuy); return; }
     const action = control.dataset.mh;
     if (action === 'close') close();
     else if (action === 'emergency') showEmergency(S);

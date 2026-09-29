@@ -135,6 +135,12 @@ button.mh-tile:hover{transform:translateY(-2px);border-color:var(--edge)}
 .mh-choice{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:12px 16px;border-radius:14px;cursor:pointer;text-align:left;font:600 16px/1.25 var(--body);color:var(--ink);
   border:1px solid var(--edge);background:linear-gradient(180deg,#2a1c30,#1b1220);transition:transform .12s ease,border-color .12s ease,background .12s ease}
 .mh-choice span{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;font:700 13px var(--body);background:#0006;color:var(--mh-candle)}
+.mh-choice .mh-choice-text{flex:1;display:block;width:auto;height:auto;border-radius:0;background:none;color:inherit;font:inherit;place-items:normal}
+.mh-odds-tag{flex:none;align-self:center;font:600 11px/1 var(--body);font-style:normal;letter-spacing:.02em;padding:5px 8px;border-radius:99px;border:1px solid var(--hair-lit);color:var(--ink-2);background:#0004;white-space:nowrap}
+.mh-odds-tag.odds-0{color:#9fe0c4;border-color:#9fe0c455}
+.mh-odds-tag.odds-2{color:#f2c083;border-color:#f2c08355}
+.mh-odds-tag.odds-3{color:#f0908f;border-color:#f0908f66}
+.mh-heavy{color:var(--mh-candle);font-style:italic}
 .mh-choice:hover,.mh-choice:focus-visible{transform:translateY(-2px);border-color:var(--mh-candle);background:linear-gradient(180deg,#3a2438,#22141f)}
 .mh-choice:focus-visible{outline:2px solid var(--mh-candle);outline-offset:2px}
 .mh-fineprint{margin:0;font-size:12px;color:var(--ink-3);text-align:center}
