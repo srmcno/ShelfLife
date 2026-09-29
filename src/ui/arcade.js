@@ -1,6 +1,6 @@
 import { ARCADE_GAMES, ARCADE_BY_ID, FRENZY_ITEMS } from '../content/arcade.js';
 import {
-  startGame, frenzyStep, stackStep, stackDrop, seanceShown, seanceInput, seanceBeat, whackStep, whackHit, finishRun, FRENZY
+  startGame, frenzyStep, stackStep, stackDrop, seanceShown, seanceInput, seanceBeat, whackStep, whackHit, finishRun, frenzyDirection, FRENZY
 } from '../engine/arcade.js';
 import { arcadeState } from '../arcade-state.js';
 import { mayhemState } from '../mayhem-state.js';
@@ -354,7 +354,7 @@ export function initArcade(state, onRefresh) {
     const field = sheet.querySelector('[data-ar-field]');
     if (e.key === 'p' || e.key === 'P') { e.preventDefault(); pause(!run.paused); return; }
     if (run.paused) return;
-    if (run.id === 'frenzy' && ['ArrowLeft', 'ArrowRight', 'a', 'd', 'A', 'D'].includes(e.key)) { e.preventDefault(); run.game.target = null; run.game.dir = /Left|a/i.test(e.key) && !/d/i.test(e.key) ? -1 : 1; }
+    if (run.id === 'frenzy' && frenzyDirection(e.key) !== null) { e.preventDefault(); run.game.target = null; run.game.dir = frenzyDirection(e.key); }
     else if (run.id === 'stack' && (e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); dropCoffin(field); }
     else if (run.id === 'seance' && /^[1-4]$/.test(e.key) && !e.repeat) { e.preventDefault(); pressCandle(field, Number(e.key) - 1); }
     else if (run.id === 'whack' && /^[1-9]$/.test(e.key) && !e.repeat) {
@@ -362,7 +362,7 @@ export function initArcade(state, onRefresh) {
       e.preventDefault(); hitGrave(field, Number(e.key) - 1);
     }
   });
-  document.addEventListener('keyup', e => { if (run?.id === 'frenzy' && ['ArrowLeft', 'ArrowRight', 'a', 'd', 'A', 'D'].includes(e.key)) run.game.dir = 0; });
+  document.addEventListener('keyup', e => { if (run?.id === 'frenzy' && frenzyDirection(e.key) !== null) run.game.dir = 0; });
   document.addEventListener('visibilitychange', () => { if (document.hidden && run) pause(true); });
   veil.addEventListener('click', e => { if (e.target === veil) close(); });
 }

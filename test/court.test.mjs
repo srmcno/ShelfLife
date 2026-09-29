@@ -4,7 +4,7 @@ import { blankState, normalizeState } from '../src/state.js';
 import { COURT_CASES, COURT_CAST, HAPPENINGS, RANDOM_HAPPENINGS, ADS, QUESTIONS_PER_EPISODE, JURY_EXTRAS, STAND_INS } from '../src/content/court.js';
 import { COURT_ART } from '../src/art/court-cast.js';
 import {
-  castEpisode, episodeOpening, episodeQuestions, episodeAsk, questionsLeft, startHappening, resolveHappening, randomHappening,
+  castEpisode, standInFor, episodeOpening, episodeQuestions, episodeAsk, questionsLeft, startHappening, resolveHappening, randomHappening,
   episodeBreak, episodeRule, courtFinish, courtCases, nextCaseId, JURY_SEATS
 } from '../src/engine/court.js';
 import { seededRandom } from '../src/engine/arcade.js';
@@ -72,6 +72,19 @@ test('the shelf is the jury: other residents first, neighbours fill the rest, wi
   assert.notEqual(solo.d.id, 'moth');
   assert.equal(solo.jury.length, JURY_SEATS);
   assert.equal(castEpisode(blankState(), {}), null);
+});
+
+test('a solo household gets the neighbour its lobby named, whatever the dice say', () => {
+  const alone = household(1);
+  for (const k of COURT_CASES) {
+    for (const salt of [0, 1, 7, 42]) {
+      const named = standInFor(k.id, salt);
+      for (const seed of [1, 2, 3]) {
+        const ep = castEpisode(alone, { caseId: k.id, plaintiffId: 'g0', standInSalt: salt }, seededRandom(seed));
+        assert.equal(ep.d.id, named);
+      }
+    }
+  }
 });
 
 test('every case plays start to finish with every name filled in', () => {

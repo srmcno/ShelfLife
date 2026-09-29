@@ -12,6 +12,13 @@ export { normalizeArcade, blankArcade } from '../arcade-state.js';
    Positions are fractions of the playfield: x 0..1 left to right, y 0..1
    top to bottom. Time is in seconds. */
 
+// Feeding Frenzy keyboard control: left or right, or null for any other key.
+export function frenzyDirection(key) {
+  if (key === 'ArrowLeft' || key === 'a' || key === 'A') return -1;
+  if (key === 'ArrowRight' || key === 'd' || key === 'D') return 1;
+  return null;
+}
+
 export function seededRandom(seed = 1) {
   let a = (seed >>> 0) || 1;
   return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };

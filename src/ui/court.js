@@ -26,7 +26,7 @@ const TYPE_MS = 20;
 const HEADS = 9;
 
 let S = null, refresh = () => {};
-let lobby = { caseId: '', plaintiffId: '', defendantId: '' };
+let lobby = { caseId: '', plaintiffId: '', defendantId: '', standInSalt: Math.floor(Math.random() * 1000) };
 let ep = null, session = 0;
 let queue = [], onDone = null, current = null, typer = 0, onChoice = null;
 const timers = new Set();
@@ -60,13 +60,13 @@ function defaultLobby(petId) {
   const p = pets.find(x => x.id === petId) || pets.find(x => x.id === lobby.plaintiffId) || pets[0];
   const others = pets.filter(x => x.id !== p.id);
   const d = others.find(x => x.id === lobby.defendantId) || others[Math.floor(Math.random() * others.length)] || null;
-  lobby = { caseId: COURT_BY_ID[lobby.caseId] ? lobby.caseId : nextCaseId(S), plaintiffId: p.id, defendantId: d?.id || '' };
+  lobby = { caseId: COURT_BY_ID[lobby.caseId] ? lobby.caseId : nextCaseId(S), plaintiffId: p.id, defendantId: d?.id || '', standInSalt: lobby.standInSalt };
 }
 function showLobby() {
   stopAll(); ep = null;
   const c = courtroomState(S), cases = courtCases(S);
   const k = COURT_BY_ID[lobby.caseId];
-  const preview = castEpisode(S, lobby, () => 0);
+  const preview = castEpisode(S, lobby, () => 0);  // lobby.standInSalt names the same neighbour the episode will use
   const adventure = escapadeView(S).active, forUs = adventure && !adventure.playDone && adventure.approach.activity === 'court';
   sheet.className = 'sheet sheet-court sc-lobby';
   sheet.innerHTML = head('Shelf Court', 'Daytime television · ' + c.episodes + ' episodes aired') +

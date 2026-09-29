@@ -53,7 +53,16 @@ export function nextCaseId(state, rnd = Math.random, not = '') {
 
 // Cast the episode. The chosen resident sues; another resident is sued (or,
 // in a household of one, a neighbour stands in). Everyone else is the jury.
-export function castEpisode(state, { caseId, plaintiffId, defendantId } = {}, rnd = Math.random) {
+// The neighbour who stands in when a household has no second resident. The
+// same salt always names the same neighbour, so the lobby can promise one and
+// the episode can deliver it.
+export function standInFor(caseId, salt = 0) {
+  const k = COURT_BY_ID[caseId];
+  const witnesses = new Set((k ? k.questions : []).flatMap(q => q.lines.filter(l => l[0] === 'npc').map(l => l[2])));
+  const eligible = STAND_INS.filter(id => !witnesses.has(id));
+  return eligible[Math.abs(Math.floor(salt)) % eligible.length];
+}
+export function castEpisode(state, { caseId, plaintiffId, defendantId, standInSalt } = {}, rnd = Math.random) {
   const k = COURT_BY_ID[caseId] || COURT_BY_ID[nextCaseId(state, rnd)];
   const pets = state.pets || [];
   const plaintiff = petById(state, plaintiffId) || pets[0];
@@ -61,7 +70,7 @@ export function castEpisode(state, { caseId, plaintiffId, defendantId } = {}, rn
   const others = pets.filter(p => p.id !== plaintiff.id);
   const defendantPet = petById(state, defendantId) && defendantId !== plaintiff.id ? petById(state, defendantId) : others.length ? pick(others, rnd) : null;
   const witnesses = new Set(k.questions.flatMap(q => q.lines.filter(l => l[0] === 'npc').map(l => l[2])));
-  const d = defendantPet ? person(defendantPet) : extra(pick(STAND_INS.filter(id => !witnesses.has(id)), rnd));
+  const d = defendantPet ? person(defendantPet) : extra(Number.isFinite(standInSalt) ? standInFor(k.id, standInSalt) : pick(STAND_INS.filter(id => !witnesses.has(id)), rnd));
   const jury = pets.filter(p => p.id !== plaintiff.id && p.id !== d.id).slice(0, JURY_SEATS).map(person);
   for (const id of JURY_EXTRAS) {
     if (jury.length >= JURY_SEATS) break;

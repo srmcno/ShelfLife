@@ -1,6 +1,6 @@
 /* ================= MAYHEM =================
    The short-session loop. Something goes wrong on the shelf roughly every
-   quarter of an hour (three can pile up while you are away). Each emergency is a
+   twelve minutes (three can pile up while you are away). Each emergency is a
    card with two choices; each choice rolls one of its outcomes. Outcomes pay
    Souls, which buy Coffins, which hold Curios, which fill the Cabinet of
    Curiosities. Souls earned for life set the household's Infamy.

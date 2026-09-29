@@ -27,6 +27,13 @@ async function openHousehold(page, customize = () => {}) {
   await expect(page.locator('#cabinet .piece.pet')).toHaveCount(snapshot.pets.length);
   return snapshot;
 }
+// The page runs in the timezone set in playwright.config.mjs, not the machine's,
+// so "today" for a fixture must be read in that zone or it drifts around midnight UTC.
+function todayKey() {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: 'numeric', day: 'numeric' })
+    .formatToParts(new Date()).map(x => [x.type, x.value]));
+  return parts.year + '-' + (Number(parts.month) - 1) + '-' + Number(parts.day);
+}
 const saved = page => page.evaluate(key => JSON.parse(localStorage.getItem(key)), SAVE_KEY);
 async function noHorizontalOverflow(page) {
   const sizes = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth,
@@ -72,7 +79,12 @@ test('the omen, an emergency and a coffin pay souls, fill the cabinet and surviv
 });
 
 test('a coffin holds a curio that lands in the cabinet', async ({ page }) => {
-  await openHousehold(page, snapshot => { snapshot.mayhem = { souls: 200, lifetime: 200, nextAt: Date.now() + 600000 }; });
+  await openHousehold(page, snapshot => {
+    // Pin today's chores to ones that opening a coffin cannot complete; the real roll depends on the date.
+    const day = todayKey();
+    snapshot.mayhem = { souls: 200, lifetime: 200, nextAt: Date.now() + 600000,
+      chores: { day, list: [{ id: 'feed', have: 0, done: false }, { id: 'fuss', have: 0, done: false }, { id: 'wash', have: 0, done: false }], bonus: false } };
+  });
   await page.locator('#mayhemDesk [data-mh="coffin"]').click();
   await page.locator('#mayhemSheet [data-mh="pry"]').click();
   await expect(page.locator('#mayhemSheet .mh-curio-card')).toBeVisible();
@@ -88,9 +100,9 @@ test('a coffin holds a curio that lands in the cabinet', async ({ page }) => {
 
 test('care pays souls and advances the day’s chores', async ({ page }) => {
   await openHousehold(page, snapshot => {
-    const d = new Date();
-    snapshot.mayhem = { souls: 0, lifetime: 0, nextAt: Date.now() + 600000, omen: { day: d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(), id: 'wet-hand', streak: 1, lastDay: '' },
-      chores: { day: d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(), list: [{ id: 'fuss', have: 0, done: false }, { id: 'rounds', have: 0, done: false }, { id: 'check', have: 0, done: false }], bonus: false } };
+    const day = todayKey();
+    snapshot.mayhem = { souls: 0, lifetime: 0, nextAt: Date.now() + 600000, omen: { day, id: 'wet-hand', streak: 1, lastDay: '' },
+      chores: { day, list: [{ id: 'fuss', have: 0, done: false }, { id: 'rounds', have: 0, done: false }, { id: 'check', have: 0, done: false }], bonus: false } };
     snapshot.pets.forEach(p => { p.needs = { food: 40, fuss: 30, clean: 40 }; });
   });
   await expect(page.locator('#mayhemAlert .mh-alert.calm')).toBeVisible();
