@@ -414,6 +414,12 @@ export function localDayKey(ts = Date.now()) {
   const d = new Date(ts);
   return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
 }
+// The day key `n` calendar days from `ts`, stepping by date rather than by 24 hours so DST cannot skip or repeat a day.
+export function dayKeyOffset(ts, n) {
+  const d = new Date(ts);
+  d.setDate(d.getDate() + n);
+  return localDayKey(d.getTime());
+}
 
 // Trust from games and conspiracies, rationed per resident per local day.
 // Returns how much was actually granted, so the caller can say so honestly.

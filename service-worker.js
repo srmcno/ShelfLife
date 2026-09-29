@@ -18,6 +18,8 @@ const SHELL = [
   "./src/art/court-cast.js",
   "./src/content/arcade.js",
   "./src/engine/arcade.js",
+  "./src/engine/daily.js",
+  "./src/content/daily.js",
   "./src/arcade-state.js",
   "./src/ui/arcade.js",
   "./src/mastery-state.js",

@@ -1,8 +1,9 @@
 import { ARCADE_GAMES, ARCADE_BY_ID, FRENZY_ITEMS } from '../content/arcade.js';
 import {
-  startGame, frenzyStep, stackStep, stackDrop, seanceShown, seanceInput, seanceBeat, whackStep, whackHit, finishRun, frenzyDirection, FRENZY
+  startGame, frenzyStep, stackStep, stackDrop, seanceShown, seanceInput, seanceBeat, whackStep, whackHit, finishRun, frenzyDirection, challengeToday, FRENZY
 } from '../engine/arcade.js';
 import { arcadeState } from '../arcade-state.js';
+import { DAILY_SOULS } from '../content/daily.js';
 import { mayhemState } from '../mayhem-state.js';
 import { GAME_SOULS_PER_DAY } from '../engine/mayhem.js';
 import { localDayKey, save } from '../state.js';
@@ -37,25 +38,38 @@ function head(title, kicker) {
 function showIntro() {
   stop();
   const g = ARCADE_BY_ID[gameId], a = arcadeState(S), p = pet();
+  const ch = challengeToday(S), today = ch && ch.game === gameId ? ch : null;
   sheet.className = 'sheet sheet-arcade ar-' + gameId;
   sheet.style.setProperty('--ar-accent', g.accent);
   sheet.innerHTML = head(g.title, g.kind + ' · with ' + (p ? p.name : 'nobody')) +
     '<div class="ar-intro"><div class="ar-intro-art"><span class="ar-intro-glyph">' + glyph(g.glyph) + '</span><span class="ar-intro-pet"></span></div>' +
     '<p class="ar-hook">' + esc(g.hook) + '</p><p class="ar-howto">' + esc(g.howto) + '</p>' +
     '<div class="ar-records"><span><b>' + (a.best[gameId] || 0) + '</b><small>best</small></span><span><b>' + (a.plays[gameId] || 0) + '</b><small>runs</small></span><span><b>' + purseLeft() + '</b><small>souls left today</small></span></div>' +
-    '<div class="ar-actions"><button class="btn btn-primary ar-go" type="button" data-ar="play">Play</button><button class="btn btn-ghost" type="button" data-ar="menu">Other games</button></div></div>';
+    (today ? dailyCard(today) : '') +
+    '<div class="ar-actions">' + (today
+      ? '<button class="btn btn-primary ar-go" type="button" data-ar="challenge">Today’s challenge</button><button class="btn" type="button" data-ar="play">Play as usual</button>'
+      : '<button class="btn btn-primary ar-go" type="button" data-ar="play">Play</button>') +
+    '<button class="btn btn-ghost" type="button" data-ar="menu">Other games</button></div></div>';
   if (p) sheet.querySelector('.ar-intro-pet').appendChild(renderPetSprite(p));
   open();
   sheet.querySelector('.ar-go')?.focus({ preventScroll: true });
 }
 
+function dailyCard(ch) {
+  const state = ch.claimed
+    ? 'Bonus claimed. Best today: ' + ch.best + (ch.streak > 1 ? ' · ' + ch.streak + ' days in a row' : '')
+    : '+' + DAILY_SOULS + ' souls for your first run today' + (ch.streak ? ' · ' + ch.streak + ' day' + (ch.streak === 1 ? '' : 's') + ' in a row' : '');
+  return '<div class="ar-daily"><span class="ar-daily-kicker">Today’s challenge · ' + esc(ch.mod.title) + '</span><p>' + esc(ch.mod.line) + '</p><small>' + esc(state) + '</small></div>';
+}
+
 /* ---------------- the menu of games ---------------- */
 function showMenu() {
   stop();
-  const a = arcadeState(S), p = pet();
+  const a = arcadeState(S), p = pet(), ch = challengeToday(S);
   sheet.className = 'sheet sheet-arcade ar-menu';
   sheet.innerHTML = head('The arcade', 'Open after hours · with ' + (p ? p.name : 'nobody')) +
-    '<div class="ar-menu-grid">' + ARCADE_GAMES.map(g => '<button class="ar-menu-card" type="button" data-ar-game="' + g.id + '" style="--ar-accent:' + g.accent + '"><span class="ar-menu-glyph">' + glyph(g.glyph) + '</span><b>' + esc(g.title) + '</b><small>' + esc(g.hook) + '</small><em>Best ' + (a.best[g.id] || 0) + '</em></button>').join('') + '</div>';
+    (ch ? '<button class="ar-daily-banner" type="button" data-ar-game="' + ch.game + '"><span class="ar-daily-kicker">Today’s challenge</span><b>' + esc(ARCADE_BY_ID[ch.game].title) + ': ' + esc(ch.mod.title) + '</b><small>' + esc(ch.claimed ? 'Bonus claimed. Best today: ' + ch.best : '+' + DAILY_SOULS + ' souls for your first run today') + '</small></button>' : '') +
+    '<div class="ar-menu-grid">' + ARCADE_GAMES.map(g => '<button class="ar-menu-card' + (ch && ch.game === g.id ? ' is-today' : '') + '" type="button" data-ar-game="' + g.id + '" style="--ar-accent:' + g.accent + '"><span class="ar-menu-glyph">' + glyph(g.glyph) + '</span><b>' + esc(g.title) + '</b><small>' + esc(g.hook) + '</small><em>Best ' + (a.best[g.id] || 0) + '</em>' + (ch && ch.game === g.id ? '<span class="ar-today">Today</span>' : '') + '</button>').join('') + '</div>';
   open();
 }
 
@@ -63,8 +77,8 @@ function showMenu() {
 function hud() {
   const g = run.game, def = ARCADE_BY_ID[run.id];
   const lives = 'lives' in g ? '<span class="ar-lives" aria-label="' + g.lives + ' lives left">' + skulls(g.lives, run.maxLives) + '</span>' : '';
-  return '<div class="ar-hud"><span class="ar-score"><small>Score</small><b data-ar-score>' + g.score + '</b></span><span class="ar-best"><small>Best</small><b>' + (arcadeState(S).best[run.id] || 0) + '</b></span>' + lives + '<button class="btn btn-ghost btn-sm ar-pause" type="button" data-ar="pause" aria-label="Pause">❚❚</button></div>' +
-    '<p class="ar-status" data-ar-status aria-live="polite">' + esc(def.howto) + '</p>';
+  return '<div class="ar-hud"><span class="ar-score"><small>Score</small><b data-ar-score>' + g.score + '</b></span><span class="ar-best"><small>' + (run.daily ? 'Today' : 'Best') + '</small><b>' + (run.daily ? arcadeState(S).daily?.best || 0 : arcadeState(S).best[run.id] || 0) + '</b></span>' + lives + '<button class="btn btn-ghost btn-sm ar-pause" type="button" data-ar="pause" aria-label="Pause">❚❚</button></div>' +
+    '<p class="ar-status" data-ar-status aria-live="polite">' + esc(run.daily ? run.mod.title + '. ' + run.mod.line : def.howto) + '</p>';
 }
 
 function buildFrenzy(field) {
@@ -216,13 +230,15 @@ function status(text) { const el = sheet.querySelector('[data-ar-status]'); if (
 
 /* ---------------- the loop ---------------- */
 const BUILD = { frenzy: buildFrenzy, stack: buildStack, seance: buildSeance, whack: buildWhack };
-function startRun() {
+function startRun(daily = false) {
   stop();
-  const game = startGame(gameId);
-  run = { id: gameId, petId: pet()?.id || '', game, raf: 0, last: 0, paused: false, maxLives: game.lives || 0 };
+  const ch = daily ? challengeToday(S) : null;
+  const challenge = ch && ch.game === gameId ? ch : null;
+  const game = startGame(gameId, Math.random, challenge ? challenge.mod : null);
+  run = { id: gameId, petId: pet()?.id || '', game, raf: 0, last: 0, paused: false, maxLives: game.lives || 0, daily: !!challenge, mod: challenge ? challenge.mod : null };
   sheet.className = 'sheet sheet-arcade playing ar-' + gameId;
   sheet.style.setProperty('--ar-accent', ARCADE_BY_ID[gameId].accent);
-  sheet.innerHTML = head(ARCADE_BY_ID[gameId].title, 'With ' + (pet()?.name || 'nobody')) + hud() + '<div class="ar-field" data-ar-field tabindex="0" aria-label="' + esc(ARCADE_BY_ID[gameId].title) + ' playfield"></div>' + controls();
+  sheet.innerHTML = head(ARCADE_BY_ID[gameId].title, (run.daily ? 'Today’s challenge · ' : '') + 'With ' + (pet()?.name || 'nobody')) + hud() + '<div class="ar-field" data-ar-field tabindex="0" aria-label="' + esc(ARCADE_BY_ID[gameId].title) + ' playfield"></div>' + controls();
   const field = sheet.querySelector('[data-ar-field]');
   BUILD[gameId](field);
   open();
@@ -275,20 +291,21 @@ function stop() {
 /* ---------------- game over ---------------- */
 function gameOver() {
   if (!run) return;
-  const { id, game } = run;
-  const result = finishRun(S, id, game.score, run.petId);
+  const { id, game } = run, wasDaily = run.daily;
+  const result = finishRun(S, id, game.score, run.petId, Date.now(), Math.random, { daily: wasDaily });
   stop();
   save();
   const g = ARCADE_BY_ID[id];
   sheet.className = 'sheet sheet-arcade over ar-' + id;
-  sheet.innerHTML = head(g.title, 'Run over') +
-    '<div class="ar-over"><div class="ar-final"><small>Score</small><b>' + result.score + '</b>' + (result.newBest ? '<span class="ar-newbest">New best</span>' : '<em>Best ' + result.best + '</em>') + '</div>' +
+  sheet.innerHTML = head(g.title, wasDaily ? 'Today’s challenge · run over' : 'Run over') +
+    '<div class="ar-over"><div class="ar-final"><small>Score</small><b>' + result.score + '</b>' + (result.newBest ? '<span class="ar-newbest">' + (wasDaily ? 'Best today' : 'New best') + '</span>' : '<em>' + (wasDaily ? 'Best today ' : 'Best ') + result.best + '</em>') + '</div>' +
     '<div class="ar-tier" aria-label="' + result.tier + ' of 3">' + skulls(result.tier, 3) + '</div>' +
     '<p class="ar-quip">' + esc(result.quip) + '</p>' + (result.bestLine ? '<p class="ar-bestline">' + esc(result.bestLine) + '</p>' : '') +
     '<ul class="mh-rewards">' + (result.souls ? '<li class="souls">' + glyph('soul') + '+' + result.souls + ' souls</li>' : '<li>' + (result.score ? 'Today’s arcade purse is empty. Play for glory.' : 'No score, no souls.') + '</li>') +
+    (result.daily?.bonus ? '<li class="souls">' + glyph('soul') + '+' + result.daily.bonus + ' daily bonus' + (result.daily.streak > 1 ? ' · ' + result.daily.streak + ' days in a row' : '') + '</li>' : '') +
     (result.trust ? '<li class="good">' + esc(pet()?.name || '') + ' trusts you a little more</li>' : '') + '</ul>' +
     (escapadeView(S).active?.ready ? '<div class="ar-actions"><button class="btn btn-primary" type="button" data-escapade="open">Our story’s ending ↗</button></div>' : '') +
-    '<div class="ar-actions"><button class="btn btn-primary ar-again" type="button" data-ar="play" disabled>Again</button><button class="btn" type="button" data-ar="menu">Other games</button><button class="btn btn-ghost" type="button" data-ar="close">Back to the shelf</button></div></div>';
+    '<div class="ar-actions"><button class="btn btn-primary ar-again" type="button" data-ar="' + (wasDaily ? 'challenge' : 'play') + '" disabled>Again</button><button class="btn" type="button" data-ar="menu">Other games</button><button class="btn btn-ghost" type="button" data-ar="close">Back to the shelf</button></div></div>';
   (result.newBest ? playAchievement : result.tier >= 2 ? playStar : playFeed)();
   // A beat before Again is live, so the key mashing that ended the run does
   // not start another one by accident.
@@ -322,7 +339,8 @@ export function initArcade(state, onRefresh) {
     if (grave && run?.id === 'whack') return; // handled on pointerdown for speed
     const action = e.target.closest('[data-ar]')?.dataset.ar;
     if (action === 'close') close();
-    else if (action === 'play') startRun();
+    else if (action === 'play') startRun(false);
+    else if (action === 'challenge') startRun(true);
     else if (action === 'menu') showMenu();
     else if (action === 'pause') pause(!run?.paused);
     else if (action === 'resume') pause(false);

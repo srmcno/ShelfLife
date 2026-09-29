@@ -1,6 +1,6 @@
 import { EMERGENCIES, CURIOS, RARITIES, RANKS, OMENS, CHORES, DUPLICATE_LINES } from '../content/mayhem.js';
 import { mayhemState, QUEUE_MAX, LOG_MAX } from '../mayhem-state.js';
-import { addNote, clamp, grantBonusTrust, localDayKey, petById } from '../state.js';
+import { addNote, clamp, dayKeyOffset, grantBonusTrust, localDayKey, petById } from '../state.js';
 import { fileGrudge } from './achievements.js';
 
 /* ================= THE MAYHEM LOOP =================
@@ -48,7 +48,6 @@ function seeded(text) {
   return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
 }
 const choose = (list, rnd = Math.random) => list[Math.floor(rnd() * list.length) % list.length];
-function shiftDays(ts, n) { const d = new Date(ts); d.setDate(d.getDate() + n); return d.getTime(); }
 
 /* ---------- rank ---------- */
 export function rankIndexFor(lifetime) {
@@ -81,7 +80,7 @@ export function drawOmen(state, now = Date.now(), rnd = Math.random) {
   const m = mayhemState(state);
   const day = localDayKey(now);
   if (m.omen.day === day) return null;
-  const yesterday = localDayKey(shiftDays(now, -1)), twoDaysAgo = localDayKey(shiftDays(now, -2));
+  const yesterday = dayKeyOffset(now, -1), twoDaysAgo = dayKeyOffset(now, -2);
   // Miss one night and the candle gutters but holds, once, until the next seventh night.
   let streak = 1, graceUsed = false;
   if (m.omen.lastDay === yesterday) streak = m.omen.streak + 1;

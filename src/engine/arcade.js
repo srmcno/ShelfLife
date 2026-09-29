@@ -1,6 +1,8 @@
 import { ARCADE_BY_ID, ARCADE_QUIPS, NEW_BEST_LINES, FRENZY_ITEMS } from '../content/arcade.js';
-import { grantBonusTrust, localDayKey, clamp, petById } from '../state.js';
-import { payGameSouls, deed } from './mayhem.js';
+import { grantBonusTrust, localDayKey, dayKeyOffset, clamp, petById } from '../state.js';
+import { payGameSouls, addSouls, deed } from './mayhem.js';
+import { dailyChallenge } from './daily.js';
+import { DAILY_SOULS, DAILY_STREAK_SOULS, DAILY_STREAK_CAP } from '../content/daily.js';
 import { recordGameLife } from './life.js';
 import { recordEscapadeEvent } from '../escapade-state.js';
 import { arcadeState } from '../arcade-state.js';
@@ -32,8 +34,8 @@ const weighted = (entries, rnd) => {
 
 /* ---------- Feeding Frenzy: catch the good, dodge the bad ---------- */
 export const FRENZY = { lives: 3, catchY: [0.8, 0.95], reach: 0.1, speed: 1.7, frenzyFor: 6 };
-export function frenzyStart(rnd = Math.random) {
-  return { id: 'frenzy', rnd, t: 0, x: 0.5, dir: 0, target: null, lives: FRENZY.lives, score: 0, combo: 0, bestCombo: 0,
+export function frenzyStart(rnd = Math.random, mod = null) {
+  return { id: 'frenzy', rnd, mod, t: 0, x: 0.5, dir: 0, target: null, lives: FRENZY.lives, score: 0, combo: 0, bestCombo: 0,
     items: [], spawnIn: 0.5, serial: 0, frenzyUntil: 0, over: false };
 }
 export function frenzyPace(t) { return Math.min(3, 1 + t / 38); }
@@ -43,13 +45,14 @@ export function frenzyStep(g, dt) {
   g.t += dt;
   const pace = frenzyPace(g.t);
   // Movement: a held direction wins; otherwise glide toward a pointer target.
-  if (g.dir) g.x += g.dir * FRENZY.speed * dt;
-  else if (g.target != null) { const d = g.target - g.x; g.x += Math.sign(d) * Math.min(Math.abs(d), FRENZY.speed * 1.4 * dt); }
+  const speed = FRENZY.speed * (g.mod?.speed ?? 1);
+  if (g.dir) g.x += g.dir * speed * dt;
+  else if (g.target != null) { const d = g.target - g.x; g.x += Math.sign(d) * Math.min(Math.abs(d), speed * 1.4 * dt); }
   g.x = clamp(g.x, 0.06, 0.94);
   g.spawnIn -= dt;
   if (g.spawnIn <= 0) {
-    g.spawnIn = Math.max(0.24, 0.8 - g.t * 0.011) * (0.75 + g.rnd() * 0.5);
-    const badBoost = 1 + g.t / 40;
+    g.spawnIn = Math.max(0.24, 0.8 - g.t * 0.011) * (0.75 + g.rnd() * 0.5) * (g.mod?.spawn ?? 1);
+    const badBoost = (1 + g.t / 40) * (g.mod?.bad ?? 1);
     const kind = weighted(Object.entries(FRENZY_ITEMS).map(([k, v]) => [k, v.good ? v.weight : v.weight * badBoost]), g.rnd);
     g.items.push({ id: ++g.serial, kind, x: 0.06 + g.rnd() * 0.88, y: -0.05, vy: (0.3 + g.rnd() * 0.12) * pace, spin: g.rnd() * 360 });
   }
@@ -81,8 +84,9 @@ export function frenzyStep(g, dt) {
 
 /* ---------- Coffin Stack: drop on the beat, keep what overlaps ---------- */
 export const STACK = { width: 0.42, perfect: 0.018, minOverlap: 0.012 };
-export function stackStart(rnd = Math.random) {
-  return { id: 'stack', rnd, t: 0, stack: [{ x: 0.5 - STACK.width / 2, w: STACK.width }], mover: { x: 0, w: STACK.width, dir: 1 },
+export function stackStart(rnd = Math.random, mod = null) {
+  const width = STACK.width * (mod?.width ?? 1);
+  return { id: 'stack', rnd, mod, t: 0, stack: [{ x: 0.5 - width / 2, w: width }], mover: { x: 0, w: width, dir: 1 },
     score: 0, streak: 0, over: false };
 }
 export function stackSpeed(level) { return Math.min(1.35, 0.42 + level * 0.035); }
@@ -90,7 +94,7 @@ export function stackStep(g, dt) {
   if (g.over) return;
   g.t += dt;
   const m = g.mover;
-  m.x += m.dir * stackSpeed(g.score) * dt;
+  m.x += m.dir * stackSpeed(g.score) * (g.mod?.speed ?? 1) * dt;
   if (m.x <= 0) { m.x = 0; m.dir = 1; }
   if (m.x + m.w >= 1) { m.x = 1 - m.w; m.dir = -1; }
 }
@@ -116,11 +120,17 @@ export function stackDrop(g) {
 
 /* ---------- The Séance: repeat what the candles say ---------- */
 export const SEANCE = { pads: 4, lives: 2 };
-export function seanceStart(rnd = Math.random) {
-  return { id: 'seance', rnd, seq: [Math.floor(rnd() * SEANCE.pads)], pos: 0, score: 0, lives: SEANCE.lives, phase: 'show', over: false };
+export function seanceStart(rnd = Math.random, mod = null) {
+  const seq = [];
+  for (let i = 0; i < Math.max(1, mod?.start || 1); i++) {
+    let next = Math.floor(rnd() * SEANCE.pads);
+    if (seq.length >= 2 && seq.at(-1) === next && seq.at(-2) === next) next = (next + 1) % SEANCE.pads;
+    seq.push(next);
+  }
+  return { id: 'seance', rnd, mod, seq, pos: 0, score: 0, lives: SEANCE.lives, phase: 'show', over: false };
 }
 // How long each candle stays lit while the spirits speak.
-export function seanceBeat(g) { return Math.max(0.26, 0.62 - g.seq.length * 0.03); }
+export function seanceBeat(g) { return Math.max(0.26, 0.62 - g.seq.length * 0.03) * (g.mod?.beat ?? 1); }
 export function seanceShown(g) { if (!g.over) { g.phase = 'input'; g.pos = 0; } }
 export function seanceInput(g, pad) {
   if (g.over || g.phase !== 'input') return { ignored: true };
@@ -143,8 +153,8 @@ export function seanceInput(g, pad) {
 
 /* ---------- Grave Whack: push the dead back down ---------- */
 export const WHACK = { holes: 9, lives: 3 };
-export function whackStart(rnd = Math.random) {
-  return { id: 'whack', rnd, t: 0, holes: Array.from({ length: WHACK.holes }, () => null), spawnIn: 0.6, score: 0, combo: 0, lives: WHACK.lives, over: false, serial: 0 };
+export function whackStart(rnd = Math.random, mod = null) {
+  return { id: 'whack', rnd, mod, t: 0, holes: Array.from({ length: WHACK.holes }, () => null), spawnIn: 0.6, score: 0, combo: 0, lives: WHACK.lives, over: false, serial: 0 };
 }
 export function whackStep(g, dt) {
   if (g.over) return [];
@@ -161,11 +171,11 @@ export function whackStep(g, dt) {
   const empty = g.holes.map((h, i) => h ? -1 : i).filter(i => i >= 0);
   if (g.spawnIn <= 0 && empty.length) {
     g.spawnIn = Math.max(0.32, 0.95 - g.t * 0.012) * (0.7 + g.rnd() * 0.6);
-    const mournerChance = Math.min(0.28, 0.12 + g.t / 400);
+    const mournerChance = Math.min(0.45, Math.min(0.28, 0.12 + g.t / 400) * (g.mod?.mourner ?? 1));
     const r = g.rnd();
     const kind = r < 0.06 ? 'landlord' : r < 0.06 + mournerChance ? 'mourner' : 'hand';
     const i = empty[Math.floor(g.rnd() * empty.length) % empty.length];
-    g.holes[i] = { id: ++g.serial, kind, age: 0, life: Math.max(0.7, 1.7 - g.t * 0.016) * (kind === 'landlord' ? 0.8 : 1) };
+    g.holes[i] = { id: ++g.serial, kind, age: 0, life: Math.max(0.7, 1.7 - g.t * 0.016) * (kind === 'landlord' ? 0.8 : 1) * (g.mod?.life ?? 1) };
     events.push({ type: 'rise', hole: i, kind });
   }
   if (g.lives <= 0) { g.over = true; events.push({ type: 'over' }); }
@@ -189,26 +199,45 @@ export function whackHit(g, i) {
 
 /* ---------- starting, finishing and paying ---------- */
 const STARTERS = { frenzy: frenzyStart, stack: stackStart, seance: seanceStart, whack: whackStart };
-export function startGame(id, rnd = Math.random) { return STARTERS[id] ? STARTERS[id](rnd) : null; }
+export function startGame(id, rnd = Math.random, mod = null) { return STARTERS[id] ? STARTERS[id](rnd, mod) : null; }
+
+// Today's challenge record: one per day, replaced when the date changes.
+export function dailyRecord(state, challenge) {
+  const a = arcadeState(state);
+  if (a.daily?.day !== challenge.day) a.daily = { day: challenge.day, game: challenge.game, mod: challenge.mod.id, best: 0, plays: 0, claimed: false };
+  return a.daily;
+}
+export function challengeToday(state, now = Date.now()) {
+  const challenge = dailyChallenge(localDayKey(now));
+  if (!challenge) return null;
+  const a = arcadeState(state), rec = a.daily?.day === challenge.day ? a.daily : null;
+  const yesterday = dayKeyOffset(now, -1);
+  const streak = a.dailyLastDay === localDayKey(now) || a.dailyLastDay === yesterday ? a.dailyStreak : 0;
+  return { ...challenge, best: rec?.best || 0, plays: rec?.plays || 0, claimed: !!rec?.claimed, streak };
+}
 
 export function tierFor(id, score) { return (ARCADE_BY_ID[id]?.tiers || []).filter(t => score >= t).length; }
 
-export function finishRun(state, id, score, petId, now = Date.now(), rnd = Math.random) {
+export function finishRun(state, id, score, petId, now = Date.now(), rnd = Math.random, opts = {}) {
   const game = ARCADE_BY_ID[id];
   if (!game) return null;
   const a = arcadeState(state);
   const pet = petById(state, petId) || state.pets?.[0] || null;
   score = Math.max(0, Math.floor(score || 0));
-  const previous = a.best[id] || 0;
+  // A challenge run keeps its own best for the day, so a slim-coffin score never
+  // replaces the ordinary record it cannot fairly be compared with.
+  const challenge = opts.daily ? dailyChallenge(localDayKey(now)) : null;
+  const daily = challenge && challenge.game === id ? dailyRecord(state, challenge) : null;
+  const previous = daily ? daily.best : a.best[id] || 0;
   const newBest = score > previous && score > 0;
-  if (newBest) a.best[id] = score;
-  a.plays[id] = (a.plays[id] || 0) + 1;
+  if (newBest) { if (daily) daily.best = score; else a.best[id] = score; }
+  if (daily) daily.plays += 1; else a.plays[id] = (a.plays[id] || 0) + 1;
   a.lastGame = id;
   const tier = tierFor(id, score);
   let souls = 0, trust = 0, counted = false;
   // A run that scored nothing is a warm-up, not a game.
   if (score > 0) {
-    souls = payGameSouls(state, Math.floor(score * game.pay) + (newBest ? 10 : 0), now);
+    souls = payGameSouls(state, Math.floor(score * game.pay) + (newBest && !daily ? 10 : 0), now);
     deed(state, 'game', 1, now);
     if (pet) {
       pet.needs && (pet.needs.fuss = clamp((pet.needs.fuss || 0) + 12, 0, 100));
@@ -219,9 +248,23 @@ export function finishRun(state, id, score, petId, now = Date.now(), rnd = Math.
       counted = true;
     }
   }
+  // The first scoring challenge run of the day pays a flat bonus, outside the daily purse.
+  let dailyResult = null;
+  if (daily) {
+    let bonus = 0;
+    if (score > 0 && !daily.claimed) {
+      daily.claimed = true;
+      const today = localDayKey(now);
+      a.dailyStreak = a.dailyLastDay === dayKeyOffset(now, -1) ? a.dailyStreak + 1 : 1;
+      a.dailyLastDay = today;
+      bonus = DAILY_SOULS + DAILY_STREAK_SOULS * Math.min(a.dailyStreak - 1, DAILY_STREAK_CAP);
+      addSouls(state, bonus);
+    }
+    dailyResult = { title: challenge.mod.title, mod: challenge.mod.id, best: daily.best, bonus, streak: a.dailyStreak };
+  }
   const name = pet ? pet.name : 'Someone';
   const pool = ARCADE_QUIPS[id][tier] || ARCADE_QUIPS[id][0];
   const quip = pool[Math.floor(rnd() * pool.length) % pool.length].replace(/\{n\}/g, name);
   const bestLine = newBest && previous ? NEW_BEST_LINES[Math.floor(rnd() * NEW_BEST_LINES.length) % NEW_BEST_LINES.length].replace(/\{n\}/g, name) : '';
-  return { id, score, best: a.best[id] || 0, previous, newBest, tier, souls, trust, counted, quip, bestLine, day: localDayKey(now) };
+  return { id, score, best: daily ? daily.best : a.best[id] || 0, previous, newBest, tier, souls, trust, counted, quip, bestLine, daily: dailyResult, day: localDayKey(now) };
 }

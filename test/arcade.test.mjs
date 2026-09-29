@@ -133,7 +133,7 @@ test('arcade records survive reload and hostile data', () => {
   finishRun(s, 'seance', 9, 'g0', NOW);
   const restored = normalizeState(JSON.parse(JSON.stringify(s)));
   assert.equal(restored.arcade.best.seance, 9);
-  assert.deepEqual(normalizeArcade({ best: { frenzy: -3, nope: 5, stack: 'x', whack: 12 }, lastGame: 'court' }), { best: { whack: 12 }, plays: {}, lastGame: '' });
+  assert.deepEqual(normalizeArcade({ best: { frenzy: -3, nope: 5, stack: 'x', whack: 12 }, lastGame: 'court' }), { best: { whack: 12 }, plays: {}, lastGame: '', daily: null, dailyStreak: 0, dailyLastDay: '' });
 });
 
 test('arcade trust is rationed by the same daily cap as every other bonus', async () => {
