@@ -181,7 +181,7 @@ test('the guide offers unaired cases first and records survive a reload', () => 
   const reloaded = normalizeState(JSON.parse(JSON.stringify(s)));
   assert.deepEqual(reloaded.courtroom.best, s.courtroom.best);
   assert.deepEqual(normalizeCourtroom({ episodes: 3, justice: 9, best: { 'borrowed-coffin': 7, nope: 2, 'snoring-wall': -1 }, last: 'nope' }),
-    { episodes: 3, justice: 3, best: { 'borrowed-coffin': 3 }, last: '' });
+    { episodes: 3, justice: 3, best: { 'borrowed-coffin': 3 }, last: '', docketDay: '', docketStreak: 0, docketLastDay: '' });
 });
 
 test('adventures can ask for an episode, and an episode moves them on', () => {

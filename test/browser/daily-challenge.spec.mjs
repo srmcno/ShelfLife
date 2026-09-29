@@ -3,6 +3,8 @@ import { householdFixture } from '../household-fixtures.mjs';
 import { dailyChallenge } from '../../src/engine/daily.js';
 import { ARCADE_BY_ID } from '../../src/content/arcade.js';
 import { DAILY_SOULS } from '../../src/content/daily.js';
+import { docketCaseId, DOCKET_SOULS } from '../../src/engine/court.js';
+import { COURT_BY_ID } from '../../src/engine/court.js';
 
 const test = base.extend({ runtimeErrors: [async ({ page }, use) => {
   const errors = [];
@@ -79,4 +81,21 @@ test('the challenge menu and intro fit a 320px phone', async ({ page }) => {
   expect(await wide()).toBe(false);
   await page.locator('#arcadeSheet .ar-daily-banner').click();
   expect(await wide()).toBe(false);
+});
+
+test('Shelf Court opens on today’s docket case and says what airing it pays', async ({ page }) => {
+  const docketCase = COURT_BY_ID[docketCaseId(todayKey())];
+  await open(page);
+  await launcher(page).click();
+  await page.locator('#activityCards [data-court]').click();
+  await expect(page.locator('#courtVeil .sc-docket')).toContainText(docketCase.title);
+  await expect(page.locator('#courtVeil .sc-docket')).toContainText('+' + DOCKET_SOULS + ' souls');
+  await expect(page.locator('#courtVeil .sc-tonight h3')).toHaveText(docketCase.title);
+  // Choosing another case offers a way back to the docket.
+  await page.locator('#courtVeil [data-sc="another"]').click();
+  await expect(page.locator('#courtVeil .sc-docket button[data-sc-case="' + docketCase.id + '"]')).toBeVisible();
+  await page.locator('#courtVeil .sc-docket button[data-sc-case]').click();
+  await expect(page.locator('#courtVeil .sc-tonight h3')).toHaveText(docketCase.title);
+  await page.setViewportSize({ width: 320, height: 700 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 || [...document.querySelectorAll('.veil.open .sheet')].some(el => el.scrollWidth > el.clientWidth + 1))).toBe(false);
 });

@@ -1,7 +1,7 @@
 import { COURT_CAST, QUESTIONS_PER_EPISODE } from '../content/court.js';
 import {
   courtCases, nextCaseId, castEpisode, episodeCase, episodeOpening, episodeQuestions, episodeAsk,
-  randomHappening, resolveHappening, episodeBreak, episodeRule, courtFinish, fill, COURT_BY_ID
+  randomHappening, resolveHappening, episodeBreak, episodeRule, courtFinish, fill, COURT_BY_ID, docketToday, DOCKET_SOULS
 } from '../engine/court.js';
 import { courtroomState } from '../court-state.js';
 import { save } from '../state.js';
@@ -55,16 +55,26 @@ function portrait(who) {
 const stars = (n, max = 3) => Array.from({ length: max }, (_, i) => '<i class="' + (i < n ? 'on' : '') + '">★</i>').join('');
 
 /* ---------------- the lobby ---------------- */
+function docketLine(docket, k) {
+  const today = COURT_BY_ID[docket.caseId];
+  if (!today) return '';
+  if (docket.done) return '<p class="sc-docket done"><b>Today’s docket is filed.</b> ' + (docket.streak > 1 ? docket.streak + ' days in session.' : 'Back tomorrow for another.') + '</p>';
+  return '<p class="sc-docket"><b>Today’s docket: ' + esc(today.title) + '.</b> +' + DOCKET_SOULS + ' souls for airing it' + (docket.streak ? ' · ' + docket.streak + ' day' + (docket.streak === 1 ? '' : 's') + ' in session' : '') +
+    (k.id === today.id ? '' : ' <button class="btn btn-ghost btn-sm" type="button" data-sc-case="' + today.id + '">Hear it</button>') + '</p>';
+}
 function defaultLobby(petId) {
   const pets = S.pets;
   const p = pets.find(x => x.id === petId) || pets.find(x => x.id === lobby.plaintiffId) || pets[0];
   const others = pets.filter(x => x.id !== p.id);
   const d = others.find(x => x.id === lobby.defendantId) || others[Math.floor(Math.random() * others.length)] || null;
-  lobby = { caseId: COURT_BY_ID[lobby.caseId] ? lobby.caseId : nextCaseId(S), plaintiffId: p.id, defendantId: d?.id || '', standInSalt: lobby.standInSalt };
+  // The first time the lobby opens each day it offers the docket case, unless it is already aired.
+  const docket = docketToday(S);
+  const first = COURT_BY_ID[lobby.caseId] ? lobby.caseId : !docket.done && COURT_BY_ID[docket.caseId] ? docket.caseId : nextCaseId(S);
+  lobby = { caseId: first, plaintiffId: p.id, defendantId: d?.id || '', standInSalt: lobby.standInSalt };
 }
 function showLobby() {
   stopAll(); ep = null;
-  const c = courtroomState(S), cases = courtCases(S);
+  const c = courtroomState(S), cases = courtCases(S), docket = docketToday(S);
   const k = COURT_BY_ID[lobby.caseId];
   const preview = castEpisode(S, lobby, () => 0);  // lobby.standInSalt names the same neighbour the episode will use
   const adventure = escapadeView(S).active, forUs = adventure && !adventure.playDone && adventure.approach.activity === 'court';
@@ -72,6 +82,7 @@ function showLobby() {
   sheet.innerHTML = head('Shelf Court', 'Daytime television · ' + c.episodes + ' episodes aired') +
     '<div class="sc-titlecard"><div class="sc-logo"><small>Live from the shelf</small><b>SHELF COURT</b><em>Real residents. Real disputes. Real dead.</em></div><div class="sc-titlecard-judge">' + castSvg('judge') + '</div></div>' +
     (forUs ? '<p class="sc-adventure"><b>' + esc(adventure.episode.title) + '</b> · An episode starring our resident moves our adventure on.</p>' : '') +
+    docketLine(docket, k) +
     '<section class="sc-tonight" aria-label="Tonight’s episode"><span class="sc-kicker">Tonight’s episode</span><h3>' + esc(k.title) + '</h3>' +
     '<div class="sc-vs"><figure><span class="sc-vs-art">' + portrait(preview.p) + '</span><figcaption><small>Plaintiff</small>' + esc(preview.p.name) + '</figcaption></figure><b>v.</b><figure><span class="sc-vs-art">' + portrait(preview.d) + '</span><figcaption><small>Defendant</small>' + esc(preview.d.name) + '</figcaption></figure></div>' +
     '<p class="sc-claim">' + esc(fill(preview, k.claim)) + '<br><small>Asking: ' + esc(fill(preview, k.asking)) + '</small></p>' +
@@ -383,6 +394,7 @@ function finish() {
     '<h3>' + (res.correct ? 'Justice, allegedly, was served' : 'You got it wrong, live on air') + '</h3>' +
     '<p>' + esc(truth) + ' Ratings ' + res.ratings + '. The jury agreed ' + res.agree + ' to ' + (ep.jury.length - res.agree) + '.</p>' +
     '<ul class="mh-rewards">' + (res.souls ? '<li class="souls">' + glyph('soul') + '+' + res.souls + ' souls</li>' : '<li>Today’s game purse is empty. You did it for the art.</li>') +
+    (res.docket ? '<li class="souls">' + glyph('soul') + '+' + res.docket.bonus + ' for today’s docket' + (res.docket.streak > 1 ? ' · ' + res.docket.streak + ' days in session' : '') + '</li>' : '') +
     (res.trust ? '<li class="good">' + esc(res.trust) + ' trusts you a little more</li>' : '') +
     (res.grudge ? '<li class="bad">' + esc(res.grudge) + ' will remember this</li>' : '') +
     (res.firstAir ? '<li>Episode ' + (courtCases(S).findIndex(c => c.id === k.id) + 1) + ' aired · ' + res.aired + ' of ' + res.total + '</li>' : '') + '</ul>' +

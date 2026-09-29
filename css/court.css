@@ -289,3 +289,9 @@
 @media (prefers-reduced-motion:reduce){
   .sheet-court .cc-bob,.sheet-court .cc-eye,.sheet-court .sc-head,.sheet-court .cc-wing,.sc-onair,.sc-bug i{animation:none}
 }
+
+/* ---- the daily docket ---- */
+.sc-docket{margin:0 0 12px;padding:10px 14px;border-radius:12px;border:1px solid color-mix(in srgb,var(--mh-candle,#F6C768) 50%,transparent);background:linear-gradient(120deg,color-mix(in srgb,var(--mh-candle,#F6C768) 12%,#0000),#0000);font:500 14px/1.45 var(--body);color:var(--ink)}
+.sc-docket b{font-weight:700}
+.sc-docket.done{border-color:var(--hair-lit);background:none;color:var(--ink-2)}
+.sc-docket .btn{margin-left:6px;vertical-align:middle}
