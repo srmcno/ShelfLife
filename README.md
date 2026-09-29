@@ -225,12 +225,30 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/ui/` | Views, interaction, navigation and accessible dialogs |
 | `css/` | Shared materials and dedicated game/workspace layouts |
 | `test/` | Domain regressions, synthetic households and browser tests |
-| `scripts/` | Pages packaging and optional local Mac launcher |
+| `icons/src/`, `store/` | Layered icon sources and Play Store art |
+| `scripts/` | Pages packaging, icon and store art rendering, and the optional local Mac launcher |
 
 Main publishes to GitHub Pages only after domain, Python and browser checks pass. Packaging excludes
 development files and writes the commit to `release.json`; the same revision identifies the offline
 cache. Add new production assets to `service-worker.js` and bump its development cache version.
 The tests check that the offline shell is complete.
+
+### The icon
+
+The resident on the icon is drawn once, as Android adaptive-icon layers in `icons/src/`:
+`background.svg`, `foreground.svg` and `monochrome.svg` (Android 13 themed icons) on a 108dp
+canvas of 432 units. Launchers show the middle 288 units; the resident and candle stay inside
+the 264-unit safe circle. Every other icon is a crop of the same layers, so edit the sources and
+render again:
+
+```sh
+node scripts/render_icons.mjs      # web, maskable, Apple, Play listing and Android launcher icons
+node scripts/render_store_art.mjs  # store/feature-graphic.jpg, drawn with the game's own residents
+```
+
+Both use Playwright's Chromium (set `CHROMIUM_PATH` to use another). `render_icons.mjs` writes
+the Android launcher resources only when an `android/` project exists. `store/` is not published
+with the site.
 
 ### Connecting your own Supabase project
 

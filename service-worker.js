@@ -1,5 +1,5 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v52';
+const CACHE_VERSION = 'shelflife-v53';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./src/cloud/config.js",
@@ -145,8 +145,12 @@ const SHELL = [
   "./assets/fonts/karla-400-normal.woff2",
   "./assets/fonts/karla-600-normal.woff2",
   "./assets/fonts/karla-700-normal.woff2",
+  "./icons/icon.svg",
+  "./icons/icon-180.png",
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "./icons/icon-maskable-192.png",
+  "./icons/icon-maskable-512.png"
 ];
 // Every installed asset must also be eligible for offline delivery. Keeping
 // this tied to the manifest prevents new illustration folders being missed.

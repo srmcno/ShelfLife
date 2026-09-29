@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432">
+  <!-- Adaptive icon background: 108dp canvas at 4 units per dp. The launcher
+       shows the middle 288 units; anything outside is bleed for parallax. -->
+  <defs>
+    <radialGradient id="bg-room" cx="0.5" cy="0.36" r="0.72">
+      <stop offset="0" stop-color="#4b2c55"/>
+      <stop offset="0.55" stop-color="#2a1834"/>
+      <stop offset="1" stop-color="#120a18"/>
+    </radialGradient>
+    <radialGradient id="bg-glow" cx="310" cy="176" r="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffc877" stop-opacity="0.5"/>
+      <stop offset="0.35" stop-color="#f2a35e" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#f2a35e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bg-plank-top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b98292"/>
+      <stop offset="1" stop-color="#8d566b"/>
+    </linearGradient>
+    <linearGradient id="bg-plank-front" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6f3d55"/>
+      <stop offset="1" stop-color="#4a2539"/>
+    </linearGradient>
+    <linearGradient id="bg-under" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07040a" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#120a18" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="432" height="432" fill="url(#bg-room)"/>
+  <!-- the wallpaper's teardrop motif, barely there -->
+  <g fill="#ffffff" opacity="0.035">
+    <path d="M108 40c14 22 22 38 22 52a22 22 0 0 1-44 0c0-14 8-30 22-52Z"/>
+    <path d="M216 22c14 22 22 38 22 52a22 22 0 0 1-44 0c0-14 8-30 22-52Z"/>
+    <path d="M324 40c14 22 22 38 22 52a22 22 0 0 1-44 0c0-14 8-30 22-52Z"/>
+    <path d="M54 150c14 22 22 38 22 52a22 22 0 0 1-44 0c0-14 8-30 22-52Z"/>
+    <path d="M378 150c14 22 22 38 22 52a22 22 0 0 1-44 0c0-14 8-30 22-52Z"/>
+  </g>
+  <rect width="432" height="432" fill="url(#bg-glow)"/>
+  <!-- the shelf: top face, lit front edge, front face, and the dark underneath -->
+  <rect x="0" y="292" width="432" height="16" fill="url(#bg-plank-top)"/>
+  <rect x="0" y="306" width="432" height="3" fill="#d6a3ae" opacity="0.55"/>
+  <rect x="0" y="309" width="432" height="31" fill="url(#bg-plank-front)"/>
+  <path d="M0 322h432M0 331h432" stroke="#2c1422" stroke-width="1.5" opacity="0.35"/>
+  <rect x="0" y="340" width="432" height="92" fill="#120a18"/>
+  <rect x="0" y="340" width="432" height="44" fill="url(#bg-under)"/>
+</svg>
