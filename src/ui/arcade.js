@@ -25,6 +25,7 @@ let S = null, refresh = () => {};
 const veil = byId('arcadeVeil'), sheet = byId('arcadeSheet');
 let run = null;           // { id, petId, game, raf, last, paused, ... }
 let gameId = 'frenzy', petId = '';
+let arcadeSocial = null, boardToken = 0;   // friends' scores for the daily challenge, when the social layer is on
 
 function pet() { return S.pets.find(p => p.id === petId) || S.pets[0] || null; }
 function skulls(n, max) { return Array.from({ length: max }, (_, i) => '<i class="' + (i < n ? 'on' : '') + '">' + glyph('skull') + '</i>').join(''); }
@@ -45,7 +46,7 @@ function showIntro() {
     '<div class="ar-intro"><div class="ar-intro-art"><span class="ar-intro-glyph">' + glyph(g.glyph) + '</span><span class="ar-intro-pet"></span></div>' +
     '<p class="ar-hook">' + esc(g.hook) + '</p><p class="ar-howto">' + esc(g.howto) + '</p>' +
     '<div class="ar-records"><span><b>' + (a.best[gameId] || 0) + '</b><small>best</small></span><span><b>' + (a.plays[gameId] || 0) + '</b><small>runs</small></span><span><b>' + purseLeft() + '</b><small>souls left today</small></span></div>' +
-    (today ? dailyCard(today) : '') +
+    (today ? dailyCard(today) : '') + (today && arcadeSocial?.active() ? BOARD_SLOT : '') +
     '<div class="ar-actions">' + (today
       ? '<button class="btn btn-primary ar-go" type="button" data-ar="challenge">Today’s challenge</button><button class="btn" type="button" data-ar="play">Play as usual</button>'
       : '<button class="btn btn-primary ar-go" type="button" data-ar="play">Play</button>') +
@@ -53,6 +54,36 @@ function showIntro() {
   if (p) sheet.querySelector('.ar-intro-pet').appendChild(renderPetSprite(p));
   open();
   sheet.querySelector('.ar-go')?.focus({ preventScroll: true });
+  // Today's best goes up again in case an earlier try found no connection.
+  if (today && arcadeSocial?.active()) loadBoard({ game: today.game, day: today.day, mod: today.mod.id }, today.best);
+}
+
+/* ---------------- friends today ---------------- */
+// Friends by name, everyone else as a percentage. Filled in whenever the
+// network answers; the game never waits for it.
+const BOARD_SLOT = '<div class="ar-board" data-ar-board aria-live="polite"><p class="ar-board-note">Asking the neighbours.</p></div>';
+async function loadBoard(ch, score = 0) {
+  const token = ++boardToken;
+  const slot = () => token === boardToken ? sheet.querySelector('[data-ar-board]') : null;
+  if (score > 0) { try { await arcadeSocial.submitScore({ game: ch.game, day: ch.day, score, mod: ch.mod }); } catch { /* the board below says if we are offline */ } }
+  try {
+    const [board, place] = await Promise.all([arcadeSocial.board(ch.game, ch.day), arcadeSocial.percentile(ch.game, ch.day)]);
+    const el = slot();
+    if (el) el.innerHTML = boardMarkup(board, place);
+  } catch {
+    const el = slot();
+    if (el) el.innerHTML = '<p class="ar-board-note">Offline. The scores will keep.</p>';
+  }
+}
+function boardMarkup(board, place) {
+  const top = board.slice(0, 5), mine = board.find(r => r.me);
+  const rows = mine && !top.includes(mine) ? [...top, mine] : top;
+  const line = place.beaten !== null ? 'You beat ' + place.beaten + '% of players today.'
+    : place.players > 1 ? place.players + ' players so far today. The best scored ' + place.top + '.'
+    : place.players === 1 ? (mine ? 'You are the only player so far today.' : 'One player so far today.') : '';
+  return '<span class="ar-daily-kicker">Friends today</span>' + (rows.length
+    ? '<ol class="ar-board-list">' + rows.map(r => '<li' + (r.me ? ' class="me"' : '') + '><b>' + r.rank + '</b><span>' + esc(r.me ? 'You' : r.name || 'A friend') + '</span><em>' + r.score + '</em></li>').join('') + '</ol>'
+    : '<p class="ar-board-note">No friends have played today. Yet.</p>') + (line ? '<p class="ar-board-note">' + esc(line) + '</p>' : '');
 }
 
 function dailyCard(ch) {
@@ -304,6 +335,7 @@ function gameOver() {
     '<ul class="mh-rewards">' + (result.souls ? '<li class="souls">' + glyph('soul') + '+' + result.souls + ' souls</li>' : '<li>' + (result.score ? 'Today’s arcade purse is empty. Play for glory.' : 'No score, no souls.') + '</li>') +
     (result.daily?.bonus ? '<li class="souls">' + glyph('soul') + '+' + result.daily.bonus + ' daily bonus' + (result.daily.streak > 1 ? ' · ' + result.daily.streak + ' days in a row' : '') + '</li>' : '') +
     (result.trust ? '<li class="good">' + esc(pet()?.name || '') + ' trusts you a little more</li>' : '') + '</ul>' +
+    (wasDaily && result.daily && arcadeSocial?.active() ? BOARD_SLOT : '') +
     (escapadeView(S).active?.ready ? '<div class="ar-actions"><button class="btn btn-primary" type="button" data-escapade="open">Our story’s ending ↗</button></div>' : '') +
     '<div class="ar-actions"><button class="btn btn-primary ar-again" type="button" data-ar="' + (wasDaily ? 'challenge' : 'play') + '" disabled>Again</button><button class="btn" type="button" data-ar="menu">Other games</button><button class="btn btn-ghost" type="button" data-ar="close">Back to the shelf</button></div></div>';
   (result.newBest ? playAchievement : result.tier >= 2 ? playStar : playFeed)();
@@ -312,6 +344,7 @@ function gameOver() {
   const again = sheet.querySelector('.ar-again');
   setTimeout(() => { if (again?.isConnected) { again.disabled = false; again.focus({ preventScroll: true }); } }, 650);
   refresh();
+  if (wasDaily && result.daily && arcadeSocial?.active()) loadBoard({ game: id, day: result.day, mod: result.daily.mod }, result.score);
 }
 
 /* ---------------- wiring ---------------- */
@@ -325,8 +358,8 @@ export function openArcade(id, residentId) {
   else showMenu();
 }
 
-export function initArcade(state, onRefresh) {
-  S = state; refresh = onRefresh || refresh;
+export function initArcade(state, onRefresh, { social } = {}) {
+  S = state; refresh = onRefresh || refresh; arcadeSocial = social || null;
   window.addEventListener('shelflife:arcade', e => openArcade(e.detail?.game, e.detail?.petId));
   // Older invitations still say "play"; they now open the arcade menu.
   window.addEventListener('shelflife:play', e => openArcade(null, e.detail?.petId));

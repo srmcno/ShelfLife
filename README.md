@@ -179,6 +179,32 @@ save**. Guest play is unchanged, and offline the game carries on and catches up 
   deletion without the app and, when cloud save is set up, signs in with a code and deletes the account itself.
   Both are published with the site and linked from More.
 
+### Friends (optional, needs cloud save)
+
+With cloud save on, **More → Friends** swaps shelves with people you know. Nothing social is sent until
+you open Friends for the first time on that account; without a cloud project there is no Friends
+button at all, and a player without cloud save is pointed at Cloud save first.
+
+- **Your friend code** is eight letters and numbers. Share it; add theirs under **Add a friend by
+  code**. Asking someone who has already asked you makes you friends straight away.
+- **Friends see** your name (optional, 24 characters), your residents' names, moods, traits and
+  drawings, your rank and how many curios you have. They see the shelf as it was when you last opened
+  Friends or last synced, at most every ten minutes. A drawing over 120 KB stays home; its resident
+  appears without it.
+- **Serve papers** on a friend's resident and they hear the case in Shelf Court, with your resident
+  as a guest plaintiff and theirs defending. You hear the verdict, the stars and the ratings the next
+  time you open Friends or Shelf Court. Hearing a case pays 15 souls and hearing a verdict pays 10,
+  each for up to three summonses a day. A friend's resident never joins your shelf or its memories.
+- **Daily challenge scores** go up when you play today's challenge. Friends appear by name (top five);
+  everyone else is one line, such as "You beat 64% of players today". No stranger is ever named.
+- **Remove**, **Block** and **Report** sit in each friend's row. Blocking removes the friendship,
+  tears up any papers between you and makes your code stop working for them; they are not told.
+  Reports go to a table only the project owner can read, with the name and shelf the reporter saw.
+
+Nothing is public: there is no search, no global list of names and no way to see a stranger's shelf.
+Every reply from the server is checked again before the game draws it: text is clamped and escaped,
+creatures are rebuilt from known parts, and a drawing is only accepted as a PNG under 120 KB.
+
 After the first visit, the installed game also works offline. Returning players receive a
 **Save & refresh** banner when a new edition is available. An active interaction or failed save
 prevents that refresh. Installation is available through your browser's app or home-screen menu.
@@ -209,9 +235,9 @@ The browser suite uses isolated synthetic households and a separate local server
 creation, saved appearance, care, every arcade game, a full Shelf Court episode ruled rightly and one ruled wrongly, expeditions, completed adventure endings,
 abandoned runs, emergencies, coffins and the curio cabinet, expedition returns, report persistence,
 replay identity, all sixteen keepsakes,
-cancelled gestures, failed saves, responsive layouts, cloud save against an in-memory Supabase
+cancelled gestures, failed saves, responsive layouts, cloud save and friends against an in-memory Supabase
 (`test/support/fake-supabase.mjs`) and runtime errors
-in desktop Chromium and phone-sized Chromium/WebKit. `npm test` also runs the SQL migration in PGlite. Offline reload is tested in Chromium;
+in desktop Chromium and phone-sized Chromium/WebKit. `npm test` also runs both SQL migrations in PGlite. Offline reload is tested in Chromium;
 Playwright does not support WebKit service-worker tooling. This is browser automation, not physical-device
 testing. `test/responsive-harness.html` provides additional local fixture exploration.
 
@@ -222,6 +248,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
 | `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js` | Shelf Court: cases, episode state machine, TV studio stage and the drawn cast |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
+| `src/cloud/social.js`, `src/ui/friends.js`, `css/social.css` | Friends, shelves on show, Shelf Court summonses and daily boards |
 | `src/native.js`, `capacitor.config.json`, `android/` | The Android app: native glue, Capacitor settings and the native project |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
@@ -318,7 +345,7 @@ node scripts/store_screenshots.mjs # store/screenshots/: eight 1080x1920 phone s
 
 All three use Playwright's Chromium (set `CHROMIUM_PATH` to use another). `render_icons.mjs` writes
 the Android launcher resources only when an `android/` project exists. The screenshots use a synthetic
-household, a fixed afternoon and a seeded random, so a commit always gives the same pictures; any over
+household, a fixed afternoon and a seeded random, so a commit always shows the same scenes; any over
 1 MB is saved as a JPEG instead. `store/listing.md` drafts the Play listing, the content rating and Data
 safety answers and the release checklist. `store/` is not published with the site.
 
@@ -327,7 +354,8 @@ safety answers and the release checklist. `store/` is not published with the sit
 Cloud save stays off, with no cloud UI and no requests, until `src/cloud/config.js` has a project URL and key.
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the SQL editor, run `supabase/migrations/0001_accounts_and_saves.sql`. Running it again is harmless.
+2. In the SQL editor, run `supabase/migrations/0001_accounts_and_saves.sql`, then
+   `supabase/migrations/0002_social.sql` for Friends. Running either again is harmless.
 3. Authentication → Sign In / Providers: enable **Anonymous sign-ins** and keep **Email** on.
 4. Authentication → Emails: make the **Magic link**, **Confirm signup** and **Change email address**
    templates print `{{ .Token }}`, so players get a code. Adding an email to an anonymous account uses
@@ -339,6 +367,10 @@ Cloud save stays off, with no cloud UI and no requests, until `src/cloud/config.
 The built-in email sender allows only a few messages an hour; set up custom SMTP before real players
 arrive. Abandoned anonymous accounts can be cleared from the SQL editor:
 `delete from auth.users u where u.is_anonymous and u.created_at < now() - interval '90 days' and not exists (select 1 from public.saves s where s.user_id = u.id and s.updated_at > now() - interval '90 days');`
+Old daily scores and summonses can go the same way (the lines are also at the top of 0002):
+`delete from public.scores where day < current_date - 30;` and
+`delete from public.summons where created_at < now() - interval '60 days';`
+Reports wait in `public.reports` (select from it in the SQL editor); nothing in the game reads them.
 
 The optional Mac launcher can use locally installed **Daniel (Enhanced)**. Pages uses the voices
 provided by each visitor's browser; the local Mac voice is not distributed with the web game.

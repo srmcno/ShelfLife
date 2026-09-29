@@ -109,7 +109,7 @@ export function initDialogs({ onOpen } = {}) {
   panels.forEach(panel => {
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'true');
-    panel.setAttribute('aria-label', ({ escapadeVeil: 'Little adventures', playroomVeil: 'The playroom', lifeVeil: 'Your small world', museumVeil: 'Memory museum', playVeil: 'Play together', studioVeil: 'Make a pet', cardVeil: 'Resident details', decorVeil: 'Decorate', voiceVeil: 'Narrator voice', incidentsVeil: 'Incidents', mayhemVeil: 'Emergencies and curios', arcadeVeil: 'The arcade', courtVeil: 'Shelf Court', helpVeil: 'A small field guide', restoreVeil: 'Restore a shelf', transferVeil: 'Email or share your shelf', cloudVeil: 'Cloud save', postcardVeil: 'A postcard', moreTray: 'Everything else' })[panel.id] || 'Dialog');
+    panel.setAttribute('aria-label', ({ escapadeVeil: 'Little adventures', playroomVeil: 'The playroom', lifeVeil: 'Your small world', museumVeil: 'Memory museum', playVeil: 'Play together', studioVeil: 'Make a pet', cardVeil: 'Resident details', decorVeil: 'Decorate', voiceVeil: 'Narrator voice', incidentsVeil: 'Incidents', mayhemVeil: 'Emergencies and curios', arcadeVeil: 'The arcade', courtVeil: 'Shelf Court', helpVeil: 'A small field guide', restoreVeil: 'Restore a shelf', transferVeil: 'Email or share your shelf', cloudVeil: 'Cloud save', friendsVeil: 'Friends', postcardVeil: 'A postcard', moreTray: 'Everything else' })[panel.id] || 'Dialog');
     new MutationObserver(sync).observe(panel, { attributes: true, attributeFilter: ['class'] });
   });
   document.addEventListener('keydown', e => {

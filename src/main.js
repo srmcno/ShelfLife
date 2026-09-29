@@ -3,8 +3,9 @@ import { initWelcome } from './ui/welcome.js';
 import { initEscapades } from './ui/escapades.js';
 import { createBackup } from './backup.js';
 import { initBackupTransfer } from './ui/backup.js';
-import { cloud, sync, connectCloud } from './cloud/index.js';
+import { cloud, sync, social, connectCloud } from './cloud/index.js';
 import { initCloudUI } from './ui/cloud.js';
+import { initFriends } from './ui/friends.js';
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
@@ -268,6 +269,7 @@ const CLOUD_ARRIVALS = {
   undo: 'Swapped back. Everyone is pretending nothing happened.'
 };
 cloudUI = initCloudUI({ cloud, sync, getState: () => state, onChange: () => syncBackupBanner() });
+initFriends({ state, cloud, sync, social, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
 connectCloud({
   applyRemote: (next, { reason } = {}) => {
     applyRestoredState(next);
@@ -417,8 +419,8 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 // ---------- wire the remaining self-contained widgets ----------
 
 initMayhem(state, () => renderAll(state));
-initArcade(state, () => renderAll(state));
-initCourt(state, () => renderAll(state));
+initArcade(state, () => renderAll(state), { social });
+initCourt(state, () => renderAll(state), { social });
 initSchemeUI(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
 initWelcome(state, () => renderAll(state));
