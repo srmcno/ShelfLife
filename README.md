@@ -145,8 +145,8 @@ See [the expedition and paperwork design notes](docs/hearings-and-expeditions.md
 
 ## Your save
 
-The game has no accounts, server or automatic device sync. It stores your household in this
-browser under `shelflife.v4`. Clearing browser data removes that local copy.
+No account is needed to play, now or later. The game stores your household in this browser under
+`shelflife.v4`. Clearing browser data removes that local copy.
 
 Use **More → Back up** to download a copy. **Move to another device** offers the device share menu
 or a download and email draft. If you use the draft, attach the downloaded file yourself.
@@ -157,14 +157,34 @@ Earlier save versions migrate automatically. Invalid positions are repaired. Sto
 a warning; unreadable saves are preserved as downloadable recovery files. Keep a backup before
 clearing site data or switching devices.
 
+### Cloud save (optional)
+
+When an edition is connected to a cloud project, **More → Cloud save** can keep a copy of your shelf on
+a server so it follows you between browsers and phones. Nothing is sent until you choose **Turn on cloud
+save**. Guest play is unchanged, and offline the game carries on and catches up later.
+
+- Turning it on makes an anonymous account that only this browser can open. Add an email to reach it
+  from anywhere: you are sent a 6 digit code, never a password.
+- The shelf is copied about 20 seconds after you do something, and when you leave the page. **Sync now**
+  copies it at once. A device you have not touched quietly picks up the newer copy.
+- On another device choose **Already have an account? Sign in on this device**. If only one side has
+  residents, that shelf is used. If both do, you choose which to keep. Nothing is merged or overwritten
+  without asking; the other shelf stays on the device for a week and **Undo** swaps them back.
+- Stored on the server: the save itself (the same data as a backup file), your email if you add one, a
+  random device label such as `android-…`, and when it was last saved. The sign-in session stays in this
+  browser under `shelflife.cloud`, never inside the save or its backups.
+- **Sign out of this device** stops the copying and keeps the shelf. **Delete my cloud data and account**
+  removes the cloud copy and the account from the server; the shelf on this device stays.
+
 After the first visit, the installed game also works offline. Returning players receive a
 **Save & refresh** banner when a new edition is available. An active interaction or failed save
 prevents that refresh. Installation is available through your browser's app or home-screen menu.
 
 ## Development
 
-No runtime dependencies, backend or bundler. Plain ES modules, local styles, SVG creatures and
-bundled licensed fonts. Serve over HTTP; opening `index.html` as a file does not support modules.
+No runtime dependencies, required backend or bundler. Plain ES modules, local styles, SVG creatures and
+bundled licensed fonts. Optional cloud save talks to Supabase with plain `fetch`. Serve over HTTP;
+opening `index.html` as a file does not support modules.
 
 ```sh
 node test/serve.mjs
@@ -186,8 +206,9 @@ The browser suite uses isolated synthetic households and a separate local server
 creation, saved appearance, care, every arcade game, a full Shelf Court episode ruled rightly and one ruled wrongly, expeditions, completed adventure endings,
 abandoned runs, emergencies, coffins and the curio cabinet, expedition returns, report persistence,
 replay identity, all sixteen keepsakes,
-cancelled gestures, failed saves, responsive layouts and runtime errors
-in desktop Chromium and phone-sized Chromium/WebKit. Offline reload is tested in Chromium;
+cancelled gestures, failed saves, responsive layouts, cloud save against an in-memory Supabase
+(`test/support/fake-supabase.mjs`) and runtime errors
+in desktop Chromium and phone-sized Chromium/WebKit. `npm test` also runs the SQL migration in PGlite. Offline reload is tested in Chromium;
 Playwright does not support WebKit service-worker tooling. This is browser automation, not physical-device
 testing. `test/responsive-harness.html` provides additional local fixture exploration.
 
@@ -197,6 +218,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
 | `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
 | `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js` | Shelf Court: cases, episode state machine, TV studio stage and the drawn cast |
+| `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
 | `src/art/` | Creature/drawing data, SVG rendering, animation and the studio |
@@ -209,6 +231,24 @@ Main publishes to GitHub Pages only after domain, Python and browser checks pass
 development files and writes the commit to `release.json`; the same revision identifies the offline
 cache. Add new production assets to `service-worker.js` and bump its development cache version.
 The tests check that the offline shell is complete.
+
+### Connecting your own Supabase project
+
+Cloud save stays off, with no cloud UI and no requests, until `src/cloud/config.js` has a project URL and key.
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In the SQL editor, run `supabase/migrations/0001_accounts_and_saves.sql`. Running it again is harmless.
+3. Authentication → Sign In / Providers: enable **Anonymous sign-ins** and keep **Email** on.
+4. Authentication → Emails: make the **Magic link**, **Confirm signup** and **Change email address**
+   templates print `{{ .Token }}`, so players get a code. Adding an email to an anonymous account uses
+   the change-email template.
+5. Authentication → URL Configuration: set the Site URL to where the game is served.
+6. Project Settings → API: paste the Project URL and the anon public key into `src/cloud/config.js`.
+   The anon key is public by design; row level security keeps each save private.
+
+The built-in email sender allows only a few messages an hour; set up custom SMTP before real players
+arrive. Abandoned anonymous accounts can be cleared from the SQL editor:
+`delete from auth.users u where u.is_anonymous and u.created_at < now() - interval '90 days' and not exists (select 1 from public.saves s where s.user_id = u.id and s.updated_at > now() - interval '90 days');`
 
 The optional Mac launcher can use locally installed **Daniel (Enhanced)**. Pages uses the voices
 provided by each visitor's browser; the local Mac voice is not distributed with the web game.

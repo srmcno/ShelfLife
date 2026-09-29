@@ -9,6 +9,7 @@
     "build": "python3 scripts/build_site.py"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "playwright": "1.63.0"
   }
 }

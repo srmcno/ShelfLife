@@ -446,8 +446,8 @@ export const VISIT_GAP_MS = 2 * HOUR;   // a gap this long starts a new visit
 export const BRIEFING_AT = 12;          // total grudges at which new arrivals get briefed
 
 /* ================= THE BACKUP REMINDER =================
-   Everything in this game lives in one browser's localStorage: no account, no
-   sync, and no way back from a cleared site-data dialog. The game has always
+   Unless the player turns on cloud save, everything in this game lives in one
+   browser's localStorage, with no way back from a cleared site-data dialog. The game has always
    offered a backup under More and has never once suggested taking one, so the
    players most likely to lose a shelf were exactly the ones who never opened that
    menu. These rules ask — but only once a shelf is old enough and populated

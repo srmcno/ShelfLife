@@ -3,6 +3,8 @@ import { initWelcome } from './ui/welcome.js';
 import { initEscapades } from './ui/escapades.js';
 import { createBackup } from './backup.js';
 import { initBackupTransfer } from './ui/backup.js';
+import { cloud, sync, connectCloud } from './cloud/index.js';
+import { initCloudUI } from './ui/cloud.js';
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
@@ -178,10 +180,12 @@ function countOf(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one 
 // The reminder itself (when a shelf is worth nagging about) lives in state.js so
 // it can be tested without a DOM; this end only paints it.
 const backupBanner = document.getElementById('backupBanner');
+let cloudUI = null;
 function syncBackupBanner() {
   if (!backupBanner) return;
-  const due = backupDue(state);
+  const due = backupDue(state) && !cloudUI?.covers();
   backupBanner.hidden = !due;
+  cloudUI?.nudge();
   if (!due) return;
   const text = document.getElementById('backupBannerText');
   if (text) {
@@ -219,15 +223,16 @@ function cancelRestore() { pendingRestore = null; restoreVeil.classList.remove('
 document.getElementById('restoreCancel').addEventListener('click', cancelRestore);
 restoreVeil.addEventListener('click', e => { if (e.target === restoreVeil) cancelRestore(); });
 document.getElementById('restoreBackup').addEventListener('click', () => document.getElementById('exportBtn').click());
-document.getElementById('restoreConfirm').addEventListener('click', () => {
-  if (!pendingRestore) return;
+// Replaces the live shelf with one that has already been through normalizeState.
+// A restored backup and a chosen cloud copy both arrive this way.
+function applyRestoredState(normalized) {
   stopSpeech();
   closeCard();
   clearedNotes = null;
   document.getElementById('clearNotes').dataset.undo = '';
   document.getElementById('clearNotes').textContent = 'Clear notes';
   Object.keys(state).forEach(k => delete state[k]);
-  Object.assign(state, pendingRestore);
+  Object.assign(state, normalized);
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);
@@ -236,8 +241,30 @@ document.getElementById('restoreConfirm').addEventListener('click', () => {
   syncNight();
   renderAll(state);
   syncAudioButtons();
+}
+document.getElementById('restoreConfirm').addEventListener('click', () => {
+  if (!pendingRestore) return;
+  applyRestoredState(pendingRestore);
   cancelRestore();
   toast('Shelf restored. Everyone has an opinion about the journey.');
+});
+
+// ---------- cloud save (inert unless src/cloud/config.js is filled in) ----------
+const CLOUD_ARRIVALS = {
+  arrived: 'Your shelf has arrived from the cloud. Everyone is accounted for.',
+  newer: 'Caught up with your other device. Nobody noticed you were gone.',
+  chosen: 'The cloud copy is on the shelf now.',
+  undo: 'Swapped back. Everyone is pretending nothing happened.'
+};
+cloudUI = initCloudUI({ cloud, sync, getState: () => state, onChange: () => syncBackupBanner() });
+connectCloud({
+  applyRemote: (next, { reason } = {}) => {
+    applyRestoredState(next);
+    toast(CLOUD_ARRIVALS[reason] || CLOUD_ARRIVALS.chosen);
+    return true;
+  },
+  // Never swap the shelf out from under a game or a resident's card.
+  canApply: () => !document.querySelector('.veil.open:not(#cloudVeil)')
 });
 const recoveryBtn = document.getElementById('recoveryBtn');
 recoveryBtn.hidden = !Store.get(RECOVERY_KEY);
