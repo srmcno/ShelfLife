@@ -56,18 +56,27 @@ export async function writeCacheFile({ name, data, blob }) {
   return written.uri;
 }
 
-// Resolves 'shared', 'cancelled', 'failed' or 'unsupported' (not the app).
-export async function shareFile({ name, data, blob, title = 'Shelf Life', text, dialogTitle } = {}) {
-  const share = plugin('Share');
-  if (!share || !plugin('Filesystem')) return 'unsupported';
-  let uri;
-  try { uri = await writeCacheFile({ name, data, blob }); } catch { return 'failed'; }
+async function openShareSheet(options) {
   try {
-    await share.share({ title, text, files: [uri], dialogTitle: dialogTitle || title });
+    await plugin('Share').share(options);
     return 'shared';
   } catch (error) {
     return /cancel/i.test(String(error?.message || error || '')) ? 'cancelled' : 'failed';
   }
+}
+
+// Resolves 'shared', 'cancelled', 'failed' or 'unsupported' (not the app).
+export async function shareFile({ name, data, blob, title = 'Shelf Life', text, dialogTitle } = {}) {
+  if (!plugin('Share') || !plugin('Filesystem')) return 'unsupported';
+  let uri;
+  try { uri = await writeCacheFile({ name, data, blob }); } catch { return 'failed'; }
+  return openShareSheet({ title, text, files: [uri], dialogTitle: dialogTitle || title });
+}
+
+// Words and a link, such as a friend code: the same sheet, no file.
+export async function shareText({ title = 'Shelf Life', text, url, dialogTitle } = {}) {
+  if (!plugin('Share')) return 'unsupported';
+  return openShareSheet({ title, text, url, dialogTitle: dialogTitle || title });
 }
 
 // "Save" in the app: the same share sheet, where Drive, Files or email keep the copy.

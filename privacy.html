@@ -46,15 +46,25 @@
       written.</li>
   </ul>
   <h3>Friends</h3>
-  <p>If you use the friend features, the server also keeps:</p>
+  <p>Friends need cloud save. If you use them, the server also keeps:</p>
   <ul>
-    <li><strong>Friend codes and friend lists.</strong> Nobody is added without accepting.</li>
-    <li><strong>Shelf snapshots</strong>, shared only with friends you have accepted.</li>
-    <li><strong>Shelf Court summonses</strong> sent between friends.</li>
-    <li><strong>Daily arcade scores.</strong> The names beside them are visible only to your friends.</li>
+    <li><strong>Your friend code and friend list:</strong> who you have asked, who has asked you and who has
+      accepted. Nobody becomes your friend without accepting, and a request you send does not show the other
+      player's name until they do.</li>
+    <li><strong>Your shelf on show:</strong> a snapshot of your residents (their names, looks and moods), your
+      display name and how many curios you have. Only friends you have accepted can see it.</li>
+    <li><strong>Shelf Court summonses</strong> between friends: the case, the two residents in it and the
+      verdict.</li>
+    <li><strong>Daily arcade scores.</strong> Friends see yours with your name. Everyone else sees only
+      anonymous numbers: how many people played, what share of them a score beat, and the day's top score,
+      never whose it was.</li>
+    <li><strong>Blocks and reports.</strong> You can block anyone and report them. A report keeps your reason
+      and a copy of that player's name and shelf as they were, so a person can review it for moderation. It is
+      removed if either account is deleted.</li>
+    <li>A short record of friend codes tried, so nobody can guess their way into your list.</li>
   </ul>
-  <p>There are no public profiles, no chat and no strangers. Other players see nothing of yours unless you
-    have accepted them as a friend.</p>
+  <p>There are no public profiles and no chat. Strangers never see your name, your shelf or your residents;
+    at most, your score is one of the numbers in the anonymous day's results.</p>
   <h3>Who holds it</h3>
   <p>Cloud save runs on <a href="https://supabase.com" rel="noopener">Supabase</a>, which stores the data and
     sends the sign-in emails on our behalf, and handles them only to provide that service. The sign-in
@@ -84,9 +94,9 @@
   <h2>Keeping and deleting</h2>
   <p>Cloud data is kept while the account exists. You can delete it at any time, with or without the app:
     see <a href="delete-account.html">delete your account</a>. That removes the account, your email, the
-    cloud save, the device id, your friend code and name, friend links, shared snapshots, summonses and
-    scores. Copies in the provider's routine backups expire on its normal schedule. The household on your
-    device is left alone.</p>
+    cloud save, the device id, your friend code and name, friend links, your shelf on show, summonses,
+    scores, blocks, and reports made by you or about you. Copies in the provider's routine backups expire
+    on its normal schedule. The household on your device is left alone.</p>
   <p>To see the cloud save itself, choose <strong>More → Back up</strong>: the file holds the same data.</p>
 
   <h2>Questions</h2>

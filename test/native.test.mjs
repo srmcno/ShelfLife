@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { setImmediate as nextTurn } from 'node:timers/promises';
 import { readFileSync, existsSync } from 'node:fs';
 import {
-  isNative, plugin, shareFile, saveFile, openExternal, externalTarget, initNative, backAction,
+  isNative, plugin, shareFile, saveFile, shareText, openExternal, externalTarget, initNative, backAction,
   deviceVoices, speak, stopSpeaking, speechAvailable, hideSplash, minimizeApp
 } from '../src/native.js';
 import { PLAY_URL } from '../src/backup.js';
@@ -96,6 +96,17 @@ test('a cancelled share, a refused share and an unwritable cache are told apart'
   fakeCapacitor({ plugins: { Share: undefined } });
   assert.equal(await shareFile({ name: 'a.json', data: '{}' }), 'unsupported');
   reset();
+});
+
+test('a friend code goes to the share sheet as words and a link, with no file', async () => {
+  reset();
+  assert.equal(await shareText({ text: 'My friend code is ABCD EFGH.' }), 'unsupported');
+  const fake = fakeCapacitor();
+  try {
+    assert.equal(await shareText({ text: 'My friend code is ABCD EFGH.', url: PLAY_URL, dialogTitle: 'Send your friend code' }), 'shared');
+    assert.deepEqual(fake.of('Share')[0][2], { title: 'Shelf Life', text: 'My friend code is ABCD EFGH.', url: PLAY_URL, dialogTitle: 'Send your friend code' });
+    assert.equal(fake.of('Filesystem').length, 0);
+  } finally { reset(); }
 });
 
 test('pages outside the game open in the browser tab; mailto goes to the system', async () => {

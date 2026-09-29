@@ -1,8 +1,8 @@
 # Google Play listing: draft
 
 Everything the Play Console asks for, in the order it asks. Paste, then check each line against the build
-you are actually uploading: the friend features and cloud save are described below as they will be once
-they ship, and the answers change if a release goes out without them.
+you are actually uploading. Cloud save and the friend features that depend on it appear only when
+`src/cloud/config.js` names a Supabase project; several answers below change with that, and say how.
 
 Assets in this folder: `play-icon-512.png` (app icon), `feature-graphic.jpg` (1024 x 500) and
 `screenshots/` (eight 1080 x 1920 phone screenshots from `node scripts/store_screenshots.mjs`).
@@ -51,7 +51,7 @@ They get hungry, bored and filthy in real time. Nobody here stays buried. You ca
 If cloud save is switched on for the release, add this paragraph before the last line:
 
 ```text
-Cloud save is there if you want it: turn it on and your shelf can follow you to another phone or a browser. Sign in with a code sent to your email. No passwords.
+Cloud save and friends are there if you want them. Your shelf can follow you to another phone or a browser, signed in with a code sent to your email. Swap friend codes to show each other your shelves, summon each other's residents to Shelf Court and compare daily scores. Friends only: no chat, no strangers.
 ```
 
 **App category:** Game, **Casual**. (Simulation also fits; Casual is where short daily sessions are
@@ -95,11 +95,12 @@ Category: **Game**. Answer from what is in the build:
 - **Crude humour:** mild, if the form asks: death and curse jokes, funerals for raisins.
 - **Gambling:** no real-money gambling and no simulated casino games. Coffins and the nightly omen give
   random in-game rewards, bought only with souls earned in play; nothing can be bought with money.
-- **Users interact or share content:** there is no public chat and no public profile. Before the friend
-  features ship, answer **No**. Once they ship, answer that users can share limited content with friends
-  they have accepted: a display name, shelf snapshots (which can include hand-drawn creatures), Court
-  summonses and daily scores, with no free-form messaging. Play's user-generated content policy then
-  expects a way to remove a friend and to report abuse; ship those with the feature.
+- **Users interact or share content:** there is no public chat and no public profile. Without cloud save
+  configured, answer **No**. With it, answer that users can share limited content with friends they have
+  accepted: a display name, a shelf on show (which can include hand-drawn creatures), Court summonses and
+  daily scores, with no free-form messaging. Strangers see only anonymous score numbers. Players can
+  remove and block a friend and report abuse; reports are kept for moderation, so somebody has to read
+  them (in the Supabase table editor, `public.reports`).
 - **Shares location:** no. **Digital purchases:** no.
 
 Expect roughly PEGI 7 / ESRB Everyone 10+ for fantasy peril and mild fear. The target audience stays 13+
@@ -123,8 +124,8 @@ sense.
 | Personal info: Email address | Only if the player adds one, for the sign-in code | Yes | No | Yes | Account management |
 | Personal info: Name | The display name the player chooses, shown to accepted friends | Yes | No | Yes | App functionality |
 | Personal info: User IDs | The account id and friend code | Yes | No | Yes | Account management, App functionality |
-| App activity: Other user-generated content | The cloud save: residents, drawings, names, notes; shelf snapshots for friends | Yes | No | Yes | App functionality |
-| App activity: Other actions | Game progress in the save, Court summonses, daily arcade scores | Yes | No | Yes | App functionality |
+| App activity: Other user-generated content | The cloud save: residents, drawings, names, notes; the shelf on show to friends; the reason typed into a report | Yes | No | Yes | App functionality, Fraud prevention, security and compliance (reports) |
+| App activity: Other actions | Game progress in the save, friend requests and blocks, Court summonses, daily arcade scores | Yes | No | Yes | App functionality |
 | Device or other IDs | The random device id the game makes up, such as `android-k2x9q4mz` | Yes | No | Yes | App functionality |
 
 Not collected: location, financial info, health, messages, photos and videos, audio, files, calendar,

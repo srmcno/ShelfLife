@@ -3,7 +3,7 @@
 //   node scripts/store_screenshots.mjs
 //
 // A synthetic household (test/household-fixtures.mjs), a fixed afternoon and
-// a seeded Math.random, so the same commit gives the same pictures. Each is
+// a seeded Math.random, so the same commit shows the same scenes. Each is
 // 1080 x 1920: 9:16 portrait, which Play accepts for phones (the long side
 // may be at most twice the short one) and prefers for featured games.
 // It starts the local preview server on SHELF_PREVIEW_PORT (default 4193).
