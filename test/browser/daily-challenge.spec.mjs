@@ -99,3 +99,19 @@ test('Shelf Court opens on today’s docket case and says what airing it pays', 
   await page.setViewportSize({ width: 320, height: 700 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 || [...document.querySelectorAll('.veil.open .sheet')].some(el => el.scrollWidth > el.clientWidth + 1))).toBe(false);
 });
+
+test('the shelf desk lists today’s docket and challenge and opens each one', async ({ page }) => {
+  const c = dailyChallenge(todayKey()), docketCase = COURT_BY_ID[docketCaseId(todayKey())];
+  await open(page);
+  const tile = page.locator('#mayhemDesk .mh-today');
+  await expect(tile).toContainText(docketCase.title);
+  await expect(tile).toContainText(ARCADE_BY_ID[c.game].title);
+  await expect(tile).toContainText(c.mod.title);
+  await tile.locator('[data-mh-today="arcade"]').click();
+  await expect(page.locator('#arcadeVeil .sheet-head h2')).toHaveText(ARCADE_BY_ID[c.game].title);
+  await expect(page.locator('#arcadeSheet .ar-daily')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#arcadeVeil')).not.toBeVisible();
+  await tile.locator('[data-mh-today="court"]').click();
+  await expect(page.locator('#courtVeil .sc-tonight h3')).toHaveText(docketCase.title);
+});

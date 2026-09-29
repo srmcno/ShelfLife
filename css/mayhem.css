@@ -307,3 +307,13 @@ button.mh-shelf-item:hover{border-color:var(--rc);transform:translateY(-2px)}
 .mh-season{grid-column:1/-1;order:-2;display:flex;flex-direction:column;gap:3px;padding:10px 14px;border-radius:12px;border:1px solid #ff9a3c66;background:linear-gradient(120deg,#ff9a3c1f,#0000);font:500 13px/1.45 var(--body);color:var(--ink-2)}
 .mh-season b{font:700 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:#ff9a3c}
 .mh-season-note{margin:-4px 0 10px;font-size:12.5px;color:var(--ink-3)}
+
+/* ---- today in the playroom ---- */
+.mh-today{grid-column:1/-1;gap:6px}
+.mh-today-row{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--hair-lit);background:#ffffff08;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.mh-today-row:hover,.mh-today-row:focus-visible{border-color:var(--mh-candle)}
+.mh-today-row b{display:block;font:600 13.5px/1.2 var(--body)}
+.mh-today-row small{display:block;font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.mh-today-row.done{color:var(--ink-3)}
+.mh-today-row.done .mh-check{background:var(--mh-good);border-color:var(--mh-good)}
+@media (min-width:901px){.mh-today{flex-direction:row;flex-wrap:wrap;align-items:center}.mh-today .mh-tile-kicker{flex:0 0 100%}.mh-today-row{flex:1 1 260px;width:auto}}

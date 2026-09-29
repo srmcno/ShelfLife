@@ -6,6 +6,10 @@ import {
 import { mayhemState } from '../mayhem-state.js';
 import { CURIOS, RARITIES, RANKS, QUIET_LINES } from '../content/mayhem.js';
 import { SEASONS } from '../content/seasons.js';
+import { COURT_BY_ID, docketToday, DOCKET_SOULS } from '../engine/court.js';
+import { challengeToday } from '../engine/arcade.js';
+import { ARCADE_BY_ID } from '../content/arcade.js';
+import { DAILY_SOULS } from '../content/daily.js';
 import { activeSeason, seasonProgress } from '../engine/seasons.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { glyph } from '../art/mayhem-glyphs.js';
@@ -105,7 +109,14 @@ function renderDesk(state, now = Date.now()) {
   const cabinetTile = '<button class="mh-tile mh-cabinet-tile" type="button" data-mh="cabinet"><span class="mh-tile-kicker">Cabinet of Curiosities</span><b>' + owned + ' / ' + CURIOS.length + '</b><span class="mh-meter"><i style="width:' + Math.round(owned / CURIOS.length * 100) + '%"></i></span><small>' + esc(rankInfo(state).rank.title) + '</small></button>';
   const season = activeSeason(now);
   const seasonStrip = season ? (p => '<div class="mh-season"><b>' + esc(season.name) + '</b><span>' + esc(season.blurb) + ' Some coffins hold something seasonal (' + p.owned + '/' + p.total + '). Until ' + season.to[1] + ' ' + MONTHS[season.to[0]] + '.</span></div>')(seasonProgress(m, season)) : '';
-  setHTML(deskEl, seasonStrip + omenTile + choresTile + coffinTile + cabinetTile);
+  const docket = docketToday(state, now), ch = challengeToday(state, now), docketCase = COURT_BY_ID[docket.caseId];
+  const todayRow = (kind, done, title, detail, extra = '') => '<button type="button" class="mh-today-row' + (done ? ' done' : '') + '" data-mh-today="' + kind + '"' + extra + '><span class="mh-check" aria-hidden="true">' + (done ? '✓' : '') + '</span><span><b>' + esc(title) + '</b><small>' + esc(detail) + '</small></span></button>';
+  const todayTile = docketCase && ch
+    ? '<div class="mh-tile mh-today"><span class="mh-tile-kicker">Today in the Playroom</span>' +
+      todayRow('court', docket.done, 'Shelf Court docket', docketCase.title + (docket.done ? ' · filed' : ' · +' + DOCKET_SOULS + ' souls')) +
+      todayRow('arcade', ch.claimed, 'Arcade challenge', ARCADE_BY_ID[ch.game].title + ': ' + ch.mod.title + (ch.claimed ? ' · done' : ' · +' + DAILY_SOULS + ' souls'), ' data-game="' + ch.game + '"') + '</div>'
+    : '';
+  setHTML(deskEl, seasonStrip + omenTile + choresTile + coffinTile + todayTile + cabinetTile);
 }
 
 // The count of waiting disasters follows you: onto the Shelf tab, into the
@@ -403,12 +414,17 @@ export function initMayhem(state, onRefresh) {
     else if (event.type === 'chores-complete') later('All three chores done. A free curio: ' + event.prize.curio.name + (event.prize.duplicate ? ' (duplicate, +' + event.prize.refund + ' souls)' : '') + '.');
   });
   document.addEventListener('click', event => {
-    const control = event.target.closest?.('[data-mh],[data-choice],[data-curio],[data-order],[data-order-buy]');
+    const control = event.target.closest?.('[data-mh],[data-choice],[data-curio],[data-order],[data-order-buy],[data-mh-today]');
     if (!control || !S) return;
     if (control.closest('#mayhemVeil') === null && !control.closest('#mayhemAlert,#mayhemDesk')) return;
     if (control.getAttribute('aria-disabled') === 'true' && control.dataset.mh === 'coffin') { showCoffin(S); return; }
     if (control.dataset.choice != null) { choose(S, Number(control.dataset.choice)); return; }
     if (control.dataset.curio) { showCurio(control.dataset.curio); return; }
+    if (control.dataset.mhToday) {
+      if (control.dataset.mhToday === 'court') window.dispatchEvent(new CustomEvent('shelflife:court', { detail: {} }));
+      else window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: control.dataset.game } }));
+      return;
+    }
     if (control.dataset.order) { showOrder(control.dataset.order); return; }
     if (control.dataset.orderBuy) { buyOrder(S, control.dataset.orderBuy); return; }
     const action = control.dataset.mh;
