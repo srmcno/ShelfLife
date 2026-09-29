@@ -4,7 +4,7 @@
 
 Small creatures. Long memories. A free, darkly comic creature game for phones and desktops.
 Make peculiar residents, look after them, play together and collect the evidence of a small life.
-They cannot die. They have looked into it.
+Immortal. Unwashed. In arrears.
 
 ## Something has gone wrong
 

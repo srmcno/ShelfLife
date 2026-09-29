@@ -1,7 +1,7 @@
 {
   "name": "Shelf Life",
   "short_name": "Shelf Life",
-  "description": "Small creatures with needs, opinions, and long memories. They cannot die. They have looked into it.",
+  "description": "Small creatures with needs, opinions and long memories. Immortal. Unwashed. In arrears.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

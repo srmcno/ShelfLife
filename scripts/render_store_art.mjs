@@ -49,17 +49,17 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8">
   .copy h1{margin:0;font:400 104px/0.95 Gloock,serif;letter-spacing:-.035em}
   .copy h1 em{font-style:normal;color:#F6C768;text-shadow:0 0 22px #f6c76855}
   .copy p{margin:22px 0 0;font:400 34px/1.15 Gloock,serif;letter-spacing:-.02em}
-  .copy small{display:block;max-width:300px;margin-top:14px;font:500 27px/1.15 Caveat,cursive;color:#eab0bf}
+  .copy small{display:block;margin-top:14px;font:500 30px/1.15 Caveat,cursive;color:#eab0bf}
   *{animation-play-state:paused!important;transition:none!important}
 </style></head><body>
 <div class="art">
   <svg class="paper" viewBox="0 0 1024 500" width="1024" height="500">${wallpaper}</svg>
   <div class="glow" style="left:470px;top:40px;width:520px;height:420px;background:radial-gradient(closest-side,#ffc87733,transparent)"></div>
   <div class="shelf"></div><div class="lip"></div><div class="front"></div><div class="under"></div>
-  ${candle(404, 74)}${candle(434, 52)}${candle(988, 66)}
+  ${candle(420, 74)}${candle(450, 52)}${candle(988, 66)}
   ${[2, 1, 0].map(i => `<div class="shadow" style="right:${40 + 18 + i * 178}px"></div>`).join('')}
   <div class="cast" id="cast"></div>
-  <div class="copy"><h1>Shelf <em>Life</em></h1><p>Small creatures.<br>Long memories.</p><small>They cannot die. They have looked into it.</small></div>
+  <div class="copy"><h1>Shelf <em>Life</em></h1><p>Small creatures.<br>Long memories.</p><small>Immortal. Unwashed. In arrears.</small></div>
 </div>
 <script type="module">
   import { ARRIVALS, arrivalDraft } from '/src/content/arrivals.js';
