@@ -313,11 +313,14 @@ render again:
 ```sh
 node scripts/render_icons.mjs      # web, maskable, Apple, Play listing and Android launcher icons
 node scripts/render_store_art.mjs  # store/feature-graphic.jpg, drawn with the game's own residents
+node scripts/store_screenshots.mjs # store/screenshots/: eight 1080x1920 phone screenshots for Play
 ```
 
-Both use Playwright's Chromium (set `CHROMIUM_PATH` to use another). `render_icons.mjs` writes
-the Android launcher resources only when an `android/` project exists. `store/` is not published
-with the site.
+All three use Playwright's Chromium (set `CHROMIUM_PATH` to use another). `render_icons.mjs` writes
+the Android launcher resources only when an `android/` project exists. The screenshots use a synthetic
+household, a fixed afternoon and a seeded random, so a commit always gives the same pictures; any over
+1 MB is saved as a JPEG instead. `store/listing.md` drafts the Play listing, the content rating and Data
+safety answers and the release checklist. `store/` is not published with the site.
 
 ### Connecting your own Supabase project
 
