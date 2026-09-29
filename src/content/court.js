@@ -1132,3 +1132,5 @@ export const AUDIENCE_REACTIONS = [
   ['(The audience loses its mind. Three ghosts faint. One proposes to the bailiff. The bailiff says he will think about it.)', '(Standing ovation. The dead are on their feet. They do not have feet. It is still very moving.)']
 ];
 export const HALLWAY_IN = ['Outside the courtroom…', 'In the hallway, moments later…', 'Our cameras caught up with them by the vending machine…', 'We asked for a comment. We got one.'];
+// The hall cam reporter's question before each loser answers.
+export const HALLWAY_ASKS = ['Any regrets?', 'How are you feeling?', 'A word for the viewers at home?', 'Will you appeal?', 'Do you still believe in justice?', 'Was it worth it?', 'Is this a bad time?', 'Did you see that coming?', 'The court has spoken. Would you like to?', 'What happens now?', 'How will you tell the family?', 'One word for the judge?'];

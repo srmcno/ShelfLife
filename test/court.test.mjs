@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blankState, normalizeState } from '../src/state.js';
-import { COURT_CASES, COURT_CAST, HAPPENINGS, RANDOM_HAPPENINGS, ADS, QUESTIONS_PER_EPISODE, JURY_EXTRAS, STAND_INS } from '../src/content/court.js';
+import { COURT_CASES, COURT_CAST, HAPPENINGS, RANDOM_HAPPENINGS, ADS, QUESTIONS_PER_EPISODE, JURY_EXTRAS, STAND_INS, HALLWAY_ASKS } from '../src/content/court.js';
 import { COURT_ART } from '../src/art/court-cast.js';
 import {
   castEpisode, standInFor, episodeOpening, episodeQuestions, episodeAsk, questionsLeft, startHappening, resolveHappening, randomHappening,
@@ -238,6 +238,22 @@ test('the guide offers unaired cases first and records survive a reload', () => 
   assert.deepEqual(normalizeCourtroom({ episodes: 3, justice: 9, best: { 'borrowed-coffin': 7, nope: 2, 'snoring-wall': -1 }, last: 'nope' }),
     { episodes: 3, justice: 3, best: { 'borrowed-coffin': 3 }, last: '', docketDay: '', docketStreak: 0, docketLastDay: '',
       summonsDay: '', summonsHeard: 0, summonsVerdicts: 0, summonsPaid: [] });
+});
+
+test('the hall cam: the announcer cuts to the hallway and a reporter asks each loser in turn', () => {
+  for (const ruling of ['plaintiff', 'defendant', 'both']) {
+    const { result } = playAll(household(), 'borrowed-coffin', ruling, 'gavel', seededRandom(ruling.length));
+    const losers = ruling === 'plaintiff' ? ['d'] : ruling === 'defendant' ? ['p'] : ['p', 'd'];
+    assert.deepEqual(result.losers, losers);
+    assert.equal(result.winner, ruling === 'both' ? null : ruling === 'plaintiff' ? 'p' : 'd');
+    assert.equal(result.hallway[0].s, 'announcer');
+    assert.deepEqual(result.hallway.slice(1).map(l => l.s), losers.flatMap(side => ['reporter', side]));
+    const asks = result.hallway.filter(l => l.s === 'reporter');
+    asks.forEach((l, i) => { assert.equal(l.who, losers[i]); assert.ok(HALLWAY_ASKS.includes(l.t)); });
+    if (asks.length > 1) assert.notEqual(asks[0].t, asks[1].t, 'two losers get two different questions');
+  }
+  assert.ok(HALLWAY_ASKS.length >= 6);
+  for (const ask of HALLWAY_ASKS) assert.ok(!/[\u2014\u2013"']/.test(ask) && ask.length <= 60, ask);
 });
 
 test('adventures can ask for an episode, and an episode moves them on', () => {

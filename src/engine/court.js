@@ -1,7 +1,7 @@
 import {
   COURT_CASES, COURT_CAST, JURY_EXTRAS, STAND_INS, QUESTIONS_PER_EPISODE, RULINGS, HAPPENINGS, RANDOM_HAPPENINGS,
   OPENERS, ALL_RISE, JUDGE_ENTRANCES, PLAINTIFF_CUE, DEFENDANT_CUE, ADS, BREAK_IN, BREAK_OUT,
-  JURY_AGREE, JURY_DISAGREE, AUDIENCE_REACTIONS, HALLWAY_IN
+  JURY_AGREE, JURY_DISAGREE, AUDIENCE_REACTIONS, HALLWAY_IN, HALLWAY_ASKS
 } from '../content/court.js';
 import { courtroomState, SUMMONS_REMEMBERED } from '../court-state.js';
 import { grantBonusTrust, petById, localDayKey, dayKeyOffset } from '../state.js';
@@ -198,7 +198,8 @@ export function episodeBreak(ep, rnd = Math.random) {
 }
 
 // Rule. The jury votes, the audience reacts, and the loser gives an interview
-// in the hallway.
+// in the hallway: the announcer cuts to it, then a reporter asks each loser a
+// question (reporter lines carry the side they are asking in `who`).
 export function episodeRule(ep, ruling, rnd = Math.random) {
   if (ep.done || !RULINGS.includes(ruling)) return null;
   const k = episodeCase(ep);
@@ -220,9 +221,13 @@ export function episodeRule(ep, ruling, rnd = Math.random) {
   const juryLines = [voice(JURY_AGREE, true), voice(JURY_DISAGREE, false)].filter(Boolean);
   juryLines.push({ s: 'jury', t: agree === ep.jury.length ? 'The jury agrees with you. All of them. Even the one that was asleep.' : agree === 0 ? 'The jury disagrees with you. Unanimously. One of them is writing to its MP.' : 'The jury agrees, ' + agree + ' to ' + (ep.jury.length - agree) + '.', who: null });
   const losers = ruling === 'plaintiff' ? ['d'] : ruling === 'defendant' ? ['p'] : ['p', 'd'];
-  const hallway = [{ s: 'announcer', t: pick(HALLWAY_IN, rnd) }, ...losers.map(side => ({ s: side, t: fill(ep, k.hallway[side]), who: null }))];
+  const first = Math.floor(rnd() * HALLWAY_ASKS.length);
+  const hallway = [{ s: 'announcer', t: pick(HALLWAY_IN, rnd) }, ...losers.flatMap((side, i) => [
+    { s: 'reporter', t: fill(ep, HALLWAY_ASKS[(first + i * 5) % HALLWAY_ASKS.length], side), who: side },
+    { s: side, t: fill(ep, k.hallway[side]), who: null }
+  ])];
   return {
-    correct, truth: k.truth, votes, agree, stars,
+    correct, truth: k.truth, votes, agree, stars, losers, winner: losers.length === 1 ? (losers[0] === 'p' ? 'd' : 'p') : null,
     ruling: lines(ep, k.rulings[ruling]),
     jury: juryLines,
     audience: { s: 'audience', t: pick(AUDIENCE_REACTIONS[Math.min(3, Math.floor(ep.ratings / 25))], rnd), who: null },

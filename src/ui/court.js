@@ -7,6 +7,7 @@ import { courtroomState } from '../court-state.js';
 import { save } from '../state.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { castSvg, COURT_PROPS } from '../art/court-cast.js';
+import { HALL_SET, HALL_PROPS } from '../art/court-hallway.js';
 import { glyph } from '../art/mayhem-glyphs.js';
 import { escapadeView } from '../engine/escapades.js';
 import { guestPet } from '../cloud/social.js';
@@ -22,7 +23,7 @@ import { playTone, playStomp, playAchievement, playError, playStar, playUnlock }
 const byId = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const veil = byId('courtVeil'), sheet = byId('courtSheet');
-const VOICES = { judge: 110, bailiff: 640, announcer: 180, p: 470, d: 380, audience: 220, jury: 300 };
+const VOICES = { judge: 110, bailiff: 640, announcer: 180, reporter: 540, p: 470, d: 380, audience: 220, jury: 300 };
 const NPC_VOICES = { woodlouse: 440, geoffrey2: 470, moth: 560, lamp: 250, cat: 180, ghost: 330, uncle: 150, raven: 240, widow: 380, susan: 600 };
 const TYPE_MS = 20;
 const HEADS = 9;
@@ -229,7 +230,7 @@ function nameFor(line) {
   if (line.s === 'npc') return COURT_CAST[line.who]?.name || 'A witness';
   if (line.s === 'p') return ep.p.name + ', plaintiff';
   if (line.s === 'd') return ep.d.name + ', defendant';
-  return ({ judge: 'Judge Mortis (you)', bailiff: 'Bailiff Rattigan', announcer: 'Announcer', audience: 'Studio audience', jury: 'The jury' })[line.s] || '';
+  return ({ judge: 'Judge Mortis (you)', bailiff: 'Bailiff Rattigan', announcer: 'Announcer', reporter: 'Hall cam reporter', audience: 'Studio audience', jury: 'The jury' })[line.s] || '';
 }
 function setSpeaker(who) {
   const st = stage(); if (!st) return;
@@ -258,7 +259,9 @@ function speak(line) {
   if (line.s === 'npc') showWitness(line.who);
   setSpeaker(line.s);
   cue(line);
-  $('[data-actor="' + line.s + '"]')?.classList.add('talking');
+  const hall = $('.sc-hall');
+  if (hall && (line.s === 'reporter' || line.s === 'p' || line.s === 'd')) aimHall(line.s === 'reporter' ? line.who : line.s);
+  (hall?.querySelector('[data-actor="' + line.s + '"]') || $('[data-actor="' + line.s + '"]'))?.classList.add('talking');
   let typed = 0;
   text.textContent = '';
   const full = line.t;
@@ -396,6 +399,85 @@ function happeningEnd(h, choice) {
   if (h.anim === 'sleep' && choice === 'gavel') st.querySelectorAll('.sc-seat.asleep').forEach(el => el.classList.remove('asleep'));
 }
 
+/* ---------------- the hallway ----------------
+   After the ruling the show cuts to a hand-held camera in the corridor
+   outside Courtroom 1: its own set (art/court-hallway.js), the loser in the
+   foreground with a microphone in their face, and on some episodes the winner
+   strolling past behind them while the loser's eyes follow. The courtroom
+   stays underneath, hidden by the stage's .sc-hallway hook, until the cut
+   back. */
+const WALK_DELAY = 1600, WALK_MS = 6400;  // matches .sc-hall-track in css/court.css
+const lowerFirst = text => text ? text[0].toLowerCase() + text.slice(1) : '';
+function hallTitle(side) {
+  if (ep.ruling === 'both') return 'Declared an idiot, live on air';
+  const asking = lowerFirst(fill(ep, episodeCase(ep).asking));
+  return (side === 'd' ? 'Found liable. Owes ' : 'Lost. Wanted ') + asking;
+}
+function hallMarkup(losers, walker, boom) {
+  const loser = side => '<div class="sc-hall-loser ' + side + '" data-actor="' + side + '"><span class="sc-hall-art">' + portrait(ep[side]) + '</span></div>';
+  return '<div class="sc-hall' + (losers.length > 1 ? ' both' : '') + '" aria-hidden="true"><div class="sc-hall-cam">' + HALL_SET +
+    '<span class="sc-hall-onair">ON AIR</span><span class="sc-hall-plate">COURT 1</span>' +
+    '<span class="sc-hall-prop board">' + HALL_PROPS.noticeboard + '</span><span class="sc-hall-prop portrait">' + HALL_PROPS.portrait + '</span>' +
+    '<span class="sc-hall-prop bench">' + HALL_PROPS.bench + '</span><span class="sc-hall-prop vend">' + HALL_PROPS.vending + '</span>' +
+    (walker ? '<div class="sc-hall-track"><span class="sc-hall-walker"><span class="sc-hall-stride">' + portrait(walker) + '</span></span></div>' : '') +
+    '<span class="sc-hall-haze"></span>' + losers.map(loser).join('') +
+    (boom ? '<span class="sc-hall-prop boom">' + HALL_PROPS.boom + '</span>' : '') +
+    '<span class="sc-hall-prop mic" data-actor="reporter">' + HALL_PROPS.mic + '</span></div>' +
+    '<span class="sc-hall-vignette"></span><span class="sc-hall-vf"><i></i><i></i><i></i><i></i><b></b></span>' +
+    '<span class="sc-hall-rec"><i></i>REC</span><span class="sc-hall-label">HALL CAM 2</span><span class="sc-hall-tc" data-sc-tc></span><span class="sc-hall-batt"><i></i></span>' +
+    '<div class="sc-hall-lower"><b data-sc-hall-name></b><span data-sc-hall-title></span></div></div>';
+}
+function enterHallway(result) {
+  const st = stage(); if (!st || !result.losers?.length) return;
+  const tok = session;
+  const walker = result.winner && !reduced() && Math.random() < 0.65 ? ep[result.winner] : null;
+  st.insertAdjacentHTML('beforeend', hallMarkup(result.losers, walker, !busyEffects() && Math.random() < 0.6));
+  st.classList.add('sc-hallway');
+  aimHall(result.losers[0]);
+  timecode(tok);
+  if (walker) followWinner(tok);
+}
+function leaveHallway() {
+  const st = stage(); if (!st) return;
+  st.classList.remove('sc-hallway');
+  st.querySelector('.sc-hall')?.remove();
+}
+// Point the microphone and the lower third at one loser.
+function aimHall(side) {
+  const hall = $('.sc-hall');
+  if (!hall || !ep?.[side] || hall.dataset.aim === side) return;
+  hall.dataset.aim = side;
+  hall.querySelector('[data-sc-hall-name]').textContent = ep[side].name;
+  hall.querySelector('[data-sc-hall-title]').textContent = hallTitle(side);
+  const lower = hall.querySelector('.sc-hall-lower');
+  lower.classList.remove('in'); void lower.offsetWidth; lower.classList.add('in');
+}
+// A running timecode, hours:minutes:seconds:frames at 24 frames a second.
+function timecode(tok) {
+  const el = $('[data-sc-tc]'); if (!el) return;
+  const start = Date.now(), base = (60 * (12 + Math.floor(Math.random() * 40)) + Math.floor(Math.random() * 60)) * 24;
+  const two = n => String(n).padStart(2, '0');
+  const tick = () => {
+    if (tok !== session || !el.isConnected) return;
+    const f = base + Math.floor((Date.now() - start) * 24 / 1000);
+    el.textContent = two(Math.floor(f / 86400)) + ':' + two(Math.floor(f / 1440) % 60) + ':' + two(Math.floor(f / 24) % 60) + ':' + two(f % 24);
+    later(tick, reduced() ? 1000 : 125);
+  };
+  tick();
+}
+// The winner walks from the far end of the corridor to the near side; the
+// loser's eyes (and a little of their head) go with them.
+function followWinner(tok) {
+  const loser = $('.sc-hall-loser'); if (!loser) return;
+  for (let t = 0; t <= WALK_MS + 800; t += 400) {
+    later(() => {
+      if (tok !== session || !loser.isConnected) return;
+      const centre = 1.1 - 1.25 * Math.min(1, t / WALK_MS);
+      loser.style.setProperty('--gaze', t > WALK_MS ? '0' : Math.max(-2.4, Math.min(2.4, (centre - 0.5) * 5)).toFixed(2));
+    }, WALK_DELAY + t);
+  }
+}
+
 /* ---------------- the episode ---------------- */
 async function runEpisode() {
   const tok = session;
@@ -434,10 +516,13 @@ async function runEpisode() {
   meters();
   if (ep.ratings >= 50) applause(2200);
   await play([result.audience]); if (!alive()) return;
-  tvStatic(500);
-  stage()?.classList.add('sc-hallway');
-  await wait(450); if (!alive()) return;
+  // Cut to the hall cam under the static; the announcer talks over the cut.
+  tvStatic(700);
+  enterHallway(result);
   await play(result.hallway); if (!alive()) return;
+  tvStatic(500);
+  await wait(260); if (!alive()) return;
+  leaveHallway();
   finish();
 }
 async function runHappening(h) {
