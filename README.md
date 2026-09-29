@@ -232,6 +232,52 @@ development files and writes the commit to `release.json`; the same revision ide
 cache. Add new production assets to `service-worker.js` and bump its development cache version.
 The tests check that the offline shell is complete.
 
+### The Android app
+
+The Play Store edition wraps the same web build in [Capacitor 8](https://capacitorjs.com). `android/` is the
+native project Capacitor generated; it is committed, and `npx cap sync` only rewrites its generated files
+(`capacitor.build.gradle`, `capacitor.settings.gradle` and the copied web assets). The web game has no
+Capacitor imports: the npm packages exist only for the native project.
+
+You need Node 22 or newer, JDK 21 and the Android SDK with platform 36 and its build tools. Android Studio
+Otter (2025.2.1) or newer bundles all of it.
+
+```sh
+npm ci
+npm run android:sync     # npm run build, then copy dist/ into android/
+npm run android:open     # open the project in Android Studio
+npm run android:apk      # debug APK in android/app/build/outputs/apk/debug/
+npm run android:bundle   # release AAB in android/app/build/outputs/bundle/release/
+```
+
+The version lives in one place: `version` in `package.json`. The app's `versionName` is that string and its
+`versionCode` is `major * 10000 + minor * 100 + patch` (1.0.0 is 10000, 1.2.3 is 10203), worked out in
+`android/app/build.gradle`. Play refuses a versionCode it has seen before, so bump `version` before every upload.
+
+#### Signing a release
+
+Play only accepts signed bundles. Make an upload key once, keep it outside the repository and back it up
+with its passwords somewhere safe:
+
+```sh
+keytool -genkeypair -v -keystore ~/keys/shelflife-upload.jks -alias upload \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Then create `android/keystore.properties` (gitignored, as are `*.jks` and `*.keystore`):
+
+```properties
+storeFile=/home/you/keys/shelflife-upload.jks
+storePassword=the store password
+keyAlias=upload
+keyPassword=the key password
+```
+
+`android/app/build.gradle` reads that file only if it exists, so without it `npm run android:bundle` still
+builds an unsigned bundle. With it, the bundle is signed with the upload key. Enrol in Play App Signing when
+you create the app: Google keeps the key that signs what players install, and a lost upload key can be
+reset from the Play Console rather than ending the app.
+
 ### Connecting your own Supabase project
 
 Cloud save stays off, with no cloud UI and no requests, until `src/cloud/config.js` has a project URL and key.
