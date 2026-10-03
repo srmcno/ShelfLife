@@ -145,7 +145,7 @@ export function openCard(state, id, keepScroll) {
   const careNames = { food: 'Feed it', fuss: 'Fuss over it', clean: 'Clean it up' };
   const adventure = escapadeView(state).active;
   const ourAdventure = adventure?.petId === pet.id ? adventure : null;
-  if (ourAdventure) html += '<div class="escapade-care-note"><p><b>' + escapeHtml(ourAdventure.episode.title) + '</b>' + escapeHtml(ourAdventure.ready ? 'Our story is ready for its ending.' : ourAdventure.careDone ? 'Our personal moment is saved. Next, a game together.' : ourAdventure.episode.care.label + ' — a personal moment for our adventure.') + '</p><button type="button" class="btn btn-ghost" data-escapade="open">' + (ourAdventure.ready ? 'Choose the ending' : 'Our adventure') + ' ↗</button></div>';
+  if (ourAdventure) html += '<div class="escapade-care-note"><p><b>' + escapeHtml(ourAdventure.episode.title) + '</b>' + escapeHtml(ourAdventure.ready ? 'Our story is ready for its ending.' : ourAdventure.careDone ? 'Our personal moment is saved. Next, a game together.' : ourAdventure.episode.care.label + ': a personal moment for our adventure.') + '</p><button type="button" class="btn btn-ghost" data-escapade="open">' + (ourAdventure.ready ? 'Choose the ending' : 'Our adventure') + ' ↗</button></div>';
   html += '<div class="care-row">' + Object.keys(careNames).map(need => {
     const preview = previewCare(pet, need);
     const storyMoment = ourAdventure && !ourAdventure.careDone && ourAdventure.episode.care.need === need;

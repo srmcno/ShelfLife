@@ -61,3 +61,13 @@ export function householdFixture(kind='established', now=Date.now()) {
   if(kind==='legacy') { s.v=3; delete s.life; s.pets.forEach(p=>{p.img=drawing();delete p.art;delete p.names;delete p.slotHist;}); return s; }
   return normalizeState(s);
 }
+
+// A household on its first day: one resident who moved in a moment ago, nothing
+// done yet. The first-session tour starts for this one and for no fixture above.
+export function firstDayHousehold(now=Date.now()) {
+  const s=blankState(); s.started=now; s.lastTick=now; s.seq=3;
+  s.pets=[{ id:'first',name:'Mabel',born:now,traits:['theatrical','undertaker'],needs:{food:58,fuss:54,clean:66},bond:0,cared:0,grudges:0,
+    stats:{cute:6,menace:4,damp:5,mystique:7},art:{body:'',stamps:[],creature:generateCreature({seed:'first-day-mabel'})} }];
+  s.slots[0]='first'; s.life.introStarted=true;
+  return normalizeState(s);
+}

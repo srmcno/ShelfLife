@@ -2,8 +2,6 @@ import { householdAftermath } from '../household-echoes.js';
 import { renderLife } from './life.js';
 import { renderWelcome } from './welcome.js';
 import { renderEscapades } from './escapades.js';
-import { welcomeView } from '../engine/welcome.js';
-import { escapadeView } from '../engine/escapades.js';
 import { advanceStories, withStories } from '../engine/stories.js';
 import { renderStories } from './stories.js';
 import { save } from '../state.js';
@@ -26,6 +24,7 @@ import { VISITORS } from '../content/stories.js';
 import { renderTheatreControls } from './shelf-theatre.js';
 import { createArrivalInvitation } from './arrival.js';
 import { renderMayhem } from './mayhem.js';
+import { renderNextStep } from './nextstep.js';
 
 const cabinet = document.getElementById('cabinet');
 const notesEl = document.getElementById('notes');
@@ -481,41 +480,12 @@ function syncRounds(state) {
     updateText(check.querySelector('span'), wait ? 'Listening · ' + Math.ceil(wait / 1000) + 's' : 'Check the shelf');
   }
 }
+// The brief used to sit here as its own card, competing with the omen strip and
+// the emergency strip. One recommender now decides what the shelf asks next
+// (engine/nextstep.js) and ui/nextstep.js paints it above the cabinet.
 function renderBrief(state) {
   briefState = state;
-  const host = document.getElementById('shelfBrief');
-  if (!host) return;
-  const welcome = welcomeView(state);
-  if (welcome && !state.life?.welcome?.dismissed && welcome.stage !== 'finished') {
-    const markup = '<span class="brief-icon" aria-hidden="true">✦</span><div><b>' + escapeHtml(welcome.pet.name + ' has a housewarming invitation.') + '</b><span>Unpack a little bowl. Make your first household memory.</span></div><button class="btn btn-sm">Come in</button>';
-    if (updateMarkup(host, markup)) host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent('shelflife:goto', {detail:{tab:'plots',target:'#welcomePanel'}})));
-    return;
-  }
-  const adventure = escapadeView(state).active;
-  if (adventure) {
-    const text = adventure.ready ? 'The story is ready for its ending. You get to choose.' : 'Your place is saved. ' + adventure.completedSteps + ' of 2 moments shared.';
-    updateMarkup(host, '<span class="brief-icon" aria-hidden="true">✦</span><div><b>' + escapeHtml(adventure.pet.name + ' saved you a place.') + '</b><span>' + escapeHtml(text) + '</span></div><button id="escapadeBrief" class="btn btn-sm" data-escapade="open">' + (adventure.ready ? 'The ending' : 'Continue') + ' ↗</button>');
-    return;
-  }
-  const recap=state.life?.recap?.map(id=>state.life.scenes.find(scene=>scene.id===id)).filter(Boolean)||[];
-  if(recap.length){
-    const latest=recap[0],cast=(latest.cast||[]).map(id=>petById(state,id)?.name).filter(Boolean);
-    const next=state.life.outing?{action:'outing',label:'Continue expedition'}:{action:'scene-select',label:'See what happened'};
-    const text=latest.text.length>170?latest.text.slice(0,167).trimEnd()+'…':latest.text;
-    updateMarkup(host,'<span class="brief-icon" aria-hidden="true">✦</span><div><b>'+escapeHtml(cast.length?cast.join(' & ')+': '+latest.title:latest.title)+'</b><span>'+escapeHtml(text)+'</span></div><button class="btn btn-sm" data-life="'+next.action+'" data-id="'+latest.id+'">'+next.label+' ↗</button>');
-    return;
-  }
-  const sorted = [...state.pets].sort((a, b) => a.needs[worstNeed(a)] - b.needs[worstNeed(b)]);
-  const needy = sorted.find(p => p.needs[worstNeed(p)] < 60);
-  const playful = state.pets.find(p => !isAsleep(p)) || state.pets[0];
-  const pet = needy || playful;
-  if (!pet) {
-    updateMarkup(host, '<span class="brief-icon" aria-hidden="true">✦</span><div><b>Make something wonderfully odd.</b><span>Care. Conspire. Collect the evidence.</span></div>');
-    return;
-  }
-  const markup = '<span class="brief-icon" aria-hidden="true">' + (needy ? '!' : '✦') + '</span><div><b>' + escapeHtml(needy ? pet.name + ' is feeling ' + needWords[worstNeed(pet)] + '.' : 'A little time together?') + '</b><span>' + (needy ? 'Tap to help. Individual care builds trust.' : 'Hold a séance with ' + escapeHtml(pet.name) + '. The dead are chatty tonight.') + '</span></div><button class="btn btn-sm">' + (needy ? 'Care' : 'Play') + ' ↗</button>';
-  if (!updateMarkup(host, markup, JSON.stringify([pet.id, markup]))) return;
-  host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent(needy ? 'shelflife:care' : 'shelflife:arcade', { detail: { petId: pet.id, game: 'seance' } })));
+  renderNextStep(state);
 }
 
 /* ---- what needs you -------------------------------------------------------

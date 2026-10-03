@@ -1,0 +1,122 @@
+/* =============================================================================
+   Onboarding and clarity: the one "do this next" card, the first-session guide's
+   soft ring, the help sheet's First day / Glossary tabs, the tooltip card,
+   earned-souls chips, and Calm mode. Loaded last on purpose: it only adds.
+   ============================================================================= */
+
+/* ---- the one card --------------------------------------------------------- */
+.next-step{--ns-tone:var(--mint);position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center;margin:0 0 12px;padding:13px 15px;
+  border:1px solid color-mix(in srgb,var(--ns-tone) 42%,transparent);border-radius:14px;color:var(--ink);
+  background:radial-gradient(120% 160% at 0% 0%,color-mix(in srgb,var(--ns-tone) 18%,transparent),transparent 62%),linear-gradient(180deg,var(--night-3),var(--night-2));
+  box-shadow:0 12px 30px -20px color-mix(in srgb,var(--ns-tone) 70%,transparent),inset 0 1px 0 var(--glass-2)}
+.next-step[hidden]{display:none}
+.next-step[data-kind="emergency"]{--ns-tone:var(--mh-blood,#C4243C)}
+.next-step[data-kind="omen"]{--ns-tone:var(--mh-violet,#B98BFF)}
+.next-step[data-kind="coffin"],.next-step[data-kind="guide-done"]{--ns-tone:var(--mh-candle,#F6C768)}
+.next-step[data-kind="guide"]{--ns-tone:var(--mh-candle,#F6C768)}
+.ns-main{min-width:0}
+.ns-kicker{display:flex;align-items:center;gap:10px;font:700 11px/1.3 var(--body);letter-spacing:.14em;text-transform:uppercase;color:color-mix(in srgb,var(--ns-tone) 78%,var(--ink))}
+.ns-dots{display:inline-flex;gap:4px}
+.ns-dots i{display:block;width:14px;height:5px;border-radius:3px;background:var(--hair-lit)}
+.ns-dots i.done{background:var(--mh-good,#8FE0B4)}
+.ns-dots i.now{background:var(--mh-candle,#F6C768)}
+.ns-title{margin:3px 0 0;font:400 22px/1.15 var(--display);letter-spacing:-.01em;color:var(--ink);text-wrap:balance}
+.ns-hint{margin:5px 0 0;font:400 13px/1.42 var(--body);color:var(--ink-2)}
+.ns-actions{display:flex;flex-direction:column;align-items:stretch;gap:2px}
+.ns-go{min-width:112px}
+.next-step[data-kind="emergency"] .ns-go{background:linear-gradient(180deg,#ff5a6c,var(--mh-blood,#C4243C));color:#fff}
+.next-step[data-kind="omen"] .ns-go{background:linear-gradient(180deg,#caa6ff,#8a5ad8);color:#12081f}
+.next-step[data-kind="coffin"] .ns-go,.next-step[data-kind="guide"] .ns-go,.next-step[data-kind="guide-done"] .ns-go{background:linear-gradient(180deg,#ffd98a,#d9a13c);color:#2a1a05}
+.ns-skip{min-height:44px;padding:0 6px;border:0;background:none;color:var(--ink-2);font:600 12px/1 var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.ns-skip:hover{color:var(--ink)}
+.ns-skip:focus-visible,.ns-go:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.shelf-vacant .next-step{display:none}
+
+@media (max-width:560px){
+  .next-step{grid-template-columns:minmax(0,1fr);gap:8px;padding:11px 13px}
+  .ns-title{font-size:20px}
+  .ns-hint{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .ns-actions{flex-direction:row;align-items:center;gap:8px}
+  .ns-go{flex:1;min-height:46px}
+  .ns-skip{flex:none}
+  /* The heading is decoration once there are residents; the card is the first thing a phone needs. */
+  body:not(.shelf-vacant) .shelf-heading{margin-bottom:8px}
+  body:not(.shelf-vacant) .shelf-heading .eyebrow,body:not(.shelf-vacant) .room-live{display:none}
+  body:not(.shelf-vacant) .shelf-heading h1{font-size:24px;margin:0}
+}
+
+/* While the first-session guide runs it is the only voice: no second strip, no
+   badges, no extra number systems. The strip returns when the tour ends. */
+body[data-guide="on"] #mayhemAlert{display:none}
+body[data-guide="on"] #shelfBadge,body[data-guide="on"] #notesBadge,body[data-guide="on"] #plotsDot{display:none!important}
+body[data-guide="on"] .shelf-framing .framing-tools{display:none}
+
+/* ---- the soft ring on the exact button -------------------------------------- */
+.guide-ring{position:relative;z-index:3;outline:3px solid var(--mh-candle,#F6C768);outline-offset:3px;border-radius:14px;animation:guide-pulse 1.8s ease-in-out infinite}
+.pet.guide-ring{border-radius:20px;outline-offset:-2px}
+.tabbar .tab.guide-ring{outline-offset:-4px;border-radius:12px}
+.guide-ring.btn,.guide-ring.mh-choice{outline-offset:3px}
+@keyframes guide-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--mh-candle,#F6C768) 55%,transparent)}50%{box-shadow:0 0 0 11px transparent}}
+.guide-pop{animation:guide-pop .9s ease-out 1}
+@keyframes guide-pop{0%{transform:scale(1);box-shadow:0 0 0 0 color-mix(in srgb,var(--mh-candle,#F6C768) 70%,transparent)}35%{transform:scale(1.08)}100%{transform:scale(1);box-shadow:0 0 0 18px transparent}}
+
+/* ---- the desk while it is still growing -------------------------------------- */
+.mh-teaser{grid-column:1/-1;margin:0;font:21px/1.3 var(--hand);color:var(--ink-2);text-align:center;border-style:dashed}
+.mh-gloss-link{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;border:0;background:none;color:var(--ink-2);font:600 13px var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.mh-gloss-link:hover{color:var(--ink)}
+
+/* ---- help: First day and Glossary --------------------------------------------- */
+.help-tabs{display:flex;gap:8px;margin:14px 0 12px}
+.help-tab{flex:1;min-height:44px;padding:8px 12px;border-radius:var(--r);border:1px solid var(--hair-lit);background:transparent;color:var(--ink-2);font:700 14px var(--body)}
+.help-tab:hover{color:var(--ink);background:var(--glass)}
+.help-tab[aria-selected="true"]{background:var(--glass-2);color:var(--ink);border-color:var(--key-mid);box-shadow:inset 0 -3px 0 var(--mh-candle,#F6C768)}
+.help-tab:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.help-heading{margin:6px 0 10px;font:400 22px/1.2 var(--display)}
+.gl-tour{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px}
+.gl-tour li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--hair);border-radius:12px;background:var(--glass)}
+.gl-tour li.done{opacity:.78}
+.gl-tour li b{display:block;font-size:15px;color:var(--ink)}
+.gl-tour li small{display:block;margin-top:3px;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.gl-tour li em{font-style:normal;font-size:12px;color:var(--mh-good,#8FE0B4)}
+.gl-check{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--edge);font:700 12px var(--body);color:var(--ink-2)}
+.gl-tour li.done .gl-check{background:var(--mh-good,#8FE0B4);border-color:var(--mh-good,#8FE0B4);color:#12081a}
+.help-more{margin-top:14px;border-top:1px solid var(--hair);padding-top:4px}
+.help-more>summary{display:flex;align-items:center;min-height:48px;cursor:pointer;font:700 14px var(--body);color:var(--ink)}
+.gl-group h3{margin:18px 0 4px;font:700 11px/1.3 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.gl-group dl{margin:0}
+.gl-entry{padding:12px 4px;border-top:1px solid var(--hair);border-radius:8px}
+.gl-entry:focus{outline:none}
+.gl-entry:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.gl-entry dt{font:400 21px/1.2 var(--display);color:var(--ink)}
+.gl-entry dd{margin:4px 0 0}
+.gl-entry dd p{margin:4px 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.gl-entry dd .gl-short{color:var(--ink);font-weight:600}
+.gl-entry dd .btn{margin-top:6px}
+.gl-flash{animation:gl-flash 1.8s ease-out 1}
+@keyframes gl-flash{0%{background:color-mix(in srgb,var(--mh-candle,#F6C768) 28%,transparent)}100%{background:transparent}}
+
+/* ---- the tooltip card ------------------------------------------------------------ */
+.gloss-card{position:fixed;z-index:95;left:max(12px,var(--sal));right:max(12px,var(--sar));bottom:calc(var(--tabbar-h) + var(--sab) + 14px);max-width:440px;margin-inline:auto;
+  padding:13px 15px;border-radius:14px;border:1px solid var(--key-mid);background:linear-gradient(180deg,var(--night-3),var(--night-2));color:var(--ink);box-shadow:0 18px 44px -14px #000}
+.gloss-card[hidden]{display:none}
+.gloss-card.show{animation:gloss-in .18s ease-out 1}
+@keyframes gloss-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.gloss-term{display:block;font:400 21px/1.2 var(--display)}
+.gloss-card p{margin:4px 0 10px;font-size:14px;line-height:1.45;color:var(--ink-2)}
+.gloss-actions{display:flex;flex-wrap:wrap;gap:8px}
+.gloss-actions .btn{flex:1 1 auto}
+
+/* ---- what an act earned, over the thing that earned it -------------------------------- */
+.earn-chip{position:absolute;z-index:9;left:50%;top:10%;white-space:nowrap;padding:3px 9px;border-radius:99px;font:800 14px/1.3 var(--body);color:#2a1a05;background:var(--mh-candle,#F6C768);
+  box-shadow:0 4px 14px -4px #000a;pointer-events:none;animation:earn-rise 1.6s ease-out forwards}
+.earn-chip.earn-trust{background:var(--pink);color:var(--accent-ink)}
+.earn-chip.earn-good{background:var(--mh-good,#8FE0B4);color:#0d2519}
+@keyframes earn-rise{0%{opacity:0;transform:translate(-50%,14px) scale(.8)}18%{opacity:1;transform:translate(-50%,0) scale(1.06)}78%{opacity:1}100%{opacity:0;transform:translate(-50%,-34px)}}
+@media (prefers-reduced-motion:reduce){.guide-ring{animation:none}.guide-pop{animation:none}.gl-flash{animation:none}.gloss-card.show{animation:none}.earn-chip{animation:none;opacity:1}}
+
+/* ---- small fixes that belong with the rest ------------------------------------------------ */
+/* The toast was shrink-wrapped into half the screen width (left:50% leaves 50vw to fit in), so a sentence
+   became a tall narrow strip across the page. It is as wide as its words, up to the screen. */
+#toast{width:max-content;max-width:min(calc(100vw - 32px),460px)}
+/* A sheet's title takes focus so a screen reader starts there; it is not a control and needs no ring. */
+.sheet h2[tabindex="-1"]:focus,.sheet h2[tabindex="-1"]:focus-visible,.pane[tabindex="-1"]:focus-visible{outline:none}

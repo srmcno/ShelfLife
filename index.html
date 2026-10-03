@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0812">
 <meta name="color-scheme" content="dark">
-<title>Shelf Life — small creatures, long memories</title>
+<title>Shelf Life: small creatures, long memories</title>
 <meta name="description" content="Grow or draw peculiar little immortal pets. Feed them, survive their emergencies, collect cursed curios and read the complaints. A free, offline-friendly creature game.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -35,6 +35,7 @@
 <link rel="stylesheet" href="css/atmosphere.css">
 <link rel="stylesheet" href="css/cloud.css">
 <link rel="stylesheet" href="css/social.css">
+<link rel="stylesheet" href="css/guide.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
@@ -52,8 +53,9 @@
   <div class="topbar-actions">
     <button class="souls-hud" id="soulsHud" type="button" hidden></button>
     <button class="btn btn-sm playroom-launch" id="playroomBtn" aria-haspopup="dialog">Playroom <span aria-hidden="true">↗</span></button>
-    <button class="btn btn-ghost btn-sm btn-icon" id="quickHelp" aria-label="How to play" title="How to play">
+    <button class="btn btn-ghost btn-sm help-btn" id="quickHelp" aria-label="Help and how to play" title="Help and how to play">
       <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.2 7.4a2.9 2.9 0 1 1 4.2 2.6c-.9.5-1.4 1-1.4 2.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="15.3" r="1.1" fill="currentColor"/></svg>
+      <span>Help</span>
     </button>
     <button class="btn btn-ghost btn-sm" id="moreBtn" aria-expanded="false" aria-controls="moreTray">More</button>
   </div>
@@ -68,6 +70,7 @@
 <main class="app room-app">
   <section class="pane pane-shelf" id="paneShelf" aria-label="Your residents">
     <div class="shelf-heading"><div><span class="eyebrow">Nobody here stays buried</span><h1>The household</h1></div><span class="room-live"><i></i> Alive &amp; opinionated</span></div>
+    <section class="next-step" id="nextStep" aria-label="What to do next" hidden></section>
     <div class="mayhem-alert" id="mayhemAlert" hidden></div>
     <div class="stage">
       <div class="candles left" aria-hidden="true"><span class="candle c1"><i></i></span><span class="candle c2"><i></i></span><span class="candle c3"><i></i></span></div>
@@ -81,7 +84,6 @@
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5H7l1.2-1.6h3.6L13 6h2.5A1.5 1.5 0 0 1 17 7.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="11" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
       </button></div></div>
     <section id="householdAftermath" class="household-aftermath" aria-label="Aftermath at home" hidden></section>
-    <div id="shelfBrief" class="shelf-brief"></div>
     <div class="actions" id="actions">
       <button class="btn btn-primary shelf-primary" id="roundsBtn">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 11.5a6 6 0 0 0 11.3 1.8M16 8.5A6 6 0 0 0 4.7 6.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15.5 5v4h-4M4.5 15v-4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -393,20 +395,34 @@
 </div>
 
 <div class="veil" id="helpVeil"><div class="sheet field-guide">
-  <div class="sheet-head"><div><h2>A small field guide</h2><p class="card-meta">Nobody here came with instructions. These are our best guesses.</p></div><button class="btn btn-ghost btn-sm" id="helpClose">Close</button></div>
-  <ol class="guide-steps">
-    <li><h3>Deal with the emergencies.</h3><p>Something goes wrong on the shelf every twelve minutes, and up to three disasters pile up while you are away. Each one is a choice. Every choice pays souls; not every choice goes well. Spend souls on coffins, collect cursed curios, and watch the neighbours’ opinion of your house get worse. Turn over one omen a night and finish three unholy chores a day for extra.</p></li>
-    <li><h3>Make someone peculiar.</h3><p>Grow a creature and change its parts, or draw one and give it moving stamps. Name it. Move it in.</p></li>
-    <li><h3>Keep it fed, fussed, and clean.</h3><p>Tap a creature to care for it. Helping when a need is below 72 earns care credit; every three credits adds a trust point. Rounds help everyone a little, but build no trust. Games and conspiracies add at most three trust per resident per day; care is the steady route.</p></li>
-    <li><h3>Read the room.</h3><p>Check the shelf for notes, arguments, and small developments. A resident files at most one grievance an hour, so reading often costs nothing. Individual care builds trust, unlocking drawing tools and furniture in Decorate. Tap a byline on the board to keep one resident’s notes.</p></li>
-    <li><h3>Reconsider the neighbours.</h3><p>Drag to rearrange. On a phone, hold first. Or open a resident’s card and choose a shelf position. Furniture affects the creatures beside it; some neighbours feud. Watch them: they nudge, whisper, glare and steal from whoever is next to them.</p></li>
-    <li><h3>Encourage a terrible idea.</h3><p>Small conspiracies offer choices with visible costs and rewards. Help, redirect, or leave the residents to their own devices. They act after three minutes; another plan follows five minutes later. Nobody dies. Sometimes the raisin does.</p></li>
-    <li><h3>Make a little history.</h3><p>Stories holds a six-beat weekly case and temporary visitors. Follow the evidence through care, placement and choices. A case waits until you finish it. Visitors stay six hours and leave museum curiosities when welcomed.</p></li>
-    <li><h3>Keep your promises.</h3><p>Accept a resident’s request in its card, then fulfil it within twelve hours of accepting for trust. Refusing costs one trust and adds a grievance. Friends form after fifteen minutes beside each other with trust on both sides. Rivals can reach a truce once both trust you at level three.</p></li>
-    <li><h3>Find your kind of mischief.</h3><p>Open Play on a phone or Playroom on a larger screen. Pick a resident, then a game: judge its petty lawsuits on Shelf Court, catch snacks in Feeding Frenzy, stack coffins, hold a Séance, or push the dead back down in Grave Whack. Every run pays souls, beating your best pays extra, and Expeditions bring home parts for household projects.</p><button class="btn btn-primary" id="helpPlayroom">Open the Playroom</button></li>
-  </ol>
+  <div class="sheet-head"><div><h2>Help and field guide</h2><p class="card-meta">Nobody here came with instructions. These are our best guesses.</p></div><button class="btn btn-ghost btn-sm" id="helpClose">Close</button></div>
+  <div class="help-tabs" role="tablist" aria-label="Help sections">
+    <button type="button" class="help-tab" role="tab" id="helpTabFirst" data-help-tab="first-day" aria-selected="true" aria-controls="helpPanelFirst">First day</button>
+    <button type="button" class="help-tab" role="tab" id="helpTabGlossary" data-help-tab="glossary" aria-selected="false" aria-controls="helpPanelGlossary" tabindex="-1">Glossary</button>
+  </div>
+  <div role="tabpanel" id="helpPanelFirst" data-help-panel="first-day" aria-labelledby="helpTabFirst">
+    <h3 class="help-heading">The first-day tour</h3>
+    <div id="helpTour"></div>
+    <details class="help-more"><summary>Everything else, in order of mischief</summary>
+    <ol class="guide-steps">
+      <li><h3>Deal with the emergencies.</h3><p>Something goes wrong on the shelf every twelve minutes, and up to three disasters pile up while you are away. Each one is a choice. Every choice pays souls; not every choice goes well. Spend souls on coffins, collect cursed curios, and watch the neighbours’ opinion of your house get worse. Turn over one omen a night and finish three unholy chores a day for extra.</p></li>
+      <li><h3>Make someone peculiar.</h3><p>Grow a creature and change its parts, or draw one and give it moving stamps. Name it. Move it in.</p></li>
+      <li><h3>Keep it fed, fussed, and clean.</h3><p>Tap a creature to care for it. Helping when a need is below 72 earns care credit; every three credits adds a bond point. Rounds help everyone a little, but build no bond. Games and conspiracies add at most three a day per resident; care is the steady route.</p></li>
+      <li><h3>Read the room.</h3><p>Check the shelf for notes, arguments, and small developments. A resident files at most one grievance an hour, so reading often costs nothing. A strong bond unlocks drawing tools and furniture in Decorate. Tap a byline on the board to keep one resident’s notes.</p></li>
+      <li><h3>Reconsider the neighbours.</h3><p>Drag to rearrange. On a phone, hold first. Or open a resident’s card and choose a shelf position. Furniture affects the creatures beside it; some neighbours feud. Watch them: they nudge, whisper, glare and steal from whoever is next to them.</p></li>
+      <li><h3>Encourage a terrible idea.</h3><p>Small conspiracies offer choices with visible costs and rewards. Help, redirect, or leave the residents to their own devices. They act after three minutes; another plan follows five minutes later. Nobody dies. Sometimes the raisin does.</p></li>
+      <li><h3>Make a little history.</h3><p>Stories holds a six-beat weekly case and temporary visitors. Follow the evidence through care, placement and choices. A case waits until you finish it. Visitors stay six hours and leave museum curiosities when welcomed.</p></li>
+      <li><h3>Keep your promises.</h3><p>Accept a resident’s request in its card, then fulfil it within twelve hours of accepting for a bond point. Refusing costs one and adds a grievance. Friends form after fifteen minutes beside each other with a bond on both sides. Rivals can reach a truce once both are at level three.</p></li>
+      <li><h3>Find your kind of mischief.</h3><p>Open Play on a phone or Playroom on a larger screen. Pick a resident, then a game: judge its petty lawsuits on Shelf Court, catch snacks in Feeding Frenzy, stack coffins, hold a Séance, or push the dead back down in Grave Whack. Every run pays souls, beating your best pays extra, and Expeditions bring home parts for household projects.</p><button class="btn btn-primary" id="helpPlayroom">Open the Playroom</button></li>
+    </ol>
+    </details>
+  </div>
+  <div role="tabpanel" id="helpPanelGlossary" data-help-panel="glossary" aria-labelledby="helpTabGlossary" hidden>
+    <p class="hint">Every number the game shows, in plain words.</p>
+    <div id="helpGlossary"></div>
+  </div>
   <p class="guide-footnote">Needs change while you are away, up to eighteen hours at a time, and only half as fast at night. They cannot die. You can take a break. Your shelf saves on this device; More → Back up keeps a copy you can restore elsewhere.</p>
-  <p class="guide-footnote">Keyboard: Tab through controls, Enter or Space to activate, Escape to close a sheet. The game respects your device’s reduced-motion preference.</p>
+  <p class="guide-footnote">Keyboard: Tab through controls, Enter or Space to activate, Escape to close a sheet. The game respects your device’s reduced-motion preference, and More has a Calm mode.</p>
 </div></div>
 <div class="veil" id="transferVeil"><div class="sheet sheet-transfer">
   <div class="sheet-head"><div><span class="eyebrow">Take everyone with you</span><h2>Email or share your shelf</h2></div><button class="btn btn-ghost btn-sm" id="transferClose">Close</button></div>

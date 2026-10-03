@@ -2,7 +2,7 @@
 export function blankLife() {
   return { v:1, introDone:false, introStarted:false, xp:0, day:'', daily:[], awards:[], scenes:[], serial:0,
     relics:[], displayed:[], frame:'wood', visitorEpisodes:{}, outing:null, outings:0, projects:[], projectParts:{}, trailPages:[],
-    lastSeen:0, recap:[], blueprints:[] };
+    lastSeen:0, recap:[], blueprints:[], guide:null };
 }
 const obj = x => x && typeof x === 'object' && !Array.isArray(x);
 const number = (x, max=1e9) => Number.isFinite(x) ? Math.max(0,Math.min(max,Math.floor(x))) : 0;
@@ -47,5 +47,14 @@ export function normalizeLife(raw, established=false) {
   // Generated blueprints only, keeping the save small. Creature normalization
   // happens at the art boundary when a blueprint is loaded.
   s.blueprints=(Array.isArray(s.blueprints)?s.blueprints:[]).filter(x=>obj(x)&&typeof x.name==='string'&&obj(x.creature)).slice(0,6).map(x=>({name:x.name.slice(0,22),creature:x.creature}));
+  // The first-session guide (engine/guide.js). Absent for any household that was
+  // not new when the guide shipped, so an established save never gains a tour.
+  s.guide=normalizeGuide(s.guide);
   return s;
+}
+const stepIds=list=>[...new Set((Array.isArray(list)?list:[]).filter(x=>typeof x==='string'&&/^[a-z]{2,16}$/.test(x)))].slice(0,12);
+export function normalizeGuide(raw) {
+  if (!obj(raw)) return null;
+  return {v:1,status:['on','skipped','done'].includes(raw.status)?raw.status:'on',at:number(raw.at,1e14),
+    seen:stepIds(raw.seen),done:stepIds(raw.done),finishedAt:number(raw.finishedAt,1e14),celebrated:raw.celebrated===true};
 }
