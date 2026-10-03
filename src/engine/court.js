@@ -10,6 +10,7 @@ import { dayNumber } from './daily.js';
 import { recordGameLife, recordScene } from './life.js';
 import { recordEscapadeEvent } from '../escapade-state.js';
 import { fileGrudge } from './achievements.js';
+import { canBridge, spendFreeze, earnFreeze } from './streaks.js';
 
 /* Shelf Court as a pure state machine. The UI owns an `episode` and feeds it
    choices; every call returns the lines to play next and nudges two meters:
@@ -68,8 +69,11 @@ export function docketCaseId(dayKey) {
 }
 export function docketToday(state, now = Date.now()) {
   const c = courtroomState(state), day = localDayKey(now);
-  const streak = c.docketLastDay === day || c.docketLastDay === dayKeyOffset(now, -1) ? c.docketStreak : 0;
-  return { day, caseId: docketCaseId(day), done: c.docketDay === day, streak };
+  const kept = c.docketLastDay === day || c.docketLastDay === dayKeyOffset(now, -1);
+  // One missed day is bridged by a streak freeze (engine/streaks.js), spent when the docket is next aired.
+  const bridged = !kept && canBridge(state, c.docketLastDay, c.docketStreak, now);
+  const streak = kept || bridged ? c.docketStreak : 0;
+  return { day, caseId: docketCaseId(day), done: c.docketDay === day, streak, bridged };
 }
 
 // Unaired cases first, then the least recently seen.
@@ -271,11 +275,13 @@ export function courtFinish(state, ep, now = Date.now()) {
   const today = docketToday(state, now);
   if (k.id === today.caseId && !today.done) {
     c.docketDay = today.day;
+    if (today.bridged) spendFreeze(state, 'docket', now);
     c.docketStreak = today.streak + 1;
     c.docketLastDay = today.day;
+    earnFreeze(state, 'docket', c.docketStreak, now);
     const bonus = DOCKET_SOULS + DOCKET_STREAK_SOULS * Math.min(c.docketStreak - 1, DOCKET_STREAK_CAP);
     addSouls(state, bonus);
-    docket = { bonus, streak: c.docketStreak };
+    docket = { bonus, streak: c.docketStreak, freeze: today.bridged };
   }
   const pet = side => ep[side].kind === 'pet' ? petById(state, ep[side].id) : null;
   const P = pet('p'), D = pet('d');

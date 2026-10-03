@@ -165,7 +165,7 @@ test('coffins cost souls, always hold a curio and refund duplicates', () => {
   assert.equal(s.mayhem.souls, COFFIN_COST * 2);
   const again = openCoffin(s, NOW, () => 0);
   assert.ok(again.duplicate || again.curio.id !== first.curio.id);
-  const roll = rollCurio(s, () => 0);
+  const roll = rollCurio(s, () => 0, false, NOW);
   if (roll.duplicate) assert.ok(roll.refund > 0);
 });
 

@@ -69,14 +69,16 @@ test('a long dry spell ends in something cursed or better, then the count resets
   assert.ok(pityActive(s));
   for (let i = 0; i < 25; i++) {
     s.mayhem.dry = PITY_DRY_AT;
-    const roll = rollCurio(s, () => 0);
+    // NOW is late September: outside the Thin Season (15 October to 2 November), so
+    // these rolls never meet a seasonal curio however the real clock reads.
+    const roll = rollCurio(s, () => 0, false, NOW);
     assert.ok(['cursed', 'unholy'].includes(roll.rarity.id), 'pity rolls only cursed or unholy');
     assert.equal(roll.pity, true);
     assert.equal(s.mayhem.dry, 0);
   }
   // Below the threshold rolls are ordinary, and commons count towards the drought.
   s.mayhem.dry = 0;
-  const common = rollCurio(s, () => 0);
+  const common = rollCurio(s, () => 0, false, NOW);
   assert.equal(common.rarity.id, 'common');
   assert.equal(s.mayhem.dry, 1);
   assert.ok(!pityActive(s));

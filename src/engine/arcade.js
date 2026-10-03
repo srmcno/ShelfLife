@@ -6,6 +6,7 @@ import { DAILY_SOULS, DAILY_STREAK_SOULS, DAILY_STREAK_CAP } from '../content/da
 import { recordGameLife } from './life.js';
 import { recordEscapadeEvent } from '../escapade-state.js';
 import { arcadeState } from '../arcade-state.js';
+import { canBridge, spendFreeze, earnFreeze } from './streaks.js';
 export { normalizeArcade, blankArcade } from '../arcade-state.js';
 
 /* ================= ARCADE SIMULATIONS =================
@@ -212,8 +213,11 @@ export function challengeToday(state, now = Date.now()) {
   if (!challenge) return null;
   const a = arcadeState(state), rec = a.daily?.day === challenge.day ? a.daily : null;
   const yesterday = dayKeyOffset(now, -1);
-  const streak = a.dailyLastDay === localDayKey(now) || a.dailyLastDay === yesterday ? a.dailyStreak : 0;
-  return { ...challenge, best: rec?.best || 0, plays: rec?.plays || 0, claimed: !!rec?.claimed, streak };
+  const kept = a.dailyLastDay === localDayKey(now) || a.dailyLastDay === yesterday;
+  // One missed day is bridged by a streak freeze (engine/streaks.js), spent when the challenge is next claimed.
+  const bridged = !kept && canBridge(state, a.dailyLastDay, a.dailyStreak, now);
+  const streak = kept || bridged ? a.dailyStreak : 0;
+  return { ...challenge, best: rec?.best || 0, plays: rec?.plays || 0, claimed: !!rec?.claimed, streak, bridged };
 }
 
 export function tierFor(id, score) { return (ARCADE_BY_ID[id]?.tiers || []).filter(t => score >= t).length; }
@@ -251,16 +255,18 @@ export function finishRun(state, id, score, petId, now = Date.now(), rnd = Math.
   // The first scoring challenge run of the day pays a flat bonus, outside the daily purse.
   let dailyResult = null;
   if (daily) {
-    let bonus = 0;
+    let bonus = 0, freeze = false;
     if (score > 0 && !daily.claimed) {
       daily.claimed = true;
       const today = localDayKey(now);
-      a.dailyStreak = a.dailyLastDay === dayKeyOffset(now, -1) ? a.dailyStreak + 1 : 1;
+      freeze = a.dailyLastDay !== dayKeyOffset(now, -1) && canBridge(state, a.dailyLastDay, a.dailyStreak, now) && spendFreeze(state, 'challenge', now);
+      a.dailyStreak = a.dailyLastDay === dayKeyOffset(now, -1) || freeze ? a.dailyStreak + 1 : 1;
       a.dailyLastDay = today;
+      earnFreeze(state, 'challenge', a.dailyStreak, now);
       bonus = DAILY_SOULS + DAILY_STREAK_SOULS * Math.min(a.dailyStreak - 1, DAILY_STREAK_CAP);
       addSouls(state, bonus);
     }
-    dailyResult = { title: challenge.mod.title, mod: challenge.mod.id, best: daily.best, bonus, streak: a.dailyStreak };
+    dailyResult = { title: challenge.mod.title, mod: challenge.mod.id, best: daily.best, bonus, streak: a.dailyStreak, freeze };
   }
   const name = pet ? pet.name : 'Someone';
   const pool = ARCADE_QUIPS[id][tier] || ARCADE_QUIPS[id][0];
