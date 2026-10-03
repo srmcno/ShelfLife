@@ -51,7 +51,7 @@ test('every emergency is well formed, fits its cast and ships a known glyph', ()
 });
 
 test('emergency copy uses only {a} and {b}, curly quotes, stamped headings and no dashes', () => {
-  assert.ok(!/[—–]/.test(JSON.stringify(EMERGENCIES)), 'a dash crept into an emergency');
+  assert.ok(!/[\u2014\u2013]/.test(JSON.stringify(EMERGENCIES)), 'a dash crept into an emergency');
   for (const e of EMERGENCIES) {
     const all = [e.title, ...e.choices.flatMap(c => [c.label, ...c.outcomes.map(o => o.text)])];
     for (const text of all) {

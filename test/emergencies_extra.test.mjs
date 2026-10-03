@@ -75,7 +75,7 @@ test('no duplicate copy, no dashes of any kind, curly quotes only, only {a} and 
     else assert.ok(!all.includes('{b}'), e.id + ' names {b} without a pair');
     assert.ok(e.title.includes('{a}') || e.title.includes('{b}') || e.id === 'wifi-password', e.id + ' title names no one');
   }
-  assert.ok(!/[—–]/.test(JSON.stringify(EXTRA_EMERGENCIES)));
+  assert.ok(!/[\u2013\u2014]/.test(JSON.stringify(EXTRA_EMERGENCIES)));
 });
 
 test('every effect is one the engine understands, and the trait and trust hooks are well formed', () => {
