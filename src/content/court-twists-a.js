@@ -291,7 +291,7 @@ export const TWISTS_A = {
         ], [
           ['d', 'Me, Your Honour. I saw the bucket and declared {p} dead.'],
           ['judge', 'Did you consult a doctor? The register?'],
-          ['bailiff', 'The register has {d} down as next of kin since the morning of the bucket, Your Honour. In {d}’s hand. With a little flourish on the D.'],
+          ['bailiff', 'The register has {d} down as next of kin since the morning of the bucket, Your Honour. In {d}’s hand. With a little flourish.'],
           ['d', 'The flourish is sincere.']
         ])
       },
@@ -310,7 +310,7 @@ export const TWISTS_A = {
         ])
       },
       4: {
-        clue: 'The bucket {d} saw was tin with a dent and a flourished “D” on the base. {p}’s bucket is blue, with a lid.',
+        clue: 'The bucket {d} saw was tin and dented, with {d}’s name scratched in the base. {p}’s bucket is blue, with a lid.',
         lines: alt([
           ['p', 'Blue. Deep. A proper lid. I had it with me the whole time, Your Honour. It is under the witness box.'],
           ['judge', 'And the bucket outside your slot, the one {d} saw?'],
@@ -319,7 +319,7 @@ export const TWISTS_A = {
         ], [
           ['p', 'Blue, Your Honour. A handle that does not squeak. I took it with me, and I have not been apart from it since.'],
           ['judge', 'Then whose bucket was outside your slot?'],
-          ['bailiff', 'Tin, sir. Dented. There is a “D” scratched in the base, with a flourish.'],
+          ['bailiff', 'Tin, sir. Dented. There is a name scratched in the base, with a flourish. It says {d}.'],
           ['d', 'THAT FLOURISH IS SENTIMENTAL.']
         ])
       }
