@@ -592,5 +592,251 @@ export const TWISTS_A = {
     }
   }],
 
+  /* ---------- 5. The Portrait: both becomes plaintiff ---------- */
+  'dead-portrait': [{
+    id: 'after-hobbs',
+    title: 'The Portrait of Somebody Else',
+    truth: 'plaintiff',
+    turn: alt([
+      ['narrator', '(Behind the judge, the bailiff has been looking at the painting for some time. He tilts his head. He tilts it the other way.)'],
+      ['bailiff', 'Your Honour, I feel I have seen that face before.'],
+      ['judge', 'It is a painting of a corpse, Bailiff. They all look alike.']
+    ], [
+      ['narrator', '(The judge glances at the portrait on the easel. He glances away. He glances back, more slowly.)'],
+      ['judge', 'Bailiff. Turn that painting a little to the left.'],
+      ['bailiff', 'Like this, sir?'],
+      ['judge', '…Not like that. Put it back.']
+    ]),
+    questions: {
+      0: {
+        herring: '{d} insists fourteen real flies attended the sitting, so it painted only what it saw. Unconfirmed.',
+        lines: alt([
+          ['p', 'No flies, Your Honour. None. Not one.'],
+          ['d', 'Fourteen. For all six hours. They worked in shifts.'],
+          ['judge', 'Can anyone confirm?'],
+          ['bailiff', 'Fourteen flies are in the gallery today, sir. They say they were there. They also say they were at a funeral in 1702, so I am treating them with caution.']
+        ], [
+          ['p', 'No flies, Your Honour. Not one.'],
+          ['d', 'Fourteen, Your Honour, for all six hours. They worked in shifts. Very professional. I got to know them by name.'],
+          ['judge', 'Which names?'],
+          ['d', 'Gerald. Beryl. Gerald again. A lot of Geralds.']
+        ])
+      },
+      1: {
+        clue: '{d} took up painting on Tuesday, the day a crate marked JUDGE’S EFFECTS went missing from the cellar.',
+        lines: alt([
+          ['d', 'Since Tuesday. I am a natural.'],
+          ['bailiff', 'Cellar log, Your Honour. On Tuesday afternoon one crate, marked JUDGE’S EFFECTS, was removed. Contents: assorted tubes of grey.'],
+          ['judge', 'What a coincidence.'],
+          ['d', 'Tuesday is a busy day for crates.']
+        ], [
+          ['d', 'All my life, Your Honour. Since Tuesday.'],
+          ['judge', 'And what happened on Tuesday?'],
+          ['d', 'I saw a crate. In a cellar. It spoke to me.'],
+          ['judge', 'Crates do not speak.'],
+          ['d', 'This one said “JUDGE’S EFFECTS”, very clearly. I felt called.']
+        ])
+      },
+      2: {
+        lines: alt([
+          ['p', 'Twelve souls.'],
+          ['d', 'Eleven for the portrait. One for the flies.'],
+          ['judge', 'Eleven and one. I paid exactly that, once. In 1702. I cannot think why that is coming back to me.']
+        ], [
+          ['p', 'Twelve souls, Your Honour. Eleven for the portrait, one for the flies.'],
+          ['judge', 'Why did the flies cost extra, {d}?'],
+          ['d', 'They were part of the original.'],
+          ['judge', 'The original what?'],
+          ['d', 'Concept.']
+        ])
+      },
+      3: {
+        clue: 'The “portrait” is Judge Mortis’s own 1702 funeral portrait, by Hobbs. {d} traced it and swapped the name card for {p}’s.',
+        lines: alt([
+          ['narrator', '(The bailiff turns the painting round. A gasp runs through the gallery. In the front row, every ghost takes off its hat.)'],
+          ['audience', '(A voice from the back: “IT’S THE JUDGE.”)'],
+          ['judge', 'It is not the judge. It is a… that is my funeral portrait. That is Hobbs, 1702. Those are MY flies.'],
+          ['bailiff', 'Fourteen, sir. They are named in the corner. Gerald, Beryl, and the twelve cousins.']
+        ], [
+          ['narrator', '(The bailiff turns the painting round. The audience goes very quiet. In the back row, a ghost stands, puts a hand over where its heart used to be, and hums two bars of a hymn.)'],
+          ['bailiff', 'There is a tiny plaque on the frame, Your Honour. “After Hobbs, 1702. Judge Mortis, lying in state.” {d} has stuck {p}’s name over it, but the glue is bad.'],
+          ['judge', 'Those are my cheekbones. That is my jaw. I would know it anywhere. I have been carrying it around for three hundred years.']
+        ])
+      },
+      4: {
+        sass: true,
+        lines: alt([
+          ['judge', '{p}, that painting is flattering. The cheekbones alone. I could look at them all day.'],
+          ['p', 'IT IS A SKULL.'],
+          ['judge', 'A distinguished one. Whoever sat for that had a very strong jaw.']
+        ], [
+          ['judge', '{p}, I have been dead three hundred years and I know a good skull. That one has a lovely brow ridge. Excellent hinge.'],
+          ['p', 'THE HINGE IS NOT THE POINT.'],
+          ['judge', 'The hinge is always the point.']
+        ])
+      },
+      5: {
+        clue: '{d} never once looked at {p}’s face. It kept glancing at a card up its sleeve.',
+        lines: alt([
+          ['p', 'Perfectly still. Six hours. I barely blinked, and it never once looked at me.'],
+          ['judge', 'You never looked at your subject, {d}?'],
+          ['d', 'I have a method. I look at the sleeve, I look at the canvas, I never look at the sitter.'],
+          ['judge', 'What is up the sleeve?'],
+          ['d', 'Reference.']
+        ], [
+          ['p', 'Like a statue, Your Honour. And every few seconds it looked up its sleeve, like a man checking a watch.'],
+          ['d', 'It is a very long watch.'],
+          ['bailiff', 'There is a card up the sleeve, Your Honour. Small. It says, “skull, flies, look serious”.'],
+          ['d', 'Everyone has a note to self.']
+        ])
+      }
+    },
+    rulings: {
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. {d} did not paint a portrait. {d} found a crate marked JUDGE’S EFFECTS and charged twelve souls for my funeral portrait, with my flies in it.'],
+        ['judge', 'Eleven for the portrait and one for the flies, exactly what Hobbs charged. Even the prices were copied. {d} refunds {p} in full and returns my jaw to its crate.'],
+        ['d', 'It was a very good likeness.'],
+        ['judge', 'It was an excellent likeness. That is why I am taking it personally.']
+      ], [
+        ['judge', 'Judgment for {p}. {p} sat for six hours and was painted as somebody else, three hundred years dead, with somebody else’s flies. That is not realism. That is a clerical error with a brush.'],
+        ['judge', '{d} refunds the lot. The portrait comes to my chambers, where I will be examining the cheekbones.'],
+        ['p', 'WHAT ABOUT MINE?'],
+        ['judge', 'Yours were never in it.']
+      ]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. {p} sat still, with flies, and received a portrait of precisely that. It is accurate.'],
+        ['judge', 'The court has noticed that the portrait looks suspiciously like the court, and in the interests of dignity declines to say so.'],
+        ['p', 'IT IS A PICTURE OF YOU.'],
+        ['judge', 'It is a picture of a distinguished skull. I will hear nothing further.']
+      ], [
+        ['judge', 'Judgment for {d}. An artist paints what he sees. If he sees a skull and a Hobbs, that is between him and Hobbs, and Hobbs is dead.'],
+        ['p', 'HOBBS IS NOT THE POINT.'],
+        ['judge', 'Hobbs is always the point. Hobbs did my coffin.']
+      ]),
+      both: alt([
+        ['judge', 'You are both to blame. {p} posed like a corpse, and {d} charged for a corpse that was not even {p}.'],
+        ['judge', 'Half refund. The portrait hangs in my chambers, where it belongs.']
+      ], [
+        ['judge', 'Neither of you has the faintest idea what a portrait is. {p} did not ask whose face it was. {d} did not say.'],
+        ['judge', 'The flies take custody. They have the strongest claim. They were there first.']
+      ])
+    },
+    hallway: {
+      p: [
+        'I’ve asked the judge for a sitting. If I’m going to be mistaken for someone, it might as well be a person with presence.',
+        'I sat for six hours and was painted as a man who died in 1702. I have never felt so seen.',
+        'I’m hiring the spider. It does portraits. At least it paints what it eats.'
+      ],
+      d: [
+        'Hobbs would be proud. Hobbs would also like his easel back.',
+        'It was a homage. Art is just theft with better lighting.',
+        'Twelve souls for a tracing. I’m thinking of tracing a few more. Is the bailiff free?'
+      ]
+    }
+  }],
+
+  /* ---------- 6. The Tooth Fairy Job: both becomes plaintiff ---------- */
+  'tooth-fairy': [{
+    id: 'gift-tag',
+    title: 'NOT UNCLE’S, In Capitals',
+    truth: 'plaintiff',
+    turn: alt([
+      ['narrator', '(In the gallery, Uncle stands up, opens his mouth to speak, and thinks better of it. He sits. He stands again.)'],
+      ['judge', 'Do you wish to say something, Uncle?'],
+      ['npc', 'NOT YET. I AM GATHERING MY THOUGHTS. THEY ARE IN A JAR.', 'uncle']
+    ], [
+      ['bailiff', 'Your Honour, there is a jar on the evidence table. The label says “NOT UNCLE’S”, underlined three times.'],
+      ['judge', 'Then it is clearly Uncle’s.'],
+      ['bailiff', 'That is what everyone says, sir. Uncle says it means the opposite.']
+    ]),
+    questions: {
+      0: {
+        clue: 'Uncle wrote NOT UNCLE’S on the jar because he was giving the teeth to {p}. The jar is the gift tag.',
+        lines: alt([
+          ['p', 'A jar. It says “NOT UNCLE’S”.'],
+          ['judge', 'In handwriting that is very obviously Uncle’s.'],
+          ['p', 'Yes, Your Honour. That is how you know he meant it.'],
+          ['npc', 'I GAVE THEM TO {p}. THE JAR IS THE GIFT TAG. I WROTE “NOT UNCLE’S” IN CAPITALS. WHAT MORE DOES A MAN HAVE TO DO.', 'uncle']
+        ], [
+          ['p', 'Out of a jar marked “NOT UNCLE’S”, Your Honour. Handed to me by Uncle himself.'],
+          ['judge', 'Why would Uncle hand you his teeth?'],
+          ['npc', 'THEY RATTLED. I COULD NOT SLEEP. I WANTED THEM IN SOMEBODY WITH A TIN.', 'uncle'],
+          ['judge', 'And the label?'],
+          ['npc', 'IT IS NOT A DISGUISE. IT IS A GIFT TAG. I USED CAPITALS.', 'uncle']
+        ])
+      },
+      3: {
+        clue: 'Uncle gave {p} the teeth, with a postcard and his own lettering on the tin. {d} sold them anyway.',
+        lines: alt([
+          ['p', 'They were mine from the moment Uncle put them in my hand. I have the postcard.'],
+          ['judge', 'Read it.'],
+          ['p', '“Dear {p}. Teeth enclosed. Yours, not mine. Love, U.”'],
+          ['d', 'I read it, Your Honour. “Yours, not mine.” Nobody was using them.']
+        ], [
+          ['judge', 'Were those teeth ever yours, {p}?'],
+          ['p', 'Since last Whitsun, Your Honour. Uncle gave them to me, with a postcard. I keep them in the tin. The lettering on the tin is his too.'],
+          ['npc', 'IT TOOK ME THREE WEEKS.', 'uncle'],
+          ['d', 'Nobody told me they were GIFTS. They looked like inventory.']
+        ])
+      },
+      4: {
+        clue: 'The fairy paid on Uncle’s postcard, which {d} said was its own. {d} told her “{p}” was a pen name.',
+        lines: alt([
+          ['narrator', '(The tooth fairy is led in. She is the size of a thumb and has the eyes of someone who has seen too many pillows.)'],
+          ['narrator', '(The fairy: “I pay on proof of title. The seller showed me a postcard that said ‘Teeth enclosed. Yours, not mine.’ I asked who {p} was. The seller said it was a pen name.”)'],
+          ['judge', 'And you believed that?'],
+          ['narrator', '(The fairy: “I believe everything. It is the only way to stay in this job.”)']
+        ], [
+          ['narrator', '(The tooth fairy is led in. She wears a cardigan and drags a sack that rattles when she breathes.)'],
+          ['narrator', '(The fairy: “I never look at faces. I look at paperwork. The paperwork said the teeth were a gift to a {p}. The seller said that was a nickname.”)'],
+          ['judge', 'A nickname for what?'],
+          ['narrator', '(The fairy: “For the seller, Your Honour. It said everyone calls it that. Nobody has ever called it that.”)']
+        ])
+      }
+    },
+    rulings: {
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. “NOT UNCLE’S” is not a disguise. It is a gift tag in capitals, and the only people who misread gift tags are children and thieves.'],
+        ['judge', '{d} pays ten souls, which is what a filling is worth, and apologises to the fairy in person. At night. While she is counting.'],
+        ['npc', 'AND THE WISDOM TOOTH.', 'uncle'],
+        ['judge', 'And the wisdom tooth, Uncle. We are not finished.']
+      ], [
+        ['judge', 'Judgment for {p}. Uncle gave the teeth. {p} kept them in a tin. {d} sold them to a fairy on a postcard it had no business reading.'],
+        ['judge', '{d} will buy the teeth back from the fairy, at her price.'],
+        ['d', 'What is her price?'],
+        ['judge', 'Gums. She has been looking at yours since the hearing began.']
+      ]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. A tooth in a tin is a tooth in a tin. If {p} wished to keep it, {p} should have kept it in {p}.'],
+        ['p', 'UNCLE GAVE THEM TO ME.'],
+        ['judge', 'Uncle gives everything to everyone. That is why he has no teeth.']
+      ], [
+        ['judge', 'Judgment for {d}. Finders keepers. The court has found the postcard, the jar and the lettering, and is keeping them.'],
+        ['p', 'THAT IS THE WRONG WAY ROUND.'],
+        ['judge', 'It is the only way round that I have.']
+      ]),
+      both: alt([
+        ['judge', 'You are both small and toothless. {p} keeps teeth in a tin, and {d} sells what it is not given.'],
+        ['judge', 'Everything goes back to Uncle, who will give it away again by Friday.'],
+        ['npc', 'I WILL TRY.', 'uncle']
+      ], [
+        ['judge', 'You are both at fault. {p} for hoarding another man’s molars, and {d} for retailing them.'],
+        ['judge', 'The fairy is to be informed. She will not be surprised. She has not been surprised since 1850.']
+      ])
+    },
+    hallway: {
+      p: [
+        'I have a new tin. It says “MINE. A GIFT. FROM UNCLE.” Uncle did the lettering. It took him four weeks.',
+        'Ten souls, a filling, and a hat I can’t see. I am a person of means.',
+        'I am going to read every label on this shelf. Twice. Aloud. To {d}.'
+      ],
+      d: [
+        'The postcard said “yours, not mine”. I interpreted it generously.',
+        'The fairy offered me a job. I will not say what it involves.',
+        'I would like it noted that the hat was worth it.'
+      ]
+    }
+  }],
+
   // @@NEXT
 };
