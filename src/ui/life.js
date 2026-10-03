@@ -36,8 +36,13 @@ export function renderAcquainted(state,first){
 // A new household's first trip leaves out the vocabulary it has not met yet (mastery
 // tiers, wagers, field notes: see the style rules for .first-trip) and explains the one
 // word it cannot avoid. Established households, and anyone who has been on a trip, see everything.
+// The expedition words a player meets after the first trip each explain themselves on tap.
+const TERM_MARKS=[['.mission-field-note > b','field-notes'],['.expedition-result-score > span','trail-points'],['.expedition-reading-pane > p:first-child','mastery']];
+export function explainTrailTerms(root){
+ TERM_MARKS.forEach(([selector,id])=>root.querySelectorAll(selector).forEach(el=>{if(el.dataset.gloss)return;el.dataset.gloss=id;el.setAttribute('role','button');el.tabIndex=0;}));
+}
 export function softenFirstTrip(l,root){
- if(!l.guide||l.outings>0)return;
+ if(!l.guide||l.outings>0){explainTrailTerms(root);return;}
  const view=root.querySelector('.expedition-view');if(!view)return;
  view.classList.add('first-trip');
  root.querySelectorAll('.expedition-departure b,.expedition-hud>span:first-child').forEach(el=>{el.dataset.gloss='nerve';el.setAttribute('role','button');el.tabIndex=0;});

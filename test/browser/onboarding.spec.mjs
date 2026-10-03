@@ -328,3 +328,31 @@ test('locked furniture and locked drawing colours stay focusable and say what op
   await expect(page.locator('#stamps .chip-locked')).toHaveCount(4);
   await expect(page.locator('#stampUnlock')).toContainText('a third eye and antlers');
 });
+
+test('a first trip leaves out words the household has not met; after a trip they return and explain themselves', async ({ page }) => {
+  await firstDay(page);
+  const open = () => page.evaluate(() => window.dispatchEvent(new CustomEvent('shelflife:activity', { detail: { action: 'outing', petId: 'first' } })));
+  await open();
+  await expect(page.locator('#lifeVeil .expedition-view.first-trip')).toBeVisible();
+  await expect(page.locator('#lifeVeil .trail-wager-settings')).toBeHidden();
+  await expect(page.locator('#lifeVeil .expedition-reading-pane > p').first()).toBeHidden();
+  // The one word it cannot avoid answers a tap, inside the sheet.
+  await page.locator('#lifeVeil .expedition-departure b').click();
+  await expect(page.locator('#glossCard')).toContainText('How brave your crew has left');
+  await page.locator('#glossCard [data-gl-close]').click();
+  await expect(page.locator('#lifeVeil')).toHaveClass(/open/);
+  await page.keyboard.press('Escape');
+
+});
+
+test('once a trip has been made, wagers and mastery are back and each answers a tap', async ({ page }) => {
+  await firstDay(page, s => { s.life.outings = 1; s.life.introDone = true; });
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('shelflife:activity', { detail: { action: 'outing', petId: 'first' } })));
+  await expect(page.locator('#lifeVeil .expedition-view')).toBeVisible();
+  await expect(page.locator('#lifeVeil .expedition-view.first-trip')).toHaveCount(0);
+  await expect(page.locator('#lifeVeil .trail-wager-settings')).toBeVisible();
+  const mastery = page.locator('#lifeVeil .expedition-reading-pane > p[data-gloss="mastery"]');
+  await expect(mastery).toBeVisible();
+  await mastery.click();
+  await expect(page.locator('#glossCard')).toContainText('What your crew has learned');
+});
