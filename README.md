@@ -214,7 +214,7 @@ save**. Guest play is unchanged, and offline the game carries on and catches up 
   digits from the newest email into the game. You do not create a code or password yourself.
 - The shelf is copied about 20 seconds after you do something, and when you leave the page. **Sync now**
   copies it at once. A device you have not touched quietly picks up the newer copy.
-- On another device choose **Already have an account? Sign in on this device**. If only one side has
+- On another device choose **Sign in or create an email account**. If only one side has
   residents, that shelf is used. If both do, you choose which to keep. Nothing is merged or overwritten
   without asking; the other shelf stays on the device for a week and **Undo** swaps them back.
 - Stored on the server: the save itself (the same data as a backup file), your email if you add one, a
