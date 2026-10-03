@@ -352,17 +352,21 @@ safety answers and the release checklist. `store/` is not published with the sit
 ### Connecting your own Supabase project
 
 Cloud save stays off, with no cloud UI and no requests, until `src/cloud/config.js` has a project URL and key.
+The copy in this repo already points at the project the published game uses. To run your own, follow the
+steps below and replace both values. `test/serve.mjs` serves an empty config, so browser tests never reach
+a real project (set `SHELF_REAL_CLOUD_CONFIG=1` to serve the real one).
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run `supabase/migrations/0001_accounts_and_saves.sql`, then
    `supabase/migrations/0002_social.sql` for Friends. Running either again is harmless.
 3. Authentication → Sign In / Providers: enable **Anonymous sign-ins** and keep **Email** on.
 4. Authentication → Emails: make the **Magic link**, **Confirm signup** and **Change email address**
-   templates print `{{ .Token }}`, so players get a code. Adding an email to an anonymous account uses
-   the change-email template.
+   templates print `{{ .Token }}`, so players get a code, for example `<p>Your Shelf Life code: {{ .Token }}</p>`.
+   Adding an email to an anonymous account uses the change-email template.
 5. Authentication → URL Configuration: set the Site URL to where the game is served.
-6. Project Settings → API: paste the Project URL and the anon public key into `src/cloud/config.js`.
-   The anon key is public by design; row level security keeps each save private.
+6. Project Settings → API: paste the Project URL and the publishable key (or the legacy anon key) into
+   `src/cloud/config.js`. It is public by design; row level security keeps each save private. Never paste
+   a secret or service_role key: a unit test refuses to pass if one is shipped.
 
 The built-in email sender allows only a few messages an hour; set up custom SMTP before real players
 arrive. Abandoned anonymous accounts can be cleared from the SQL editor:

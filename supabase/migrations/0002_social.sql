@@ -140,27 +140,27 @@ grant select on table public.shelves, public.friendships, public.blocks, public.
 drop policy if exists "shelves are for their owner and accepted friends" on public.shelves;
 create policy "shelves are for their owner and accepted friends" on public.shelves
   for select to authenticated using (
-    auth.uid() = user_id or exists (
+    (select auth.uid()) = user_id or exists (
       select 1 from public.friendships f
        where f.status = 'accepted'
-         and ((f.requester = auth.uid() and f.addressee = shelves.user_id)
-           or (f.addressee = auth.uid() and f.requester = shelves.user_id))));
+         and ((f.requester = (select auth.uid()) and f.addressee = shelves.user_id)
+           or (f.addressee = (select auth.uid()) and f.requester = shelves.user_id))));
 
 drop policy if exists "friendships are for the two players in them" on public.friendships;
 create policy "friendships are for the two players in them" on public.friendships
-  for select to authenticated using (auth.uid() in (requester, addressee));
+  for select to authenticated using ((select auth.uid()) in (requester, addressee));
 
 drop policy if exists "blocks are for the blocker" on public.blocks;
 create policy "blocks are for the blocker" on public.blocks
-  for select to authenticated using (auth.uid() = blocker);
+  for select to authenticated using ((select auth.uid()) = blocker);
 
 drop policy if exists "summonses are for the two players in them" on public.summons;
 create policy "summonses are for the two players in them" on public.summons
-  for select to authenticated using (auth.uid() in (from_user, to_user));
+  for select to authenticated using ((select auth.uid()) in (from_user, to_user));
 
 drop policy if exists "scores are private to their owner" on public.scores;
 create policy "scores are private to their owner" on public.scores
-  for select to authenticated using (auth.uid() = user_id);
+  for select to authenticated using ((select auth.uid()) = user_id);
 
 -- ---------------------------------------------------------------------------
 -- Helpers (not callable from the API)
