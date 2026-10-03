@@ -33,7 +33,7 @@ export const CASES_EXTRA = [
       'The calendar has neat torn edges. Not one Tuesday: every Tuesday, for eleven weeks. Earn their confidence with a game, or two more useful care actions, to find out who has been tidying them away.',
       'The torn pages are under a pebble in {q}’s bowl. Tuesday is bath day. {q} has gone eleven weeks without a bath and regards this as a calendar matter. Decide whether Tuesday comes back.'],
     good: 'Tuesday returns. Bath day moves to a Thursday invented for the purpose, so the calendar now has two. Nobody has asked what the original Thursday thinks of this. It is not taking calls.',
-    messy: 'Tuesday is restored by decree and bath day returns with it. On Wednesday the calendar is found with a smaller, neater gap where Thursday was. It has been initialled.' },
+    messy: 'Tuesday is restored by decree and bath day returns with it. On Wednesday the calendar is found with a smaller, neater gap where Thursday was. It has been countersigned.' },
 
   { id: 'letters', title: 'The letters under the lamp', object: 'letters',
     beats: ['An unsigned letter has appeared under the lamp. It begins: “I have noticed some things about the way you all chew.” {p} read it aloud twice. Everyone recognised themselves, then everyone else.',

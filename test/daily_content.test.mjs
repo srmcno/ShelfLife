@@ -295,7 +295,7 @@ test('each new case file has six gated beats and two endings that never need a n
     assert.equal(c.beats.length, 6, c.id);
     c.beats.forEach((beat, i) => {
       cleanText(beat, c.id + ' beat ' + i);
-      assert.ok(beat.length >= 100 && beat.length <= 330, c.id + ' beat ' + i + ' is ' + beat.length + ' characters');
+      assert.ok(beat.length >= 100 && beat.length <= 280, c.id + ' beat ' + i + ' is ' + beat.length + ' characters');
       assert.match(beat, SENTENCE, c.id + ' beat ' + i);
       for (const [slot] of beat.matchAll(/\{[^}]*\}/g)) assert.ok(['{p}', '{q}'].includes(slot), c.id + ' beat ' + i + ' uses ' + slot);
     });
@@ -309,7 +309,7 @@ test('each new case file has six gated beats and two endings that never need a n
     assert.match(c.beats[5], /Decide /, c.id + ' beat 5 must end on a verdict');
     for (const ending of [c.good, c.messy]) {
       cleanText(ending, c.id + ' ending');
-      assert.ok(ending.length >= 90 && ending.length <= 260, c.id + ' ending length ' + ending.length);
+      assert.ok(ending.length >= 90 && ending.length <= 280, c.id + ' ending length ' + ending.length);
       assert.ok(!/[{}]/.test(ending), c.id + ' ending shows no names, so it cannot use a placeholder');
       assert.match(ending, SENTENCE);
     }

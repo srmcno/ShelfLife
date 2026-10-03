@@ -28,22 +28,22 @@ export const OMENS_EXTRA = [
     line: 'Emergencies pay double souls today. A librarian has arrived about an overdue book. He is very old and extremely polite. The late fee, as of this morning, is the house.' },
   { id: 'held-breath', name: 'The Held Breath', effect: 'mayhem', glyph: 'ear',
     line: 'Emergencies pay double souls today. It has gone quiet in the walls, and not the restful sort. It is the quiet of something that has just put its coat on.' },
-  { id: 'loose-fuse', name: 'The Unattached Fuse', effect: 'mayhem', glyph: 'flame',
+  { id: 'unattached-fuse', name: 'The Unattached Fuse', effect: 'mayhem', glyph: 'flame',
     line: 'Emergencies pay double souls today. A fuse is burning somewhere in the house. It is not attached to anything. It is burning in the spirit of the thing.' },
 
   /* coffin: coffins at half price */
-  { id: 'loyalty-card', name: 'The Loyalty Card', effect: 'coffin', glyph: 'photo',
-    line: 'Coffins are half price today. The undertaker stamps your loyalty card every night you call. The seventh stamp is on the house. He says this warmly, and looks at the house.' },
+  { id: 'seventh-night', name: 'The Seventh Night', effect: 'coffin', glyph: 'key',
+    line: 'Coffins are half price today. The undertaker ticks your name in his book every night you call. The seventh night is on the house. He says this warmly, and looks at the house.' },
   { id: 'price-match', name: 'The Price Match', effect: 'coffin', glyph: 'scroll',
     line: 'Coffins are half price today. The undertaker will match any rival quote. You do not have a rival undertaker. He has gone to become one.' },
   { id: 'floor-model', name: 'The Floor Model', effect: 'coffin', glyph: 'box',
     line: 'Coffins are half price today. That includes the floor model, which has slight signs of use. The undertaker says the last occupant was only trying it for size.' },
 
   /* luck: rarer curios are more likely */
-  { id: 'lost-property', name: 'The Lost Property Office', effect: 'luck', glyph: 'key',
+  { id: 'lost-property', name: 'The Lost Property Office', effect: 'luck', glyph: 'brooch',
     line: 'Rarer curios are more likely today. The night bus has handed in everything the dead left on it. Most of it is umbrellas. All of them are open.' },
-  { id: 'estate-sale', name: 'The Estate Sale', effect: 'luck', glyph: 'ring',
-    line: 'Rarer curios are more likely today. There is an estate sale two streets over, and the deceased is running it. He hovers at every table and asks what you want it for.' },
+  { id: 'house-clearance', name: 'The House Clearance', effect: 'luck', glyph: 'ring',
+    line: 'Rarer curios are more likely today. There is a house clearance two streets over, and the deceased is running it. He hovers at every table and asks what you want it for.' },
   { id: 'rabbits-foot', name: 'The Rabbit’s Foot', effect: 'luck', glyph: 'paw',
     line: 'Rarer curios are more likely today. The rabbit’s foot is working beautifully. Please do not ask the rabbit.' },
 
