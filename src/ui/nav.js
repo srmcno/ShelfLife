@@ -8,6 +8,8 @@ import { state, onNote } from '../state.js';
 const PHONE = window.matchMedia('(max-width:720px)');
 const TAB_KEY = 'shelflife.tab';
 const TABS = ['shelf', 'notes', 'plots'];
+// Left to right along the tab bar. A pane slides in from the side its tab is on.
+const TAB_ORDER = { shelf: 0, plots: 1, notes: 2 };
 
 const tray = document.getElementById('moreTray');
 const scrim = document.getElementById('trayScrim');
@@ -39,6 +41,8 @@ export function setTab(name, opts = {}) {
   if (TABS.indexOf(name) < 0) name = 'shelf';
   const changed = currentTab() !== name;
   if (changed) tabScroll.set(currentTab(), window.scrollY || 0);
+  // css/fx.css reads this for the direction of the pane's arrival.
+  if (changed) document.body.dataset.tabDir = TAB_ORDER[name] > TAB_ORDER[currentTab()] ? 'forward' : 'back';
   document.body.dataset.tab = name;
   tabs.forEach(t => { if (t.dataset.tab === name) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
   try { localStorage.setItem(TAB_KEY, name); } catch (e) { /* storage is optional */ }

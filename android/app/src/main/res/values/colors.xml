@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The room with the lights off (index.html theme-color): behind the game. -->
+    <!-- The room with the lights off (index.html theme-color): behind the game and
+         behind the launch splash, so the splash fades into the first frame with
+         no change of brightness. -->
     <color name="shelf_night">#0B0812</color>
-    <!-- The plum of the manifest background: the launch screen. -->
-    <color name="shelf_plum">#1A1220</color>
 </resources>
