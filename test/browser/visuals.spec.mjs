@@ -489,7 +489,7 @@ test.describe('consistency', () => {
   test('the More drawer top-aligns its items and its links are a full tap target', async ({ page }) => {
     await openHousehold(page);
     await page.locator('#tabMore:visible, #moreBtn:visible').first().click();
-    const sizes = await page.evaluate(() => [...document.querySelectorAll('.tray-legal a')].map(a => Math.round(a.getBoundingClientRect().height)));
+    const sizes = await page.evaluate(() => [...document.querySelectorAll('.tray-legal a')].map(a => a.offsetHeight));
     expect(Math.min(...sizes)).toBeGreaterThanOrEqual(44);
     const tops = await page.evaluate(() => ['#helpBtn', '#decorBtn', '#museumBtn'].map(s => { const b = document.querySelector(s), r = b.getBoundingClientRect(), t = b.querySelector('span').getBoundingClientRect(); return Math.round(t.top - r.top); }));
     expect(new Set(tops).size, 'item labels start at ' + tops).toBe(1);

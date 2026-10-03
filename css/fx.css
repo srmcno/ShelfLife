@@ -102,7 +102,7 @@ body[data-effects="light"] .fx-flyer{filter:none}
 .fx-banner.low{top:auto;bottom:calc(40px + var(--sab, 0px));animation-name:fx-banner-in-low}
 .fx-banner.out{animation:fx-banner-out .3s ease-in both}
 .fx-banner.low.out{animation-name:fx-banner-out-low}
-.fx-banner-kicker{display:block;font:700 10.5px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--fx-tone)}
+.fx-banner-kicker{display:block;font:700 11px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--fx-tone)}
 .fx-banner b{display:block;margin-top:8px;font:400 28px/1.08 var(--display);color:#FFE7B0;text-wrap:balance}
 .fx-banner p{margin:8px 0 0;font:21px/1.3 var(--hand);color:var(--ink-2);text-wrap:balance}
 @keyframes fx-banner-in{from{opacity:0;transform:translateX(-50%) translateY(-18px) scale(.9)}to{opacity:1;transform:translateX(-50%)}}
