@@ -1,0 +1,170 @@
+/* =============================================================================
+   fx.css: the lit shelf, the toolkit's particles, transitions and empty states.
+   Loaded last, so it can refine what the earlier sheets set without editing them.
+
+     1. springs and press feedback
+     2. sheets that leave properly, panes that slide
+     3. the toolkit layer: particles, rings, flyers, banners
+     4. illustrated empty and loading states
+     5. the lit shelf (phone grade)
+
+   Motion rules for the whole file: transform and opacity only, nothing loops
+   unless a player can see it, reduced motion draws nothing, Light mode draws
+   the quiet version.
+   ============================================================================= */
+:root{
+  --fx-spring:cubic-bezier(.34,1.56,.64,1);
+  --fx-settle:cubic-bezier(.22,1,.36,1);
+  --fx-accent:var(--mint);
+}
+@supports (transition-timing-function:linear(0,1)){
+  :root{--fx-spring:linear(0,.18 6%,.58 14%,.92 22%,1.08 30%,1.1 36%,1.04 44%,.99 54%,1.005 70%,1);--fx-settle:linear(0,.36 7%,.74 17%,.93 29%,1.01 43%,1.005 60%,1)}
+}
+
+/* ---- 1. press feedback ------------------------------------------------------
+   Everything tappable gives a little under the finger and springs back. The
+   individual transform properties compose with the transforms already in use. */
+:is(.tab,.chip,.filter-chip,.tray-item,.mh-tile,.mh-choice,.activity-card,.door,.museum-door,.arrival-resident,.mh-shelf-item,.souls-hud,.studio-tab,.opt,.sw,.story-folder>summary):not(:disabled){
+  transition-property:scale,background-color,border-color,color,box-shadow,translate,opacity;
+  transition-duration:.34s,.14s,.14s,.14s,.14s,.15s,.14s;
+  transition-timing-function:var(--fx-spring),ease,ease,ease,ease,ease,ease;
+}
+:is(.tab,.chip,.filter-chip,.tray-item,.mh-tile,.mh-choice,.activity-card,.door,.museum-door,.arrival-resident,.mh-shelf-item,.souls-hud,.studio-tab,.opt,.sw,.story-folder>summary):not(:disabled):active{
+  scale:.965;transition-duration:.06s,.14s,.14s,.14s,.14s,.15s,.14s;
+}
+.tab:active svg{scale:.9}
+.tab svg{transition:scale .3s var(--fx-spring)}
+.pet:active .sprite,.prop:active svg{scale:.97}
+.btn:active{transition-duration:.06s}
+/* a card that opens does it with a little weight */
+details[open]>.folder-content,details[open]>.theatre-buttons,details[open]>.gen-tuning,details[open]>.theatre-repertoire{animation:fx-unfold .42s var(--fx-settle) both;transform-origin:50% 0}
+@keyframes fx-unfold{from{opacity:0;transform:translateY(-8px) scale(.985)}to{opacity:1;transform:none}}
+.story-folder .folder-arrow{transition:rotate .34s var(--fx-spring)}
+.story-folder[open] .folder-arrow{rotate:90deg}
+.note--new{animation:fx-note-in .55s var(--fx-spring) both}
+@keyframes fx-note-in{from{opacity:0;transform:translateY(14px) rotate(-1.4deg) scale(.96)}to{opacity:1;transform:none}}
+
+/* ---- 2. sheets that leave properly ------------------------------------------ */
+.veil.fx-leaving{display:block;pointer-events:none;animation:fx-veil-out .2s ease-in forwards}
+.veil.fx-leaving .sheet{animation:fx-sheet-out .2s cubic-bezier(.5,0,.8,.4) forwards}
+@keyframes fx-veil-out{to{opacity:0}}
+@keyframes fx-sheet-out{to{opacity:0;transform:translateY(14px) scale(.985)}}
+.veil.open .sheet{animation-timing-function:var(--fx-settle);animation-duration:.42s}
+@media (max-width:720px){
+  .veil.fx-leaving{display:flex}
+  .veil.fx-leaving .sheet{animation-name:fx-sheet-down}
+  .veil.open .sheet{animation-name:fx-sheet-up;animation-duration:.46s;animation-timing-function:var(--fx-settle)}
+  @keyframes fx-sheet-up{from{transform:translateY(72px);opacity:.5}to{transform:none;opacity:1}}
+  @keyframes fx-sheet-down{to{transform:translateY(96px);opacity:.4}}
+  .pane{animation:fx-pane-in .34s var(--fx-settle) both}
+}
+/* panes arrive from the side the tab bar says they live on (nav.js sets --pane-dx) */
+@keyframes fx-pane-in{from{opacity:0;transform:translate3d(var(--pane-dx,0px),8px,0)}to{opacity:1;transform:none}}
+@media (min-width:721px){.pane{animation:fx-pane-in .3s var(--fx-settle) both}}
+body[data-effects="light"] .veil.fx-leaving .sheet{animation-duration:.14s}
+body[data-effects="light"] .pane{animation-duration:.18s}
+body[data-effects="light"] details[open]>.folder-content{animation:none}
+
+/* ---- 3. the toolkit layer ----------------------------------------------------- */
+#fxLayer{position:fixed;inset:0;z-index:95;pointer-events:none;overflow:hidden;contain:strict}
+.fx-burst{position:absolute;width:0;height:0}
+.fx-p{position:absolute;left:0;top:0;width:calc(var(--s) * 1px);height:calc(var(--s) * 1px);margin:calc(var(--s) * -.5px) 0 0 calc(var(--s) * -.5px);
+  color:var(--c);background:currentColor;will-change:transform,opacity;
+  animation:fx-fly var(--t) cubic-bezier(.16,.74,.34,1) var(--d) both}
+.fx-p.star{clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
+.fx-p.chip{width:calc(var(--s) * .62px);height:calc(var(--s) * 1.1px);border-radius:1px}
+.fx-p.ember{border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;background:radial-gradient(60% 60% at 50% 66%,#fff 0 18%,currentColor 56%,transparent 100%);box-shadow:0 0 8px 1px color-mix(in srgb,currentColor 55%,transparent)}
+.fx-p.heart{background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21C4 15 2 11 2 7.5A5 5 0 0 1 12 6a5 5 0 0 1 10 1.5C22 11 20 15 12 21z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21C4 15 2 11 2 7.5A5 5 0 0 1 12 6a5 5 0 0 1 10 1.5C22 11 20 15 12 21z'/%3E%3C/svg%3E") center/contain no-repeat}
+.fx-p.puff{border-radius:50%;background:radial-gradient(circle at 38% 34%,color-mix(in srgb,currentColor 70%,#fff),currentColor 60%,transparent 100%);opacity:.9}
+body[data-effects="light"] .fx-p.ember{box-shadow:none}
+@keyframes fx-fly{
+  0%{transform:translate(0,0) rotate(0deg) scale(.15);opacity:0}
+  9%{opacity:1}
+  52%{transform:translate(calc(var(--x) * .8),calc(var(--y) * .8 - var(--lift))) rotate(calc(var(--r) * .6)) scale(1)}
+  100%{transform:translate(var(--x),calc(var(--y) + var(--fall))) rotate(var(--r)) scale(.45);opacity:0}
+}
+.fx-ring{position:absolute;width:calc(var(--w) * 1px);height:calc(var(--w) * 1px);margin:calc(var(--w) * -.5px) 0 0 calc(var(--w) * -.5px);border-radius:50%;
+  border:2px solid var(--c);opacity:0;animation:fx-ring .7s cubic-bezier(.2,.7,.3,1) both;will-change:transform,opacity}
+@keyframes fx-ring{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+.fx-flyer{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;color:#F6C768;will-change:transform,opacity;
+  filter:drop-shadow(0 0 5px color-mix(in srgb,currentColor 70%,transparent))}
+.fx-flyer svg{display:block;width:100%;height:100%}
+body[data-effects="light"] .fx-flyer{filter:none}
+
+.fx-banner{position:absolute;left:50%;top:calc(var(--topbar-h, 58px) + var(--sat, 0px) + 16px);width:min(92vw,420px);padding:16px 22px 18px;border-radius:18px;text-align:center;
+  background:radial-gradient(120% 140% at 50% 0%,color-mix(in srgb,var(--fx-tone) 24%,transparent),transparent 62%),linear-gradient(180deg,#2a1b2e,#170f1d);
+  border:1px solid color-mix(in srgb,var(--fx-tone) 62%,transparent);color:var(--ink);
+  box-shadow:0 0 0 1px #0007 inset,0 22px 50px -18px #000,0 0 36px -10px color-mix(in srgb,var(--fx-tone) 55%,transparent);
+  transform:translateX(-50%);animation:fx-banner-in .62s var(--fx-spring) both}
+.fx-banner.tone-candle{--fx-tone:#F6C768}
+.fx-banner.tone-mint{--fx-tone:#7FD8C0}
+.fx-banner.tone-blood{--fx-tone:#FF6F7F}
+.fx-banner.out{animation:fx-banner-out .3s ease-in both}
+.fx-banner-kicker{display:block;font:700 10.5px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--fx-tone)}
+.fx-banner b{display:block;margin-top:8px;font:400 28px/1.08 var(--display);color:#FFE7B0;text-wrap:balance}
+.fx-banner p{margin:8px 0 0;font:21px/1.3 var(--hand);color:var(--ink-2);text-wrap:balance}
+@keyframes fx-banner-in{from{opacity:0;transform:translateX(-50%) translateY(-18px) scale(.9)}to{opacity:1;transform:translateX(-50%)}}
+@keyframes fx-banner-out{to{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.97)}}
+body[data-effects="light"] .fx-banner{box-shadow:0 18px 36px -18px #000}
+
+/* a curio arriving is a small event of its own */
+.mh-curio-card.fresh{animation:fx-reveal .9s var(--fx-spring) both;transform-origin:50% 60%}
+@keyframes fx-reveal{0%{opacity:0;transform:scale(.55) rotate(-5deg)}30%{opacity:1}60%{transform:scale(1.07) rotate(1.5deg)}100%{transform:none}}
+.mh-curio-card.fresh.rarity-rare::after,.mh-curio-card.fresh.rarity-cursed::after,.mh-curio-card.fresh.rarity-unholy::after{content:'';position:absolute;inset:-26px;z-index:-1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--rc,#F6C768) 34%,transparent),transparent);animation:fx-halo 2.4s ease-in-out infinite alternate}
+@keyframes fx-halo{from{opacity:.35;transform:scale(.9)}to{opacity:.8;transform:scale(1.05)}}
+.mh-curio-card{position:relative;isolation:isolate}
+
+/* the HUD number counts, so it should not jitter */
+.souls-count b,.fx-count{font-variant-numeric:tabular-nums}
+
+@media (prefers-reduced-motion:reduce){
+  #fxLayer,.fx-p,.fx-ring,.fx-flyer{display:none}
+  .fx-banner{animation:none}
+  .mh-curio-card.fresh,.mh-curio-card.fresh::after{animation:none}
+}
+
+/* ---- 4. illustrated empty and loading states ----------------------------------- */
+.fx-empty{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:420px;margin:14px auto;padding:22px 20px 24px;text-align:center;
+  border:1px dashed var(--hair-lit);border-radius:var(--r-lg);color:var(--ink-3);
+  background:radial-gradient(70% 80% at 50% 0%,color-mix(in srgb,var(--key) 7%,transparent),transparent 70%)}
+.fx-empty.compact{flex-direction:row;text-align:left;gap:14px;padding:14px 16px;max-width:none;margin:10px 0}
+.fx-empty-art{flex:none;width:min(210px,62%);color:var(--ink-3)}
+.fx-empty.compact .fx-empty-art{width:92px}
+.fx-empty-art .empty-art{display:block;width:100%;height:auto;overflow:visible}
+.fx-empty-copy{display:flex;flex-direction:column;align-items:center;gap:7px;min-width:0}
+.fx-empty.compact .fx-empty-copy{align-items:flex-start}
+.fx-empty-copy b{font:400 22px/1.15 var(--display);color:var(--ink);text-wrap:balance}
+.fx-empty-copy p{font:20px/1.3 var(--hand);color:var(--ink-2);text-wrap:balance}
+.fx-empty-action{margin-top:6px}
+.empty-art .ea-line{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.empty-art .ea-line.faint{opacity:.45}
+.empty-art .ea-line.dotted{stroke-dasharray:.1 5.2;stroke-width:2.2}
+.empty-art .ea-fill{fill:color-mix(in srgb,currentColor 11%,transparent)}
+.empty-art .ea-acc{stroke:var(--fx-accent)}
+.empty-art .ea-warm{fill:var(--key);stroke:none}
+.empty-art .ea-pin{fill:#B8414F;stroke:#000;stroke-opacity:.4;stroke-width:1}
+.empty-art .ea-dot{fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+.empty-art .ea-moth,.empty-art .ea-dangle,.empty-art .ea-flame,.empty-art .ea-twinkle,.empty-art .ea-knock,.empty-art .ea-bunny{transform-box:fill-box;transform-origin:50% 0}
+.empty-art .ea-flame{transform-origin:50% 100%}
+.empty-art .ea-twinkle,.empty-art .ea-win{transform-origin:50% 50%}
+body:not([data-effects="light"]) .empty-art .ea-dangle{animation:fx-dangle 5.5s ease-in-out infinite}
+body:not([data-effects="light"]) .empty-art .ea-flame{animation:fx-flame 1.8s ease-in-out infinite}
+body:not([data-effects="light"]) .empty-art .ea-twinkle{animation:fx-twinkle 3.4s ease-in-out infinite}
+body:not([data-effects="light"]) .empty-art .ea-moth{animation:fx-moth 4.2s ease-in-out infinite}
+body:not([data-effects="light"]) .empty-art .ea-knock{animation:fx-knock 6s ease-in-out infinite}
+@keyframes fx-dangle{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+@keyframes fx-flame{0%,100%{transform:scale(1,1) rotate(-2deg)}50%{transform:scale(.92,1.1) rotate(3deg)}}
+@keyframes fx-twinkle{0%,100%{opacity:.5;transform:scale(.8) rotate(0)}50%{opacity:1;transform:scale(1.1) rotate(20deg)}}
+@keyframes fx-moth{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-4px) rotate(3deg)}}
+@keyframes fx-knock{0%,88%,100%{transform:rotate(0)}92%{transform:rotate(-14deg)}96%{transform:rotate(8deg)}}
+@media (prefers-reduced-motion:reduce){.empty-art *{animation:none!important}}
+
+.fx-loading{display:flex;align-items:center;gap:10px;padding:10px 2px;color:var(--ink-3);font:20px/1.3 var(--hand)}
+.fx-loading-dots{display:inline-flex;gap:5px}
+.fx-loading-dots i{width:6px;height:6px;border-radius:50%;background:var(--key);opacity:.35;animation:fx-dot 1.2s ease-in-out infinite}
+.fx-loading-dots i:nth-child(2){animation-delay:.18s}
+.fx-loading-dots i:nth-child(3){animation-delay:.36s}
+@keyframes fx-dot{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1.15)}}
+body[data-effects="light"] .fx-loading-dots i{animation:none;opacity:.7}
+@media (prefers-reduced-motion:reduce){.fx-loading-dots i{animation:none;opacity:.7}}
