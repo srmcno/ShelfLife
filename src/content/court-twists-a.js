@@ -266,5 +266,331 @@ export const TWISTS_A = {
     }
   }],
 
+  /* ---------- 2. The Warm Slot: both becomes plaintiff ---------- */
+  'stolen-slot': [{
+    id: 'next-of-kin',
+    title: 'Closest, Honestly',
+    truth: 'plaintiff',
+    turn: alt([
+      ['bailiff', 'Your Honour, before we begin: {p} has brought its own bucket to court. {d} has brought one too.'],
+      ['judge', 'Why would anyone bring a bucket to a hearing about a bucket?'],
+      ['bailiff', 'I believe it is for comparison, sir. {d} has put its bucket behind its back.']
+    ], [
+      ['narrator', '(The bailiff carries a tin bucket to the evidence table and sets it down. {d} looks at the ceiling and begins to whistle.)'],
+      ['judge', 'Whose is that, Bailiff?'],
+      ['bailiff', 'It was found outside {p}’s slot, sir. Nobody has claimed it. {d} would like it known that it has not claimed it.']
+    ]),
+    questions: {
+      0: {
+        clue: '{d} wrote itself in as {p}’s next of kin the morning of the bucket, then “checked” the register and found itself.',
+        lines: alt([
+          ['d', 'Nobody said. I saw a bucket outside the slot and I put two and two together.'],
+          ['judge', 'You told us you were next of kin. You said you checked.'],
+          ['bailiff', 'Shelf register, Your Honour. Next of kin for {p}: {d}. Entered the morning of the bucket. Under “relationship” it says “closest, honestly”.'],
+          ['d', 'I did check. I checked it very carefully, with a pen.']
+        ], [
+          ['d', 'Me, Your Honour. I saw the bucket and declared {p} dead.'],
+          ['judge', 'Did you consult a doctor? The register?'],
+          ['bailiff', 'The register has {d} down as next of kin since the morning of the bucket, Your Honour. In {d}’s hand. With a little flourish on the D.'],
+          ['d', 'The flourish is sincere.']
+        ])
+      },
+      1: {
+        clue: 'Shelf records: {p} has held that slot nine years. {d} lives by the draught and has applied for the warm slot four times.',
+        lines: alt([
+          ['p', 'Mine. Since the beginning of time.'],
+          ['bailiff', 'Shelf records, Your Honour. {p}: nine years in that slot. {d}: nine years in the slot by the draught.'],
+          ['judge', 'Has {d} ever applied for a transfer?'],
+          ['bailiff', 'Four times, sir. The reason given each time is “warm”.']
+        ], [
+          ['p', 'Mine, Your Honour. Ask anybody.'],
+          ['d', 'Mine until the spring, Your Honour. I was out ill in a bucket and when I came back {p} had taken it.'],
+          ['bailiff', 'Shelf records show {d} has never been ill, Your Honour, nor in a bucket, nor in that slot before this month.'],
+          ['d', 'I was ill in spirit.']
+        ])
+      },
+      4: {
+        clue: 'The bucket {d} saw was tin with a dent and a flourished “D” on the base. {p}’s bucket is blue, with a lid.',
+        lines: alt([
+          ['p', 'Blue. Deep. A proper lid. I had it with me the whole time, Your Honour. It is under the witness box.'],
+          ['judge', 'And the bucket outside your slot, the one {d} saw?'],
+          ['p', 'Never seen it. Tin. Dented.'],
+          ['d', 'THAT DENT IS SENTIMENTAL.']
+        ], [
+          ['p', 'Blue, Your Honour. A handle that does not squeak. I took it with me, and I have not been apart from it since.'],
+          ['judge', 'Then whose bucket was outside your slot?'],
+          ['bailiff', 'Tin, sir. Dented. There is a “D” scratched in the base, with a flourish.'],
+          ['d', 'THAT FLOURISH IS SENTIMENTAL.']
+        ])
+      }
+    },
+    rulings: {
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. {d} left its own bucket outside {p}’s slot, wrote itself in as next of kin, announced a death and moved in before the death was dry.'],
+        ['judge', '“Which vultures?”, you were asked. “Me”, you said. The court admires a confession, even a proud one. The slot goes back, and {d} goes back to the draught.'],
+        ['d', 'May I keep the bucket?'],
+        ['judge', 'It is yours. It has a dent.']
+      ], [
+        ['judge', 'Judgment for {p}. A man who declares you dead on the strength of his own bucket has not mistaken anything. He has planned a funeral.'],
+        ['judge', '{d} returns the slot, the smell, and the register entry, which {d} will eat, slowly, in front of the jury.'],
+        ['d', 'It has a flourish on it.'],
+        ['judge', 'Then it will go down in style.']
+      ]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. Under shelf law a slot left empty for a full afternoon is a vacancy, and I hate it as much as you do.'],
+        ['judge', 'The court notes the register, the tin bucket and the flourish, and does nothing about any of them.'],
+        ['p', 'THAT IS IT?'],
+        ['judge', 'It is a plank, {p}.']
+      ], [
+        ['judge', 'Judgment for {d}. {p} left the slot, the slot was taken, and I am told that is how slots work.'],
+        ['judge', 'I was buried in a box with a better argument than that, and I did not fight it. Next time, {p}, take the slot into the bucket with you.'],
+        ['p', 'IT HAD A DENT.'],
+        ['judge', 'So did the box.']
+      ]),
+      both: alt([
+        ['judge', 'You are both vultures. {p} gets ill where people can see it, and {d} writes itself into registers.'],
+        ['judge', 'Alternate days. The register is burned and the bucket goes to the bailiff.'],
+        ['bailiff', 'I will treasure it, Your Honour. I have always wanted a dent.']
+      ], [
+        ['judge', 'You are both small, and so is the slot. One of you was careless with a bucket and the other one was careful with a pen.'],
+        ['judge', 'Share the slot. Share the draught. Share the bucket, if you must. I will not hear a word about it.'],
+        ['audience', '(Somebody at the back shouts “THE BUCKET”. It is, once again, a chant.)']
+      ])
+    },
+    hallway: {
+      p: [
+        'I’m going back to the slot. It still smells of me. It also smells of a very small tin.',
+        'I’ve changed the register. Next of kin: the wall. The wall can’t be bribed. It snores through everything.',
+        'I sat in my slot for three hours. It is still warm. It is warm from {d}’s guilt.'
+      ],
+      d: [
+        'The draught is not so bad. It builds character. It builds a cough.',
+        'I never said {p} was dead. I said “passed on”. Which it did. To the privy.',
+        'I’m applying for the warm slot again. Fifth time. Reason given: “warm”.'
+      ]
+    }
+  }],
+
+  /* ---------- 3. The Early Eulogy: plaintiff becomes defendant ---------- */
+  'early-eulogy': [{
+    id: 'the-brief',
+    title: 'Mostly Fine, As Ordered',
+    truth: 'defendant',
+    turn: alt([
+      ['bailiff', 'Your Honour, {d} has handed up a document. It is a brief. It is eleven pages long and it has a salad stain on page one.'],
+      ['judge', 'Who briefed {d}?'],
+      ['bailiff', 'It does not say, sir. But there are arrows, and a diagram of a salad.']
+    ], [
+      ['narrator', '(The bailiff holds a booking form up to the light. There is a thumbprint in the corner. He sniffs it.)'],
+      ['bailiff', 'Vinaigrette, Your Honour.'],
+      ['judge', 'Bailiff, you cannot identify a suspect by smell.'],
+      ['bailiff', 'It is a very specific vinaigrette, sir.']
+    ]),
+    questions: {
+      0: {
+        clue: '{p} told {d} to carry on even if it waved. Item six on the brief, in {p}’s handwriting, above “do not look at the salad”.',
+        lines: alt([
+          ['d', 'I did, Your Honour. Front row. Salad. Waving.'],
+          ['judge', 'And you kept going.'],
+          ['d', 'Item six of the brief. “Carry on even if I wave. Do not look at the salad.”'],
+          ['judge', 'Who wrote that?'],
+          ['p', 'A thoughtful person.']
+        ], [
+          ['d', 'I saw it, Your Honour. Front row. Salad. Very much alive, and very much a paying customer.'],
+          ['p', 'I WAVED.'],
+          ['d', 'It is in the contract, Your Honour. “If client waves, proceed. If client weeps, proceed louder.” The client wept at “a bit much”.'],
+          ['p', 'THAT WAS THE SALAD. IT HAD ONIONS.']
+        ])
+      },
+      1: {
+        clue: '{p} commissioned the eulogy for three souls, due at the graveside. {p} paid two and sued over the third.',
+        lines: alt([
+          ['d', '“{p} was here. Now {p} is not, in theory. {p} was mostly fine. {p} was a bit much. {p} has paid two souls, and is, as of this sentence, one short.”'],
+          ['judge', 'You invoiced at a graveside.'],
+          ['d', 'It is where the client is most emotional, Your Honour.'],
+          ['p', 'I WAS GOING TO PAY IT WHEN I WAS DEAD.']
+        ], [
+          ['d', '“{p} will be missed, by some. {p} leaves behind a salad, a cake, and an invoice for three souls, payable in the dish by the door. Two have been received.”'],
+          ['judge', 'You read your own invoice into the eulogy.'],
+          ['d', 'It was in the brief, Your Honour. “Honest. Itemised.”'],
+          ['p', 'I PUT TWO IN THE DISH. THE THIRD IS FOR WHEN IT GETS GOOD.']
+        ])
+      },
+      3: {
+        clue: 'The funeral was booked by {p}. The form is signed “the deceased, in advance” and has a vinaigrette thumbprint.',
+        lines: alt([
+          ['p', 'I do not know. Somebody saw me lying very still and started booking things.'],
+          ['bailiff', 'The form, Your Honour. Hall, hymns, one cake, one salad, signed “the deceased, in advance”. There is a thumbprint in vinaigrette.'],
+          ['p', 'Anyone could have vinaigrette.'],
+          ['judge', 'Only one person brought a salad, {p}.']
+        ], [
+          ['bailiff', 'Booked by {p}, Your Honour. Hall, hymns, one cake, one eulogy, one salad. Under “cause of death” it says “TBC”.'],
+          ['judge', 'You booked your own funeral, {p}.'],
+          ['p', 'It was a rehearsal. For when it is real. I wanted to see how it went.'],
+          ['d', 'It went mostly fine, Your Honour.']
+        ])
+      },
+      4: {
+        lines: alt([
+          ['d', 'I took them home. {p} bought them, and the card is in {p}’s own hand.'],
+          ['judge', 'What does the card say?'],
+          ['d', '“To me, from everyone. You deserved this.”'],
+          ['p', 'Everyone was SUPPOSED to sign it.']
+        ], [
+          ['d', 'They are in a jar, Your Honour. Lilies, not too many. Those were the instructions.'],
+          ['judge', 'Whose instructions?'],
+          ['d', 'The deceased’s. There was a diagram. It had arrows.'],
+          ['p', 'THE ARROWS WERE FOR THE VASE.']
+        ])
+      }
+    },
+    rulings: {
+      defendant: alt([
+        ['judge', 'Judgment for {d}. {p} commissioned an honest eulogy, received an honest eulogy, and sued over the honesty. The booking form is stained with vinaigrette. This court knows a salad thumb when it sees one.'],
+        ['judge', '{p} pays the third soul, and {d} keeps the flowers and the card. “You deserved this.” I think we can all agree.'],
+        ['p', 'I WANTED TWENTY PERCENT MORE ADJECTIVES.'],
+        ['judge', 'Then you should have paid for adjectives.']
+      ], [
+        ['judge', 'Judgment for {d}. A resident who books its own funeral, waves from the front row and weeps at the review has no case. It has a salad.'],
+        ['judge', '{p} pays the third soul. {d} will give a second eulogy, longer, with adjectives, at {p}’s real funeral, which the court has taken the liberty of booking.'],
+        ['p', 'WHEN?'],
+        ['judge', 'Does it matter?']
+      ]),
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. A eulogy may be honest. It may not be honest at that volume, at that length, or in front of a cake.'],
+        ['judge', '{d} will write a nicer one. The court has read the brief, and the brief did say “honest”, and the court is overruling the brief on grounds of taste.'],
+        ['d', 'You cannot overrule a brief.'],
+        ['judge', 'I have been dead three hundred years. I can overrule anything.']
+      ], [
+        ['judge', 'Judgment for {p}. {d} will give {p} a second funeral, with a kinder speech and a bigger cake.'],
+        ['judge', 'The court notes the vinaigrette on the booking form, and says nothing about it, out of respect for the salad.']
+      ]),
+      both: alt([
+        ['judge', 'You are both undertakers of the wrong thing. {p} arranges a funeral to see who cries. {d} arranges a bill to see who pays.'],
+        ['judge', 'Both of you will attend the next real funeral as guests. Sit at the back. Bring nothing green.']
+      ], [
+        ['judge', 'Neither of you is dead and both of you are trying. {p} pays the soul. {d} refunds the adjectives it left out.'],
+        ['judge', 'The cake goes to the moth, who has been in the rafters since the hymns.'],
+        ['npc', 'It was a very good hymn.', 'moth']
+      ])
+    },
+    hallway: {
+      p: [
+        'I’m getting a second opinion. A longer one. With adjectives.',
+        'I paid two souls for “mostly fine”. I want a refund on the “mostly”.',
+        'I’m framing the vinaigrette. It was the best thing in the room.'
+      ],
+      d: [
+        'Two out of three souls and a jar of lilies. A good day for an honest man.',
+        'I’m starting a service. Honest eulogies, living clients only. Salad optional.',
+        'The moth cried at “a bit much”. That is my five-star review.'
+      ]
+    }
+  }],
+
+  /* ---------- 4. The Haunted Sock: defendant becomes both ---------- */
+  'haunted-sock': [{
+    id: 'dear-diary',
+    title: 'Dear Diary, Wrong',
+    truth: 'both',
+    turn: alt([
+      ['narrator', '(The jar on the evidence table whispers something. The bailiff leans in, nods gravely, and writes it down.)'],
+      ['judge', 'What did it say, Bailiff?'],
+      ['bailiff', '“Dear Diary.” I do not know who Diary is, Your Honour, but the sock is very fond of him.']
+    ], [
+      ['bailiff', 'Your Honour, a small leather book has just fallen out of the sock. The sock is trying to hide it with its toe.'],
+      ['judge', 'What is it?'],
+      ['bailiff', 'I have not opened it, sir. But it says DO NOT READ on the front, so I assume it is the evidence.']
+    ]),
+    questions: {
+      1: {
+        clue: 'The sock’s “wrong” is a book review. It was reading {p}’s diary, which {p} left tucked inside it when it lent it out.',
+        lines: alt([
+          ['judge', 'Sock. Why do you keep saying “wrong”?'],
+          ['narrator', '(The sock presses itself to the glass and whispers: “March the fourth. ‘I was right about the raisins.’ …Wrong.”)'],
+          ['narrator', '(A corner of a small leather diary slides out of the sock. It is labelled “DIARY OF {p}. PRIVATE. DO NOT READ.”)'],
+          ['p', 'THAT WAS IN THE SOCK FOR SAFEKEEPING.']
+        ], [
+          ['narrator', '(The bailiff holds up the jar. The sock whispers, in a voice very like {d}’s: “Dear Diary. Today {p} was right again. Smug.” Then, in its own: “Wrong.”)'],
+          ['judge', 'It is quoting {p}’s diary.'],
+          ['p', 'It is in a SOCK. Nobody looks in a sock.'],
+          ['judge', 'The sock looked.']
+        ])
+      },
+      2: {
+        clue: '{d} found {p}’s diary in the sock and read it aloud to the sock every night, doing the voices and taking requests.',
+        lines: alt([
+          ['d', 'Warm water on Sundays. Its own egg cup. And a bedtime story every night.'],
+          ['judge', 'What story?'],
+          ['d', 'A real page-turner. A resident who is always right about the raisins. I do the voices.'],
+          ['p', 'THAT IS MY DIARY.'],
+          ['d', 'It was in the sock, Your Honour. A sock is a public place.']
+        ], [
+          ['d', 'I wore it, I sang to it, and I read to it, Your Honour. It has no eyes, so somebody had to.'],
+          ['judge', 'Read what?'],
+          ['d', 'Whatever was in the sock. A lovely little book. Very confessional. The sock cried at March the fourth.'],
+          ['p', 'WHAT HAPPENED ON MARCH THE FOURTH? I CAN NEVER REMEMBER WHAT I PUT IN THERE.']
+        ])
+      },
+      5: {
+        lines: alt([
+          ['p', 'I do not care about the sock. I want what was in the sock.'],
+          ['judge', 'And what was in the sock?'],
+          ['p', 'Nothing. Nothing at all.'],
+          ['narrator', '(From the jar, a whisper: “Dear Diary.” From the bottom drawer, across the shelf, forty tiny voices: “Wrong.”)'],
+          ['p', 'THEY HAVE ALL READ IT.']
+        ], [
+          ['p', 'I want it to stop reading me back to myself.'],
+          ['judge', 'Is it accurate?'],
+          ['p', 'It is DEVASTATINGLY accurate.'],
+          ['narrator', '(From the jar, a whisper: “Wrong.” From the bottom drawer, across the shelf, forty tiny voices: “Wrong.”)'],
+          ['p', 'THEY ARE REVIEWING ME.']
+        ])
+      }
+    },
+    rulings: {
+      both: alt([
+        ['judge', 'You are both at fault. {p} lent out a haunted sock with a diary in it. {d} read the diary to the sock like a bedtime story. Two crimes, one sock, and the sock was only the audience.'],
+        ['judge', 'The diary goes back to {p}, unread. The sock goes back in the drawer, and the sock gets the last word.'],
+        ['narrator', '(The sock whispers “wrong”. For once, the entire court agrees.)']
+      ], [
+        ['judge', 'You are both in the wrong. {p} keeps a diary in a haunted sock, which is like keeping it in a courtroom. {d} reads other people’s diaries aloud to footwear.'],
+        ['judge', 'The sock is released on its own recognisance. The diary is sealed until {p} is mostly dead.'],
+        ['bailiff', 'I have not read it, Your Honour. Page nineteen is very good.']
+      ]),
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. {d} borrowed a sock, found a diary inside it, and read it aloud, in voices. That is a violation of both privacy and footwear.'],
+        ['judge', '{d} returns the sock, the diary and the egg cup, and writes the sock an apology. The sock will mark it.'],
+        ['narrator', '(The sock whispers “wrong”. It is a very tough marker.)']
+      ], [
+        ['judge', 'Judgment for {p}. A diary is a diary, even in a sock, and a sock is a sock, even in a book club.'],
+        ['judge', '{d} will return everything, and will never again do a voice for anything that has no mouth.'],
+        ['d', 'The sock was very good at listening.'],
+        ['judge', 'So are gossips. That is the problem.']
+      ]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. The sock was haunted before it left the drawer and {p} knew. {p} then hid its own diary inside it, which is like hiding a secret with a gossip.'],
+        ['p', 'SO THE READING IS FINE?'],
+        ['judge', 'The reading is a matter for the sock.']
+      ], [
+        ['judge', 'Judgment for {d}. {p} lent out a cursed sock with its own diary in it and now wants damages for what the sock said. That is leaving a cake in a wasps’ nest and suing the wasp.'],
+        ['p', 'But it READ it.'],
+        ['judge', 'It lives in a sock, {p}. It had very little else to do.']
+      ])
+    },
+    hallway: {
+      p: [
+        'I have moved the diary into the other sock. They never talk to each other.',
+        'The drawer knows everything now. I am going to be very polite to the drawer.',
+        'I’ve started a new diary. The first page just says “wrong”. So that is done.'
+      ],
+      d: [
+        'The sock and I have an understanding. I read, it reviews. Best book club I have ever been in.',
+        'I regret nothing. Page nineteen was incredible.',
+        'I’m getting the sock a friend. It can do the second half of the book.'
+      ]
+    }
+  }],
+
   // @@NEXT
 };
