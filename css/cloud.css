@@ -12,6 +12,9 @@
 .cloud-more .btn{width:100%;min-height:44px;justify-content:center;white-space:normal;text-align:center}
 
 .cloud-form label{display:block;margin-bottom:8px;font-weight:700;font-size:14px}
+.cloud-steps{padding-left:22px;line-height:1.55}
+.cloud-steps li+li{margin-top:8px}
+.cloud-destination{overflow-wrap:anywhere;font-weight:700}
 .cloud-row{display:flex;flex-wrap:wrap;gap:10px}
 .cloud-row input{flex:1 1 200px;min-width:0;max-width:100%;min-height:46px;padding:12px 14px;background:var(--case-mid);border:1px solid var(--hair-lit);
   color:var(--ink);border-radius:var(--r);font-size:16px}

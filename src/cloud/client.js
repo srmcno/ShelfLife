@@ -176,7 +176,16 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
   async function requestEmailCode(address, { mode, create = true } = {}) {
     const target = cleanEmail(address);
     const how = mode === 'link' || mode === 'signin' ? mode : isAnonymous() ? 'link' : 'signin';
-    if (how === 'link') await authed('/auth/v1/user', { method: 'PUT', body: { email: target } });
+    if (how === 'link') {
+      // GoTrue automatically attaches an anonymous user's email, without
+      // sending a code, when confirmation is disabled. This UI requires proof
+      // of inbox ownership before attaching it, so check before mutating.
+      const settings = await send('/auth/v1/settings');
+      if (settings?.mailer_autoconfirm !== false) {
+        throw new CloudError('Email confirmation is not enabled on the server.', { code: 'email_confirmation_disabled' });
+      }
+      await authed('/auth/v1/user', { method: 'PUT', body: { email: target } });
+    }
     else await send('/auth/v1/otp', { method: 'POST', body: { email: target, create_user: create !== false } });
     setMeta({ pending: { email: target, mode: how, at: now() } });
     return { email: target, mode: how };

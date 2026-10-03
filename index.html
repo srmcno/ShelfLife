@@ -443,9 +443,10 @@
 <!-- Only reachable when src/cloud/config.js is filled in. ui/cloud.js shows one part at a time. -->
 <div class="veil" id="cloudVeil"><div class="sheet sheet-cloud">
   <div class="sheet-head"><div><span class="eyebrow">Entirely optional</span><h2>Cloud save</h2></div><button class="btn btn-ghost btn-sm" id="cloudClose">Close</button></div>
+  <p class="hint">The game saves automatically in this browser. Cloud save adds an online copy; an email account lets you use it on other devices and join Friends.</p>
   <p class="cloud-status" id="cloudStatus" role="status" aria-live="polite"></p>
   <section class="cloud-part" id="cloudOff" aria-label="Cloud save is off">
-    <p>Cloud save keeps a copy of this shelf on a server, so it can follow you to a phone or another browser.</p>
+    <p>Turn on cloud save to copy this shelf, then add your email below to keep a way back in.</p>
     <p class="hint">Nothing leaves this device until you turn it on. No account is needed to play, now or later.</p>
     <div class="cloud-actions"><button class="btn btn-primary" id="cloudEnable">Turn on cloud save</button></div>
   </section>
@@ -463,19 +464,28 @@
     <div class="cloud-actions"><button class="btn" id="cloudRepairBtn">Replace the cloud copy with this shelf</button></div>
   </section>
   <section class="cloud-part" id="cloudAnon" hidden>
-    <p>Cloud save is on. This browser holds the only key. Add an email so you can get back in from anywhere.</p>
+    <p>Cloud save is on. This browser holds the only key. Add your email to sign in on another device or use Friends. Clearing this browser's data without an email loses access to the cloud copy.</p>
   </section>
   <section class="cloud-part" id="cloudSignIn" aria-labelledby="cloudSignInTitle" hidden>
     <h3 id="cloudSignInTitle">Sign in on this device</h3>
-    <p class="hint">We email a code. If this device and the account both have residents, you choose which shelf stays.</p>
+    <p class="hint">Use the same email as your other device, or enter an email to make a new account. If both shelves have residents, you choose which shelf stays.</p>
   </section>
   <form class="cloud-part cloud-form" id="cloudEmailForm" novalidate hidden>
+    <ol class="cloud-steps" id="cloudEmailSteps">
+      <li>Enter an email inbox you can open, then choose <b>Email me a code</b>.</li>
+      <li>Open the email and copy its sign-in code. Check spam or junk if it is missing.</li>
+      <li>Enter the emailed code below and choose <b>Confirm</b>.</li>
+    </ol>
+    <p class="hint" id="cloudEmailHelp">No password to set up. The email service creates the code; you do not choose one yourself.</p>
     <label for="cloudEmail">Your email</label>
-    <div class="cloud-row"><input type="email" id="cloudEmail" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" maxlength="254" placeholder="you@example.com"><button class="btn" type="submit" id="cloudSendCode">Send me a code</button></div>
+    <div class="cloud-row"><input type="email" id="cloudEmail" aria-describedby="cloudEmailHelp" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" maxlength="254" placeholder="you@example.com"><button class="btn" type="submit" id="cloudSendCode">Email me a code</button></div>
   </form>
   <form class="cloud-part cloud-form" id="cloudCodeForm" novalidate hidden>
-    <label for="cloudCode">6 digit code</label>
-    <div class="cloud-row"><input type="text" id="cloudCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="123456"><button class="btn btn-primary" type="submit" id="cloudConfirm">Confirm</button></div>
+    <p id="cloudCodeDestination" class="cloud-destination"></p>
+    <label for="cloudCode">Code from your email</label>
+    <div class="cloud-row"><input type="text" id="cloudCode" aria-describedby="cloudCodeHelp cloudCodeDestination" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="Emailed digits"><button class="btn btn-primary" type="submit" id="cloudConfirm">Confirm</button></div>
+    <p class="hint" id="cloudCodeHelp">Nothing arrived? Check the address above and your spam or junk folder. Wait at least a minute before sending another code, then use the newest email.</p>
+    <div class="cloud-actions"><button class="btn btn-ghost" type="button" id="cloudChangeEmail">Use a different email</button></div>
   </form>
   <section class="cloud-part" id="cloudAccount" hidden>
     <dl class="cloud-facts"><div><dt>Email</dt><dd id="cloudEmailShown"></dd></div><div><dt>Last synced</dt><dd id="cloudSynced"></dd></div></dl>
@@ -486,7 +496,7 @@
     <p id="cloudUndoText"></p>
     <div class="cloud-actions"><button class="btn" id="cloudUndoBtn">Undo</button></div>
   </section>
-  <div class="cloud-part cloud-more" id="cloudSignInLink" hidden><button class="btn btn-ghost" id="cloudSignInOpen">Already have an account? Sign in on this device</button></div>
+  <div class="cloud-part cloud-more" id="cloudSignInLink" hidden><button class="btn btn-ghost" id="cloudSignInOpen">Sign in or create an email account</button></div>
   <div class="cloud-part cloud-more" id="cloudSignInBack" hidden><button class="btn btn-ghost" id="cloudSignInCancel">Back</button></div>
   <section class="cloud-part cloud-danger" id="cloudDelete" hidden>
     <button class="btn btn-ghost" id="cloudDeleteStart">Delete my cloud data and account</button>
