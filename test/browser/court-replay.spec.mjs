@@ -197,9 +197,9 @@ test('a twisted version: the hint after the statements, an unconfirmed lead, the
   await expect(page.locator('#courtSheet .sc-notes .sc-note.struck .sc-note-flag')).toHaveText('Struck');
   await expect(page.locator('#courtSheet .sc-obj-row .sc-obj')).toHaveText('Objection used');
   await expect(page.locator('#courtSheet .sc-obj-row .sc-obj')).toBeDisabled();
-  // Two more questions, then the twist’s truth is the defendant’s.
-  for (let n = 0; n < 2; n++) {
-    await page.locator('#courtSheet .sc-q').first().click();
+  // Ask two clue questions explicitly: their shuffled position varies by episode.
+  for (const question of ['where Keith came from', 'prove the coffin is theirs']) {
+    await questionButton(page, question).click();
     step = await settle(page, await advance(page));
   }
   expect(step.choices).toEqual(['plaintiff', 'defendant', 'both']);
