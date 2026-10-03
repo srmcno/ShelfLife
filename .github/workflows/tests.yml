@@ -7,11 +7,18 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        project: [desktop-chromium, mobile-chromium, mobile-webkit]
+        include:
+          - project: desktop-chromium
+            os: ubuntu-latest
+          - project: mobile-chromium
+            os: ubuntu-latest
+          # macOS WebKit most closely matches the Safari engine used on iPhones.
+          - project: mobile-webkit
+            os: macos-latest
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.0.0
