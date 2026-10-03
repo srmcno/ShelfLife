@@ -410,13 +410,14 @@ const escapeText = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':
 
 /**
  * Markup for an illustrated empty state.
- * @param {{kind:string, title:string, line?:string, action?:{label:string, attrs?:string}, compact?:boolean}} o
+ * @param {{kind:string, title?:string, line?:string, lineClass?:string, action?:{label:string, attrs?:string}, compact?:boolean}} o
  */
 export function emptyState(o) {
   const action = o.action ? '<button class="btn fx-empty-action" type="button"' + (o.action.attrs ? ' ' + o.action.attrs : '') + '>' + escapeText(o.action.label) + '</button>' : '';
   return '<div class="fx-empty' + (o.compact ? ' compact' : '') + ' fx-empty-' + escapeText(o.kind) + '">' +
     '<div class="fx-empty-art" aria-hidden="true">' + emptyArt(o.kind) + '</div>' +
-    '<div class="fx-empty-copy"><b>' + escapeText(o.title) + '</b>' + (o.line ? '<p>' + escapeText(o.line) + '</p>' : '') + action + '</div></div>';
+    '<div class="fx-empty-copy">' + (o.title ? '<b>' + escapeText(o.title) + '</b>' : '') +
+    (o.line ? '<p' + (o.lineClass ? ' class="' + escapeText(o.lineClass) + '"' : '') + '>' + escapeText(o.line) + '</p>' : '') + action + '</div></div>';
 }
 
 export function loadingState(line = 'One moment.') {
@@ -448,6 +449,19 @@ function watchSheets() {
   veils.forEach(veil => observer.observe(veil, { attributes: true, attributeFilter: ['class'], attributeOldValue: true }));
 }
 
+/* ---------- static empty states -------------------------------------------------- */
+// The Stories pane of a house that has nobody in it yet. Shown by CSS while
+// body.shelf-vacant is set (ui/render.js), so there is no state to keep in sync.
+function mountStaticEmpties() {
+  const pane = document.getElementById('panePlots');
+  const heading = pane?.querySelector('.destination-heading');
+  if (!heading || pane.querySelector('.stories-vacant')) return;
+  heading.insertAdjacentHTML('afterend', '<div class="stories-vacant">' + emptyState({
+    kind: 'stories', title: 'No stories without residents.', line: 'Somebody has to get into trouble first, and nobody has moved in.',
+    action: { label: 'Make someone', attrs: 'data-proxy="newPetBtn"' }
+  }) + '</div>');
+}
+
 /* ---------- boot ---------------------------------------------------------------- */
 
 let started = false;
@@ -456,6 +470,7 @@ export function initFx({ getSettings } = {}) {
   started = true;
   if (getSettings) useSettings(getSettings);
   watchSheets();
+  mountStaticEmpties();
   // A light tick under a finger on the things that matter. Touch only.
   const TICKS = '.tab,.btn-primary,[data-care],.mh-choice,.mh-coffin-box,.mh-tarot,.arrival-resident,.mh-tile,.souls-hud,.activity-card';
   document.addEventListener('pointerdown', event => {

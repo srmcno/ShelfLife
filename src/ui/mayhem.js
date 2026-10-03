@@ -18,6 +18,7 @@ import { playAchievement, playPowerUp, playStar, playStomp, playFeud, playUnlock
 import { save } from '../state.js';
 import { toast } from './toast.js';
 import { nudgesAvailable, enableNudges } from '../notify.js';
+import { emptyState } from './fx.js';
 
 /* The mayhem loop's surfaces: a souls counter in the top bar, an alarm strip
    over the cabinet, a small desk under the actions, and one sheet that shows an
@@ -335,6 +336,7 @@ function showCabinet(state) {
     '<p class="mh-stats">' + plural(m.resolved, 'emergency', 'emergencies') + ' survived · ' + plural(m.coffins, 'coffin') + ' opened · ' + m.souls + ' souls in hand</p></section>' +
     '<div class="mh-cabinet-actions"><button class="btn btn-primary" type="button" data-mh="coffin">Open a coffin · ' + coffinCost(state) + '</button>' + (m.queue.length ? '<button class="btn" type="button" data-mh="emergency">' + plural(m.queue.length, 'emergency', 'emergencies') + ' waiting</button>' : '') + '</div>' +
     '<div class="mh-curio-detail" id="mhCurioDetail" hidden></div>' +
+    (curioCount(state) ? '' : emptyState({ kind: 'cabinet', compact: true, title: 'Not one curio.', line: 'Every coffin holds something. The undertaker calls this a feature.' })) +
     groups + seasonGroups +
     (log ? '<section class="mh-log"><h3>The incident reports</h3><ul>' + log + '</ul></section>' : '');
   open();

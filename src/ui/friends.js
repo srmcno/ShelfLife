@@ -7,6 +7,7 @@
 // Everything a friend wrote arrives through the readers in src/cloud/social.js
 // and is printed through esc(). Nothing from the server is ever markup.
 import { formatCode, socialText, guestPet } from '../cloud/social.js';
+import { emptyState, loadingState } from './fx.js';
 import { PLAY_URL } from '../backup.js';
 import { isNative, shareText } from '../native.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
@@ -141,7 +142,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       (incoming.length ? '<section aria-labelledby="frRequestsTitle"><h3 id="frRequestsTitle">Requests</h3><ul class="fr-list">' + incoming.map(f => requestRow(f, { confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul></section>' : '') +
       '<section aria-labelledby="frListTitle"><h3 id="frListTitle">Friends' + (list.length ? ' <small>' + list.length + '</small>' : '') + '</h3>' +
       (list.length ? '<ul class="fr-list">' + list.map(f => friendRow(f, { menu: menuFor === f.userId, confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul>'
-        : '<p class="fr-empty">' + (loaded ? 'Nobody yet. Swap codes with someone you know.' : 'Knocking on doors.') + '</p>') + '</section>' +
+        : loaded ? emptyState({ kind: 'friends', compact: true, line: 'Nobody yet. Swap codes with someone you know.', lineClass: 'fr-empty' }) : loadingState('Knocking on doors.')) + '</section>' +
       '<p class="hint fr-small">Your name, residents and drawings are shown to accepted friends only. Daily scores reach everyone else as a percentage, never a name.</p>';
   }
   function shelfMarkup() {
@@ -149,8 +150,8 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     const facts = s ? [RANKS[s.rank]?.title, s.curios + (s.curios === 1 ? ' curio' : ' curios'), v.updatedAt ? 'Updated ' + timeAgo(v.updatedAt) : ''].filter(Boolean).join(' · ') : '';
     title = [friendName(f) + '’s shelf', 'Visiting · look, do not touch'];
     return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to friends</button></div>' +
-      (v.loading ? '<p class="fr-empty">Wiping their doormat.</p>'
-        : !s || !s.residents.length ? '<p class="fr-empty">Nothing on show yet. Their shelf appears here once they open Friends.</p>'
+      (v.loading ? loadingState('Wiping their doormat.')
+        : !s || !s.residents.length ? emptyState({ kind: 'friends', compact: true, line: 'Nothing on show yet. Their shelf appears here once they open Friends.', lineClass: 'fr-empty' })
         : '<p class="fr-facts">' + esc(facts) + '</p><div class="fr-shelf">' + s.residents.map(residentCard).join('') + '</div>');
   }
   function serveMarkup() {

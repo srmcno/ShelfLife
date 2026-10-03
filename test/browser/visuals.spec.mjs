@@ -322,3 +322,68 @@ test.describe('celebrations', () => {
     expect(await fxCount(page)).toBe(0);
   });
 });
+
+test.describe('empty states and transitions', () => {
+  test('a house with nobody in it explains its notes and stories and offers a way in', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('.arrival-resident')).toHaveCount(3);
+    await page.locator('.tab[data-tab="notes"]').click();
+    const notes = page.locator('#notes .fx-empty-notes');
+    await expect(notes).toBeVisible();
+    await expect(notes.locator('svg.empty-art')).toBeVisible();
+    await expect(notes).toContainText('First, a creature. Then, the complaints.');
+    await noHorizontalOverflow(page);
+    await page.locator('.tab[data-tab="plots"]').click();
+    const stories = page.locator('.stories-vacant .fx-empty-stories');
+    await expect(stories).toBeVisible();
+    await noHorizontalOverflow(page);
+    await stories.getByRole('button', { name: 'Make someone' }).click();
+    await expect(page.locator('#studioVeil')).toBeVisible();
+  });
+
+  test('an empty filter on the note board says so in the house voice', async ({ page }) => {
+    await openHousehold(page);
+    await page.locator('.tab[data-tab="notes"]').click();
+    await page.locator('#noteFilters [data-filter="papers"]').click();
+    const empty = page.locator('#notes .fx-empty');
+    await expect(empty).toBeVisible();
+    await expect(empty).toContainText('Nothing filed. Suspicious.');
+    await expect(empty).toContainText('filing desk is ready');
+    await expect(empty.locator('button')).toHaveCount(0);
+  });
+
+  test('the cabinet is illustrated while it is empty and plain once it has something in it', async ({ page }) => {
+    await openHousehold(page, s => { s.mayhem = mayhem({ curios: {} }); });
+    await page.locator('#mayhemDesk [data-mh="cabinet"]').click();
+    await expect(page.locator('#mayhemSheet .fx-empty-cabinet')).toBeVisible();
+    await expect(page.locator('#mayhemSheet .fx-empty-cabinet')).toContainText('Not one curio.');
+    await noHorizontalOverflow(page);
+    await page.locator('#mayhemSheet [data-mh="close"]').click();
+    await page.context().clearCookies();
+  });
+
+  test('the cabinet carries no empty state once there is a curio', async ({ page }) => {
+    const { CURIOS } = await import('../../src/content/mayhem.js');
+    await openHousehold(page, s => { s.mayhem = mayhem({ curios: { [CURIOS[0].id]: 1 } }); });
+    await page.locator('#mayhemDesk [data-mh="cabinet"]').click();
+    await expect(page.locator('#mayhemSheet .mh-rank-card')).toBeVisible();
+    await expect(page.locator('#mayhemSheet .fx-empty-cabinet')).toHaveCount(0);
+  });
+
+  test('moving between tabs remembers which way you went', async ({ page }) => {
+    await openHousehold(page);
+    await page.locator('.tab[data-tab="notes"]').click();
+    await expect(page.locator('body')).toHaveAttribute('data-tab-dir', 'forward');
+    await page.locator('.tab[data-tab="shelf"]').click();
+    await expect(page.locator('body')).toHaveAttribute('data-tab-dir', 'back');
+  });
+
+  test('empty states fit a 320px phone', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto('/');
+    for (const tab of ['notes', 'plots']) {
+      await page.locator('.tab[data-tab="' + tab + '"]').click();
+      await noHorizontalOverflow(page);
+    }
+  });
+});
