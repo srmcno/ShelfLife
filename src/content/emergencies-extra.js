@@ -122,9 +122,9 @@ export const EXTRA_EMERGENCIES = [
         { tone: 'good', stamp: 'SPARED', text: '“These bring me joy,” you say, holding up the left. {a} considers it for a long minute and nods once. It puts the shoes back, and thanks them again, for staying.', souls: 16 },
         { tone: 'bad', stamp: 'PURGED', text: 'It hears your case with the sorrow of a surgeon. The shoes go anyway, thanked. It looks at your coat next. Then at you, for longer than is comfortable.', souls: 12, grudge: 'a', fits: TIDY }
       ] },
-      { label: 'Give it the cupboard under the stairs', outcomes: [
-        { tone: 'weird', stamp: 'ELSEWHERE', text: 'It thanks forty objects and bins thirty. At the back it thanks something that thanks it back. By evening the cupboard is a little deeper than it was.', souls: 21, curio: true },
-        { tone: 'good', stamp: 'DECLUTTERED', text: 'It finds a tin of buttons, a map, a second map and a bicycle nobody remembers. It thanks them all, bins none, and labels the tin JOY.', souls: 17, a: { fuss: 15 } }
+      { label: 'Hand it the stair cupboard', outcomes: [
+        { tone: 'weird', stamp: 'ELSEWHERE', text: 'In the cupboard under the stairs it thanks forty objects and bins thirty. At the back it thanks something that thanks it back. By evening the cupboard is a little deeper.', souls: 21, curio: true },
+        { tone: 'good', stamp: 'DECLUTTERED', text: 'Under the stairs it finds a tin of buttons, a map, a second map and a bicycle nobody remembers. It thanks them all, bins none, and labels the tin JOY.', souls: 17, a: { fuss: 15 } }
       ] }
     ] },
   { id: 'museum-plaque', title: 'A school party is touring the shelf. The guide calls {a} “late medieval, domestic, do not feed”.', art: 'photo',
@@ -485,7 +485,7 @@ export const EXTRA_EMERGENCIES = [
         { tone: 'good', stamp: 'RELEASED', text: 'It comes off with a sigh like a large dog settling. They emerge blinking, two separate animals who have seen each other from behind and agree never to bring it up.', souls: 16, a: { clean: 20 }, b: { clean: 20 } },
         { tone: 'bad', stamp: 'HOOVES', text: 'You cut it open. The front half has been wearing the back half’s wellies. This is announced, publicly. {b} is quiet about the hooves, and bitter.', souls: 12, grudge: 'b' }
       ] },
-      { label: 'Make them take turns at the front', outcomes: [
+      { label: 'Make them take turns in front', outcomes: [
         { tone: 'weird', stamp: 'ROSETTE', text: 'They take third prize at the village show, Best Animal. The vet is called. After an hour he admits he has never seen a more nervous pair of legs.', souls: 22, curio: true },
         { tone: 'good', stamp: 'SWAPPED', text: 'They swap at noon on the dot. The back, they discover, is the better half: nobody can see you and you see everything. {b} will not now hear of going to the front.', souls: 17, bond: 'a' }
       ] }

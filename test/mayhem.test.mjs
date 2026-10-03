@@ -46,8 +46,8 @@ test('every emergency is well formed, fits its cast and ships a known glyph', ()
       }
     }
   }
-  assert.ok(EMERGENCIES.length >= 60);
-  assert.ok(EMERGENCIES.filter(e => e.pair).length >= 13, 'enough pair cards for a full shelf');
+  assert.ok(EMERGENCIES.length >= 108);
+  assert.ok(EMERGENCIES.filter(e => e.pair).length >= 22, 'enough pair cards for a full shelf');
 });
 
 test('emergency copy uses only {a} and {b}, curly quotes, stamped headings and no dashes', () => {
