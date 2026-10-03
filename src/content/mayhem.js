@@ -747,6 +747,10 @@ export const RANKS = [
   { at: 8500, title: 'Unspeakable', line: 'Nobody says your address out loud anymore. The postman leaves the post at the end of the road and runs.' }
 ];
 
+import { OMENS_EXTRA } from './omens-extra.js';
+import { CHORES_EXTRA } from './chores-extra.js';
+import { QUIET_EXTRA, DUPLICATE_EXTRA } from './ambient-extra.js';
+
 /* One omen per local day, drawn on the first visit. `effect` is read by the
    engine; `line` is what the card says. */
 export const OMENS = [
@@ -760,7 +764,7 @@ export const OMENS = [
   { id: 'second-shadow', name: 'The Second Shadow', effect: 'mayhem', line: 'Emergencies pay double souls today. Your shadow has plans of its own.' },
   { id: 'tolling-bell', name: 'The Tolling Bell', effect: 'luck', line: 'Rarer curios are more likely today. It tolls for thee. It is also offering a discount.' },
   { id: 'hungry-house', name: 'The Hungry House', effect: 'extra', line: 'One more emergency can pile up today. The house is peckish.' }
-];
+].concat(OMENS_EXTRA);
 
 /* Three chores a day, drawn from these. `deed` is the event the engine counts. */
 export const CHORES = [
@@ -774,7 +778,7 @@ export const CHORES = [
   { id: 'coffin', deed: 'coffin', need: 1, label: 'Open a coffin', line: 'Open 1 coffin' },
   { id: 'check', deed: 'check', need: 1, label: 'Read the complaints', line: 'Check the shelf for notes' },
   { id: 'care5', deed: 'care', need: 5, label: 'Make the rounds personal', line: 'Care for residents 5 times' }
-];
+].concat(CHORES_EXTRA);
 
 /* Lines for the empty emergency tray and small toasts. */
 export const QUIET_LINES = [
@@ -783,10 +787,10 @@ export const QUIET_LINES = [
   'No emergencies. The residents are planning the next one together.',
   'Peace on the shelf. Enjoy it. It is lying to you.',
   'Nothing has gone wrong yet. The drawer is breathing a bit heavily though.'
-];
+].concat(QUIET_EXTRA);
 export const DUPLICATE_LINES = [
   'You already own this. It is disappointed in you.',
   'A duplicate. The first one is jealous.',
   'You have one of these. Now you have a matching pair. Nobody wanted a pair.',
   'Another one. They must be breeding.'
-];
+].concat(DUPLICATE_EXTRA);

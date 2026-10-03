@@ -1,3 +1,4 @@
+import { CASES_EXTRA } from './cases-extra.js';
 // Six beats each. The cast and evidence are filled from the player's shelf.
 export const CASES = [
   { id: 'crumb', title: 'The crumb that cast two shadows', object: 'crumb',
@@ -27,7 +28,7 @@ export const CASES = [
       'The lint was attached to both sides all along. The frontier is a very small scarf. Three threats of annexation have been made over winter clothing. Decide who wears it.'],
     good: 'The scarf is declared communal. Everyone wears one end. Nobody can move without the others. One calls it peace. Another calls it a useful restraint.',
     messy: 'The scarf is divided. Both halves unravel. Nobody is warm, everyone has less territory, and both sides announce victory.' }
-];
+].concat(CASES_EXTRA);
 export const VISITORS = [
   { id: 'moth', name: 'Madam Moth', title: 'Inspector of small lights', gift: 'A bottled moonbeam', seed: 'visitor-moth', parts: { wings: 'moth', top: 'antennae' }, line: 'Madam Moth asks which lamp is warmest. She calls this an inspection. Her last three reports end halfway through a sentence.' },
   { id: 'lint', name: 'The Lint Baron', title: 'Owner of absolutely no land', gift: 'A ceremonial dust crown', seed: 'visitor-lint', parts: { top: 'crown' }, line: 'The Lint Baron has crossed three floorboards to inspect land he does not own. He is carrying eviction notices with the names left blank.' },

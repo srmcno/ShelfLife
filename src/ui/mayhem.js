@@ -4,7 +4,7 @@ import {
   queueCap, pokeDrawer, POKE_COST, commissionCost, commissionCurio, pityActive
 } from '../engine/mayhem.js';
 import { mayhemState } from '../mayhem-state.js';
-import { CURIOS, RARITIES, RANKS, QUIET_LINES } from '../content/mayhem.js';
+import { CURIOS, RARITIES, RANKS, QUIET_LINES, OMENS } from '../content/mayhem.js';
 import { SEASONS } from '../content/seasons.js';
 import { COURT_BY_ID, docketToday, DOCKET_SOULS } from '../engine/court.js';
 import { challengeToday } from '../engine/arcade.js';
@@ -290,7 +290,7 @@ function showOmen(state, revealed = null) {
   sheet.querySelector('.mh-next .btn')?.focus({ preventScroll: true });
 }
 function omenGlyph(id) {
-  return ({ 'wet-hand': 'hand', 'hanged-spoon': 'spoon', 'open-coffin': 'coffin', 'many-eyes': 'eye', 'crowded-grave': 'grave', 'patient-worm': 'bug', 'smiling-moon': 'glow', 'second-shadow': 'shadow', 'tolling-bell': 'clock', 'hungry-house': 'door' })[id] || 'skull';
+  return ({ 'wet-hand': 'hand', 'hanged-spoon': 'spoon', 'open-coffin': 'coffin', 'many-eyes': 'eye', 'crowded-grave': 'grave', 'patient-worm': 'bug', 'smiling-moon': 'glow', 'second-shadow': 'shadow', 'tolling-bell': 'clock', 'hungry-house': 'door' })[id] || OMENS.find(o => o.id === id)?.glyph || 'skull';
 }
 function flip(state) {
   const result = drawOmen(state);
