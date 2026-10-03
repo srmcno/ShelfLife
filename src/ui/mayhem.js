@@ -59,7 +59,7 @@ function renderHud(state) {
   hud.hidden = !state.pets.length && !m.lifetime;
   setHTML(hud, '<span class="souls-icon">' + glyph('soul') + '</span>' +
     '<span class="souls-count"><b>' + m.souls + '</b><small>souls</small></span>' +
-    '<span class="souls-rank"><em>' + esc(info.rank.title) + '</em><i class="souls-bar"><i style="width:' + Math.round(info.progress * 100) + '%"></i></i></span>');
+    '<span class="souls-rank"><em>' + esc(info.rank.legacy ? info.rank.title.split(':')[0] : info.rank.title) + '</em><i class="souls-bar"><i style="width:' + Math.round(info.progress * 100) + '%"></i></i></span>');
   hud.setAttribute('aria-label', m.souls + ' souls. Household rank: ' + info.rank.title + '. Open the Cabinet of Curiosities.');
 }
 

@@ -30,6 +30,10 @@ const shown = new WeakSet();
 /* ---------- the quiet work done on every render ---------- */
 // Reads the counters, notices a return, checks the new achievements and says what happened.
 export function syncRetention(state, now = Date.now()) {
+  // Called from every render of the shelf. Whatever goes wrong in here must never stop the shelf drawing.
+  try { return syncRetentionNow(state, now); } catch { return []; }
+}
+function syncRetentionNow(state, now) {
   const events = syncAlmanac(state, now);
   checkReturn(state, now);
   const unlocked = checkAchievements(state, now);
