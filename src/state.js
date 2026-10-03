@@ -9,6 +9,7 @@ import { blankArcade, normalizeArcade } from './arcade-state.js';
 import { blankCourtroom, normalizeCourtroom } from './court-state.js';
 import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.js';
 import { RESIDENT_TENURE } from './content/resident-life.js';
+import { blankRetention, normalizeRetention } from './almanac-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -173,7 +174,7 @@ export function defaultLedger() { return { meeting: 1, carried: 0, struck: {}, a
 
 export function blankState() {
   return {
-    v: 4, life: blankLife(), escapades: blankEscapades(), mayhem: blankMayhem(), arcade: blankArcade(), courtroom: blankCourtroom(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
+    v: 4, life: blankLife(), escapades: blankEscapades(), mayhem: blankMayhem(), arcade: blankArcade(), courtroom: blankCourtroom(), ...blankRetention(), pets: [], props: [], slots: new Array(SLOT_COUNT).fill(null),
     notes: [], paperwork: blankPaperwork(), seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
@@ -398,6 +399,7 @@ export function normalizeState(raw) {
   s.mayhem = normalizeMayhem(s.mayhem, s, now);
   s.arcade = normalizeArcade(s.arcade);
   s.courtroom = normalizeCourtroom(s.courtroom);
+  normalizeRetention(s, now); // the Almanac, streak freezes, return chest, Legacy, collections, exchange and owned decor
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
   return s;
 }

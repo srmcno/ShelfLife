@@ -7,7 +7,7 @@ import {
   shelfSnapshot, residentSnapshot, guestPet, isoDay, socialText, socialCode, MAX_IMAGE_CHARS, MAX_SHELF_CHARS, PUBLISH_GAP_MS
 } from '../src/cloud/social.js';
 import { generateCreature } from '../src/art/creatures.js';
-import { CURIOS } from '../src/content/mayhem.js';
+import { CURIOS, RANKS } from '../src/content/mayhem.js';
 import { createFakeSupabase } from './support/fake-supabase.mjs';
 
 const T0 = Date.UTC(2026, 8, 29, 12);
@@ -63,7 +63,8 @@ test('readers turn hostile shelves into plain, bounded data', () => {
   });
   assert.equal(shelf.name, 'Ada the Great and Terrib');
   assert.ok([...shelf.name].every(c => c.codePointAt(0) > 0x1f && c.codePointAt(0) !== 0x202e));
-  assert.equal(shelf.rank, 11, 'rank is clamped to a real rank');
+  // The ladder runs on past Unspeakable into the Legacy ranks, so the last real rank is the clamp.
+  assert.equal(shelf.rank, RANKS.length - 1, 'rank is clamped to a real rank');
   assert.equal(shelf.curios, 0);
   assert.deepEqual(shelf.residents.map(r => r.id), ['a1', 'a2', 'a3', 'a4']);
   const [a1, a2, a3, a4] = shelf.residents;

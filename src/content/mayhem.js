@@ -737,7 +737,8 @@ export const CURIOS = [
 
 /* Lifetime souls set the household's rank. Titles are how the neighbours talk
    about the house, not how the house talks about itself. */
-export const RANKS = [
+import { LEGACY_RANKS } from './legacy.js';
+const BASE_RANKS = [
   { at: 0, title: 'Suspiciously Normal', line: 'The neighbours wave. They do not know yet.' },
   { at: 60, title: 'Mildly Damp', line: 'There is a smell. It is coming from the shelf. It is, in a way, a greeting.' },
   { at: 160, title: 'Faintly Cursed', line: 'Milk curdles in the fridge when you walk past. The milk had it coming.' },
@@ -751,6 +752,8 @@ export const RANKS = [
   { at: 6000, title: 'The Thing Under the Stairs', line: 'The neighbours have moved. So has the street, slightly.' },
   { at: 8500, title: 'Unspeakable', line: 'Nobody says your address out loud anymore. The postman leaves the post at the end of the road and runs.' }
 ];
+// Past Unspeakable the ladder goes on: thirty Legacy ranks (content/legacy.js), each paying a title and a Legacy Token.
+export const RANKS = [...BASE_RANKS, ...LEGACY_RANKS];
 
 import { OMENS_EXTRA } from './omens-extra.js';
 import { CHORES_EXTRA } from './chores-extra.js';
