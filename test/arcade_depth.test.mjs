@@ -511,6 +511,28 @@ test('arenas unlock by lifetime runs or by medals, and the next one is named', (
   assert.equal(lifetimeRuns(s.arcade), 11);
 });
 
+test('ordinary and daily warm-ups never advance runs or unlock arenas', () => {
+  for (const daily of [false, true]) {
+    const s = household(), id = daily ? dailyChallenge(localDayKey(NOW)).game : 'frenzy';
+    for (let i = 0; i < 30; i++) {
+      const result = finishRun(s, id, 0, 'g0', NOW, () => 0, { daily });
+      assert.equal(result.counted, false);
+      assert.deepEqual(result.unlocked, []);
+    }
+    assert.equal(lifetimeRuns(s.arcade), 0);
+    assert.equal(s.arcade.runs, 0);
+    assert.deepEqual(s.arcade.plays, {});
+    if (daily) assert.equal(s.arcade.daily.plays, 0);
+    assert.deepEqual(unlockedThemes(normalizeArcade(s.arcade)).map(t => t.id), ['dusk']);
+    for (let i = 0; i < 10; i++) finishRun(s, id, 1, 'g0', NOW, () => 0, { daily });
+    assert.equal(lifetimeRuns(s.arcade), 10);
+    assert.equal(daily ? s.arcade.daily.plays : s.arcade.plays[id], 10);
+    assert.ok(themeUnlocked(s.arcade, ARCADE_THEMES.find(t => t.id === 'moonlit')));
+    finishRun(s, id, 0, 'g0', NOW, () => 0, { daily });
+    assert.equal(lifetimeRuns(s.arcade), 10, 'a later warm-up leaves scored progress intact');
+  }
+});
+
 test('a chosen arena must be unlocked, and the fortnight of challenge days keeps fourteen at most', () => {
   assert.equal(normalizeArcade({ theme: 'gilded' }).theme, 'dusk');
   assert.equal(normalizeArcade({ theme: 'nope' }).theme, 'dusk');

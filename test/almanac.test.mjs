@@ -405,6 +405,34 @@ test('a save with sixty old chapter records still records the new one, whatever 
   assert.ok(!('zz-old-00' in s.almanac.chapters));
 });
 
+test('reload keeps the newest sixty chapters and the active encore with its claims', () => {
+  const raw = blankAlmanac(), keys = [];
+  for (let y = 2026; y <= 2032; y++) for (let m = 1; m <= (y === 2032 ? 5 : 12); m++) {
+    const chapter = chapterAt(at(y, m, 15));
+    if (!chapter) continue;
+    keys.push(chapter.key);
+    raw.chapters[chapter.key] = { xp: keys.length * 100, claimed: 31, badge: 0, spot: 2 };
+  }
+  const now = at(2032, 5, 15), active = chapterAt(now).key;
+  assert.ok(keys.length > 60);
+  const loaded = normalizeAlmanac(JSON.parse(JSON.stringify(raw)), now);
+  assert.deepEqual(Object.keys(loaded.chapters), keys.slice(-60));
+  assert.deepEqual(loaded.chapters[active], raw.chapters[active]);
+  assert.deepEqual(normalizeAlmanac(JSON.parse(JSON.stringify(loaded)), now), loaded);
+});
+
+test('reload explicitly protects the active chapter even when it was inserted first', () => {
+  for (const now of [at(2026, 11, 1), at(2032, 2, 29), at(2032, 11, 1)]) {
+    const raw = blankAlmanac(), active = chapterAt(now).key;
+    raw.chapters[active] = { xp: 1234, claimed: 31, badge: 0, spot: 2 };
+    for (let i = 0; i < 60; i++) raw.chapters['zz-old-' + i] = { xp: 1 };
+    const loaded = normalizeAlmanac(raw, now);
+    assert.equal(Object.keys(loaded.chapters).length, 60);
+    assert.deepEqual(loaded.chapters[active], raw.chapters[active]);
+    assert.ok(!('zz-old-0' in loaded.chapters));
+  }
+});
+
 test('the weekly Back Issues markdown stays on one curio: buying it does not move it to another', () => {
   const s = household();
   addSouls(s, 5000);

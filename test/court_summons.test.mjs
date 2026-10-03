@@ -102,7 +102,32 @@ test('summons rewards: once per summons, three a day of each kind, fresh each mo
   for (let i = 10; i < 60; i++) summonsReward(s, ID(i), 'verdict', NOW + (2 + i) * DAY);
   assert.equal(courtroomState(s).summonsPaid.length, 40, 'the list of paid summonses is bounded');
   for (let i = 100; i < 160; i++) summonsReward(s, ID(i), 'verdict', NOW + 90 * DAY);
-  assert.equal(courtroomState(s).summonsOwed.length, 20, 'and so is the list of owed ones');
+  assert.equal(courtroomState(s).summonsOwed.length, 57, 'every unpaid verdict is retained');
+});
+
+test('more than twenty unpaid hearings and verdicts survive reloads and all pay later', () => {
+  let s = household();
+  const owed = [];
+  for (const [kind, offset] of [['heard', 100], ['verdict', 200]]) {
+    for (let i = 0; i < 28; i++) {
+      const id = ID(offset + i);
+      summonsReward(s, id, kind, NOW);
+      if (i >= SUMMONS_DAILY_CAP) owed.push({ id, kind });
+    }
+  }
+  assert.deepEqual(courtroomState(s).summonsOwed, owed);
+  s = normalizeState(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(courtroomState(s).summonsOwed, owed);
+  const before = s.mayhem.souls;
+  let count = 0;
+  for (let day = 1; day <= 9; day++) {
+    count += payOwedSummons(s, NOW + day * DAY).count;
+    assert.deepEqual(payOwedSummons(s, NOW + day * DAY), { souls: 0, count: 0 });
+    s = normalizeState(JSON.parse(JSON.stringify(s)));
+  }
+  assert.equal(count, owed.length);
+  assert.equal(s.mayhem.souls - before, 25 * (SUMMONS_SOULS + VERDICT_SOULS));
+  assert.deepEqual(courtroomState(s).summonsOwed, []);
 });
 
 test('summons records survive a reload and hostile data', () => {

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { friendRow, requestRow, residentCard, friendName, traitNames, collectVerdicts, MOOD_LINES, REPORT_REASONS } from '../src/ui/friends.js';
-import { blankState, localDayKey } from '../src/state.js';
+import { blankState, normalizeState, localDayKey } from '../src/state.js';
 import { SUMMONS_DAILY_CAP } from '../src/engine/court.js';
 import { readResident, readFriends } from '../src/cloud/social.js';
 
@@ -52,4 +52,25 @@ test('verdicts over the daily cap are saved as owed before the server is told th
   assert.deepEqual(order, ['saved', 'seen:v-late'], 'and saved before the server forgets it');
   assert.deepEqual(collectVerdicts(state, social, [], now, () => order.push('again')), []);
   assert.ok(!order.includes('again'), 'an empty batch saves nothing');
+});
+
+test('repeated inbox batches retain every acknowledged unpaid verdict through reload', () => {
+  let state = blankState(), persisted;
+  const now = new Date(2026, 8, 12, 12).getTime(), acknowledged = [];
+  state.courtroom.summonsDay = localDayKey(now);
+  state.courtroom.summonsVerdicts = SUMMONS_DAILY_CAP;
+  const social = { seen: id => {
+    assert.ok(persisted.courtroom.summonsOwed.some(item => item.id === id), 'owed before acknowledgement');
+    acknowledged.push(id);
+    return Promise.resolve();
+  } };
+  const persist = () => { persisted = JSON.parse(JSON.stringify(state)); };
+  for (let batch = 0; batch < 3; batch++) {
+    const results = Array.from({ length: 10 }, (_, i) => ({ id: ID.slice(0, -12) + String(batch * 10 + i + 1).padStart(12, '0') }));
+    collectVerdicts(state, social, results, now, persist);
+    collectVerdicts(state, social, results, now, persist); // a retried fetch adds no duplicate debt
+    state = normalizeState(persisted);
+    assert.deepEqual(state.courtroom.summonsOwed.map(item => item.id), [...new Set(acknowledged)]);
+  }
+  assert.equal(state.courtroom.summonsOwed.length, 30);
 });

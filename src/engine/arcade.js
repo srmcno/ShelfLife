@@ -471,8 +471,6 @@ export function finishRun(state, id, score, petId, now = Date.now(), rnd = Math.
   const previous = daily ? daily.best : a.best[id] || 0;
   const newBest = score > previous && score > 0;
   if (newBest) { if (daily) daily.best = score; else a.best[id] = score; }
-  if (daily) daily.plays += 1; else a.plays[id] = (a.plays[id] || 0) + 1;
-  a.runs = runsBefore + 1;
   a.lastGame = id;
   const tier = tierFor(id, score);
   // Skulls on the card are earned in the ordinary game, where scores compare.
@@ -481,6 +479,8 @@ export function finishRun(state, id, score, petId, now = Date.now(), rnd = Math.
   let souls = 0, trust = 0, counted = false;
   // A run that scored nothing is a warm-up, not a game.
   if (score > 0) {
+    if (daily) daily.plays += 1; else a.plays[id] = (a.plays[id] || 0) + 1;
+    a.runs = runsBefore + 1;
     // Pay follows the score, not the modifier: a doubled score does not pay double.
     const worth = score / Math.max(1, challenge && daily ? challenge.mod.scoreMult || 1 : 1);
     souls = payGameSouls(state, Math.floor(worth * game.pay) + (newBest && !daily ? 10 : 0), now);

@@ -3,7 +3,7 @@ import {
   OPENERS, ALL_RISE, JUDGE_ENTRANCES, PLAINTIFF_CUE, DEFENDANT_CUE, ADS, BREAK_IN, BREAK_OUT,
   JURY_AGREE, JURY_DISAGREE, JURY_ALL_AGREE, JURY_ALL_DISAGREE, AUDIENCE_REACTIONS, HALLWAY_IN, HALLWAY_ASKS
 } from '../content/court.js';
-import { courtroomState, SUMMONS_REMEMBERED, RECENT_KEPT, SEATS_KEPT, OWED_KEPT } from '../court-state.js';
+import { courtroomState, SUMMONS_REMEMBERED, RECENT_KEPT, SEATS_KEPT } from '../court-state.js';
 import { grantBonusTrust, petById, localDayKey, dayKeyOffset } from '../state.js';
 import { payGameSouls, addSouls, deed } from './mayhem.js';
 import { dayNumber } from './daily.js';
@@ -532,7 +532,7 @@ export function summonsReward(state, id, kind = 'heard', now = Date.now()) {
   // A day's three are spoken for. The reward is not paid and not burned: it is
   // written down as owed and paid on the first day with room (payOwedSummons).
   if (c[key] >= SUMMONS_DAILY_CAP) {
-    if (!c.summonsOwed.some(x => x.id === id)) c.summonsOwed = [...c.summonsOwed, { id, kind: kind === 'verdict' ? 'verdict' : 'heard' }].slice(-OWED_KEPT);
+    if (!c.summonsOwed.some(x => x.id === id)) c.summonsOwed.push({ id, kind: kind === 'verdict' ? 'verdict' : 'heard' });
     return 0;
   }
   c.summonsOwed = c.summonsOwed.filter(x => x.id !== id);

@@ -16,7 +16,6 @@ const CASE_IDS = new Set(COURT_CASES.map(c => c.id));
 export const SUMMONS_REMEMBERED = 40;
 export const RECENT_KEPT = 24;
 export const SEATS_KEPT = 40;
-export const OWED_KEPT = 20;
 const SUMMONS_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const VERSION_KEY = /^[a-z0-9-]{1,40}$/;
 const PET_KEY = /^[\w-]{1,64}$/;
@@ -74,7 +73,7 @@ export function normalizeCourtroom(raw) {
       seen.add(item.id);
       out.summonsOwed.push({ id: item.id, kind: item.kind });
     }
-    out.summonsOwed = out.summonsOwed.slice(-OWED_KEPT);
+    // Acknowledged rewards are debts: keep every valid unpaid entry until paid.
   }
   if (isRecord(raw.versions)) for (const id of CASE_IDS) {
     const rec = raw.versions[id];

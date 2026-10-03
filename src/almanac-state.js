@@ -1,4 +1,4 @@
-import { TIERS, WEEKLY_POOL, XP_RULES } from './content/almanac.js';
+import { CHAPTERS, TIERS, WEEKLY_POOL, XP_RULES } from './content/almanac.js';
 import { SET_BY_ID, CABINET_FRAMES, PORTRAIT_FRAMES, COMMISSION_BY_ID, TITLE_IDS } from './content/collections.js';
 import { FREE_DECOR, NEW_DECOR, DECOR_KINDS } from './content/decor.js';
 import { LEGACY_LEVELS, legacyAt } from './content/legacy.js';
@@ -41,7 +41,7 @@ export function blankAlmanac() {
 }
 export function blankWeek() { return { no: 0, counts: {}, done: [], claimed: [], chest: 0 }; }
 
-export function normalizeAlmanac(raw) {
+export function normalizeAlmanac(raw, now = Date.now()) {
   const out = blankAlmanac();
   if (!object(raw)) { out.init = 0; return out; }
   out.init = raw.init === 1 ? 1 : 0;
@@ -51,8 +51,17 @@ export function normalizeAlmanac(raw) {
   if (object(raw.by)) for (const [k, v] of Object.entries(raw.by)) if (SOURCES.has(k)) out.by[k] = int(v, 0, 0, 1000);
   if (object(raw.flags)) for (const k of ['omen', 'chores', 'choresAll', 'docket', 'daily']) if (Number.isFinite(raw.flags[k])) out.flags[k] = int(raw.flags[k], 0, 0, 9);
   if (object(raw.chapters)) {
-    // Only the newest sixty are kept: a chapter older than that cannot be claimed any more anyway.
-    const keys = Object.keys(raw.chapters).filter(k => CHAPTER_KEY.test(k)).sort().slice(-60);
+    // Chapter records are inserted oldest first. Never alphabetize them or
+    // let an older save's ordering discard the chapter currently running.
+    const date = new Date(now), year = date.getFullYear(), lastYear = Number(CHAPTERS.at(-1).to.slice(0, 4));
+    const refYear = Math.min(year, lastYear), month = date.getMonth();
+    const day = Math.min(date.getDate(), new Date(refYear, month + 1, 0).getDate());
+    const iso = refYear + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    const chapter = CHAPTERS.find(c => c.from <= iso && iso <= c.to);
+    const active = chapter ? chapter.id + (year > lastYear ? '~' + year : '') : '';
+    const valid = Object.keys(raw.chapters).filter(k => CHAPTER_KEY.test(k) && object(raw.chapters[k]));
+    const keys = valid.slice(-60);
+    if (valid.includes(active) && !keys.includes(active)) { keys.shift(); keys.unshift(active); }
     for (const k of keys) {
       const c = raw.chapters[k];
       if (!object(c)) continue;
@@ -172,7 +181,7 @@ export function blankRetention() {
 }
 // Called once from state.js normalizeState, after pets, mayhem and decor have been rebuilt.
 export function normalizeRetention(s, now = Date.now()) {
-  s.almanac = normalizeAlmanac(s.almanac);
+  s.almanac = normalizeAlmanac(s.almanac, now);
   s.streaks = normalizeStreaks(s.streaks);
   s.returns = normalizeReturns(s.returns, now);
   s.legacy = normalizeLegacy(s.legacy, s.mayhem?.lifetime);
