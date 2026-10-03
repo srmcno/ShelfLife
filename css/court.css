@@ -519,3 +519,169 @@ body[data-effects="light"] .sc-hall-prop.mic svg{animation:none}
 .sc-docket b{font-weight:700}
 .sc-docket.done{border-color:var(--hair-lit);background:none;color:var(--ink-2)}
 .sc-docket .btn{margin-left:6px;vertical-align:middle}
+
+/* =============================================================================
+   Replay: twists, the cast, the Objection, the bench career and its dressing
+   ============================================================================= */
+
+/* ---- the lobby: career, versions, why this cast matters ---- */
+.sc-career{margin:0 0 12px;padding:12px 14px;border-radius:14px;border:1px solid var(--hair-lit);background:linear-gradient(120deg,rgba(242,201,76,.1),transparent 70%),var(--glass)}
+.sc-career-top{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+.sc-career-top .sc-kicker{flex:0 0 100%}
+.sc-career-top b{font:400 21px/1.15 var(--display)}
+.sc-career-top small{margin-left:auto;font:700 12.5px var(--body);color:var(--ink-3)}
+.sc-bar{height:8px;margin:8px 0 6px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden}
+.sc-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f2c94c,#ff8a4c);transition:width .5s ease}
+.sc-career p{margin:0;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.sc-career p b{color:var(--ink)}
+.sc-backpay{display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:8px 12px;border-radius:10px;border:1px dashed #f2c94c;font-size:13.5px;line-height:1.4}
+.sc-backpay .mh-glyph{width:20px;height:20px;flex:none;color:#f2c94c}
+.sc-versions{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 10px;font-size:13.5px;line-height:1.4;color:var(--ink-2)}
+.sc-versions b{color:var(--ink)}
+.sc-ver-count{display:inline-flex;gap:4px}
+.sc-ver-count i{width:11px;height:11px;border-radius:50%;border:2px solid #f2c94c;box-sizing:border-box}
+.sc-ver-count i.on{background:#f2c94c}
+.sc-ver-pick{display:grid;gap:3px;flex:1 1 100%;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.sc-ver-pick select{min-width:0;text-transform:none;letter-spacing:0}
+.sc-why{margin:0 0 10px;padding:10px 12px;border-radius:10px;border:1px solid var(--hair-lit);background:rgba(0,0,0,.18)}
+.sc-why ul{margin:6px 0 0;padding-left:18px;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.sc-why li+li{margin-top:3px}
+.sc-why p{margin:6px 0 0;font-size:13.5px;line-height:1.45;color:var(--ink-3)}
+.sc-guide-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 8px}
+.sc-guide-head .sc-guide-title{margin:0}
+.sc-guide-note{margin:0 0 8px;font-size:13px;color:var(--ink-3)}
+.sc-guide-note b{color:var(--ink)}
+.sc-ep-ver{font:700 11.5px var(--body);color:var(--ink-3)}
+
+/* tags: what a resident's trait is doing in this episode */
+.sc-tags{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-top:4px}
+.sc-chip{display:inline-block;max-width:100%;padding:2px 8px;border-radius:99px;border:1px solid currentColor;font:700 11px/1.35 var(--body);letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f2c94c;background:rgba(0,0,0,.25)}
+.sc-chip.receipts{color:#f2c94c}
+.sc-chip.exaggerates{color:#ffab76}
+.sc-chip.showman{color:#ff8aa0}
+.sc-chip.crowd{color:#8fe0ca}
+.sc-chip.intimidating{color:#ff8a96}
+.sc-chip.spiteful{color:#ff6b3d}
+.sc-chip.loyal,.sc-chip.trusts{color:#ff8aa0}
+.sc-chip.sleepy{color:#9fd8ff}
+.sc-chip.gossip{color:#c9b3ff}
+.sc-vs figcaption .sc-tags{margin-top:6px}
+
+/* ---- the Case Notebook ---- */
+.sc-nb-intro{margin:0 0 12px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.sc-nb{display:grid;gap:8px}
+.sc-nb-case{padding:10px 12px;border-radius:12px;border:1px solid var(--hair-lit);background:var(--surface)}
+.sc-nb-case.unaired{opacity:.8}
+.sc-nb-case header{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:2px 10px}
+.sc-nb-case header b{font:400 17px/1.2 var(--display)}
+.sc-nb-versions{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.sc-nb-versions li{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;font-size:14px}
+.sc-nb-versions li.seen .sc-nb-name{flex:1 1 150px;font-weight:700}
+.sc-nb-versions li.unseen{color:var(--ink-3);font-style:italic}
+.sc-nb-versions .btn{margin-left:auto}
+
+/* ---- cast notes, seats and the Objection ---- */
+.sc-castnotes{margin:8px 0 0;padding:4px 10px;border-radius:10px;border:1px solid var(--hair-lit);background:rgba(0,0,0,.2);font-size:13px}
+.sc-castnotes summary{display:flex;align-items:center;gap:8px;min-height:36px;cursor:pointer;list-style:none;overflow:hidden}
+.sc-castnotes[open] summary{overflow:visible;flex-wrap:wrap}
+.sc-castnotes summary::-webkit-details-marker{display:none}
+.sc-castnotes-label{flex:none;font:800 11px var(--body);letter-spacing:.12em;text-transform:uppercase;color:#f2c94c}
+.sc-castnotes-label::after{content:' ▾';font-size:10px}
+.sc-castnotes[open] .sc-castnotes-label::after{content:' ▴'}
+.sc-castnotes .sc-tags{margin:0;justify-content:flex-start;flex-wrap:nowrap;min-width:0}
+.sc-castnotes[open] .sc-tags{flex-wrap:wrap}
+.sc-castnotes .sc-chip{flex:none}
+.sc-castnotes:not([open]) .sc-tags{-webkit-mask-image:linear-gradient(90deg,#000 80%,transparent);mask-image:linear-gradient(90deg,#000 80%,transparent)}
+.sc-castnotes ul{margin:6px 0 2px;padding-left:18px;line-height:1.45;color:var(--ink-2)}
+.sc-castnotes li+li{margin-top:3px}
+.sc-castnotes li b{color:var(--ink)}
+.sc-seat-tags{position:absolute;left:-3px;bottom:-3px;display:flex;gap:1px;pointer-events:none}
+.sc-ico{display:block;width:clamp(10px,2.6vw,13px);height:clamp(10px,2.6vw,13px)}
+.sc-seat.absent{box-shadow:inset 0 0 0 2px #9fd8ff}
+.sc-seat.absent .sc-seat-art{opacity:.55;transform:rotate(-14deg)}
+.sc-seat.absent .sc-vote{opacity:1;animation:sc-pop .3s cubic-bezier(.2,1.6,.4,1) 1 both}
+.sc-skiprow{display:flex;justify-content:flex-end;margin-top:8px}
+.sc-skiprow .btn{min-height:44px}
+.sc-obj-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:8px}
+.sc-obj{min-height:44px;border-color:#f2c94c;color:#fff4dc;background:linear-gradient(180deg,#7a2848,#5a1c36)}
+.sc-obj[disabled]{opacity:.6;border-color:var(--hair-lit);background:var(--surface)}
+.sc-obj.btn-ghost{background:none}
+.sc-obj-count{margin-left:6px;padding:1px 8px;border-radius:99px;background:rgba(0,0,0,.35);font:700 12px var(--body)}
+.sc-obj-row small{font-size:12.5px;color:var(--ink-3)}
+.sc-obj-panel{display:grid;gap:8px}
+.sc-obj-opt{display:block;width:100%;text-align:left;padding:11px 14px;border-radius:10px;border:1px solid var(--hair-lit);background:var(--surface);color:var(--ink);font:inherit;font-size:14.5px;line-height:1.4;cursor:pointer}
+.sc-obj-opt:hover,.sc-obj-opt:focus-visible{border-color:#f2c94c;background:var(--surface-hi)}
+.sc-obj-opt small{display:block;margin-bottom:2px;font:800 10.5px var(--body);letter-spacing:.12em;text-transform:uppercase;color:#f2c94c}
+
+/* ---- notes: unconfirmed, struck, confirmed ---- */
+.sc-note-flag{display:inline-block;margin-left:4px;padding:0 7px;border-radius:99px;border:1px solid currentColor;font:800 10.5px/1.6 var(--body);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;vertical-align:1px}
+.sc-note.shaky{font-style:italic}
+.sc-note.shaky .sc-note-flag{color:#b3601c}
+.sc-note.struck{opacity:.7}
+.sc-note.struck .sc-note-flag{color:#a32c3c}
+.sc-note.confirmed .sc-note-flag{color:#1d7a58}
+.sc-notes .sc-note .sc-note-flag{color:#f2c94c}
+.sc-notes .sc-note.struck .sc-note-flag{color:#ff8a96}
+.sc-notes .sc-note.confirmed .sc-note-flag{color:#8fe0ca}
+.sc-clue.shaky{background:#f1e6c4;border-style:dashed}
+.sc-clue.shaky small{color:#8a4a10}
+
+/* ---- the wrap: versions, promotions ---- */
+.sc-ver-line.twist{color:#f2c94c;border-color:rgba(242,201,76,.5)}
+.sc-career-line{margin:0 0 8px;font-size:13.5px;color:var(--ink-2)}
+.sc-promo{position:relative;margin:4px 0 10px;padding:12px 14px;border-radius:12px;border:2px solid #f2c94c;overflow:hidden;
+  background:radial-gradient(120% 140% at 50% 0%,rgba(242,201,76,.28),rgba(163,44,60,.22) 70%),#1a0a11;animation:sc-promo 1.6s ease-out 1}
+.sc-promo b{display:block;font:400 26px/1.15 var(--display);color:#fff4dc;text-shadow:0 0 14px rgba(242,201,76,.55)}
+.sc-promo p{display:flex;align-items:center;gap:6px;margin:4px 0 0;font-weight:700;color:#f2c94c}
+.sc-promo .mh-glyph{width:20px;height:20px}
+.sc-promo ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.sc-promo li b{display:inline;font:700 13.5px var(--body);color:var(--ink);text-shadow:none}
+@keyframes sc-promo{0%{box-shadow:0 0 0 0 rgba(242,201,76,.8);transform:scale(.96)}40%{transform:scale(1.015)}100%{box-shadow:0 0 0 18px rgba(242,201,76,0);transform:none}}
+
+/* ---- the courtroom's dressing (what the bench career unlocks) ---- */
+.sc-gavel-brass .jm-gavel rect{fill:#d6a33a}
+.sc-gavel-brass .jm-gavel path[stroke="#8b5a3c"]{stroke:#b8872a}
+.sc-gavel-brass .jm-gavel path[stroke="#a8704c"]{stroke:#fff1b8}
+.sc-gavel-ebony .jm-gavel rect{fill:#1d1626}
+.sc-gavel-ebony .jm-gavel path[stroke="#8b5a3c"]{stroke:#3a2f48}
+.sc-gavel-ebony .jm-gavel path[stroke="#e2b04a"]{stroke:#cfd5e2}
+.sc-gavel-ebony .jm-gavel path[stroke="#a8704c"]{stroke:#6a5c80}
+.sc-wig-gilt .jm-wig [fill="#f3ede2"],.sc-wig-laurel .jm-wig [fill="#f3ede2"]{fill:#ecd07a}
+.sc-wig-gilt .jm-wig [fill="#d9cfbc"],.sc-wig-laurel .jm-wig [fill="#d9cfbc"]{fill:#d4ab49}
+.sc-wig-gilt .jm-wig [stroke="#d9cfbc"],.sc-wig-laurel .jm-wig [stroke="#d9cfbc"]{stroke:#b88a2a}
+.sc-wig-gilt .jm-wig [stroke="#ae9f86"],.sc-wig-laurel .jm-wig [stroke="#ae9f86"]{stroke:#8a6a1c}
+.sc-wig-gilt .jm-wig [stroke="#f3ede2"],.sc-wig-laurel .jm-wig [stroke="#f3ede2"]{stroke:#ecd07a}
+.sc-banner{position:absolute;left:27%;top:-1%;width:9.5%;z-index:1;pointer-events:none}
+.sc-banner svg,.sc-bench-dress svg,.sc-bench-plate svg,.sc-candle svg{display:block;width:100%;height:auto;overflow:visible}
+.sc-bench>span:first-child{position:relative;z-index:1}
+.sc-has-plate .sc-bench>span:first-child{transform:translateY(-16%)}
+.sc-bench .sc-bench-dress{position:absolute;left:0;top:0;width:100%;max-width:none;height:100%;z-index:0;overflow:hidden;border-radius:2px 2px 0 0}
+.sc-bench-dress svg{height:100%;width:100%}
+.sc-bench-dress svg{border-radius:inherit}
+.sc-bench .sc-bench-plate{position:absolute;left:50%;bottom:6%;width:34%;max-width:none;transform:translateX(-50%);z-index:2}
+.sc-candle{position:absolute;top:28%;width:3.4%;z-index:4;pointer-events:none}
+.sc-candle.l{left:30.5%}
+.sc-candle.r{right:30.5%}
+.sc-flame{transform-box:fill-box;transform-origin:50% 100%;animation:sc-flame .5s steps(2,jump-none) infinite alternate}
+@keyframes sc-flame{from{transform:scale(1,1)}to{transform:scale(.88,1.12) rotate(4deg)}}
+.sc-spot{position:absolute;left:50%;top:-4%;width:44%;height:72%;transform:translateX(-50%);z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,236,170,.34),rgba(255,236,170,0) 92%);clip-path:polygon(38% 0,62% 0,100% 100%,0 100%);animation:sc-spot 5s steps(5) infinite alternate}
+@keyframes sc-spot{from{opacity:.7}to{opacity:1}}
+.sc-head.sc-reg svg .hat{fill:#171020}
+.sc-head.sc-reg svg .brim{fill:none;stroke:#120a18;stroke-width:3;stroke-linecap:round}
+.sc-head.sc-reg svg .band{fill:none;stroke:#f2c94c;stroke-width:2}
+.sc-head.sc-reg svg .monocle{display:block;fill:none;stroke:#f2c94c;stroke-width:1.5}
+.sc-head.sc-reg svg .sandwich{fill:#e8d3a0;stroke:#120a18;stroke-width:1.2}
+.sc-head.sc-reg svg .lettuce{fill:none;stroke:#7a9a4a;stroke-width:1.6}
+.sc-titlecard-judge .sc-laurel,.sc-judge .sc-laurel{pointer-events:none}
+
+@media (max-width:560px){
+  .sc-career-top b{font-size:19px}
+  .sc-nb-case header{grid-template-columns:1fr auto}
+  .sc-nb-case header .sc-ep-no{grid-column:1 / -1}
+}
+body[data-effects="light"] .sc-flame,body[data-effects="light"] .sc-spot,body[data-effects="light"] .sc-promo{animation:none}
+@media (prefers-reduced-motion:reduce){
+  .sc-flame,.sc-spot,.sc-promo{animation:none}
+  .sc-bar i{transition:none}
+}

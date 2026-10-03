@@ -2,7 +2,7 @@ import { blankState, normalizeState, localDayKey } from '../src/state.js';
 import { generateCreature } from '../src/art/creatures.js';
 
 // Deterministic, synthetic households. No player data belongs in this file.
-export const FIXTURE_NAMES = ['fresh', 'established', 'nearly-full', 'drawing-heavy', 'conflicting', 'sleeping', 'capped', 'legacy'];
+export const FIXTURE_NAMES = ['fresh', 'established', 'nearly-full', 'drawing-heavy', 'conflicting', 'sleeping', 'capped', 'legacy', 'court-veteran'];
 const names = ['Agnes', 'Lord Dampington III', 'Pip', 'Bitey', 'Velvet', 'Mothball', 'Cricket', 'Doreen', 'Gladys', 'Snag', 'Mildred', 'Crumb', 'Wanda', 'Nell', 'Gnasher'];
 const traits = ['spiteful', 'damp', 'theatrical', 'magpie', 'porcelain', 'sugar', 'loadbearing', 'nocturnal'];
 // A valid synthetic raster with deliberately uncompressed pixels exercises the
@@ -58,6 +58,11 @@ export function householdFixture(kind='established', now=Date.now()) {
   if(kind==='sleeping') s.pets.forEach(p=>p.traits=['nocturnal']);
   if(kind==='capped') s.pets.forEach(p=>{p.bond=25;p.needs={food:100,fuss:100,clean:100};p.bonusTrust={day:localDayKey(now),n:3};p.playedAt={memory:now,chase:now,alibi:now,court:now};});
   if(kind==='drawing-heavy') { raster ||= drawing(); s.pets.forEach(p=>p.art={body:raster,stamps:Array.from({length:18},(_,i)=>({kind:i%2?'eyes':'legs',x:220+(i%6)*30,y:210+Math.floor(i/6)*65,size:24,rotation:i*3,color:'#271927'})),bounds:{x:.1,y:.1,width:.8,height:.85}}); }
+  // A regular at Shelf Court: versions seen, a recent list, who last sat where, a rank and owed rewards.
+  if(kind==='court-veteran') s.courtroom={episodes:30,justice:21,best:{'borrowed-coffin':3,'snoring-wall':2,'stolen-slot':1},last:'stolen-slot',docketDay:'',docketStreak:2,docketLastDay:localDayKey(now-86400000),
+    versions:{'borrowed-coffin':{base:3,'a-second-telling':2},'snoring-wall':{base:2}},recent:['borrowed-coffin','snoring-wall','stolen-slot'],seats:{qa0:30,qa1:29,qa2:12},
+    stars:52,rank:4,flawless:1,flawlessBest:3,summonsDay:localDayKey(now),summonsHeard:3,summonsVerdicts:0,summonsPaid:[],
+    summonsOwed:[{id:'00000000-0000-4000-8000-000000000001',kind:'heard'}]};
   if(kind==='legacy') { s.v=3; delete s.life; s.pets.forEach(p=>{p.img=drawing();delete p.art;delete p.names;delete p.slotHist;}); return s; }
   return normalizeState(s);
 }

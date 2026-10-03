@@ -161,8 +161,10 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       '<div class="fr-serve"><span class="fr-res-art" data-serve-art></span><p>On <b>' + esc(v.resident.name) + '</b>, of ' + esc(friendName(v.friend)) + '’s shelf. They hear it in Shelf Court, and you hear the verdict.</p></div>' +
       '<form class="fr-form" data-fr-form="serve"><label class="fr-label" for="frCase">The case</label><select class="fr-input" id="frCase">' +
       COURT_CASES.map(k => '<option value="' + k.id + '"' + (k.id === caseId ? ' selected' : '') + '>' + esc(k.title) + (k.id === docket.caseId ? ' (today’s docket)' : '') + '</option>').join('') + '</select>' +
-      '<label class="fr-label" for="frPlaintiff">Your plaintiff</label><select class="fr-input" id="frPlaintiff">' +
+      '<label class="fr-label" for="frPlaintiff">Your resident</label><select class="fr-input" id="frPlaintiff">' +
       state.pets.map(p => '<option value="' + esc(p.id) + '"' + (p.id === v.plaintiffId ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '</select>' +
+      '<label class="fr-label" for="frSide">Takes the side of</label><select class="fr-input" id="frSide"><option value="p"' + (v.side === 'd' ? '' : ' selected') + '>The plaintiff (suing ' + esc(v.resident.name) + ')</option>' +
+      '<option value="d"' + (v.side === 'd' ? ' selected' : '') + '>The defendant (being sued by ' + esc(v.resident.name) + ')</option></select>' +
       '<div class="fr-actions"><button class="btn btn-primary" type="submit"' + (state.pets.length ? '' : ' disabled') + '>Serve the papers</button></div></form>';
   }
 
@@ -231,7 +233,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   }
   function papers(resident) {
     view = 'serve';
-    serving = { friend: visiting.friend, resident, caseId: '', plaintiffId: serving?.plaintiffId || state.pets[0]?.id || '' };
+    serving = { friend: visiting.friend, resident, caseId: '', plaintiffId: serving?.plaintiffId || state.pets[0]?.id || '', side: serving?.side || 'p' };
     message = '';
     render('#frCase');
   }
@@ -255,10 +257,10 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       const name = $('frName').value;
       act(async () => { me = await social.setName(name); drafts.frName = undefined; message = me.name ? 'Friends now see you as ' + me.name + '.' : 'Friends now see your code instead of a name.'; social.publish({ force: true }).catch(() => {}); }, '#frName');
     } else if (form === 'serve') {
-      const caseId = $('frCase').value, plaintiff = state.pets.find(p => p.id === $('frPlaintiff').value);
-      serving.caseId = caseId; serving.plaintiffId = plaintiff?.id || '';
+      const caseId = $('frCase').value, plaintiff = state.pets.find(p => p.id === $('frPlaintiff').value), side = $('frSide').value === 'd' ? 'd' : 'p';
+      serving.caseId = caseId; serving.plaintiffId = plaintiff?.id || ''; serving.side = side;
       act(async () => {
-        await social.serve({ to: serving.friend.userId, caseId, plaintiff, defendant: serving.resident });
+        await social.serve({ to: serving.friend.userId, caseId, plaintiff, defendant: serving.resident, side });
         const who = friendName(serving.friend);
         view = 'shelf';
         message = 'Papers served. ' + who + ' will find them in Shelf Court.';

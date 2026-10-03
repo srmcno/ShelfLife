@@ -113,6 +113,21 @@ hallway interview. Stars come from the right verdict, ratings of 70 or more, and
 more agreeing. Rule justly and the winner trusts you a little more; rule against the resident who
 was right and they hold a real grudge. Twenty-four hand-written cases, eight of each verdict, each with alternate takes so reruns rarely repeat.
 
+Reruns are not repeats. A case can have a **twisted version** in which the investigation turns up a
+different truth: the opening statements are the same, but the testimony, the case notes, the rulings and the
+hallway lines change, so a player who memorised the case has to read the notes again. Today's docket airs
+one fixed version for everyone; free play favours versions you have not seen; the **Case Notebook** lists every
+case with the versions you have seen and your stars on each, and never names one you have not. Your
+residents matter too: a resident's traits give it a role at the podium or in the jury box (keeping receipts,
+exaggerating, playing to the room, holding a grudge, dozing through the vote, gossiping), explained in the lobby
+under *Why this cast matters* and on the cast notes. Each episode you get one **Objection**: check a note
+marked unconfirmed (a lead is struck, an exaggerated clue is confirmed) or press the last witness for another
+clue. The ad break, the number of random scenes, the order of the questions and an occasional bonus question
+change from episode to episode; reruns offer to skip the opening and the hallway interview. Lifetime stars climb
+a ten rank **bench career** (Courtroom Sweeper to Lord Chief Gavel) that pays souls and dresses the courtroom.
+When a friend serves papers they choose which side their resident takes; a summons reward over the daily cap
+is owed and paid on the next day with room.
+
 | Game | What you do |
 | --- | --- |
 | Feeding Frenzy | Your resident catches falling snacks and dodges holy water, soap and mousetraps. Combos multiply; a still-beating heart doubles everything for six seconds. |
@@ -248,6 +263,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js`, `src/content/emergencies-extra.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
 | `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
 | `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js`, `src/art/court-hallway.js` | Shelf Court: cases, episode state machine, TV studio stage, the drawn cast and the hall cam's corridor set |
+| `src/content/court-twists*.js`, `src/engine/court-twists.js`, `src/engine/court-traits.js`, `src/engine/court-objection.js`, `src/engine/court-career.js`, `src/content/court-bonus.js`, `src/art/court-dress.js` | Shelf Court replay: twisted case versions and their validation, trait-driven cast, the Objection, the bench career and its cosmetics, bonus questions |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
 | `src/cloud/social.js`, `src/ui/friends.js`, `css/social.css` | Friends, shelves on show, Shelf Court summonses and daily boards |
 | `src/native.js`, `capacitor.config.json`, `android/` | The Android app: native glue, Capacitor settings and the native project |

@@ -423,7 +423,7 @@ export function initMayhem(state, onRefresh) {
     if (control.dataset.choice != null) { choose(S, Number(control.dataset.choice)); return; }
     if (control.dataset.curio) { showCurio(control.dataset.curio); return; }
     if (control.dataset.mhToday) {
-      if (control.dataset.mhToday === 'court') window.dispatchEvent(new CustomEvent('shelflife:court', { detail: {} }));
+      if (control.dataset.mhToday === 'court') window.dispatchEvent(new CustomEvent('shelflife:court', { detail: docketToday(S).done ? {} : { caseId: docketToday(S).caseId } }));
       else window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: control.dataset.mhGame } }));
       return;
     }
