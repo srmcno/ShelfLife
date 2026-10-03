@@ -147,6 +147,27 @@ test('an anonymous account links an email with an email_change code and keeps it
   assert.equal(cloud.pendingEmail(), null);
 });
 
+test('automatic email confirmation refuses linking before changing the account or promising a code', async () => {
+  const fake = createFakeSupabase({ emailAutoconfirm: true });
+  const cloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory() });
+  const original = await cloud.signInAnonymously();
+  await assert.rejects(cloud.requestEmailCode('mabel@example.com'), err => err.code === 'email_confirmation_disabled');
+  assert.equal(fake.calls('/auth/v1/user').length, 0, 'no identity update');
+  assert.equal(fake.sent.length, 0);
+  assert.equal(cloud.pendingEmail(), null);
+  assert.deepEqual(cloud.session(), original);
+});
+
+test('a failed configuration check preserves the anonymous account without requesting a code', async () => {
+  const { fake, cloud } = setup();
+  const original = await cloud.signInAnonymously();
+  fake.setOffline();
+  await assert.rejects(cloud.requestEmailCode('mabel@example.com'), err => err.offline);
+  assert.equal(fake.calls('/auth/v1/user').length, 0);
+  assert.equal(cloud.pendingEmail(), null);
+  assert.deepEqual(cloud.session(), original);
+});
+
 test('linking an email that already has an account says so', async () => {
   const { fake, cloud } = setup();
   await cloud.requestEmailCode('taken@example.com', { mode: 'signin' });

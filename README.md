@@ -210,7 +210,8 @@ a server so it follows you between browsers and phones. Nothing is sent until yo
 save**. Guest play is unchanged, and offline the game carries on and catches up later.
 
 - Turning it on makes an anonymous account that only this browser can open. Add an email to reach it
-  from anywhere: you are sent a 6 digit code, never a password.
+  from anywhere: enter your email, request a code, check your inbox and spam folder, then paste the
+  digits from the newest email into the game. You do not create a code or password yourself.
 - The shelf is copied about 20 seconds after you do something, and when you leave the page. **Sync now**
   copies it at once. A device you have not touched quietly picks up the newer copy.
 - On another device choose **Already have an account? Sign in on this device**. If only one side has
@@ -409,17 +410,27 @@ a real project (set `SHELF_REAL_CLOUD_CONFIG=1` to serve the real one).
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run `supabase/migrations/0001_accounts_and_saves.sql`, then
    `supabase/migrations/0002_social.sql` for Friends. Running either again is harmless.
-3. Authentication → Sign In / Providers: enable **Anonymous sign-ins** and keep **Email** on.
-4. Authentication → Emails: make the **Magic link**, **Confirm signup** and **Change email address**
+3. Authentication → Sign In / Providers: enable **Anonymous sign-ins**, keep **Email** on, and enable
+   **Confirm email**. Disabling confirmation automatically attaches email addresses to anonymous
+   accounts without sending a code; the game refuses that configuration before changing the account.
+4. Authentication → Emails: configure **custom SMTP** with a verified sender for production delivery.
+   Supabase's default sender only delivers to project team addresses; it is not a public-player email
+   service. New Free projects using that sender also cannot customize their email templates.
+5. Authentication → Emails: make the **Magic link**, **Confirm signup** and **Change email address**
    templates print `{{ .Token }}`, so players get a code, for example `<p>Your Shelf Life code: {{ .Token }}</p>`.
    Adding an email to an anonymous account uses the change-email template.
-5. Authentication → URL Configuration: set the Site URL to where the game is served.
-6. Project Settings → API: paste the Project URL and the publishable key (or the legacy anon key) into
+6. Authentication → URL Configuration: set the Site URL to where the game is served.
+7. Project Settings → API: paste the Project URL and the publishable key (or the legacy anon key) into
    `src/cloud/config.js`. It is public by design; row level security keeps each save private. Never paste
    a secret or service_role key: a unit test refuses to pass if one is shipped.
 
-The built-in email sender allows only a few messages an hour; set up custom SMTP before real players
-arrive. Abandoned anonymous accounts can be cleared from the SQL editor:
+Before release, verify receipt and successful code entry for both adding an email to a guest account
+and signing in on another browser, using an address outside the project team. A successful HTTP
+request alone does not prove delivery. See [Supabase's SMTP requirements](https://supabase.com/docs/guides/auth/auth-smtp)
+and [email templates](https://supabase.com/docs/guides/auth/auth-email-templates). Keep SMTP credentials
+in Supabase's server settings, never in `src/cloud/config.js` or the repository.
+
+Abandoned anonymous accounts can be cleared from the SQL editor:
 `delete from auth.users u where u.is_anonymous and u.created_at < now() - interval '90 days' and not exists (select 1 from public.saves s where s.user_id = u.id and s.updated_at > now() - interval '90 days');`
 Old daily scores and summonses can go the same way (the lines are also at the top of 0002):
 `delete from public.scores where day < current_date - 30;` and

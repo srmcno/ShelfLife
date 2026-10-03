@@ -116,7 +116,8 @@ test('turn it on, add an email, and settle a conflict both ways', async ({ page 
 
   await page.locator('#cloudEmail').fill('mabel@example.com');
   await page.locator('#cloudSendCode').click();
-  await expect(page.locator('#cloudStatus')).toContainText('Code sent to mabel@example.com');
+  await expect(page.locator('#cloudStatus')).toContainText('Code requested. Check your email');
+  await expect(page.locator('#cloudCodeDestination')).toHaveText('Code requested for mabel@example.com.');
   await expect(page.locator('#cloudCode')).toBeFocused();
   await page.locator('#cloudCode').fill(FAKE_CODE);
   await page.keyboard.press('Enter');
@@ -228,6 +229,73 @@ test('the nudge appears once for an established shelf, and Not now lasts past a 
   await expect(page.locator('#cabinet .piece.pet')).toHaveCount(3);
   await expect(page.locator('#cloudNudge')).toBeHidden();
   expect(fake.requests, 'the nudge and its dismissal are local').toEqual([]);
+});
+
+test('email instructions explain the code, preserve invalid input, and let the player change the destination', async ({ page }) => {
+  const fake = createFakeSupabase();
+  await open(page, { fake });
+  await openCloud(page);
+  await expect(page.locator('#cloudVeil')).toContainText('The game saves automatically in this browser.');
+  await page.locator('#cloudSignInOpen').click();
+  await expect(page.locator('#cloudEmailSteps li')).toHaveCount(3);
+  await expect(page.locator('#cloudEmailHelp')).toContainText('you do not choose one yourself');
+  await page.locator('#cloudEmail').fill('not an email');
+  await page.locator('#cloudSendCode').click();
+  await expect(page.locator('#cloudStatus')).toHaveText('That does not look like an email address.');
+  await expect(page.locator('#cloudEmail')).toHaveValue('not an email');
+  expect(fake.requests, 'invalid input never asks the server for a code').toEqual([]);
+  await expect(page.locator('#cloudCodeForm')).toBeHidden();
+
+  const address = 'long-email-destination-for-small-screen@example.com';
+  await page.locator('#cloudEmail').fill(address);
+  await page.locator('#cloudSendCode').click();
+  await expect(page.locator('#cloudCodeDestination')).toHaveText('Code requested for ' + address + '.');
+  await expect(page.locator('#cloudEmail')).toHaveAttribute('readonly', '');
+  await expect(page.locator('#cloudCodeHelp')).toContainText('Wait at least a minute');
+  await fits(page);
+  await page.locator('#cloudCode').fill('123');
+  await page.locator('#cloudConfirm').click();
+  await expect(page.locator('#cloudStatus')).toContainText('You do not create this code yourself.');
+  await expect(page.locator('#cloudCode')).toHaveValue('123');
+  await page.locator('#cloudChangeEmail').click();
+  await expect(page.locator('#cloudCodeForm')).toBeHidden();
+  await expect(page.locator('#cloudEmail')).toBeEditable();
+  await expect(page.locator('#cloudEmail')).toHaveValue(address);
+  await expect(page.locator('#cloudEmail')).toBeFocused();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.cloud')).pending)).toBeUndefined();
+  await page.reload();
+  await openCloud(page);
+  await page.locator('#cloudSignInOpen').click();
+  await expect(page.locator('#cloudCodeForm')).toBeHidden();
+  await page.locator('#cloudEmail').fill('new-inbox@example.com');
+  await page.locator('#cloudSendCode').click();
+  await expect(page.locator('#cloudCodeDestination')).toHaveText('Code requested for new-inbox@example.com.');
+  expect(fake.sent.map(sent => sent.email)).toEqual([address, 'new-inbox@example.com']);
+});
+
+test('a server that cannot email confirmation never pretends to send a code or changes the account email', async ({ page }, testInfo) => {
+  const fake = createFakeSupabase({ emailAutoconfirm: true });
+  await open(page, { fake });
+  await openCloud(page);
+  await page.locator('#cloudEnable').click();
+  await expect(page.locator('#cloudAnon')).toBeVisible();
+  await page.locator('#cloudEmail').fill('my-inbox@example.com');
+  await page.locator('#cloudSendCode').click();
+  await expect(page.locator('#cloudStatus')).toHaveText('Email sign-in is not available right now. Your shelf is still saved on this device.');
+  await expect(page.locator('#cloudEmail')).toHaveValue('my-inbox@example.com');
+  await expect(page.locator('#cloudCodeForm')).toBeHidden();
+  expect(fake.calls('/auth/v1/user')).toEqual([]);
+  expect(fake.sent).toEqual([]);
+  expect([...fake.users.values()].every(user => user.is_anonymous && !user.email)).toBe(true);
+  expect((await saved(page)).pets.map(pet => pet.name)).toEqual(['Agnes', 'Lord Dampington III', 'Pip']);
+  const desktop = testInfo.outputPath('cloud-help-desktop.png');
+  await page.locator('#cloudVeil').screenshot({ path: desktop });
+  await testInfo.attach('Cloud email help at desktop width', { path: desktop, contentType: 'image/png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobile = testInfo.outputPath('cloud-help-mobile.png');
+  await page.locator('#cloudVeil').screenshot({ path: mobile });
+  await testInfo.attach('Cloud email help at phone width', { path: mobile, contentType: 'image/png' });
+  await fits(page);
 });
 
 test('a new shelf is not nagged', async ({ page }) => {

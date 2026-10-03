@@ -44,3 +44,13 @@ test('shelf descriptions and messages are plain, short and free of em dashes', (
     assert.doesNotMatch(line, /[–—]/);
   }
 });
+
+test('email configuration errors explain that the player cannot fix delivery by inventing a code', () => {
+  assert.match(actionText({ code: 'email_address_not_authorized', status: 403 }), /Email sign-in is not available.*saved on this device/);
+  assert.match(actionText({ code: 'email_confirmation_disabled' }), /Email sign-in is not available.*saved on this device/);
+  assert.match(actionText({ code: 'email_address_invalid' }), /real email inbox/);
+  assert.match(actionText({ code: 'invalid_code' }), /do not create this code yourself/);
+  assert.match(actionText({ status: 500 }, { emailRequest: true }), /email service could not accept/);
+  assert.doesNotMatch(actionText({ status: 403 }), /code did not work/);
+  assert.match(actionText({ status: 429 }), /Wait a few minutes/);
+});

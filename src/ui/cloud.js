@@ -69,18 +69,23 @@ export function problemText(info) {
 }
 
 // Trouble from something the player just pressed.
-export function actionText(error) {
+export function actionText(error, { emailRequest = false } = {}) {
   if (error?.offline) return 'No connection. Try again once you are back online.';
   switch (error?.code) {
     case 'invalid_email': return 'That does not look like an email address.';
-    case 'invalid_code': return 'The code is the 6 digits in the email.';
+    case 'email_address_invalid': return 'Use a real email inbox you can open. Example and test addresses cannot receive a code.';
+    case 'email_address_not_authorized': return 'Email sign-in is not available for this address yet. Your shelf is still saved on this device.';
+    case 'email_confirmation_disabled': return 'Email sign-in is not available right now. Your shelf is still saved on this device.';
+    case 'invalid_code': return 'Enter the digits from the email. You do not create this code yourself.';
     case 'otp_expired': return 'That code did not work. Use the newest email, or send another.';
     case 'over_email_send_rate_limit': case 'over_request_rate_limit': return 'Too many codes at once. Wait a few minutes, then try again.';
-    case 'anonymous_provider_disabled': case 'signup_disabled': case 'email_provider_disabled': return 'The server is not accepting new accounts right now. Nothing here has changed.';
+    case 'anonymous_provider_disabled': case 'signup_disabled': case 'email_provider_disabled': case 'otp_disabled': return 'The server is not accepting new accounts right now. Nothing here has changed.';
     case 'session_expired': return 'This device was signed out of cloud save. The shelf here is untouched.';
     case 'safety_missing': return 'The other shelf could not be read back, so nothing was swapped.';
   }
-  if (error?.status === 403) return 'That code did not work. Use the newest email, or send another.';
+  if (emailRequest && error?.status >= 500) return 'The email service could not accept the request. Try later. Your shelf is still saved on this device.';
+  if (error?.status === 429) return 'Too many requests. Wait a few minutes, then try again.';
+  if (error?.status === 403) return 'This cloud action is not available right now. Your shelf is still saved on this device.';
   return 'The cloud did not answer properly. Nothing here has changed. Try again in a moment.';
 }
 
@@ -142,7 +147,9 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
     show(parts.remove, on && !conflict && !signing);
     if (parts.remove.hidden) $('cloudDeleteConfirm').hidden = true;
 
-    $('cloudSendCode').textContent = codeFor ? 'Send another code' : 'Send me a code';
+    $('cloudSendCode').textContent = codeFor ? 'Send another code' : 'Email me a code';
+    email.readOnly = !!codeFor;
+    $('cloudCodeDestination').textContent = codeFor ? 'Code requested for ' + codeFor + '.' : '';
     $('cloudEmailShown').textContent = info.email || 'None yet. This browser is the only way in.';
     $('cloudSynced').textContent = info.status === 'syncing' ? 'Syncing now' : info.lastSyncedAt ? timeAgo(info.lastSyncedAt, now) : 'Not yet';
     $('cloudSignOut').hidden = $('cloudSignOutHint').hidden = info.anonymous;
@@ -163,7 +170,7 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
     keepFocus();
   }
 
-  async function act(work, working = '') {
+  async function act(work, working = '', errorContext = {}) {
     if (busy) return;
     busy = true;
     message = working;
@@ -173,7 +180,7 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
       if (['email_exists', 'user_already_exists'].includes(error?.code) && view !== 'signin') {
         view = 'signin'; codeFor = '';
         message = 'That email already has an account. Sign in with it instead: send a code below.';
-      } else message = actionText(error);
+      } else message = actionText(error, errorContext);
     } finally { busy = false; render(); }
   }
   const after = (info, ok) => { message = info.status === 'idle' ? ok : ''; };
@@ -213,8 +220,13 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
     act(async () => {
       const sent = await cloud.requestEmailCode(email.value, { mode: view === 'signin' ? 'signin' : 'link' });
       codeFor = sent.email; code.value = '';
-      message = 'Code sent to ' + sent.email + '. It can take a minute, and sometimes a spam folder.';
-    }).then(() => { if (codeFor) code.focus(); });
+      message = 'Code requested. Check your email, including spam or junk. Delivery can take a minute.';
+    }, 'Requesting an email code.', { emailRequest: true }).then(() => { if (codeFor) code.focus(); });
+  });
+  $('cloudChangeEmail').addEventListener('click', () => {
+    codeFor = ''; code.value = ''; message = '';
+    cloud.setMeta({ pending: undefined });
+    render(); email.focus();
   });
   parts.code.addEventListener('submit', e => {
     e.preventDefault();

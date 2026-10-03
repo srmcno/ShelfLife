@@ -19,7 +19,7 @@ const CORS = {
   'access-control-allow-headers': 'apikey, authorization, content-type, accept, x-client-info, prefer'
 };
 
-export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = FAKE_CODE, now = () => Date.now(), tokenLifetime = 3600, anonymousSignIns = true } = {}) {
+export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = FAKE_CODE, now = () => Date.now(), tokenLifetime = 3600, anonymousSignIns = true, emailAutoconfirm = false } = {}) {
   const users = new Map(), saves = new Map(), profiles = new Map();
   const access = new Map(), refresh = new Map(), codes = new Map();
   const requests = [], sent = [], failures = [];
@@ -117,6 +117,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
     if (body) { try { input = JSON.parse(body); } catch { return rest(400, 'PGRST102', 'Invalid JSON'); } }
     const who = caller(h);
 
+    if (path === '/auth/v1/settings' && method === 'GET') return json(200, { mailer_autoconfirm: emailAutoconfirm });
     if (path === '/auth/v1/signup' && method === 'POST') {
       if (input.email || input.phone) return auth(400, 'validation_failed', 'Password sign-ups are not part of this fake');
       if (!anonymousSignIns) return auth(422, 'anonymous_provider_disabled', 'Anonymous sign-ins are disabled');
