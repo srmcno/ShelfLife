@@ -120,12 +120,15 @@ test('the Exchange sells a Back Issue, asks twice for a big purchase and survive
   await page.locator('#tabMore').click();
   await page.locator('#exchangeBtn').click();
   await expect(page.locator('#exchangeVeil')).toHaveClass(/open/);
-  await expect(page.locator('#exchangeSheet .ex-bargain')).toContainText('This week');
-  const row = page.locator('#exchangeSheet .ex-row', { hasText: 'Candle That Burns Cold' });
+  const banner = page.locator('#exchangeSheet .ex-bargain');
+  await expect(banner).toContainText('This week');
+  // Buy the week's marked-down curio: 40% off 450 is 270. It must not hand the markdown to another one.
+  const name = ((await banner.locator('b').textContent()) || '').trim();
+  const row = page.locator('#exchangeSheet .ex-row', { hasText: name });
   await row.locator('[data-ex="back"]').click();
   await expect(page.locator('#exchangeSheet .ex-notice')).toContainText('back in the cabinet');
-  await expect.poll(async () => (await saved(page)).mayhem.curios['al1-cold-candle']).toBe(1);
-  expect((await saved(page)).mayhem.souls).toBe(5000 - 450);
+  await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(5000 - 270);
+  await expect(page.locator('#exchangeSheet .ex-bargain')).toHaveCount(0);
   // A frame costing 1,800 asks again before it buys.
   await page.locator('[data-ex="tab"][data-id="frames"]').click();
   const gilt = page.locator('#exchangeSheet .ex-row', { hasText: 'Gilt by Association' });
