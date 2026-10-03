@@ -50,7 +50,7 @@ export const CASES_EXTRA = [
       '{p} will keep watch overnight, once it has had useful care or a game together. It says a witness on an empty stomach would only taste the evidence.',
       'The steam rises from B1. Move {p} there for the night watch. It brings a spoon and says the spoon is for defence.',
       '{p} says the cook is a ghost who misses having a kitchen. {q} says it is mould with ambitions. Both have eaten more soup than their theories allow.',
-      'There are tiny footprints in the broth, very light and very tired. Whoever cooks is also asleep. Earn their confidence with a game, or two more useful care actions, then stay up and see who gets out of bed.',
+      'The ladle is still warm. So is the pillow beside the bowl, which has a dent in it. Whoever cooks is also asleep. Earn their confidence with a game, or two more useful care actions, then stay up and see who gets out of bed.',
       'At three in the morning {q} sits up, makes soup with its eyes shut and goes back to bed. The recipe is in a grandmother’s handwriting. Nobody here has had a grandmother. It is excellent soup. Decide whether to wake the cook.'],
     good: 'The cook is left to sleep. The soup keeps coming, and a small chair has appeared at the table for the grandmother. Nobody has asked who she is. She has seconds.',
     messy: 'The cook is woken. The soup stops. For a week everyone is polite, hungry and unwilling to be the one who says whose grandmother it was.' },
@@ -66,7 +66,7 @@ export const CASES_EXTRA = [
     messy: 'He is told about the 14. He thanks everyone, closes the notebook and walks off with great dignity. He is back at breakfast. It was, he says, nice to have it confirmed.' },
 
   { id: 'frank', title: 'The rumour about Frank', object: 'rumour',
-    beats: ['A rumour is going round the shelf. Somebody called Frank is coming, and he is cold. {p} heard it from {q}, who heard it from the radiator. Nobody here knows a Frank.',
+    beats: ['A rumour is going round the shelf. Somebody called Frank is coming, and he is cold. {p} heard it from {q}, who heard it from the pipes. Nobody here knows a Frank.',
       '{p} will help find out who Frank is, after useful care or a game together. It wants to be in good shape to meet him. It has never been introduced to anyone cold and in a hurry.',
       'Frank was last mentioned near B1. Move {p} there to wait for him. It sets out a chair, a biscuit and a short speech, and asks you not to look at the speech.',
       '{p} says Frank is tall and wears a long coat. {q} says Frank is short and wears the same coat. Both say he is cold. Neither knows who started it. Both have been very helpful about the details.',

@@ -58,5 +58,5 @@ export const DUPLICATE_EXTRA = [
   'Already catalogued. The curator has stamped it DUPLICATE and gone for a lie down.',
   'Another. The cabinet is starting to think you are doing this on purpose.',
   'A spare. Nobody needs a spare. Someone will find a use for it. It will be awful.',
-  'You had one. The coffin has given you a second, and a receipt for the feelings.'
+  'You had one. The coffin hands over a second without comment, like a waiter making a point.'
 ];
