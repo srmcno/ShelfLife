@@ -1327,5 +1327,107 @@ export const TWISTS_A = {
     }
   }],
 
-  // @@NEXT
+  /* ---------- 11. Custody of the Moth: both becomes plaintiff ---------- */
+  'moth-custody': [{
+    id: 'borrowed-bulb',
+    title: 'The Lamp Has Been Dim Since March',
+    truth: 'plaintiff',
+    turn: alt([
+      ['narrator', '(The studio lights dim slightly. Madam Moth, in the gallery, immediately turns to face {d}.)'],
+      ['judge', 'Why is the moth looking at {d}?'],
+      ['bailiff', 'She does that, Your Honour. Whenever {d} opens its mouth.']
+    ], [
+      ['npc', 'I would like it noted that I am dim, and have been dim since March.', 'lamp'],
+      ['judge', 'Lamp, you are not a party.'],
+      ['npc', 'I am a party to every case with a bulb in it.', 'lamp']
+    ]),
+    questions: {
+      0: {
+        clue: 'Madam Moth goes wherever the light is. {d} has a light in its mouth that glows when it talks.',
+        lines: alt([
+          ['npc', 'I belong to nobody. I belong to the light. {p} is soft and {d} is bright. I go where it is bright.', 'moth'],
+          ['judge', 'Why is {d} bright?'],
+          ['npc', 'There is a switch under its tongue. It glows when it talks. It is the most beautiful thing I have ever seen.', 'moth'],
+          ['d', 'It is a medical device.']
+        ], [
+          ['judge', 'Madam Moth. Whose are you?'],
+          ['npc', 'Neither of theirs. I belong to the light.', 'moth'],
+          ['judge', 'And {d} is the light?'],
+          ['npc', '{d} is a light, Your Honour. When it opens its mouth there is a little glow at the back. It makes me feel something.', 'moth'],
+          ['d', 'THAT IS A VERY BRIGHT FILLING.']
+        ])
+      },
+      4: {
+        clue: 'The moth began sleeping at {d}’s in March, the week the Lamp’s bulb went missing. Before that, every night was at {p}’s.',
+        lines: alt([
+          ['bailiff', 'Surveillance, Your Honour. Until March, every night with {p}. Since March, Thursday to Saturday with {d}. Sundays with the Lamp, in what I can only describe as a situation.'],
+          ['judge', 'What happened in March?'],
+          ['npc', 'My bulb went missing. I have been dim ever since. I would like to say who took it. I would like to point. I am a lamp.', 'lamp'],
+          ['bailiff', 'I would like it noted that {d} has been glowing since the fourteenth.']
+        ], [
+          ['bailiff', 'I have kept a diary since the spring, Your Honour. Before March, seven nights a week with {p}. After March, Thursday to Saturday with {d}.'],
+          ['judge', 'What changed?'],
+          ['npc', 'The bulb. Somebody took it out of my head at three in the morning. I have been running on a candle ever since.', 'lamp'],
+          ['bailiff', 'Which is why she visits on Sundays, Your Honour. Out of pity.']
+        ])
+      },
+      5: {
+        clue: '{p} puts out one of its own socks for the moth every night. {d} feeds her nothing but a glow it does not own.',
+        lines: alt([
+          ['d', 'Wool. Crumbs. Mostly light.'],
+          ['p', 'Every night I put out one of my own socks for her. {d} has never put out anything.'],
+          ['judge', 'Whose light, {d}?'],
+          ['d', 'Mine. It is on a long-term loan.'],
+          ['npc', 'From WHOM?', 'lamp']
+        ], [
+          ['d', 'Nothing, Your Honour. She feeds on me.'],
+          ['judge', 'On you.'],
+          ['d', 'On my glow. It is a very nourishing glow.'],
+          ['p', 'SHE EATS MY SOCKS. EVERY NIGHT. I LAY THEM OUT LIKE A BUFFET.']
+        ])
+      }
+    },
+    rulings: {
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. The moth does not love {d}. The moth loves a bulb, and the bulb belongs to the Lamp, who has sat dim in the corner since March while {d} glowed.'],
+        ['judge', 'The bulb goes back in the Lamp. {p} has custody. {d} may visit when it learns to glow on its own.'],
+        ['d', 'Can I keep the switch?'],
+        ['judge', 'It is under your tongue, {d}. Nobody here is qualified to remove it.']
+      ], [
+        ['judge', 'Judgment for {p}. A moth who prefers you only while you are plugged in is not in love. She is in a trap, and {d} baited it with the neighbour’s bulb.'],
+        ['judge', '{d} returns the bulb tonight, in person, with an apology. {p} has custody. The moth may visit whom she likes on Sundays, as arranged.'],
+        ['npc', 'She is welcome any time. I am very dim.', 'lamp']
+      ]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. She sleeps on its face. That is commitment, and a little glow is merely a gesture. Courtship is full of gestures.'],
+        ['npc', 'It is MY bulb.', 'lamp'],
+        ['judge', 'Noted, Lamp. Sit down.']
+      ], [
+        ['judge', 'Judgment for {d}. In matters of the heart, this court does not interfere with a bulb.'],
+        ['p', 'IT IS STOLEN!'],
+        ['judge', 'So is most of romance.']
+      ]),
+      both: alt([
+        ['judge', 'Nobody owns the moth. {d} lured her with a stolen bulb and {p} fed her its own socks. She will go where the light is. That has been the law since the first candle.'],
+        ['judge', 'The bulb goes back to the Lamp. Shared custody. The moth chooses.'],
+        ['narrator', '(The Lamp is lit again. Madam Moth goes straight to it and does not look back.)']
+      ], [
+        ['judge', 'You are both mistaken about love. {p} confuses a meal with devotion and {d} confuses a bulb with charm.'],
+        ['judge', 'Shared custody. The Lamp has the final say.'],
+        ['npc', 'I am very bright now.', 'lamp']
+      ])
+    },
+    hallway: {
+      p: [
+        'She came back on Sunday and sat on my head. I did not say anything. I let her think it was her idea.',
+        'I told her about the bulb. She said she knew. She said it did not make it any less romantic. I am hurt.',
+        'I am buying a very small torch. She will like it. Nobody else needs to know.'
+      ],
+      d: [
+        'It was a loan. I was going to give it back. Eventually. I had grown fond of it.',
+        'I have been very lonely, Your Honour. A bulb in the mouth is a solution. It is not a good one.',
+        'She told me I was her favourite lamp. It was the nicest thing anyone has said to me, and it was technically an insult.'
+      ]
+    }
+  }]
 };
