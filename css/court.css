@@ -654,9 +654,11 @@ body[data-effects="light"] .sc-hall-prop.mic svg{animation:none}
 .sc-banner{position:absolute;left:27%;top:-1%;width:9.5%;z-index:1;pointer-events:none}
 .sc-banner svg,.sc-bench-dress svg,.sc-bench-plate svg,.sc-candle svg{display:block;width:100%;height:auto;overflow:visible}
 .sc-bench>span:first-child{position:relative;z-index:1}
-.sc-bench-dress{position:absolute;inset:0;z-index:0;overflow:hidden;border-radius:2px 2px 0 0}
+.sc-has-plate .sc-bench>span:first-child{transform:translateY(-16%)}
+.sc-bench .sc-bench-dress{position:absolute;left:0;top:0;width:100%;max-width:none;height:100%;z-index:0;overflow:hidden;border-radius:2px 2px 0 0}
 .sc-bench-dress svg{height:100%;width:100%}
-.sc-bench-plate{position:absolute;left:50%;bottom:6%;width:34%;transform:translateX(-50%);z-index:2}
+.sc-bench-dress svg{border-radius:inherit}
+.sc-bench .sc-bench-plate{position:absolute;left:50%;bottom:6%;width:34%;max-width:none;transform:translateX(-50%);z-index:2}
 .sc-candle{position:absolute;top:28%;width:3.4%;z-index:4;pointer-events:none}
 .sc-candle.l{left:30.5%}
 .sc-candle.r{right:30.5%}
