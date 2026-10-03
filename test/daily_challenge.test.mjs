@@ -51,8 +51,8 @@ test('modifiers really change each game, and no modifier means the original game
   const fast = startGame('stack', seededRandom(1), { speed: 1.3 });
   stackStep(plain, 0.1); stackStep(fast, 0.1);
   assert.ok(fast.mover.x > plain.mover.x);
-  assert.equal(startGame('seance', seededRandom(2), { start: 3 }).seq.length, 3);
-  assert.equal(startGame('seance', seededRandom(2)).seq.length, 1);
+  assert.equal(startGame('seance', seededRandom(2), { start: 5 }).seq.length, 5);
+  assert.equal(startGame('seance', seededRandom(2)).seq.length, 3);
   assert.ok(seanceBeat(startGame('seance', seededRandom(2), { beat: 0.75 })) < seanceBeat(startGame('seance', seededRandom(2))));
   // Slippery floor slows the catcher and a storm spawns sooner.
   const a = startGame('frenzy', seededRandom(3)), b = startGame('frenzy', seededRandom(3), { speed: 0.7 });

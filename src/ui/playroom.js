@@ -1,7 +1,7 @@
 import { ARCADE_GAMES } from '../content/arcade.js';
 import { arcadeState } from '../arcade-state.js';
 import { renderPetSprite } from '../art/sprite.js';
-import { glyph } from '../art/mayhem-glyphs.js';
+import { arcadeGlyph as glyph } from '../art/arcade-art.js';
 import { escapadeView } from '../engine/escapades.js';
 import { courtroomState } from '../court-state.js';
 import { COURT_CASES } from '../content/court.js';

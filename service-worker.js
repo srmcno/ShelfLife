@@ -37,6 +37,7 @@ const SHELL = [
   "./src/content/daily.js",
   "./src/arcade-state.js",
   "./src/ui/arcade.js",
+  "./src/art/arcade-art.js",
   "./src/mastery-state.js",
   "./src/household-echoes.js",
   "./css/room.css",
