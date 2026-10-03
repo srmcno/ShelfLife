@@ -258,6 +258,19 @@ export function welcomeVisitor(state, hostId, choice, now = Date.now()) {
   recordScene(state,"visitor",definition.name+" has come calling",text,[host.id],now,{key:'visitor',guest:definition.id,branch:choice});
   remember(state, 'An unusual souvenir', text, now, 'visitor'); addNote(state, text, definition.name, 'arrival'); return true;
 }
+// A file this household has already closed pays nothing on a replay. The
+// weekly rotation still starts from its usual place (the week number, or the file
+// after the one just closed) and then walks forward to the first file the
+// household has never closed, so a long-running household reaches the newer files
+// before it meets an old one again. When every file has been closed it is the
+// plain rotation.
+const caseClosed = (state, s, c) => !!state.life?.awards?.includes('case:' + c.id) || s.caseTrust.includes(c.id)
+  || s.archive.some(m => m.kind === 'case' && m.title === c.title);
+export function pickCaseKind(state, s, start) {
+  const n = CASES.length, from = ((Math.floor(start) % n) + n) % n;
+  for (let i = 0; i < n; i++) { const c = CASES[(from + i) % n]; if (!caseClosed(state, s, c)) return c.id; }
+  return CASES[from].id;
+}
 export function advanceStories(state, now = Date.now(), rng = Math.random) {
   return withStories(state, () => advanceStoryTransaction(state, now, rng));
 }
@@ -267,7 +280,7 @@ function advanceStoryTransaction(state, now, rng) {
   if (!s.case || s.case.beat === 6 && s.case.week < week) {
     // Mystique attracts case files: the two most mysterious residents are the witnesses.
     const witnesses = [...state.pets].sort((a, b) => (b.stats?.mystique || 0) - (a.stats?.mystique || 0)).slice(0, 2);
-    s.case = { kind: CASES[((week % CASES.length) + CASES.length) % CASES.length].id, week, beat: 0, cast: witnesses.map(p => ({ id: p.id, name: p.name })), careStart: careCount(state), careClue: careCount(state), playStart: playCount(state), choices: [] };
+    s.case = { kind: pickCaseKind(state, s, week), week, beat: 0, cast: witnesses.map(p => ({ id: p.id, name: p.name })), careStart: careCount(state), careClue: careCount(state), playStart: playCount(state), choices: [] };
     addNote(state, caseText(state), 'a new case file', 'scheme');
   }
   if (s.visitor && now >= s.visitor.at + VISIT_LENGTH) {
@@ -364,8 +377,8 @@ export function chooseRequest(state, pet) {
 
 export function startNextCase(state, now=Date.now()) {
  const s=storyState(state); if(!state.pets.length||!s.case||s.case.beat!==6)return false;
- const index=(CASES.findIndex(c=>c.id===s.case.kind)+1)%CASES.length;
+ const kind=pickCaseKind(state,s,CASES.findIndex(c=>c.id===s.case.kind)+1);
  const cast=[...state.pets].sort((a,b)=>(b.stats?.mystique||0)-(a.stats?.mystique||0)).slice(0,2).map(p=>({id:p.id,name:p.name}));
- s.case={kind:CASES[index].id,week:Math.floor(now/WEEK),beat:0,cast,careStart:careCount(state),careClue:careCount(state),playStart:playCount(state),choices:[]};
+ s.case={kind,week:Math.floor(now/WEEK),beat:0,cast,careStart:careCount(state),careClue:careCount(state),playStart:playCount(state),choices:[]};
  addNote(state,caseText(state),'a new case file','scheme');return true;
 }

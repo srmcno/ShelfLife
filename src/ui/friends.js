@@ -7,6 +7,7 @@
 // Everything a friend wrote arrives through the readers in src/cloud/social.js
 // and is printed through esc(). Nothing from the server is ever markup.
 import { formatCode, socialText, guestPet } from '../cloud/social.js';
+import { emptyState, loadingState } from './fx.js';
 import { PLAY_URL } from '../backup.js';
 import { isNative, shareText } from '../native.js';
 import { TRAIT_BY_ID } from '../content/traits.js';
@@ -46,9 +47,11 @@ export function verdictLine(r) {
 }
 // Pays for each verdict once (engine/court.js keeps count) and tells the
 // server it has been seen. Friends and the Court both show them this way.
-export function collectVerdicts(state, social, results, now = Date.now()) {
+export function collectVerdicts(state, social, results, now = Date.now(), persist = save) {
   const out = results.map(r => ({ ...r, souls: summonsReward(state, r.id, 'verdict', now) }));
-  if (out.some(r => r.souls)) save();
+  // A reward over the daily cap is written down as owed, not paid, and the server stops sending the
+  // verdict once it is seen. So whatever was paid or owed is saved first, whether or not it paid today.
+  if (out.length) persist();
   for (const r of results) social.seen(r.id).catch(() => { /* shown again next time, never paid twice */ });
   return out;
 }
@@ -141,7 +144,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       (incoming.length ? '<section aria-labelledby="frRequestsTitle"><h3 id="frRequestsTitle">Requests</h3><ul class="fr-list">' + incoming.map(f => requestRow(f, { confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul></section>' : '') +
       '<section aria-labelledby="frListTitle"><h3 id="frListTitle">Friends' + (list.length ? ' <small>' + list.length + '</small>' : '') + '</h3>' +
       (list.length ? '<ul class="fr-list">' + list.map(f => friendRow(f, { menu: menuFor === f.userId, confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul>'
-        : '<p class="fr-empty">' + (loaded ? 'Nobody yet. Swap codes with someone you know.' : 'Knocking on doors.') + '</p>') + '</section>' +
+        : loaded ? emptyState({ kind: 'friends', compact: true, line: 'Nobody yet. Swap codes with someone you know.', lineClass: 'fr-empty' }) : loadingState('Knocking on doors.')) + '</section>' +
       '<p class="hint fr-small">Your name, residents and drawings are shown to accepted friends only. Daily scores reach everyone else as a percentage, never a name.</p>';
   }
   function shelfMarkup() {
@@ -149,8 +152,8 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     const facts = s ? [RANKS[s.rank]?.title, s.curios + (s.curios === 1 ? ' curio' : ' curios'), v.updatedAt ? 'Updated ' + timeAgo(v.updatedAt) : ''].filter(Boolean).join(' · ') : '';
     title = [friendName(f) + '’s shelf', 'Visiting · look, do not touch'];
     return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to friends</button></div>' +
-      (v.loading ? '<p class="fr-empty">Wiping their doormat.</p>'
-        : !s || !s.residents.length ? '<p class="fr-empty">Nothing on show yet. Their shelf appears here once they open Friends.</p>'
+      (v.loading ? loadingState('Wiping their doormat.')
+        : !s || !s.residents.length ? emptyState({ kind: 'friends', compact: true, line: 'Nothing on show yet. Their shelf appears here once they open Friends.', lineClass: 'fr-empty' })
         : '<p class="fr-facts">' + esc(facts) + '</p><div class="fr-shelf">' + s.residents.map(residentCard).join('') + '</div>');
   }
   function serveMarkup() {
@@ -161,8 +164,10 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       '<div class="fr-serve"><span class="fr-res-art" data-serve-art></span><p>On <b>' + esc(v.resident.name) + '</b>, of ' + esc(friendName(v.friend)) + '’s shelf. They hear it in Shelf Court, and you hear the verdict.</p></div>' +
       '<form class="fr-form" data-fr-form="serve"><label class="fr-label" for="frCase">The case</label><select class="fr-input" id="frCase">' +
       COURT_CASES.map(k => '<option value="' + k.id + '"' + (k.id === caseId ? ' selected' : '') + '>' + esc(k.title) + (k.id === docket.caseId ? ' (today’s docket)' : '') + '</option>').join('') + '</select>' +
-      '<label class="fr-label" for="frPlaintiff">Your plaintiff</label><select class="fr-input" id="frPlaintiff">' +
+      '<label class="fr-label" for="frPlaintiff">Your resident</label><select class="fr-input" id="frPlaintiff">' +
       state.pets.map(p => '<option value="' + esc(p.id) + '"' + (p.id === v.plaintiffId ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '</select>' +
+      '<label class="fr-label" for="frSide">Takes the side of</label><select class="fr-input" id="frSide"><option value="p"' + (v.side === 'd' ? '' : ' selected') + '>The plaintiff (suing ' + esc(v.resident.name) + ')</option>' +
+      '<option value="d"' + (v.side === 'd' ? ' selected' : '') + '>The defendant (being sued by ' + esc(v.resident.name) + ')</option></select>' +
       '<div class="fr-actions"><button class="btn btn-primary" type="submit"' + (state.pets.length ? '' : ' disabled') + '>Serve the papers</button></div></form>';
   }
 
@@ -231,7 +236,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   }
   function papers(resident) {
     view = 'serve';
-    serving = { friend: visiting.friend, resident, caseId: '', plaintiffId: serving?.plaintiffId || state.pets[0]?.id || '' };
+    serving = { friend: visiting.friend, resident, caseId: '', plaintiffId: serving?.plaintiffId || state.pets[0]?.id || '', side: serving?.side || 'p' };
     message = '';
     render('#frCase');
   }
@@ -255,10 +260,10 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       const name = $('frName').value;
       act(async () => { me = await social.setName(name); drafts.frName = undefined; message = me.name ? 'Friends now see you as ' + me.name + '.' : 'Friends now see your code instead of a name.'; social.publish({ force: true }).catch(() => {}); }, '#frName');
     } else if (form === 'serve') {
-      const caseId = $('frCase').value, plaintiff = state.pets.find(p => p.id === $('frPlaintiff').value);
-      serving.caseId = caseId; serving.plaintiffId = plaintiff?.id || '';
+      const caseId = $('frCase').value, plaintiff = state.pets.find(p => p.id === $('frPlaintiff').value), side = $('frSide').value === 'd' ? 'd' : 'p';
+      serving.caseId = caseId; serving.plaintiffId = plaintiff?.id || ''; serving.side = side;
       act(async () => {
-        await social.serve({ to: serving.friend.userId, caseId, plaintiff, defendant: serving.resident });
+        await social.serve({ to: serving.friend.userId, caseId, plaintiff, defendant: serving.resident, side });
         const who = friendName(serving.friend);
         view = 'shelf';
         message = 'Papers served. ' + who + ' will find them in Shelf Court.';

@@ -2,7 +2,7 @@ import { blankState, normalizeState, localDayKey } from '../src/state.js';
 import { generateCreature } from '../src/art/creatures.js';
 
 // Deterministic, synthetic households. No player data belongs in this file.
-export const FIXTURE_NAMES = ['fresh', 'established', 'nearly-full', 'drawing-heavy', 'conflicting', 'sleeping', 'capped', 'legacy'];
+export const FIXTURE_NAMES = ['fresh', 'established', 'nearly-full', 'drawing-heavy', 'conflicting', 'sleeping', 'capped', 'legacy', 'court-veteran', 'veteran'];
 const names = ['Agnes', 'Lord Dampington III', 'Pip', 'Bitey', 'Velvet', 'Mothball', 'Cricket', 'Doreen', 'Gladys', 'Snag', 'Mildred', 'Crumb', 'Wanda', 'Nell', 'Gnasher'];
 const traits = ['spiteful', 'damp', 'theatrical', 'magpie', 'porcelain', 'sugar', 'loadbearing', 'nocturnal'];
 // A valid synthetic raster with deliberately uncompressed pixels exercises the
@@ -57,7 +57,29 @@ export function householdFixture(kind='established', now=Date.now()) {
   // browser checks at night must report that this fixture is naturally awake.
   if(kind==='sleeping') s.pets.forEach(p=>p.traits=['nocturnal']);
   if(kind==='capped') s.pets.forEach(p=>{p.bond=25;p.needs={food:100,fuss:100,clean:100};p.bonusTrust={day:localDayKey(now),n:3};p.playedAt={memory:now,chase:now,alibi:now,court:now};});
+  // A long-time player: past Unspeakable, a partly filled cabinet, a chapter under way, a freeze in hand, a set claimed,
+  // a frame bought and a title worn. Exercises every piece of the retention state through normalizeState.
+  if(kind==='veteran') {
+    const day=localDayKey(now);
+    s.mayhem={souls:2600,lifetime:12000,resolved:140,coffins:60,rank:12,
+      curios:Object.fromEntries(['tooth-not-yours','damp-receipt','warm-glove','mourning-brooch','half-candle','condolence-card','button-eye','suspicious-mushroom','moth-wing','seance-spoon','name-tag','coffin-nail','death-photo','tiny-coffin','al1-treat-bag','al1-cobweb','ts-pumpkin','ts-sheet'].map(id=>[id,1])),
+      omen:{day,id:'wet-hand',streak:9,lastDay:day,grace:1},nextAt:now+600000};
+    s.almanac={init:1,seen:{care:60,resolved:140,coffins:60,outings:2,episodes:6,arcade:30,dplays:0,curios:18},day,xp:20,by:{care:6,emergency:9,omen:5},flags:{omen:1},
+      chapters:{'thin-2026':{xp:400,claimed:31,badge:0,spot:1}},week:{no:0,counts:{emergency:5},done:[],claimed:[],chest:0},settled:null,stats:{tiers:5,badges:0,weekly:2,chests:1,bought:0}};
+    s.streaks={freezes:1,earned:2,used:1,notices:[{kind:'omen',type:'earned',day,seen:0}]};
+    s.returns={seenAt:now,claimedDay:day,claimed:3,serial:3,pending:null};
+    s.legacy={spent:0};
+    s.collections={claimed:['paper']};
+    s.exchange={frames:['tin','seance-felt'],frame:'tin',portraits:['cameo'],portrait:{qa0:'cameo'},commissions:['portrait'],titles:['ch:thin-2026','set:paper','cm:portrait'],title:'set:paper'};
+    s.decor.owned=['room:pumpkin-hollow','wood:burnt-pumpkin','wall:scallop'];
+    s.settings.nudgeCats={emergency:true,away:false,almanac:true,chest:true};
+  }
   if(kind==='drawing-heavy') { raster ||= drawing(); s.pets.forEach(p=>p.art={body:raster,stamps:Array.from({length:18},(_,i)=>({kind:i%2?'eyes':'legs',x:220+(i%6)*30,y:210+Math.floor(i/6)*65,size:24,rotation:i*3,color:'#271927'})),bounds:{x:.1,y:.1,width:.8,height:.85}}); }
+  // A regular at Shelf Court: versions seen, a recent list, who last sat where, a rank and owed rewards.
+  if(kind==='court-veteran') s.courtroom={episodes:30,justice:21,best:{'borrowed-coffin':3,'snoring-wall':2,'stolen-slot':1},last:'stolen-slot',docketDay:'',docketStreak:2,docketLastDay:localDayKey(now-86400000),
+    versions:{'borrowed-coffin':{base:3,'a-second-telling':2},'snoring-wall':{base:2}},recent:['borrowed-coffin','snoring-wall','stolen-slot'],seats:{qa0:30,qa1:29,qa2:12},
+    stars:52,rank:4,flawless:1,flawlessBest:3,summonsDay:localDayKey(now),summonsHeard:3,summonsVerdicts:0,summonsPaid:[],
+    summonsOwed:[{id:'00000000-0000-4000-8000-000000000001',kind:'heard'}]};
   if(kind==='legacy') { s.v=3; delete s.life; s.pets.forEach(p=>{p.img=drawing();delete p.art;delete p.names;delete p.slotHist;}); return s; }
   return normalizeState(s);
 }

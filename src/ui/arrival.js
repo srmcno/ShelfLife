@@ -22,7 +22,13 @@ export function createArrivalInvitation() {
     const line = document.createElement('span'); line.className = 'arrival-line'; line.textContent = arrival.line;
     const action = document.createElement('span'); action.className = 'arrival-action'; action.textContent = 'Meet ' + arrival.name;
     button.append(portrait, name, line, action);
-    button.addEventListener('click', () => window.dispatchEvent(new CustomEvent('shelflife:create', { detail: { arrival: arrival.id } })));
+    button.addEventListener('click', () => {
+      // A small flourish for the one you picked, then on to the creator.
+      window.shelfFx?.burst?.(portrait, 'sparkles');
+      window.shelfFx?.haptic?.('tap');
+      window.dispatchEvent(new CustomEvent('shelflife:react', { detail: { id: 'arrival-' + arrival.id, kind: 'happy', burst: false } }));
+      window.dispatchEvent(new CustomEvent('shelflife:create', { detail: { arrival: arrival.id } }));
+    });
     cast.append(button);
   }
   const footer = document.createElement('div'); footer.className = 'arrival-footer';

@@ -11,6 +11,8 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<!-- First frame: dark before any stylesheet arrives, so nothing flashes white. -->
+<style>html,body{background:#0B0812;color-scheme:dark}</style>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/life.css">
@@ -35,6 +37,8 @@
 <link rel="stylesheet" href="css/atmosphere.css">
 <link rel="stylesheet" href="css/cloud.css">
 <link rel="stylesheet" href="css/social.css">
+<link rel="stylesheet" href="css/almanac.css">
+<link rel="stylesheet" href="css/fx.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
@@ -209,6 +213,9 @@
   <section class="tray-section" aria-labelledby="trayActivities"><h3 id="trayActivities">Play &amp; household</h3><div class="tray-grid">
     <button class="btn tray-item" data-proxy="playroomBtn"><span>Playroom</span><small>Every game, one doorway</small></button>
     <button class="btn tray-item" id="helpBtn"><span>How to play</span><small>A short field guide</small></button>
+    <button class="btn tray-item" id="almanacBtn"><span>Almanac</span><small>This month’s chapter and its prizes</small></button>
+    <button class="btn tray-item" id="collectionsBtn"><span>Collections</span><small>Sets, frames and titles</small></button>
+    <button class="btn tray-item" id="exchangeBtn"><span>Collector’s Exchange</span><small>What souls buy once the cabinet is full</small></button>
     <button class="btn tray-item" id="decorBtn"><span>Decorate</span><small>Room, shelf, furniture</small></button>
     <button class="btn tray-item" id="incidentsBtn"><span>Incidents</span><small>What has happened so far</small></button>
     <button class="btn tray-item" id="museumBtn"><span>Memory museum</span><small>Cases, visitors, names and postcards</small></button>
@@ -217,10 +224,11 @@
   <section class="tray-section" aria-labelledby="trayPreferences"><h3 id="trayPreferences">Sound &amp; motion</h3><div class="tray-grid">
     <label class="effects-setting" for="effectsMode"><span>Animation & performance</span><select id="effectsMode"><option value="auto">Automatic</option><option value="light">Light effects</option><option value="full">Full effects</option></select><small id="effectsHint"></small></label>
     <button class="btn tray-item" id="muteBtn" aria-pressed="false"><span>Sound</span><small>Small noises</small></button>
+    <button class="btn tray-item" id="hapticsBtn" aria-pressed="true" hidden><span>Haptics</span><small>Small buzzes in the arcade</small></button>
     <button class="btn tray-item" id="narratorBtn" aria-pressed="false"><span>Narrator</span><small>Reads the notes aloud</small></button>
     <button class="btn tray-item" id="voiceBtn" title="Choose who reads the notes out loud."><span>Voice</span><small>Who does the reading</small></button>
     <button class="btn tray-item" id="nudgeBtn" aria-pressed="false" hidden><span>Nudges</span><small>A buzz when something goes wrong</small></button>
-  </div></section>
+  </div><div class="tray-grid nudge-cats" id="nudgeCats" hidden></div></section>
   <section class="tray-section" aria-labelledby="traySaves"><h3 id="traySaves">Your save</h3><p class="tray-explainer">Saved on this device. A backup keeps your household safe.</p><div class="tray-grid">
     <button class="btn tray-item" id="cloudBtn" aria-haspopup="dialog" hidden><span>Cloud save</span><small id="cloudBtnSub">Off</small></button>
     <button class="btn tray-item" id="exportBtn"><span>Back up</span><small>Download this shelf</small></button>
@@ -366,6 +374,7 @@
     <div class="decor-section"><h3>Wall</h3><div class="opt-row" id="wallOpts"></div></div>
     <div class="decor-section"><h3>Shelf</h3><div class="opt-row" id="woodOpts"></div></div>
     <div class="decor-section"><h3>Accent</h3><div class="opt-row" id="accentOpts"></div></div>
+    <div class="decor-section decor-shop"><p class="hint">More rooms, woods, walls and accents are sold by the Collector’s Exchange. Almanac room sets are prizes on each chapter’s track.</p><button class="btn btn-sm" type="button" data-ex-open="decor" id="decorShop">Visit the Exchange</button></div>
     <div class="decor-section"><h3>Things for the shelf</h3><p class="hint decor-hint">Tap to place furniture near a resident. On the shelf, tap it again to invite them over: tubs are for getting into, lamps are for arguing over. Drag to rearrange, or use the position control on its card.</p><div class="prop-tray" id="propTray"></div></div>
   </div>
 </div>
@@ -517,6 +526,8 @@
 <div class="veil" id="arcadeVeil"><div class="sheet sheet-arcade" id="arcadeSheet"></div></div>
 <div class="veil" id="courtVeil"><div class="sheet sheet-court" id="courtSheet"></div></div>
 <div class="veil" id="mayhemVeil"><div class="sheet mh-sheet" id="mayhemSheet"></div></div>
+<div class="veil" id="almanacVeil"><div class="sheet sheet-almanac" id="almanacSheet"></div></div>
+<div class="veil" id="exchangeVeil"><div class="sheet sheet-exchange" id="exchangeSheet"></div></div>
 <div class="mh-rankup" id="mayhemRankUp" role="status" aria-live="polite" hidden></div>
 <div class="veil" id="incidentsVeil"><div class="sheet" id="incidentsSheet"></div></div>
 <div class="veil" id="lifeVeil"><div class="sheet sheet-life"><div class="sheet-head"><h2 id="lifeTitle">Your small world</h2><button class="btn btn-ghost" id="lifeClose">Close</button></div><div id="lifeContent"></div></div></div>

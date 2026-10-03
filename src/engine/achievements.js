@@ -3,11 +3,15 @@ import { ARCADE_GAMES } from '../content/arcade.js';
 import { COURT_CASES } from '../content/court.js';
 import { SEASONS } from '../content/seasons.js';
 import { remember } from './stories.js';
+import { COURT_ACHIEVEMENTS, COURT_INCIDENT_PROGRESS, COURT_INCIDENT_GROUP } from './court-achievements.js';
 import { FEUDS, FEUD_LINES, ESCALATION_LINES, TRUCE_LINES } from '../content/feuds.js';
 import { GRUDGE_LINES, STREAK_LINES } from '../content/copy.js';
 import { neighborPets, neighborSlots } from './tick.js';
 import { totalBond } from './unlocks.js';
 import { pick, addNote, clamp, petById, GRUDGE_LOG_MAX } from '../state.js';
+import { CURIOS } from '../content/mayhem.js';
+import { completedSetCount } from './collections.js';
+import { legacyLevel } from './legacy.js';
 
 // A resident files at most one grievance an hour, however many times the
 // player checks the shelf in that hour. Explicit slights (refusing a request,
@@ -86,6 +90,8 @@ export function stepFeudArc(state, pairKey, a, b, now = Date.now()) {
 
 // The arcade keeps one best score per game. Legacy players keep whatever they
 // already earned from the retired games; these checks only look forward.
+// The long game: the cabinet, collections, ranks, the Almanac. All read from state the game already keeps.
+const cabinetCount = state => CURIOS.filter(c => state.mayhem?.curios?.[c.id]).length;
 const arcadeRuns = state => Object.values(state.arcade?.plays || {}).reduce((n, v) => n + (Number(v) || 0), 0);
 const topTier = state => ARCADE_GAMES.some(g => (state.arcade?.best?.[g.id] || 0) >= g.tiers[g.tiers.length - 1]);
 
@@ -185,6 +191,7 @@ export const ACHIEVEMENTS = [
   { id: 'court-win', hint: 'Rule correctly in a Shelf Court episode.', label: 'Justice, Allegedly', desc: 'Got a Shelf Court verdict right.', toastLine: 'Justice was served. It was a little undercooked, but it was served.', check: state => (state.courtroom?.justice || 0) >= 1 },
   { id: 'court-all', hint: 'Air every episode of Shelf Court.', label: 'Syndicated', desc: 'Every Shelf Court case has aired.', toastLine: 'Every episode aired. The reruns will outlive everyone. Well. Most people here are already dead.', check: state => Object.keys(state.courtroom?.best || {}).length >= COURT_CASES.length },
   { id: 'court-flawless', hint: 'Earn three stars on a Shelf Court episode.', label: 'Must-See TV', desc: 'Right verdict, huge ratings, a jury that agreed.', toastLine: 'Three stars. The ghosts are talking about it in the afterlife, which is mostly where they talk.', check: state => Object.values(state.courtroom?.best || {}).some(stars => stars >= 3) },
+  ...COURT_ACHIEVEMENTS,
   { id: 'promise-kept', hint: 'Accept a resident’s request and actually do it.', label: 'Good For It', desc: 'Kept a promise to a resident.', toastLine: 'You said you would and then you did. They are recalibrating.', check: state => state.pets.some(p => (p.fulfilledRequests || 0) >= 1) },
   { id: 'promise-broken', hint: 'Refuse a resident to its face.', label: 'On The Record', desc: 'Declined a resident’s request.', toastLine: 'Declined. Filed. It was very understanding, which is worse.', check: state => state.pets.some(p => (p.refusedRequests || 0) >= 1) },
   { id: 'promises-five', hint: 'Keep five promises across the shelf.', label: 'Dependable, Apparently', desc: 'Five requests fulfilled.', toastLine: 'Five kept promises. Somebody has started a different kind of list.', check: state => state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0) >= 5 },
@@ -195,7 +202,25 @@ export const ACHIEVEMENTS = [
   { id: 'challenge-3', hint: 'Finish the daily arcade challenge three days running.', label: 'Habit Forming', desc: 'Three challenge days in a row.', toastLine: 'Three challenges in a row. The arcade has put your name on the good coffin.', check: state => (state.arcade?.dailyStreak || 0) >= 3 },
   { id: 'challenge-7', hint: 'Finish the daily arcade challenge seven days running.', label: 'Daily Bread', desc: 'Seven challenge days in a row.', toastLine: 'Seven in a row. The dead have started setting your place before you arrive.', check: state => (state.arcade?.dailyStreak || 0) >= 7 },
   { id: 'season-set', hint: 'Collect every curio from one season.', label: 'Thin Enough To Walk Through', desc: 'Completed a seasonal set.', toastLine: 'The whole set. The wall between here and everywhere else has, technically, gone.', check: state => SEASONS.some(s => s.curios.every(c => state.mayhem?.curios?.[c.id])) },
-  { id: 'full-house', hint: 'Eighteen residents and no furniture. Somehow.', label: 'Standing Room Only', desc: 'Eighteen residents at once.', toastLine: 'Eighteen. Every slot is a resident and none of them can leave.', check: state => state.pets.length >= 18 }
+  { id: 'full-house', hint: 'Eighteen residents and no furniture. Somehow.', label: 'Standing Room Only', desc: 'Eighteen residents at once.', toastLine: 'Eighteen. Every slot is a resident and none of them can leave.', check: state => state.pets.length >= 18 },
+
+  /* The long game. The record used to stop being interesting once the cabinet
+     filled and the ranks ran out, which is exactly when a player needs a reason
+     to stay. These follow the cabinet, the collections, the ranks, the omen and
+     the Almanac for as long as there is a calendar. */
+  { id: 'cabinet-10', hint: 'Ten different curios in the cabinet.', label: 'Starting a Hoard', desc: 'Ten curios in the cabinet.', toastLine: 'Ten. That is a collection now, and it has begun to leak.', check: state => cabinetCount(state) >= 10 },
+  { id: 'cabinet-full', hint: 'Every curio, from Common to Unholy.', label: 'Nothing Left to Find', desc: 'Every curio in the cabinet.', toastLine: 'All of them. The drawer has gone very quiet and is feeling a little redundant.', check: state => cabinetCount(state) >= CURIOS.length },
+  { id: 'set-first', hint: 'Complete a collection set.', label: 'A Matching Pair, At Least', desc: 'Completed a collection.', toastLine: 'A full set. The pieces look at one another as though they had always known.', check: state => completedSetCount(state) >= 1 },
+  { id: 'set-five', hint: 'Complete five collection sets.', label: 'Collector of Collections', desc: 'Five collections complete.', toastLine: 'Five sets. Someone has to dust all this, and it is not going to be the sets.', check: state => completedSetCount(state) >= 5 },
+  { id: 'rank-legend', hint: 'Reach the rank of Local Legend.', label: 'Local Legend, In Writing', desc: 'Became a Local Legend.', toastLine: 'Children dare one another to touch your gate. The gate has asked not to be touched.', check: state => (state.mayhem?.rank || 0) >= 6 },
+  { id: 'legacy-one', hint: 'Go past Unspeakable and reach Legacy I.', label: 'Past Unspeakable', desc: 'Reached Legacy I.', toastLine: 'There was a ceiling. It has been put through, and the people upstairs are looking down.', check: state => legacyLevel(state) >= 1 },
+  { id: 'coffins-50', hint: 'Open fifty coffins.', label: 'Regular at the Undertaker’s', desc: 'Opened fifty coffins.', toastLine: 'Fifty coffins. He knows your name now, and has put it on the sale sign.', check: state => (state.mayhem?.coffins || 0) >= 50 },
+  { id: 'omen-14', hint: 'Turn over the omen fourteen nights running.', label: 'Faithful to the Candle', desc: 'Fourteen nights of omens in a row.', toastLine: 'Fourteen nights. The candle has started leaving a light on for you, which is the same candle.', check: state => (state.mayhem?.omen?.streak || 0) >= 14 },
+  { id: 'tiers-10', hint: 'Claim ten rewards from the Almanac.', label: 'Reading the Almanac', desc: 'Ten Almanac rewards claimed.', toastLine: 'Ten rewards. The Almanac has noticed and is trying to look unimpressed.', check: state => (state.almanac?.stats?.tiers || 0) >= 10 },
+  { id: 'badge-first', hint: 'Finish a chapter of the Almanac and claim its badge.', label: 'Chapter Closed', desc: 'Finished an Almanac chapter.', toastLine: 'A whole chapter, seen through. The badge is on the wall and the wall looks pleased.', check: state => (state.almanac?.stats?.badges || 0) >= 1 },
+  { id: 'weekly-first', hint: 'Open a weekly chest.', label: 'Weekly Habit', desc: 'Opened a weekly chest.', toastLine: 'The chest is open. Inside was a week of your own behaviour, in cash.', check: state => (state.almanac?.stats?.chests || 0) >= 1 },
+  { id: 'weekly-five', hint: 'Open five weekly chests.', label: 'Five Weeks, Five Chests', desc: 'Opened five weekly chests.', toastLine: 'Five chests. You have started to be known at the chest counter.', check: state => (state.almanac?.stats?.chests || 0) >= 5 },
+  { id: 'freeze-saved', hint: 'Let a streak freeze cover a missed day.', label: 'Saved by the Bell', desc: 'A streak freeze covered a missed day.', toastLine: 'You missed a day and the streak was held for you. The streak sends its regards.', check: state => (state.streaks?.used || 0) >= 1 }
 ];
 
 /* ================= HOW AN INCIDENT PLAYS OUT =================
@@ -219,10 +244,13 @@ export const INCIDENT_GROUPS = [
     ids: ['first-grudge', 'first-reckoning', 'terminal-grudge', 'first-feud', 'first-truce'] },
   { id: 'games', title: 'Playing along',
     ids: ['court-win', 'court-flawless', 'court-all', 'first-handshake', 'handshake-veteran', 'chase-win', 'chase-perfect'] },
+  COURT_INCIDENT_GROUP,
   { id: 'word', title: 'Your word',
     ids: ['promise-kept', 'promises-five', 'promise-broken'] },
   { id: 'record', title: 'The long record',
-    ids: ['first-case', 'three-cases', 'first-visitor', 'all-visitors', 'archivist', 'dreamt-of'] }
+    ids: ['first-case', 'three-cases', 'first-visitor', 'all-visitors', 'archivist', 'dreamt-of'] },
+  { id: 'long', title: 'The long game',
+    ids: ['cabinet-10', 'cabinet-full', 'set-first', 'set-five', 'rank-legend', 'legacy-one', 'coffins-50', 'omen-14', 'tiers-10', 'badge-first', 'weekly-first', 'weekly-five', 'freeze-saved'] }
 ];
 
 export function groupOf(id) {
@@ -247,9 +275,17 @@ export const INCIDENT_PROGRESS = {
   'handshake-veteran': state => ({ have: arcadeRuns(state), need: 50 }),
   'chase-win': state => ({ have: state.arcade?.best?.frenzy || 0, need: 40 }),
   'court-all': state => ({ have: Object.keys(state.courtroom?.best || {}).length, need: COURT_CASES.length }),
+  ...COURT_INCIDENT_PROGRESS,
   'promises-five': state => ({ have: state.pets.reduce((n, p) => n + (p.fulfilledRequests || 0), 0), need: 5 }),
   'three-cases': state => ({ have: closedCases(state), need: 3 }),
-  'all-visitors': state => ({ have: (((state.stories || {}).collection) || []).length, need: VISITORS.length })
+  'all-visitors': state => ({ have: (((state.stories || {}).collection) || []).length, need: VISITORS.length }),
+  'cabinet-10': state => ({ have: cabinetCount(state), need: 10 }),
+  'cabinet-full': state => ({ have: cabinetCount(state), need: CURIOS.length }),
+  'set-five': state => ({ have: completedSetCount(state), need: 5 }),
+  'coffins-50': state => ({ have: state.mayhem?.coffins || 0, need: 50 }),
+  'omen-14': state => ({ have: state.mayhem?.omen?.streak || 0, need: 14 }),
+  'tiers-10': state => ({ have: state.almanac?.stats?.tiers || 0, need: 10 }),
+  'weekly-five': state => ({ have: state.almanac?.stats?.chests || 0, need: 5 })
 };
 
 export function incidentProgress(state, id) {

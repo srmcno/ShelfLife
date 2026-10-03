@@ -30,3 +30,51 @@ export const ACCENTS = {
   violet: { name: 'Violet', c: '#B183F0' },
   acid: { name: 'Acid', c: '#B8E634' }
 };
+
+/* ================= WHAT IS FREE AND WHAT IS NOT =================
+   Everything above this line has always been free, and every household keeps
+   it: FREE_DECOR is the list a save falls back to when it has never recorded
+   what it owns. What follows is new, and is earned or bought: Almanac room sets
+   come from the track (or Back Issues), the rest are sold by the Collector’s
+   Exchange (content/collections.js). */
+import { CHAPTERS } from './almanac.js';
+import { EXCHANGE_DECOR } from './collections.js';
+
+export const FREE_DECOR = { room: Object.keys(ROOMS), wall: Object.keys(WALLS), wood: Object.keys(WOODS), accent: Object.keys(ACCENTS) };
+export const DECOR_KINDS = ['room', 'wall', 'wood', 'accent'];
+export const DECOR_CATALOG = { room: ROOMS, wall: WALLS, wood: WOODS, accent: ACCENTS };
+
+const channels = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mix = (x, y, t) => '#' + channels(x).map((v, i) => Math.round(v + (channels(y)[i] - v) * t).toString(16).padStart(2, '0')).join('');
+// A dark room from three colours, in the same shape as the hand-made ones above.
+export function makeRoom({ name, a, b, key }) {
+  return { name, swatch: a, vars: {
+    '--room-a': a, '--room-b': b, '--panel-a': mix(a, b, 0.28), '--panel-b': mix(a, b, 0.52),
+    '--line': mix(a, '#ffffff', 0.17), '--rule': mix(a, '#ffffff', 0.09), '--surface': mix(a, b, 0.5),
+    '--surface-hi': mix(a, '#ffffff', 0.1), '--field': mix(b, a, 0.3), '--bone': '#F2E9DC', '--bone-dim': '#C9BCAE',
+    '--wall-ink': 'rgba(242,233,220,.14)', '--room-key': key } };
+}
+
+// New wallpapers. The patterns themselves live in css/almanac.css as body.wall-<id>.
+const NEW_WALLS = {
+  scallop: 'Scallops', waves: 'Waves', stars: 'Stars', plaid: 'Plaid', quilt: 'Quilting', rain: 'Rain', argyle: 'Argyle',
+  chevron: 'Chevrons', brick: 'Brick', ticking: 'Ticking', morse: 'Morse', tally: 'Tally Marks', lattice: 'Lattice, Locked', ripple: 'Seepage'
+};
+Object.assign(WALLS, NEW_WALLS);
+
+// 'room:pumpkin-hollow' -> where it comes from. Exchange items carry a price.
+export const NEW_DECOR = {};
+const add = (kind, id, info) => { NEW_DECOR[kind + ':' + id] = { kind, id, ...info }; };
+for (const chapter of CHAPTERS) {
+  const { room, wood, wall } = chapter.decor;
+  ROOMS[room.id] = makeRoom(room);
+  WOODS[wood.id] = { name: wood.name, wood: wood.wood, lip: wood.lip };
+  add('room', room.id, { name: room.name, source: 'chapter', chapter: chapter.id });
+  add('wood', wood.id, { name: wood.name, source: 'chapter', chapter: chapter.id });
+  if (!FREE_DECOR.wall.includes(wall)) add('wall', wall, { name: WALLS[wall], source: 'chapter', chapter: chapter.id });
+}
+for (const item of EXCHANGE_DECOR.room) { ROOMS[item.id] = makeRoom(item); add('room', item.id, { name: item.name, source: 'exchange', cost: item.cost || 0, tokens: item.tokens || 0, line: item.line }); }
+for (const item of EXCHANGE_DECOR.wood) { WOODS[item.id] = { name: item.name, wood: item.wood, lip: item.lip }; add('wood', item.id, { name: item.name, source: 'exchange', cost: item.cost || 0, tokens: item.tokens || 0, line: item.line }); }
+for (const item of EXCHANGE_DECOR.wall) { WALLS[item.id] = item.name; add('wall', item.id, { name: item.name, source: 'exchange', cost: item.cost || 0, tokens: item.tokens || 0, line: item.line }); }
+for (const item of EXCHANGE_DECOR.accent) { ACCENTS[item.id] = { name: item.name, c: item.c }; add('accent', item.id, { name: item.name, source: 'exchange', cost: item.cost || 0, tokens: item.tokens || 0, line: item.line }); }
+for (const id of Object.keys(NEW_WALLS)) if (!NEW_DECOR['wall:' + id]) throw new Error('wall ' + id + ' has no source');

@@ -16,6 +16,27 @@ import { resolveMotion, PART_ORIGIN, limbPhase } from './anatomy.js';
 // than a row: two neighbours whispering, one shoving another, a pet poking the
 // furniture, somebody glaring across a feud line, a sleeper being woken.
 //
+// Reactions (the API other modules call)
+//   emote(petId, kind, opts?)   Make one resident visibly react to an event.
+//     kind: 'happy' | 'startled' | 'proud' | 'grossed' | 'sad' | 'smug'
+//     opts: { bubble: 'a line to mutter', burst: false to skip the particles }
+//   emoteShelf(petIds, kind)    The same, staggered left to right.
+//   From a module that cannot import this one:
+//     window.dispatchEvent(new CustomEvent('shelflife:react', { detail: { id, kind } }))
+//   Each kind is a clip already in css/style.css or css/animation.css plus a
+//   gaze, a held pose class (so the arms and eyes join in), a small burst from
+//   css/fx.css and, usually, a muttered line. Nothing happens for a resident
+//   who is off screen, asleep (except 'startled'), or when motion is reduced.
+//
+// Life on the shelf (all of it driven by the one shared timer)
+//   * blinks vary: normal, double, slow and heavy-lidded; an Unblinking
+//     resident hardly blinks at all;
+//   * pupils follow your last touch (one rect read per touch, never per frame),
+//     and otherwise drift toward the actual neighbour rather than a random side;
+//   * each trait has its own favourite fidgets (TRAIT_FIDGETS);
+//   * after dark an awake resident gets drowsy (.sl-drowsy): slower breathing,
+//     heavy lids, a slump, yawns. Night owls are the exception.
+//
 // Design notes:
 //   * ONE shared timer for the whole shelf (18 pets max), not one rAF loop per
 //     pet. Each pass is a single querySelectorAll over <20 nodes plus a little
@@ -108,6 +129,66 @@ const ACTS = [
   { id: 'snore',    name: 'sl2-snore',    ms: 2300, ease: 'ease-in-out',
     w: { content: 0, fine: 0, annoyed: 0, furious: 0, asleep: 4 } }
 ];
+
+// Acts added for the shelf's inner life. They reuse clips that already exist.
+// `drowsy` acts are only offered after dark to a resident who is awake; the
+// others are ordinary fidgets that traits lean toward (TRAIT_FIDGETS).
+ACTS.push(
+  { id: 'yawn',       name: 'sl2-stretch', ms: 1600, ease: 'cubic-bezier(.45,0,.3,1)', gaze: 'up', body: 'sl-yawning',
+    drowsy: true, w: { content: 0, fine: 0, annoyed: 0, furious: 0, asleep: 0 } },
+  { id: 'nod',        name: 'sl2-sigh',    ms: 1900, ease: 'cubic-bezier(.4,0,.5,1)', gaze: 'down', body: 'sl-nodding',
+    drowsy: true, w: { content: 0, fine: 0, annoyed: 0, furious: 0, asleep: 0 } },
+  { id: 'doubletake', name: 'sl2-startle', ms: 900,  ease: 'cubic-bezier(.3,1.2,.5,1)', gaze: 'you', squint: false,
+    w: { content: 0, fine: 0, annoyed: 0, furious: 0, asleep: 0 } },
+  { id: 'preen',      name: 'sl2-wiggle',  ms: 950,  ease: 'cubic-bezier(.35,.85,.4,1)', gaze: 'down',
+    w: { content: 0, fine: 0, annoyed: 0, furious: 0, asleep: 0 } }
+);
+export const ACT_IDS = ACTS.map(a => a.id);
+// Bonus weight, by trait id, for a resident's favourite fidgets. Only traits
+// whose temperament shows are listed; the rest behave as their mood dictates.
+export const TRAIT_FIDGETS = {
+  theatrical: { perk: 3, sway: 2, sigh: 2, wave: 2, preen: 2 },
+  terminal:   { sigh: 4, wobble: 3, stir: 0 },
+  narcissist: { preen: 5, perk: 2, sway: 2 },
+  influencer: { preen: 4, perk: 3, hop: 2 },
+  spiteful:   { stare: 3, leanin: 2, thump: 2 },
+  paranoid:   { doubletake: 5, look: 4, shiver: 2, skitter: 1 },
+  cryptid:    { stare: 3, sneak: 2, doubletake: 2 },
+  unblinking: { stare: 8 },
+  damp:       { shiver: 3, sigh: 1 },
+  clean:      { preen: 4, wobble: 1 },
+  magpie:     { snatch: 4, look: 2 },
+  hoarder:    { snatch: 3, look: 2 },
+  sugar:      { hop: 4, skitter: 2, wobble: 1 },
+  feral:      { skitter: 3, stomp: 2, thump: 2 },
+  haunted:    { look: 2, shiver: 2, stare: 2, doubletake: 3 },
+  cult:       { sway: 3, stare: 1 },
+  doom:       { sigh: 4, stare: 2 },
+  doomscroll: { sigh: 4, stare: 3 },
+  clingy:     { sway: 3, look: 2 },
+  gossip:     { look: 3, doubletake: 2, wave: 1 },
+  ancient:    { stretch: 3, sigh: 2 },
+  napoleon:   { stomp: 3, thump: 2, preen: 1 },
+  martyr:     { sigh: 4, wobble: 1 },
+  landlord:   { stomp: 2, stare: 2, thump: 1 },
+  witness:    { look: 3, doubletake: 2 },
+  critic:     { stare: 2, sigh: 2, leanaway: 2 }
+};
+const fidgetCache = new Map();
+export function fidgetBias(traitString) {
+  if (!traitString) return null;
+  let bias = fidgetCache.get(traitString);
+  if (bias === undefined) {
+    bias = {};
+    for (const id of traitString.split(' ')) {
+      const table = TRAIT_FIDGETS[id];
+      if (table) for (const act in table) bias[act] = (bias[act] || 0) + table[act];
+    }
+    bias = Object.keys(bias).length ? bias : null;
+    fidgetCache.set(traitString, bias);
+  }
+  return bias;
+}
 
 // Two-pet scenes. `a` is the initiator's clip, `b` the neighbour's, played
 // `delay` ms later. `bDir` says which way the neighbour's clip should point:
@@ -287,6 +368,33 @@ function holdClass(el, cls, ms) {
 function blink(el, deep) {
   holdClass(el, 'sl-blink', 165);
   if (deep) holdClass(el, 'sl-blink-deep', 240);
+}
+
+// Blinks are not all the same blink. Mostly a quick one; sometimes a double,
+// sometimes a slow one (a content resident aimed at you is the nearest thing a
+// creature has to a smile), and a drowsy resident's lids are heavy and late.
+// Returns how long to wait before the next blink is due, as a multiplier.
+function blinkLike(el, mood) {
+  const traits = el.closest('.piece')?.dataset.traits || '';
+  if (traits.indexOf('unblinking') !== -1) {
+    // Has not blinked since arriving. Once in a long while, it does it on purpose.
+    if (chance(0.05)) { holdClass(el, 'sl-blink-deep', 480); holdClass(el, 'sl-blink', 480); }
+    return 5;
+  }
+  const drowsy = el.classList.contains('sl-drowsy');
+  const r = Math.random();
+  if (drowsy && r < 0.5) { holdClass(el, 'sl-blink', 340); holdClass(el, 'sl-blink-deep', 340); return 0.8; }
+  if (r < 0.12) {
+    blink(el, false);
+    afterMotion(() => { if (visibleSprite(el)) blink(el, false); }, 230);
+    return 1;
+  }
+  if (r < 0.2 && (mood === 'content' || mood === 'fine')) {
+    holdClass(el, 'sl-blink', 320); holdClass(el, 'sl-blink-deep', 320); gaze(el, 0, 0.3, 700);
+    return 1.3;
+  }
+  blink(el, r > 0.86);
+  return 1;
 }
 
 // Pupils. x is -1 (left) .. 1 (right), y is -1 (up) .. 1 (down). Only
@@ -558,13 +666,20 @@ function travel(el, dx, dy) {
 
 function chooseAct(el, mood) {
   const feuding = isFeuding(el);
+  const drowsy = el.classList.contains('sl-drowsy');
+  const bias = mood === 'asleep' ? null : fidgetBias(el.closest('.piece')?.dataset.traits);
   let total = 0;
   const pool = [];
   for (let i = 0; i < ACTS.length; i++) {
     const a = ACTS[i];
     if (a.feud && !feuding) continue;
+    if (a.drowsy && !drowsy) continue;
     if (a.req && !el.classList.contains('sl-can-' + a.req)) continue;
     let w = a.w[mood] || 0;
+    if (a.drowsy) w = mood === 'furious' ? 0 : 6;
+    if (bias && bias[a.id]) w += bias[a.id];
+    // Past bedtime the lively ones lose their nerve and the sighs gain weight.
+    if (drowsy && !a.drowsy) w = ['hop', 'skitter', 'stomp', 'flutter', 'saunter', 'snatch', 'wave'].includes(a.id) ? w * 0.3 : a.id === 'sigh' ? w + 2 : w;
     if (mood === 'asleep' && !w) continue;
     if (mood !== 'asleep' && el.classList.contains('sl-plotting') && ['sneak', 'snatch', 'look'].includes(a.id)) w += 9;
     if (a.t) {
@@ -746,9 +861,19 @@ function innerFragment(el) {
   return bits.length ? pickFresh(bits).toLowerCase() : null;
 }
 
+// Past bedtime, awake. Same register as content/bubbles.js: first person,
+// lowercase, a clause, and not quite owning up to it.
+const DROWSY_BUBBLES = [
+  'i am awake. i am also horizontal in spirit.', 'five more minutes. of the whole night.',
+  'i was not asleep. i was resting my opinions.', 'the dark is very persuasive tonight.',
+  'ask me again in the morning. i will say no more slowly.', 'i am simply closing my eyes for emphasis.',
+  'who turned the evening down.', 'tomorrow\u2019s problems can queue.', 'my bed is a rumour.', 'nobody blink. i need a witness.'
+];
+
 // A thought is always first person and always short: a bubble is what the
 // creature is thinking, not the shelf's report about it (that is the notes).
 function thought(el, mood) {
+  if (mood !== 'asleep' && el.classList.contains('sl-drowsy') && chance(0.6)) return pickFresh(DROWSY_BUBBLES);
   if (el.classList.contains('sl-plotting') && mood !== 'asleep') return pickFresh(PLOTTING_BUBBLES);
   if (mood === 'asleep') return pickFresh(SLEEP_TALK);
   // A third of the time it mutters a piece of its own written inner monologue
@@ -782,6 +907,7 @@ function pass() {
   // With a sheet up, css/style.css pauses the shelf's loops; the director
   // leaves those residents alone too and only drives the sprite in the sheet.
   const shelfResting = !!document.querySelector('.veil.open');
+  const night = document.body.classList.contains('night');
 
   for (let i = 0; i < els.length; i++) {
     const el = els[i];
@@ -794,6 +920,12 @@ function pass() {
     const mood = moodOfEl(el);
     const c = clockFor(id, now);
     c.seen = now;
+    // After dark an awake resident who is not a night owl gets sleepy.
+    if (el.closest('#cabinet')) {
+      const drowsy = night && mood !== 'asleep' && mood !== 'furious' && !el.classList.contains('sl-t-nocturnal');
+      if (el.classList.contains('sl-drowsy') !== drowsy) el.classList.toggle('sl-drowsy', drowsy);
+    }
+    const sleepy = el.classList.contains('sl-drowsy');
 
     if (c.gazeUntil && now >= c.gazeUntil) {
       c.gazeUntil = 0;
@@ -803,8 +935,9 @@ function pass() {
 
     if (now >= c.blink) {
       const g = BLINK_GAP[mood] || BLINK_GAP.fine;
-      c.blink = now + rand(g[0], g[1]);
-      if (mood !== 'asleep' || Math.random() < 0.4) blink(el, Math.random() < 0.16);
+      let wait = 1;
+      if (mood !== 'asleep' || Math.random() < 0.4) wait = blinkLike(el, mood);
+      c.blink = now + rand(g[0], g[1]) * wait * (sleepy ? 0.7 : 1);
     }
 
     if (now >= c.glance && mood !== 'asleep' && !c.gazeUntil) {
@@ -813,14 +946,17 @@ function pass() {
       // Mostly sideways (at a neighbour), sometimes up, occasionally straight
       // out at whoever is holding the phone.
       const r = Math.random();
-      if (r < 0.55) gaze(el, pickOne([-1, -0.6, 0.6, 1]), rand(-0.2, 0.4), rand(900, 2200));
+      const friends = r < 0.55 ? neighboursOf(el).filter(n => n.kind === 'pet') : [];
+      // Mostly at whoever is actually next door, rather than a random side.
+      if (friends.length) gaze(el, pickOne(friends).dir * rand(0.7, 1), rand(-0.1, 0.35), rand(900, 2200));
+      else if (r < 0.55) gaze(el, pickOne([-1, -0.6, 0.6, 1]), rand(-0.2, 0.4), rand(900, 2200));
       else if (r < 0.8) gaze(el, rand(-0.5, 0.5), -0.9, rand(700, 1600));
       else gaze(el, 0, 0.3, rand(1200, 2600));
     }
 
     if (now >= c.act && c.busy <= now) {
       const g = ACT_GAP[mood] || ACT_GAP.fine;
-      c.act = now + rand(g[0], g[1]);
+      c.act = now + rand(g[0], g[1]) * (sleepy ? 1.5 : 1);
 
       // Prefer a scene with the neighbour when one is on offer and the shelf
       // has been quiet for a moment.
@@ -899,6 +1035,9 @@ export function initAnimator(opts) {
     if (reduced.addEventListener) reduced.addEventListener('change', onChange);
     else if (reduced.addListener) reduced.addListener(onChange);
   }
+  // Pupils follow the last touch; other modules ask for reactions by event.
+  document.addEventListener('pointerdown', onTouch, { passive: true, capture: true });
+  window.addEventListener?.('shelflife:react', event => { const d = event.detail || {}; emote(d.id, d.kind, d); });
   document.addEventListener('visibilitychange', () => {
     document.body.classList.toggle('app-hidden', document.hidden);
     if (document.hidden) stop();
@@ -1080,4 +1219,97 @@ export function reactTo(id, need, delay) {
 export function reactShelf(ids, need) {
   if (reduced && reduced.matches) return;
   (ids || []).forEach((id, i) => reactTo(id, need, i * 110));
+}
+
+// --- following your finger -------------------------------------------------
+// A tap on the room makes the nearest residents glance at where it landed, the
+// way a household does when something is dropped. One batch of rect reads per
+// tap (reads first, writes after), nothing per frame, and never while a sheet
+// is open or for a resident who is asleep, on stage or being driven by a game.
+function onTouch(event) {
+  if (document.hidden || reduced?.matches || event.isPrimary === false) return;
+  if (document.querySelector('.veil.open') || !event.target.closest?.('#paneShelf,.tabbar')) return;
+  lookAtPoint(event.clientX, event.clientY);
+}
+const clampUnit = n => Math.max(-1, Math.min(1, n));
+export function lookAtPoint(x, y) {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return 0;
+  const reads = [];
+  document.querySelectorAll('#cabinet .sprite.sl2[data-pet]').forEach(el => {
+    if (el.classList.contains('sl-asleep') || el.classList.contains('sl-offscreen') || el.dataset.slControlled === '1' || el.dataset.slReserved === '1') return;
+    const r = el.getBoundingClientRect();
+    if (!r.width) return;
+    const cx = r.left + r.width / 2, cy = r.top + r.height * 0.4;
+    reads.push({ el, dx: x - cx, dy: y - cy, d: Math.hypot(x - cx, y - cy), w: r.width });
+  });
+  reads.sort((a, b) => a.d - b.d);
+  let looked = 0;
+  reads.slice(0, 5).forEach((r, i) => {
+    if (r.d < r.w * 0.4) return;               // it is the one being touched: its own reaction looks at you
+    if (i > 1 && !chance(0.65)) return;
+    gaze(r.el, clampUnit(r.dx / (r.w * 1.3)), clampUnit(r.dy / (r.w * 1.3)), rand(1500, 2600));
+    looked++;
+  });
+  return looked;
+}
+
+// --- reactions: one call for "something happened to this resident" -----------
+const EMOTES = {
+  happy:    { clip: 'sl2-hop',      ms: 760,  ease: 'cubic-bezier(.3,.75,.4,1)',  gaze: 'you',  hold: ['sl-waving'],     burst: 'hearts',
+              lines: ['oh. well. that is alright, then.', 'i am not smiling. my face is.', 'noted. fondly.', 'do that again, but less obviously.'] },
+  startled: { clip: 'sl2-startle',  ms: 900,  ease: 'cubic-bezier(.3,1.2,.5,1)',  gaze: 'you',  hold: [],                mark: '!',
+              lines: ['that was not on the schedule.', 'who said that?', 'i am fine. everyone saw that. i am fine.', 'no. absolutely not. what.'] },
+  proud:    { clip: 'sl2-celebrate', ms: 1000, ease: 'cubic-bezier(.2,.75,.25,1)', gaze: 'you', hold: ['sl-celebrating'], burst: 'sparkles',
+              lines: ['i did that. put it in writing.', 'somebody fetch the plaque.', 'frame it. no, bigger.', 'naturally.'] },
+  grossed:  { clip: 'sl2-recoil',   ms: 860,  ease: 'cubic-bezier(.3,0,.2,1)',    gaze: 'down', hold: ['sl-care-clean'], squint: true, dir: true, burst: 'puff',
+              lines: ['i can taste the colour.', 'that is not food, it is evidence.', 'this will be in my testimony.', 'wash it. wash everything.'] },
+  sad:      { clip: 'sl2-sigh',     ms: 1700, ease: 'cubic-bezier(.4,0,.5,1)',    gaze: 'down', hold: ['sl-nodding'],
+              lines: ['it is fine. it is on record that it is fine.', 'i will be over here. composing.', 'of course.', 'just weather. indoors.'] },
+  smug:     { clip: 'sl2-perk',     ms: 640,  ease: 'cubic-bezier(.2,1.4,.4,1)',  gaze: 'you',  hold: [],                squint: true,
+              lines: ['told you.', 'i said that. on tuesday.', 'write that down. no, with a pen.'] }
+};
+export const EMOTE_KINDS = Object.keys(EMOTES);
+
+// Make one resident react. Returns true if anyone on screen played it.
+export function emote(id, kind, opts = {}) {
+  const r = EMOTES[kind];
+  if (!r || !id || document.hidden || (reduced && reduced.matches)) return false;
+  let played = false;
+  spritesFor(id).forEach(el => {
+    if (!visibleSprite(el) || el.dataset.slControlled === '1' || el.closest('[data-sl-theatre="1"]')) return;
+    if (moodOfEl(el) === 'asleep' && kind !== 'startled') return;
+    if (!el.dataset.slPrep) prepSprite(el);
+    playAnim(el, r.clip, r.ms, r.ease, r.dir);
+    (r.hold || []).forEach(cls => holdClass(el, cls, r.ms));
+    if (r.squint) holdClass(el, 'sl-squint', r.ms);
+    gazeFor(el, r.gaze);
+    const c = clocks.get(id);
+    if (c) { c.act = Date.now() + r.ms + rand(700, 1800); c.busy = Date.now() + r.ms; }
+    if (opts.burst !== false) {
+      const rect = el.getBoundingClientRect();
+      const at = { x: rect.left + rect.width / 2, y: rect.top + rect.height * 0.32 };
+      if (r.burst) window.shelfFx?.burst?.(at, r.burst);
+      if (r.mark) mark(el, r.mark);
+    }
+    const line = opts.bubble || (chance(0.55) ? pickFresh(r.lines) : null);
+    if (line) afterMotion(() => { if (visibleSprite(el)) solo(el, line, true, kind === 'grossed' || kind === 'sad' ? 'bubble-dark' : ''); }, Math.round(r.ms * 0.4));
+    played = true;
+  });
+  return played;
+}
+
+// A small mark that pops over a head ("!") and is gone.
+function mark(el, text) {
+  el.querySelectorAll('.react-mark').forEach(node => node.remove());
+  const node = document.createElement('span');
+  node.className = 'react-mark';
+  node.setAttribute('aria-hidden', 'true');
+  node.textContent = text;
+  el.appendChild(node);
+  setTimeout(() => node.remove(), 1100);
+}
+
+export function emoteShelf(ids, kind) {
+  if (reduced && reduced.matches) return;
+  (ids || []).forEach((id, i) => afterMotion(() => emote(id, kind), i * 120));
 }

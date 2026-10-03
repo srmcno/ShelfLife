@@ -16,7 +16,9 @@
      * Effects: souls; need deltas for a/b; bond (+ only, rationed by the engine);
        grudge ('a' or 'b' files one); curio (true = a guaranteed drop). */
 
-export const EMERGENCIES = [
+import { EXTRA_EMERGENCIES } from './emergencies-extra.js';
+
+const BASE_EMERGENCIES = [
   { id: 'rat-poison', title: '{a} has found the rat poison.', art: 'bottle',
     choices: [
       { label: 'Take it off them', outcomes: [
@@ -683,6 +685,9 @@ export const EMERGENCIES = [
     ] }
 ];
 
+// The base set above, then the second volume (content/emergencies-extra.js).
+export const EMERGENCIES = [...BASE_EMERGENCIES, ...EXTRA_EMERGENCIES];
+
 /* Rarity sets the drop weight, the colour of the frame and the soul refund on a
    duplicate. Order matters: the engine rolls through it top to bottom. */
 export const RARITIES = [
@@ -732,7 +737,8 @@ export const CURIOS = [
 
 /* Lifetime souls set the household's rank. Titles are how the neighbours talk
    about the house, not how the house talks about itself. */
-export const RANKS = [
+import { LEGACY_RANKS } from './legacy.js';
+const BASE_RANKS = [
   { at: 0, title: 'Suspiciously Normal', line: 'The neighbours wave. They do not know yet.' },
   { at: 60, title: 'Mildly Damp', line: 'There is a smell. It is coming from the shelf. It is, in a way, a greeting.' },
   { at: 160, title: 'Faintly Cursed', line: 'Milk curdles in the fridge when you walk past. The milk had it coming.' },
@@ -746,6 +752,12 @@ export const RANKS = [
   { at: 6000, title: 'The Thing Under the Stairs', line: 'The neighbours have moved. So has the street, slightly.' },
   { at: 8500, title: 'Unspeakable', line: 'Nobody says your address out loud anymore. The postman leaves the post at the end of the road and runs.' }
 ];
+// Past Unspeakable the ladder goes on: thirty Legacy ranks (content/legacy.js), each paying a title and a Legacy Token.
+export const RANKS = [...BASE_RANKS, ...LEGACY_RANKS];
+
+import { OMENS_EXTRA } from './omens-extra.js';
+import { CHORES_EXTRA } from './chores-extra.js';
+import { QUIET_EXTRA, DUPLICATE_EXTRA } from './ambient-extra.js';
 
 /* One omen per local day, drawn on the first visit. `effect` is read by the
    engine; `line` is what the card says. */
@@ -760,7 +772,7 @@ export const OMENS = [
   { id: 'second-shadow', name: 'The Second Shadow', effect: 'mayhem', line: 'Emergencies pay double souls today. Your shadow has plans of its own.' },
   { id: 'tolling-bell', name: 'The Tolling Bell', effect: 'luck', line: 'Rarer curios are more likely today. It tolls for thee. It is also offering a discount.' },
   { id: 'hungry-house', name: 'The Hungry House', effect: 'extra', line: 'One more emergency can pile up today. The house is peckish.' }
-];
+].concat(OMENS_EXTRA);
 
 /* Three chores a day, drawn from these. `deed` is the event the engine counts. */
 export const CHORES = [
@@ -774,7 +786,7 @@ export const CHORES = [
   { id: 'coffin', deed: 'coffin', need: 1, label: 'Open a coffin', line: 'Open 1 coffin' },
   { id: 'check', deed: 'check', need: 1, label: 'Read the complaints', line: 'Check the shelf for notes' },
   { id: 'care5', deed: 'care', need: 5, label: 'Make the rounds personal', line: 'Care for residents 5 times' }
-];
+].concat(CHORES_EXTRA);
 
 /* Lines for the empty emergency tray and small toasts. */
 export const QUIET_LINES = [
@@ -783,10 +795,10 @@ export const QUIET_LINES = [
   'No emergencies. The residents are planning the next one together.',
   'Peace on the shelf. Enjoy it. It is lying to you.',
   'Nothing has gone wrong yet. The drawer is breathing a bit heavily though.'
-];
+].concat(QUIET_EXTRA);
 export const DUPLICATE_LINES = [
   'You already own this. It is disappointed in you.',
   'A duplicate. The first one is jealous.',
   'You have one of these. Now you have a matching pair. Nobody wanted a pair.',
   'Another one. They must be breeding.'
-];
+].concat(DUPLICATE_EXTRA);

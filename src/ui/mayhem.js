@@ -4,7 +4,7 @@ import {
   queueCap, pokeDrawer, POKE_COST, commissionCost, commissionCurio, pityActive
 } from '../engine/mayhem.js';
 import { mayhemState } from '../mayhem-state.js';
-import { CURIOS, RARITIES, RANKS, QUIET_LINES } from '../content/mayhem.js';
+import { CURIOS, RARITIES, RANKS, QUIET_LINES, OMENS } from '../content/mayhem.js';
 import { SEASONS } from '../content/seasons.js';
 import { COURT_BY_ID, docketToday, DOCKET_SOULS } from '../engine/court.js';
 import { challengeToday } from '../engine/arcade.js';
@@ -18,6 +18,13 @@ import { playAchievement, playPowerUp, playStar, playStomp, playFeud, playUnlock
 import { save } from '../state.js';
 import { toast } from './toast.js';
 import { nudgesAvailable, enableNudges } from '../notify.js';
+import { syncRetention, almanacTileHTML } from './almanac.js';
+import { returnCardHTML } from './returns.js';
+import { cabinetExtrasHTML, cabinetFrameClass } from './collections.js';
+import { chapterAt, chapterHook } from '../engine/almanac.js';
+import { activeTitle } from '../engine/collections.js';
+import { titleText } from '../content/collections.js';
+import { emptyState } from './fx.js';
 
 /* The mayhem loop's surfaces: a souls counter in the top bar, an alarm strip
    over the cabinet, a small desk under the actions, and one sheet that shows an
@@ -53,7 +60,7 @@ function renderHud(state) {
   hud.hidden = !state.pets.length && !m.lifetime;
   setHTML(hud, '<span class="souls-icon">' + glyph('soul') + '</span>' +
     '<span class="souls-count"><b>' + m.souls + '</b><small>souls</small></span>' +
-    '<span class="souls-rank"><em>' + esc(info.rank.title) + '</em><i class="souls-bar"><i style="width:' + Math.round(info.progress * 100) + '%"></i></i></span>');
+    '<span class="souls-rank"><em>' + esc(info.rank.legacy ? info.rank.title.split(':')[0] : info.rank.title) + '</em><i class="souls-bar"><i style="width:' + Math.round(info.progress * 100) + '%"></i></i></span>');
   hud.setAttribute('aria-label', m.souls + ' souls. Household rank: ' + info.rank.title + '. Open the Cabinet of Curiosities.');
 }
 
@@ -117,7 +124,7 @@ function renderDesk(state, now = Date.now()) {
       todayRow('court', docket.done, 'Shelf Court docket', docketCase.title + (docket.done ? ' · filed' : ' · +' + DOCKET_SOULS + ' souls')) +
       todayRow('arcade', ch.claimed, 'Arcade challenge', ARCADE_BY_ID[ch.game].title + ': ' + ch.mod.title + (ch.claimed ? ' · done' : ' · +' + DAILY_SOULS + ' souls'), ' data-mh-game="' + ch.game + '"') + '</div>'
     : '';
-  setHTML(deskEl, seasonStrip + omenTile + choresTile + coffinTile + todayTile + cabinetTile);
+  setHTML(deskEl, returnCardHTML(state) + almanacTileHTML(state, now) + seasonStrip + omenTile + choresTile + coffinTile + todayTile + cabinetTile);
 }
 
 // The count of waiting disasters follows you: onto the Shelf tab, into the
@@ -135,6 +142,7 @@ function renderBadges(state) {
 export function renderMayhem(state) {
   if (!state) return;
   S = state;
+  syncRetention(state);   // the Almanac, the return chest and the long-game achievements read what the game already counts
   renderBadges(state);
   renderHud(state);
   renderAlert(state);
@@ -197,6 +205,12 @@ function rewardList(result) {
   return items.length ? '<ul class="mh-rewards">' + items.join('') + '</ul>' : '';
 }
 
+// A line of the running chapter's flavour under the result: always in a flagship chapter, now and then in the rest.
+function chapterHookHTML(uid, result) {
+  const line = chapterHook(chapterAt(Date.now()), uid, result.a && result.a.name, result.b && result.b.name);
+  return line ? '<p class="alm-hook">' + esc(line) + '</p>' : '';
+}
+
 function curioCard(roll, extra = '') {
   const rarity = roll.rarity || RARITY_BY_ID[roll.curio.rarity];
   return '<div class="mh-curio-card rarity-' + rarity.id + (roll.duplicate ? ' duplicate' : ' fresh') + '">' +
@@ -208,7 +222,8 @@ function curioCard(roll, extra = '') {
 
 function choose(state, index) {
   if (!view || view.mode !== 'emergency') return;
-  const result = resolveEmergency(state, view.uid, index);
+  const uid = view.uid;
+  const result = resolveEmergency(state, uid, index);
   if (!result) { showEmergency(state); return; }
   save();
   view = { mode: 'result' };
@@ -218,7 +233,7 @@ function choose(state, index) {
   sheet.querySelector('.sheet-head [data-mh="close"]').textContent = 'Close';
   card.classList.add('resolved', 'tone-' + result.tone);
   card.querySelector('.mh-choices').outerHTML = '<div class="mh-outcome"><div class="mh-stamp tone-' + result.tone + '">' + esc(result.stamp) + '</div>' +
-    '<p class="mh-text">' + esc(result.text) + '</p>' + rewardList(result) +
+    '<p class="mh-text">' + esc(result.text) + '</p>' + chapterHookHTML(uid, result) + rewardList(result) +
     (result.curio ? '<div class="mh-drop"><span class="mh-drop-kicker">Something was left behind</span>' + curioCard(result.curio) + '</div>' : '') +
     (nudgesAvailable() && !state.settings.nudges && !state.settings.nudgeAsked ? '<p class="mh-nudge"><span>Want a buzz when something goes wrong?</span><button class="btn btn-sm" type="button" data-mh="nudge">Yes, nudge me</button><button class="btn btn-ghost btn-sm" type="button" data-mh="nudge-no">Not now</button></p>' : '') +
     '<div class="mh-next">' + (left ? '<button class="btn btn-primary" type="button" data-mh="emergency">Next emergency <small>(' + left + ' left)</small></button>' : mayhemState(state).souls >= POKE_COST ? '<button class="btn btn-primary" type="button" data-mh="poke">Poke the drawer · ' + POKE_COST + '</button><button class="btn" type="button" data-mh="close">Back to the shelf</button>' : '<button class="btn btn-primary" type="button" data-mh="close">Back to the shelf</button>') +
@@ -283,14 +298,14 @@ function showOmen(state, revealed = null) {
   sheet.innerHTML = head('Night ' + m.omen.streak + (m.omen.streak > 1 ? ' in a row' : ''), 'Tonight’s omen') +
     '<div class="mh-tarot-stage"><div class="mh-tarot face' + (revealed ? ' flipping' : '') + '"><span class="mh-tarot-face"><span class="mh-tarot-art">' + glyph(omenGlyph(omen.id)) + '</span><b>' + esc(omen.name) + '</b></span></div></div>' +
     '<p class="mh-omen-line">' + esc(omen.line) + '</p>' +
-    (revealed ? '<ul class="mh-rewards"><li class="souls">' + glyph('soul') + '+' + revealed.gift + ' souls for showing up</li>' + (revealed.graceUsed ? '<li class="good">The candle guttered while you were away. It held. One missed night is forgiven, and you get another after the next seventh night.</li>' : '') + (m.omen.streak < 7 ? '<li>Night ' + m.omen.streak + ' of 7. The seventh night leaves something rare on the step.</li>' : '') + '</ul>' : '') +
+    (revealed ? '<ul class="mh-rewards"><li class="souls">' + glyph('soul') + '+' + revealed.gift + ' souls for showing up</li>' + (revealed.graceUsed ? '<li class="good">The candle guttered while you were away. It held. One missed night is forgiven, and you get another after the next seventh night.</li>' : '') + (revealed.freezeUsed ? '<li class="good">A freeze saved your streak. You missed a night, and the candle was held for you.</li>' : '') + (m.omen.streak < 7 ? '<li>Night ' + m.omen.streak + ' of 7. The seventh night leaves something rare on the step.</li>' : '') + '</ul>' : '') +
     (revealed?.bonus ? '<div class="mh-drop"><span class="mh-drop-kicker">Seven nights. Something was left on the step.</span>' + curioCard(revealed.bonus) + '</div>' : '') +
     '<div class="mh-next"><button class="btn btn-primary" type="button" data-mh="' + (mayhemState(state).queue.length ? 'emergency' : 'close') + '">' + (mayhemState(state).queue.length ? 'See what went wrong' : 'Back to the shelf') + '</button></div>';
   open();
   sheet.querySelector('.mh-next .btn')?.focus({ preventScroll: true });
 }
 function omenGlyph(id) {
-  return ({ 'wet-hand': 'hand', 'hanged-spoon': 'spoon', 'open-coffin': 'coffin', 'many-eyes': 'eye', 'crowded-grave': 'grave', 'patient-worm': 'bug', 'smiling-moon': 'glow', 'second-shadow': 'shadow', 'tolling-bell': 'clock', 'hungry-house': 'door' })[id] || 'skull';
+  return ({ 'wet-hand': 'hand', 'hanged-spoon': 'spoon', 'open-coffin': 'coffin', 'many-eyes': 'eye', 'crowded-grave': 'grave', 'patient-worm': 'bug', 'smiling-moon': 'glow', 'second-shadow': 'shadow', 'tolling-bell': 'clock', 'hungry-house': 'door' })[id] || OMENS.find(o => o.id === id)?.glyph || 'skull';
 }
 function flip(state) {
   const result = drawOmen(state);
@@ -304,8 +319,8 @@ function flip(state) {
 function showCabinet(state) {
   view = { mode: 'cabinet' };
   const m = mayhemState(state), info = rankInfo(state);
-  sheet.className = 'sheet mh-sheet mh-cabinet';
-  const ladder = RANKS.map((rank, i) => '<li class="' + (i < info.index ? 'past' : i === info.index ? 'now' : 'future') + '"><b>' + (i <= info.index + 1 ? esc(rank.title) : '???') + '</b><small>' + rank.at + '</small></li>').join('');
+  sheet.className = 'sheet mh-sheet mh-cabinet ' + cabinetFrameClass(state);
+  const ladder = RANKS.slice(0, Math.max(12, info.index + 2)).map((rank, i) => '<li class="' + (i < info.index ? 'past' : i === info.index ? 'now' : 'future') + '"><b>' + (i <= info.index + 1 ? esc(rank.title) : '???') + '</b><small>' + rank.at + '</small></li>').join('');
   const groups = RARITIES.map(r => {
     const items = CURIOS.filter(c => c.rarity === r.id).map(c => {
       const n = m.curios[c.id] || 0;
@@ -328,14 +343,15 @@ function showCabinet(state) {
   }).join('');
   const log = m.log.slice(0, 6).map(entry => '<li class="tone-' + entry.tone + '"><span class="mh-mini-stamp">' + esc(entry.stamp) + '</span><span><b>' + esc(entry.title) + '</b> ' + esc(entry.text) + '</span></li>').join('');
   sheet.innerHTML = head('Souls earned in this house: ' + m.lifetime, 'Cabinet of Curiosities') +
-    '<section class="mh-rank-card"><span class="mh-tile-kicker">The neighbours call this house</span><h3>' + esc(info.rank.title) + '</h3><p>' + esc(info.rank.line) + '</p>' +
+    '<section class="mh-rank-card"><span class="mh-tile-kicker">The neighbours call this house</span><h3>' + esc(info.rank.title) + '</h3><p>' + esc(info.rank.line) + '</p>' + (activeTitle(state) ? '<p class="mh-wears">Wearing the title: ' + esc(titleText(activeTitle(state))) + '</p>' : '') +
     '<span class="mh-meter big"><i style="width:' + Math.round(info.progress * 100) + '%"></i></span>' +
     '<small>' + (info.next ? info.toNext + ' more souls until the neighbours start saying “' + esc(info.next.title) + '”' : 'There is nothing worse they can call you. Well done.') + '</small>' +
     '<ol class="mh-ladder">' + ladder + '</ol>' +
     '<p class="mh-stats">' + plural(m.resolved, 'emergency', 'emergencies') + ' survived · ' + plural(m.coffins, 'coffin') + ' opened · ' + m.souls + ' souls in hand</p></section>' +
     '<div class="mh-cabinet-actions"><button class="btn btn-primary" type="button" data-mh="coffin">Open a coffin · ' + coffinCost(state) + '</button>' + (m.queue.length ? '<button class="btn" type="button" data-mh="emergency">' + plural(m.queue.length, 'emergency', 'emergencies') + ' waiting</button>' : '') + '</div>' +
     '<div class="mh-curio-detail" id="mhCurioDetail" hidden></div>' +
-    groups + seasonGroups +
+    (curioCount(state) ? '' : emptyState({ kind: 'cabinet', compact: true, title: 'Not one curio.', line: 'Every coffin holds something. The undertaker calls this a feature.' })) +
+    groups + seasonGroups + cabinetExtrasHTML(state) +
     (log ? '<section class="mh-log"><h3>The incident reports</h3><ul>' + log + '</ul></section>' : '');
   open();
 }
@@ -372,7 +388,7 @@ function showCurio(id) {
 let rankTimer = null;
 function celebrateRank(rank) {
   if (!rankEl) return;
-  rankEl.innerHTML = '<div class="mh-rankup-card"><span class="mh-tile-kicker">The neighbours have a new word for you</span><b>' + esc(rank.title) + '</b><p>' + esc(rank.line) + '</p></div>';
+  rankEl.innerHTML = '<div class="mh-rankup-card"><span class="mh-tile-kicker">The neighbours have a new word for you</span><b>' + esc(rank.title) + '</b><p>' + esc(rank.line) + '</p>' + (rank.legacy ? '<small>A Legacy Token and a title are waiting in the Collector’s Exchange.</small>' : '') + '</div>';
   rankEl.hidden = false;
   rankEl.classList.remove('show'); void rankEl.offsetWidth; rankEl.classList.add('show');
   playAchievement();
@@ -423,7 +439,7 @@ export function initMayhem(state, onRefresh) {
     if (control.dataset.choice != null) { choose(S, Number(control.dataset.choice)); return; }
     if (control.dataset.curio) { showCurio(control.dataset.curio); return; }
     if (control.dataset.mhToday) {
-      if (control.dataset.mhToday === 'court') window.dispatchEvent(new CustomEvent('shelflife:court', { detail: {} }));
+      if (control.dataset.mhToday === 'court') window.dispatchEvent(new CustomEvent('shelflife:court', { detail: docketToday(S).done ? {} : { caseId: docketToday(S).caseId } }));
       else window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: control.dataset.mhGame } }));
       return;
     }

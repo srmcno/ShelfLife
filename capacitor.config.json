@@ -20,7 +20,7 @@
       "launchAutoHide": true,
       "launchShowDuration": 2000,
       "launchFadeOutDuration": 200,
-      "backgroundColor": "#1A1220",
+      "backgroundColor": "#0B0812",
       "showSpinner": false
     },
     "LocalNotifications": {

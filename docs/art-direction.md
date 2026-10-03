@@ -171,6 +171,8 @@ Mood variants: furious swaps the warm edge for `#FF4A57` and gains one 18px bloo
 
 **Performance:** three `drop-shadow`s on up to 18 continuously-animating inline SVGs is real per-frame GPU cost that nobody in this exercise profiled. Halve the blur radii under `@media (max-width:640px)` and add `@media (prefers-reduced-motion:reduce){ .sl2 .sprite-figure{filter:drop-shadow(2px 3px 2px rgba(0,0,0,.5))} }`. **Profile this on a mid-range Android before shipping** — it is the one risk no screenshot can show.
 
+> **Update, phone-grade lighting.** The chain above was profiled the hard way: Light effects, the default on phones, had to switch it off, which left the shelf flat exactly where most players are. It has been replaced by things that cost nothing per frame and so run in both modes. The warm rim is a gradient stroke inside each creature's own SVG (`.cr-rim` in `src/art/creatures.js`, retinted from `--key` in `css/fx.css`). The cast shadow on the wall is a pre-blurred ellipse drawn as a radial gradient on `.sprite::before`, and the shadow on the board is the existing `.pet::after`. Hand-drawn creatures get a still-image edge light in Full only. Light and Full now differ in how much moves, not in how the room is lit. Automatic chooses between them from a frame-rate benchmark taken on the device (`src/ui/effects.js`).
+
 ### Footing — they must not float
 
 Candlelit replaced the contact shadow with an underglow, so its creatures hover over a bright plank lip. Both are needed:

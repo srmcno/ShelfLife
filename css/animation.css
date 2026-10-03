@@ -19,3 +19,19 @@
 @media(prefers-reduced-motion:reduce){.sl2:is(.sl-testifying,.sl-denying,.sl-confessing,.sl-inspecting,.sl-celebrating) *{animation:none!important;transition:none!important;scale:none!important;rotate:none!important}}
 body.app-hidden .sl2 *{animation-play-state:paused!important}
 body[data-effects="light"] .sl2:is(.sl-testifying,.sl-denying,.sl-confessing,.sl-inspecting,.sl-celebrating) .sl-part{animation:none!important;transition:none!important}
+
+/* ---- life on the shelf ------------------------------------------------------
+   After dark an awake resident who is not a night owl gets drowsy (the animator
+   toggles .sl-drowsy): a slump, heavy lids, slower breathing, the odd yawn. */
+.sl2.sl-drowsy{--sl-sag:2.6%;--sl-tilt:2.2deg;--sl-tempo:1.6}
+.sl2.sl-drowsy .sl-part[data-part="eye"]{scale:1 .72;transition:scale .9s ease}
+.sl2.sl-vector.sl-drowsy .cr-torso{animation-duration:calc(var(--sl-breath,3.8s) * 1.7)}
+.sl2.sl-drowsy .stamp-art.anim-blink{transform:scaleY(.75)}
+.sl2.sl-yawning .sl-part[data-part="mouth"]{animation:sl-yawn-mouth 1.6s ease-in-out both;transform-box:fill-box;transform-origin:center}
+.sl2.sl-yawning .sl-part[data-part="eye"],.sl2.sl-nodding .sl-part[data-part="eye"]{scale:1 .22;transition:scale .3s}
+@keyframes sl-yawn-mouth{0%,100%{scale:1 1}30%,70%{scale:1.3 2.2}}
+/* a mark over a head: the exclamation in "startled" */
+.react-mark{position:absolute;left:50%;top:-2%;z-index:7;translate:-50% 0;font:800 22px/1 var(--body);color:#ffd45e;pointer-events:none;
+  text-shadow:0 0 8px #000a,0 1.5px 0 #000;animation:react-mark-pop 1.05s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes react-mark-pop{0%{opacity:0;transform:translateY(8px) scale(.4)}22%{opacity:1;transform:translateY(-4px) scale(1.25)}70%{opacity:1;transform:translateY(-9px) scale(1)}100%{opacity:0;transform:translateY(-15px) scale(.9)}}
+@media (prefers-reduced-motion:reduce){.react-mark{display:none}}

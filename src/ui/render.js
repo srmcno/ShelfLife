@@ -9,6 +9,7 @@ import { renderStories } from './stories.js';
 import { save } from '../state.js';
 import { fileDocument, householdReport, PAPERWORK_LIMIT } from '../paperwork-state.js';
 import { syncEffects } from './effects.js';
+import { emptyState } from './fx.js';
 import { roundsWait } from '../engine/care.js';
 import { checkWait } from '../engine/loop.js';
 import { isDragging } from './drag.js';
@@ -382,13 +383,19 @@ export function renderNotes(state) {
     const d = document.createElement('div');
     d.className = 'notes-empty';
     const empty = {
-      papers: 'The filing desk is ready. File a household report above, or finish a court case, expedition or market trip to add its record automatically.',
-      said: 'No conversations in the latest 40 notes. Check the shelf or care for a resident to hear from the household.',
-      complaints: 'No complaints in the latest 40 notes. Enjoy the peace; it is a perfectly good outcome.',
-      unsaid: 'No private thoughts in the latest 40 notes. These appear occasionally when you check the shelf, including while residents dream.',
-      plots: 'No recent conspiracies on the board. Open Visitors & conspiracies in Stories to follow the household’s current plots.'
+      papers: ['Nothing filed. Suspicious.', 'The filing desk is ready. File a household report above, or finish a court case, expedition or market trip to add its record automatically.'],
+      said: ['Nobody has said anything.', 'No conversations in the latest 40 notes. Check the shelf or care for a resident to hear from the household.'],
+      complaints: ['Not one complaint.', 'No complaints in the latest 40 notes. Enjoy the peace; it is a perfectly good outcome.'],
+      unsaid: ['Quiet in there.', 'No private thoughts in the latest 40 notes. These appear occasionally when you check the shelf, including while residents dream.'],
+      plots: ['Nothing is being plotted.', 'No recent conspiracies on the board. Open Visitors & conspiracies in Stories to follow the household’s current plots.']
     };
-    d.textContent = petFilter ? 'No ' + (noteFilter === 'papers' ? 'filed documents' : 'matching notes') + ' about ' + petFilter + '. Remove the “Only” filter to read the whole household.' : !state.pets.length ? 'First, a creature. Then, the complaints.' : empty[noteFilter] || 'Check the shelf to collect notes. Care for a resident to build trust and hear a reply.';
+    const [title, line] = petFilter
+      ? ['Nothing about ' + petFilter + '.', 'No ' + (noteFilter === 'papers' ? 'filed documents' : 'matching notes') + ' about ' + petFilter + '. Remove the “Only” filter to read the whole household.']
+      : !state.pets.length ? ['No residents, no complaints.', 'First, a creature. Then, the complaints.']
+      : empty[noteFilter] || ['The board is bare.', 'Check the shelf to collect notes. Care for a resident to build trust and hear a reply.'];
+    const action = !state.pets.length ? { label: 'Make someone', attrs: 'data-proxy="newPetBtn"' }
+      : !petFilter && (noteFilter === 'all' || !empty[noteFilter]) ? { label: 'Check the shelf', attrs: 'data-proxy="checkBtn"' } : null;
+    d.innerHTML = emptyState({ kind: 'notes', title, line, action });
     notesEl.appendChild(d);
     return;
   }

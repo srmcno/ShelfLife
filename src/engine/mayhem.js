@@ -4,6 +4,8 @@ import { addNote, clamp, dayKeyOffset, grantBonusTrust, localDayKey, petById } f
 import { fileGrudge } from './achievements.js';
 import { SEASON_RARITY, SEASONAL_CURIOS } from '../content/seasons.js';
 import { activeSeason } from './seasons.js';
+import { canBridge, spendFreeze, earnFreeze } from './streaks.js';
+import { ALMANAC_CURIOS, EDITION_RARITY } from '../content/almanac.js';
 
 /* ================= THE MAYHEM LOOP =================
    A short loop layered over the slow one. The slow loop (needs, trust, notes)
@@ -38,8 +40,8 @@ const listeners = [];
 export function onMayhem(listener) { listeners.push(listener); return () => { const i = listeners.indexOf(listener); if (i >= 0) listeners.splice(i, 1); }; }
 function emit(event) { for (const fn of listeners.slice()) { try { fn(event); } catch { /* a broken listener must not break the game */ } } }
 
-export const CURIO_BY_ID = Object.fromEntries([...CURIOS, ...SEASONAL_CURIOS].map(c => [c.id, c]));
-export const RARITY_BY_ID = Object.fromEntries([...RARITIES, SEASON_RARITY].map(r => [r.id, r]));
+export const CURIO_BY_ID = Object.fromEntries([...CURIOS, ...SEASONAL_CURIOS, ...ALMANAC_CURIOS].map(c => [c.id, c]));
+export const RARITY_BY_ID = Object.fromEntries([...RARITIES, SEASON_RARITY, EDITION_RARITY].map(r => [r.id, r]));
 export const EMERGENCY_BY_ID = Object.fromEntries(EMERGENCIES.map(e => [e.id, e]));
 const OMEN_BY_ID = Object.fromEntries(OMENS.map(o => [o.id, o]));
 const CHORE_BY_ID = Object.fromEntries(CHORES.map(c => [c.id, c]));
@@ -84,17 +86,20 @@ export function drawOmen(state, now = Date.now(), rnd = Math.random) {
   if (m.omen.day === day) return null;
   const yesterday = dayKeyOffset(now, -1), twoDaysAgo = dayKeyOffset(now, -2);
   // Miss one night and the candle gutters but holds, once, until the next seventh night.
-  let streak = 1, graceUsed = false;
+  let streak = 1, graceUsed = false, freezeUsed = false;
   if (m.omen.lastDay === yesterday) streak = m.omen.streak + 1;
   else if (m.omen.lastDay === twoDaysAgo && m.omen.streak >= 2 && m.omen.grace > 0) { streak = m.omen.streak + 1; graceUsed = true; }
+  // Out of candle grace, a streak freeze (engine/streaks.js) bridges the one missed night.
+  else if (canBridge(state, m.omen.lastDay, m.omen.streak, now) && spendFreeze(state, 'omen', now)) { streak = m.omen.streak + 1; freezeUsed = true; }
   const omen = choose(OMENS.filter(o => o.id !== m.omen.id), rnd);
   m.omen = { day, id: omen.id, streak, lastDay: day, grace: streak % 7 === 0 ? 1 : graceUsed ? 0 : m.omen.grace };
+  earnFreeze(state, 'omen', streak, now);
   const gift = omenGift(streak);
   const rankUp = addSouls(state, gift);
   // Every seventh night in a row the house leaves something rarer on the step.
   const bonus = streak % 7 === 0 ? rollCurio(state, rnd, true, now) : null;
   ensureChores(state, now, rnd);
-  return { omen, streak, gift, bonus, rankUp, graceUsed };
+  return { omen, streak, gift, bonus, rankUp, graceUsed, freezeUsed };
 }
 
 /* ---------- souls ---------- */
@@ -247,6 +252,16 @@ export function fill(text, a, b) {
    nudges the good ones. A resident with nothing special (stat 5, no trust) rolls
    every outcome equally, which is how the cards were written. */
 const TONE_STAT = { good: 'cute', bad: 'menace', weird: 'mystique' };
+// A card can write an ending for a kind of resident: `fits` lists trait ids and
+// `bondAt` a trust level. Someone who suits it makes that ending three times as
+// likely, and the risk read on the card moves with it.
+export const SUITED_BOOST = 3;
+function suitedFactor(pet, outcome) {
+  const traits = Array.isArray(pet?.traits) ? pet.traits : [];
+  const fits = Array.isArray(outcome.fits) && outcome.fits.some(id => traits.includes(id));
+  const trusted = outcome.bondAt > 0 && Number.isFinite(pet?.bond) && pet.bond >= outcome.bondAt;
+  return fits || trusted ? SUITED_BOOST : 1;
+}
 export function outcomeWeight(pet, outcome) {
   const raw = pet?.stats?.[TONE_STAT[outcome.tone]];
   const stat = Number.isFinite(raw) ? raw : 5;
@@ -254,7 +269,7 @@ export function outcomeWeight(pet, outcome) {
   let w = 1 + 0.1 * (stat - 5);
   if (outcome.tone === 'bad') w *= 1 - 0.02 * bond;
   if (outcome.tone === 'good') w *= 1 + 0.012 * bond;
-  return clamp(w, 0.2, 2);
+  return clamp(w, 0.2, 2) * suitedFactor(pet, outcome);
 }
 function pickOutcome(outcomes, pet, rnd) {
   const weights = outcomes.map(o => outcomeWeight(pet, o));

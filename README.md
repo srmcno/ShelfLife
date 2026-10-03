@@ -12,8 +12,9 @@ Every twelve minutes something goes wrong on the shelf. Somebody finds the rat p
 writes you out of their will or holds a funeral for a raisin. Up to three emergencies pile up while you
 are away. Each one is a card with two choices and a random, usually regrettable, result. Who is
 involved changes the odds: cute residents tend to get good endings, menacing ones bad endings, mysterious
-ones strange endings, and trust turns disasters aside. Each choice shows a plain risk read, from
-*Safe enough* to *Ill-advised*.
+ones strange endings, and trust turns disasters aside. Some cards are written for a particular sort of
+resident (a Doomsayer, a Landlord, someone Theatrical) and tilt towards the ending that suits them. Each
+choice shows a plain risk read, from *Safe enough* to *Ill-advised*.
 
 Every result pays **souls**. Souls buy **coffins**, and every coffin holds a cursed curio for the
 **Cabinet of Curiosities**: 34 of them, from Common to Unholy. Souls earned for life set what the
@@ -32,13 +33,36 @@ pays for the first five each day.
 ### Coming back tomorrow
 
 The shelf desk lists **today in the Playroom**. **The daily challenge** puts one arcade game in a
-modifier (snack storm, slim coffins, a chatty spirit, a funeral crowd) that is the same for everyone
-on the same date. It keeps its own best, and the first scoring run each day pays a bonus that grows
+modifier (a snack storm, an impatient undertaker, a backwards séance, flooded corners, forty-eight in
+all, one cycle every 48 days) that is the same for everyone on the same date. A strip on the arcade
+hub shows the last fourteen challenge days. It keeps its own best, and the first scoring run each day pays a bonus that grows
 with your streak. **The docket** is one Shelf Court case a day that pays a bonus for airing it.
 **Seasons** recur every year: from 15 October to 2 November, *The Thin Season* lets some coffins hold
 six seasonal curios, which stay in the cabinet once you have them. Streaks and sets are recorded as
 incidents. In the installed Android app, optional **nudges** (local notifications, no server) can tell
 you when the next emergency is due; they stay quiet overnight.
+
+### The long game
+
+**The Almanac** is a calendar of monthly chapters, written in advance from October 2026 to December 2027 and
+then repeated, so it never runs out. Each chapter has a free 30 tier track (souls, four limited curios, a
+room set, a title and a badge), a countdown, and a Court spotlight case. XP comes from things you already do
+(care, emergencies, the omen, chores, Shelf Court, the arcade, expeditions), a little each, up to a limit
+every day. Three **weekly challenges** and a weekly chest sit beside it. Miss a chapter and its curios come
+back in **Back Issues** at a higher price, so nothing is lost for good. The Thin Season is the October
+flagship, with its own flavour lines under every emergency.
+
+A **streak freeze** is earned for every seven days of the omen, the docket or the daily challenge (the shelf
+holds two) and covers one missed day on its own. Come back after a skipped day (16 hours or more) and the shelf has a
+**"while you were away"** card and a chest that grows with the days gone, up to seven. There is never a
+penalty for being away.
+
+**Collections** group the curios, keepsakes and souvenirs into sets with prizes, shown in the Cabinet. Past
+Unspeakable the ranks go on as thirty **Legacy ranks**, each paying a title and a Legacy Token. The
+**Collector's Exchange** is where souls and tokens go once the cabinet is full: Back Issues, cabinet and
+portrait frames, rooms, woods, walls, accents and commissions. Everything the game offered free before stays
+free and owned. In the Android app, optional nudges also cover a way-back ladder (a day, three, seven,
+fourteen and thirty days away, then no more), new chapters and the weekly chest, each switchable on its own.
 
 ## Make yourself at home
 
@@ -87,8 +111,11 @@ they say about the life they have had here.
 
 ## The Playroom
 
-Shelf Court, four quick arcade games and one expedition. Arcade games are endless, get faster,
-and end when your luck does. Instructions are one line. **Again** is always one key away.
+Shelf Court, four quick arcade games and one expedition. Arcade games are endless, come in waves,
+and end when your luck does. Instructions are one line. A quick 3, 2, 1 starts a run (any tap skips
+it) and **Again** is always one key away. Each game has three skulls to win, shown as a ladder on
+screen with what is left to the next one. The chosen resident reacts on the field and, on the result
+card, celebrates or sulks.
 
 ### Shelf Court
 
@@ -112,17 +139,36 @@ hallway interview. Stars come from the right verdict, ratings of 70 or more, and
 more agreeing. Rule justly and the winner trusts you a little more; rule against the resident who
 was right and they hold a real grudge. Twenty-four hand-written cases, eight of each verdict, each with alternate takes so reruns rarely repeat.
 
+Reruns are not repeats. A case can have a **twisted version** in which the investigation turns up a
+different truth: the opening statements are the same, but the testimony, the case notes, the rulings and the
+hallway lines change, so a player who memorised the case has to read the notes again. Today's docket airs
+one fixed version for everyone; free play favours versions you have not seen; the **Case Notebook** lists every
+case with the versions you have seen and your stars on each, and never names one you have not. Your
+residents matter too: a resident's traits give it a role at the podium or in the jury box (keeping receipts,
+exaggerating, playing to the room, holding a grudge, dozing through the vote, gossiping), explained in the lobby
+under *Why this cast matters* and on the cast notes. Each episode you get one **Objection**: check a note
+marked unconfirmed (a lead is struck, an exaggerated clue is confirmed) or press the last witness for another
+clue. The ad break, the number of random scenes, the order of the questions and an occasional bonus question
+change from episode to episode; reruns offer to skip the opening and the hallway interview. Lifetime stars climb
+a ten rank **bench career** (Courtroom Sweeper to Lord Chief Gavel) that pays souls and dresses the courtroom.
+When a friend serves papers they choose which side their resident takes; a summons reward over the daily cap
+is owed and paid on the next day with room.
+
 | Game | What you do |
 | --- | --- |
-| Feeding Frenzy | Your resident catches falling snacks and dodges holy water, soap and mousetraps. Combos multiply; a still-beating heart doubles everything for six seconds. |
-| Coffin Stack | Drop coffins onto a growing tower. Overhang is sawn off; three perfect drops in a row win some width back. |
-| The Séance | Candles light in sequence. Repeat it. Each round adds one. The spirits forgive one mistake. |
-| Grave Whack | Push the hands back into their graves before they climb out. Never tap the widow. The landlord is worth five. |
+| Feeding Frenzy | Your resident catches falling snacks and dodges holy water, soap and mousetraps. Combos multiply; a still-beating heart doubles everything for six seconds. It runs in waves: a feast, a holy procession that leaves one lane open, and Brother Aldous, who throws the water by the bucket. Get through him untouched and you are paid, and a skull comes back. |
+| Coffin Stack | Drop coffins onto a growing tower under a sky that darkens with height. Overhang is sawn off; clean drops in a row pay more each time, and three in a row win some width back. A miss sends the whole coffin over the edge. |
+| The Séance | Candles light in sequence, some after a held breath. Repeat it, and keep the pauses for a point a round; three in time in a row mend a spared mistake. It opens with three candles and each round adds one. The spirits forgive one mistake. |
+| Grave Whack | Push the hands back into their graves before they climb out; a hand about to escape shakes. Never tap the widow. Stuffed gloves only break your streak, the landlord is worth five and the gold tooth is worth eight and mends a skull. |
 | Shelf Court | Judge your residents' petty lawsuits on live daytime TV. The rest of the shelf is the jury. Twenty-four cases. |
 | Expeditions | Pack a tool, choose a crew and recover parts for working household objects. |
 
-Every scoring run pays souls from a daily purse, beating your best pays a bonus, and a good run
-earns a little trust (within the usual daily cap). Little adventures ask for a specific game with
+Every scoring run pays souls from a daily purse of 160, beating your best pays a bonus, and a good run
+earns a little trust (within the usual daily cap). Each skull is worth about the same souls a minute in
+every game. Skulls are kept as medals on the hub cards; lifetime runs and medals open cosmetic arenas
+(Moonlit, Embers, Hard frost, Pea soup, Gilded), and the hub names the next one. Haptics (small buzzes,
+on by default, with a switch in More) and a quiet ambient bed for each game come with the sound, and
+effects thin out by themselves on a phone that cannot keep up. Little adventures ask for a specific game with
 the resident who invited you. Expeditions show your crew, packed equipment, route and exact
 choice consequences; two distinct recovered parts build a permanent household project.
 
@@ -244,11 +290,15 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | Location | Responsibility |
 | --- | --- |
 | `src/state.js`, `src/life-state.js` | Saves, validation, migration and bounded history |
-| `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
+| `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js`, `src/content/emergencies-extra.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
 | `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
 | `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js`, `src/art/court-hallway.js` | Shelf Court: cases, episode state machine, TV studio stage, the drawn cast and the hall cam's corridor set |
+| `src/content/court-twists*.js`, `src/engine/court-twists.js`, `src/engine/court-traits.js`, `src/engine/court-objection.js`, `src/engine/court-career.js`, `src/content/court-bonus.js`, `src/art/court-dress.js` | Shelf Court replay: twisted case versions and their validation, trait-driven cast, the Objection, the bench career and its cosmetics, bonus questions |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
 | `src/cloud/social.js`, `src/ui/friends.js`, `css/social.css` | Friends, shelves on show, Shelf Court summonses and daily boards |
+| `src/almanac-state.js`, `src/content/almanac.js`, `src/engine/almanac.js`, `src/ui/almanac.js`, `css/almanac.css` | The Almanac: calendar, track, XP, weekly challenges, Back Issues and the screens |
+| `src/engine/streaks.js`, `src/engine/returns.js`, `src/engine/claimables.js` | Streak freezes, the return chest and one list of everything claimable |
+| `src/engine/collections.js`, `src/engine/legacy.js`, `src/ui/collections.js` | Sets, Legacy ranks and tokens, and the Collector's Exchange |
 | `src/native.js`, `capacitor.config.json`, `android/` | The Android app: native glue, Capacitor settings and the native project |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
