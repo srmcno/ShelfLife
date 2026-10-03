@@ -60,6 +60,8 @@ test('a pair subplot has a playable final scene and survives reload', async ({ p
 test('a pair scene on cooldown keeps the dossier open with a useful message', async ({ page }) => {
   const state = householdFixture('established');
   const now = Date.now();
+  // Keep the cooldown active during slow setup while animation timers run normally.
+  await page.clock.setFixedTime(now);
   state.settings.theatreOn = false;
   state.lastBackup = now;
   state.friction = {};

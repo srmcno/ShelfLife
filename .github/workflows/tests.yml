@@ -14,11 +14,14 @@ jobs:
         include:
           - project: desktop-chromium
             os: ubuntu-latest
+            workers: 2
           - project: mobile-chromium
             os: ubuntu-latest
+            workers: 2
           # macOS WebKit most closely matches the Safari engine used on iPhones.
           - project: mobile-webkit
             os: macos-latest
+            workers: 1
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.0.0
@@ -32,7 +35,7 @@ jobs:
       - run: npm test
       - run: python3 -m unittest discover -s test -p '*_test.py'
       - run: npx playwright install --with-deps chromium webkit
-      - run: npx playwright test --project="${{ matrix.project }}"
+      - run: npx playwright test --project="${{ matrix.project }}" --workers=${{ matrix.workers }}
       - name: Keep browser review evidence
         if: always()
         uses: actions/upload-artifact@v7.0.1
