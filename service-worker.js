@@ -31,7 +31,6 @@ const SHELL = [
   "./src/art/court-hallway.js",
   "./src/art/court-dress.js",
   "./src/content/court-twists.js",
-  "./src/content/court-twists-a.js",
   "./src/content/court-twists-b.js",
   "./src/content/court-bonus.js",
   "./src/content/court-career.js",
