@@ -117,9 +117,16 @@ const fixture = () => ({
     d: ['Keith and I have an understanding.', 'I said it was a nap.', 'I am keeping the receipt in my teeth.'] }
 });
 
+// The real twists are loaded, so a test that wants a fixture (or a case with no
+// twists at all, with a null twist) swaps the list and gets the real one back.
 const installed = [];
-function install(caseId, twist) { TWISTS[caseId] = [twist]; installed.push(caseId); }
-afterEach(() => { for (const id of installed.splice(0)) delete TWISTS[id]; });
+function install(caseId, twist) {
+  installed.push([caseId, Object.hasOwn(TWISTS, caseId) ? TWISTS[caseId] : undefined]);
+  TWISTS[caseId] = twist ? [twist] : [];
+}
+afterEach(() => {
+  for (const [id, previous] of installed.splice(0).reverse()) { if (previous === undefined) delete TWISTS[id]; else TWISTS[id] = previous; }
+});
 
 test('a sound twist passes, and each rule it can break is named', () => {
   const k = baseCase('borrowed-coffin');
@@ -181,6 +188,8 @@ test('a twist replaces the testimony, notes, rulings and hallway but never the o
 });
 
 test('the version table: counts, keys, titles and the unspoiled progress', () => {
+  install('borrowed-coffin', null);
+  install('snoring-wall', null);
   assert.equal(versionCount('borrowed-coffin'), 1);
   install('borrowed-coffin', fixture());
   assert.equal(versionCount('borrowed-coffin'), 2);
@@ -198,6 +207,7 @@ test('the version table: counts, keys, titles and the unspoiled progress', () =>
 });
 
 test('the docket airs the same version for everyone, and free play favours versions you have not seen', () => {
+  install('snoring-wall', null);
   install('borrowed-coffin', fixture());
   const day = '2026-8-25';
   const first = docketTwist(day, 'borrowed-coffin');

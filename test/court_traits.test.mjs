@@ -20,7 +20,7 @@ function shelf(...residents) {
   s.pets.forEach((p, i) => { s.slots[i] = p.id; });
   return s;
 }
-const cast = (s, caseId = 'borrowed-coffin', extra = {}, seed = 3) => castEpisode(s, { caseId, plaintiffId: 'g0', defendantId: 'g1', now: NOW, ...extra }, seededRandom(seed));
+const cast = (s, caseId = 'borrowed-coffin', extra = {}, seed = 3) => castEpisode(s, { caseId, plaintiffId: 'g0', defendantId: 'g1', now: NOW, twist: 'base', ...extra }, seededRandom(seed));
 const plain = names => shelf(...names.map(n => [n, ['damp'], 2]));
 
 test('ten effects, each tied to real traits, with no trait doing two jobs at one seat', () => {
@@ -74,7 +74,7 @@ test('receipts: a party who keeps them hands over one free clue, and the questio
   assert.deepEqual(episodeReceipts(cast(plain(['A', 'B', 'C']))), []);
   // A friend’s resident keeps receipts too.
   const mabel = guestPet({ id: 'x1', name: 'Mabel', traits: ['witness'], mood: 'fine', bond: 3, art: { creature: generateCreature({ seed: 'mabel' }) } });
-  const visit = castEpisode(plain(['A', 'B', 'C']), { caseId: 'borrowed-coffin', defendantId: 'g1', guest: { side: 'p', pet: mabel }, now: NOW }, seededRandom(2));
+  const visit = castEpisode(plain(['A', 'B', 'C']), { caseId: 'borrowed-coffin', defendantId: 'g1', guest: { side: 'p', pet: mabel }, now: NOW, twist: 'base' }, seededRandom(2));
   assert.deepEqual(partyRoles(visit).receipts, ['p']);
   assert.equal(episodeReceipts(visit, seededRandom(1)).length, 1);
 });

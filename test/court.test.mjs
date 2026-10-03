@@ -24,7 +24,7 @@ function household(n = 3) {
 const caseLines = k => [k.plaintiff, k.defendant, ...k.questions.map(q => q.lines), ...Object.values(k.rulings)].flatMap(v => lineSets(v).flat());
 const leftovers = list => list.filter(line => /\{[pdjx]\}/.test(line.t));
 function playAll(s, caseId, ruling, choice = 'gavel', rnd = seededRandom(3)) {
-  const ep = castEpisode(s, { caseId, plaintiffId: 'g0', defendantId: 'g1' }, rnd);
+  const ep = castEpisode(s, { caseId, twist: 'base', plaintiffId: 'g0', defendantId: 'g1' }, rnd);
   const said = [...episodeOpening(ep, rnd)];
   for (const q of episodeQuestions(ep).slice(0, QUESTIONS_PER_EPISODE)) {
     const r = episodeAsk(ep, q.index, rnd);
@@ -81,7 +81,7 @@ test('cases only use the names the engine fills, curly quotes, and stay readable
 
 // Ask a chosen set of questions, settle every scene, rule, and collect every line and note.
 function playQuestions(s, caseId, indices, ruling, choice, rnd, cast = { plaintiffId: 'g0', defendantId: 'g1' }) {
-  const ep = castEpisode(s, { caseId, ...cast }, rnd);
+  const ep = castEpisode(s, { caseId, twist: 'base', ...cast }, rnd);
   const said = [...episodeOpening(ep, rnd)];
   for (const index of indices) {
     const r = episodeAsk(ep, index, rnd);
@@ -118,13 +118,13 @@ test('every question, every ruling and every scene choice plays with every name 
 
 test('the shelf is the jury: other residents first, neighbours fill the rest, witnesses never sit', () => {
   const s = household(4);
-  const ep = castEpisode(s, { caseId: 'snoring-wall', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(1));
+  const ep = castEpisode(s, { caseId: 'snoring-wall', twist: 'base', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(1));
   assert.equal(ep.p.name, 'Agnes'); assert.equal(ep.d.name, 'Mort');
   assert.equal(ep.jury.length, JURY_SEATS);
   assert.deepEqual(ep.jury.slice(0, 2).map(j => j.name), ['Pip', 'Dot']);
   assert.ok(!ep.jury.some(j => j.id === 'ghost'), 'the snoring case calls the ghost as a witness');
   const alone = household(1);
-  const solo = castEpisode(alone, { caseId: 'moth-custody', plaintiffId: 'g0' }, seededRandom(2));
+  const solo = castEpisode(alone, { caseId: 'moth-custody', twist: 'base', plaintiffId: 'g0' }, seededRandom(2));
   assert.equal(solo.d.kind, 'npc');
   assert.notEqual(solo.d.id, 'moth');
   assert.equal(solo.jury.length, JURY_SEATS);
@@ -137,7 +137,7 @@ test('a solo household gets the neighbour its lobby named, whatever the dice say
     for (const salt of [0, 1, 7, 42]) {
       const named = standInFor(k.id, salt);
       for (const seed of [1, 2, 3]) {
-        const ep = castEpisode(alone, { caseId: k.id, plaintiffId: 'g0', standInSalt: salt }, seededRandom(seed));
+        const ep = castEpisode(alone, { caseId: k.id, twist: 'base', plaintiffId: 'g0', standInSalt: salt }, seededRandom(seed));
         assert.equal(ep.d.id, named);
       }
     }
@@ -156,7 +156,7 @@ test('every case plays start to finish with every name filled in', () => {
 
 test('three questions only, clues go in the notes, and zingers and chaos move the meters', () => {
   const s = household();
-  const ep = castEpisode(s, { caseId: 'borrowed-coffin', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(4));
+  const ep = castEpisode(s, { caseId: 'borrowed-coffin', twist: 'base', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(4));
   const zinger = episodeAsk(ep, 2, seededRandom(1));
   assert.equal(zinger.clue, null);
   assert.ok(ep.ratings > 50);
@@ -213,14 +213,14 @@ test('a just ruling earns the winner’s trust; an unjust one earns a grudge', (
 
 test('the jury mostly follows a respected, correct judge and the stars add up', () => {
   const s = household();
-  const ep = castEpisode(s, { caseId: 'haunted-sock', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(1));
+  const ep = castEpisode(s, { caseId: 'haunted-sock', twist: 'base', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(1));
   ep.respect = 100; ep.ratings = 90;
   const r = episodeRule(ep, 'defendant', seededRandom(9));
   assert.equal(r.agree, 6);
   assert.equal(r.stars, 3);
   assert.equal(episodeRule(ep, 'both'), null, 'one ruling per episode');
   const s2 = household();
-  const ep2 = castEpisode(s2, { caseId: 'haunted-sock', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(1));
+  const ep2 = castEpisode(s2, { caseId: 'haunted-sock', twist: 'base', plaintiffId: 'g0', defendantId: 'g1' }, seededRandom(1));
   ep2.respect = 0; ep2.ratings = 20;
   const r2 = episodeRule(ep2, 'plaintiff', seededRandom(9));
   assert.equal(r2.stars, 0);
