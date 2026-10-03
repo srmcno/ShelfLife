@@ -174,6 +174,6 @@ test('streak milestones carry copy and no dashes', () => {
   for (const [n, mark] of Object.entries(STREAK_MILESTONES)) {
     assert.ok(Number(n) >= 3);
     assert.ok(mark.title.length > 5 && mark.line.length > 10);
-    assert.ok(!/[–—]/.test(mark.title + mark.line));
+    assert.ok(!/[\u2013\u2014]/.test(mark.title + mark.line));
   }
 });
