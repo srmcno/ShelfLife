@@ -19,6 +19,9 @@ async function openHousehold(page) {
   const snapshot = householdFixture('established');
   snapshot.settings.theatreOn = false;
   snapshot.lastBackup = Date.now();
+  // The cases below are ruled by their original truth. Some cases have twisted versions with a
+  // different truth, so mark the original as seen: the lobby then lets the test ask for it by name.
+  snapshot.courtroom = { versions: Object.fromEntries(COURT_CASES.map(k => [k.id, { base: 0 }])) };
   await page.addInitScript(({ snapshot, key }) => {
     if (!sessionStorage.getItem('shelflife.browser.fixture')) {
       localStorage.setItem(key, JSON.stringify(snapshot));
@@ -34,6 +37,11 @@ async function openCourt(page) {
   await page.locator('#playroomBtn:visible, #tabPlay:visible').first().click();
   await page.locator('#playroomVeil [data-court]').click();
   await expect(page.locator('#courtVeil')).toHaveClass(/open/);
+}
+// Ask the lobby for the original telling of the case, if there is more than one.
+async function chooseOriginal(page) {
+  const picker = page.locator('#courtSheet [data-sc-version]');
+  if (await picker.count()) await picker.selectOption('base');
 }
 async function noHorizontalOverflow(page) {
   const sizes = await page.evaluate(() => [...document.querySelectorAll('.veil.open .sheet')].map(el => ({ width: el.clientWidth, content: el.scrollWidth })));
@@ -87,6 +95,7 @@ test('a whole episode of Shelf Court: questions, a ruling, a jury vote and a wra
   const k = COURT_CASES[0];
   await page.locator('#courtSheet [data-sc-case="' + k.id + '"]').click();
   await expect(page.locator('#courtSheet .sc-tonight h3')).toHaveText(k.title);
+  await chooseOriginal(page);
   await noHorizontalOverflow(page);
   await page.locator('#courtSheet [data-sc="roll"]').click();
   await expect(page.locator('#courtSheet .sc-stage')).toBeVisible();
@@ -124,6 +133,7 @@ test('the wrong ruling goes out live and the wronged resident holds a grudge', a
   await openCourt(page);
   const k = COURT_CASES.find(c => c.truth === 'plaintiff');
   await page.locator('#courtSheet [data-sc-case="' + k.id + '"]').click();
+  await chooseOriginal(page);
   await page.locator('#courtSheet [data-sc="roll"]').click();
   await playEpisode(page, 'defendant', {}, { stopAtHall: true });
   // The hallway advances from the keyboard like the rest of the show.

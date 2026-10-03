@@ -114,8 +114,8 @@ function versionMarkup(k) {
 }
 // A version already seen can be asked for by name; everything else is a surprise.
 function versionPicker(k) {
-  const picks = versionView(courtroomState(S), k.id).versions.filter(x => x.seen);
-  if (docketLocked(k.id) || !picks.length) return '';
+  const view = versionView(courtroomState(S), k.id), picks = view.versions.filter(x => x.seen);
+  if (view.of <= 1 || docketLocked(k.id) || !picks.length) return '';
   return '<label class="sc-ver-pick">Version<select data-sc-version><option value=""' + (lobby.twist ? '' : ' selected') + '>Surprise me</option>' +
     picks.map(x => '<option value="' + esc(x.key) + '"' + (lobby.twist === x.key ? ' selected' : '') + '>' + esc(x.title) + '</option>').join('') + '</select></label>';
 }
