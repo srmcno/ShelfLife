@@ -598,7 +598,7 @@ export const TWISTS_B = {
       ['judge', 'Whose is that?'],
       ['bailiff', 'It says THIRD PLACE, Your Honour. It says JAM. I have not looked any closer.']
     ], [
-      ['narrator', '(Somebody in the gallery does the noise. A second somebody does it back. It begins to travel round the room like a Mexican wave of damp.)'],
+      ['narrator', '(Somebody in the gallery does the noise. A second somebody does it back. It begins to travel round the room like a stadium wave, only damper.)'],
       ['judge', 'Order. Order. Bailiff, who started that?'],
       ['bailiff', 'The noise started itself, Your Honour. It does that now.']
     ]),
@@ -1134,11 +1134,12 @@ export const TWISTS_B = {
         ['p', 'A blanket is not the radiator.'],
         ['judge', 'No. But a blanket does not need the bailiff to cheat, which I think you will find is the main difference.']]) },
       4: { lines: alt([
-        ['d', 'Wonderful, Your Honour. At six the pipes start ticking. By ten past, my feet have gone pink.'],
-        ['judge', 'And from seven until six?'],
+        ['judge', 'Your things were in the slot before the draw, {d}.'],
+        ['d', 'My washing has dried on that radiator since Wednesday, Your Honour. I did not plan to win it. I planned to be damp.'],
+        ['judge', 'And now that you are warm?'],
         ['d', 'I tell {p} about it. Kindly. I do a little voice.'],
         ['p', 'NOBODY ASKED FOR THE VOICE.']], [
-        ['d', 'I have not slept so well since 1897, Your Honour. I have a glow.'],
+        ['d', 'I have not slept so well since 1897, Your Honour. My washing has dried on that radiator since Wednesday, and now so have I. I have a glow.'],
         ['judge', 'You have a glow.'],
         ['d', 'A little one. From the knees. It is the pipe.'],
         ['p', 'I HAD THAT GLOW FIRST. IN MY MIND.']]) },
