@@ -56,9 +56,6 @@ export function toast(msg) {
   timer = setTimeout(next, Math.max(0, need - elapsed));
 }
 
-// A tap on the message sends it away early.
-if (typeof document !== 'undefined') document.getElementById('toast')?.addEventListener('click', () => { if (showing !== null) next(); });
-
 /* ---- small chips that float up from the thing that earned them ---------------
    "+4 souls" over the card, "+1 trust" over the resident. They are decoration for
    a result the player can already read in the text, so they are skipped when

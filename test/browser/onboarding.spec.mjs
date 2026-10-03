@@ -151,6 +151,8 @@ test('an established household never sees the tour and keeps the whole desk and 
   await expect(page.locator('#mayhemDesk [data-mh="cabinet"]')).toBeVisible();
   await expect(page.locator('#mayhemDesk .mh-teaser')).toHaveCount(0);
   await expect(page.locator('#shelfBadge')).toHaveText('2');
+  // The badge is decoration; the tab keeps its name and says what the badge counts.
+  await expect(page.getByRole('button', { name: 'Shelf', exact: true })).toHaveAccessibleDescription('2 emergencies waiting');
   // The card never repeats what the omen strip above it already says.
   await expect(card(page)).toHaveAttribute('data-kind', 'emergency');
   expect((await saved(page)).life.guide ?? null).toBeNull();

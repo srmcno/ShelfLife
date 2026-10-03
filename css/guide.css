@@ -235,3 +235,6 @@ body.calm .earn-chip{opacity:1}
   .next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-go{flex:none;min-width:96px;min-height:44px;padding-inline:12px}
   .next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-title{font-size:17px}
 }
+/* Inside a sheet the result is at the bottom of the screen, so the toast goes to the top instead of covering it. */
+body.dialog-open[data-active-dialog] #toast{top:calc(10px + var(--sat));bottom:auto;transform:translateX(-50%) translateY(-16px)}
+body.dialog-open[data-active-dialog] #toast.show{transform:translateX(-50%) translateY(0)}

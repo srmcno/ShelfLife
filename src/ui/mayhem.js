@@ -132,10 +132,10 @@ function renderBadges(state) {
   const n = state.pets.length ? mayhemState(state).queue.length : 0;
   const badge = byId('shelfBadge');
   if (badge) { badge.hidden = !n; badge.textContent = n ? String(n) : ''; }
-  // The badge itself is decoration; the tab says what it counts.
-  const tab = badge?.closest('.tab');
-  const label = n ? 'Shelf, ' + n + (n === 1 ? ' emergency waiting' : ' emergencies waiting') : 'Shelf';
-  if (tab && tab.getAttribute('aria-label') !== label) tab.setAttribute('aria-label', label);
+  // The badge itself is decoration. The tab keeps its plain name ("Shelf") and describes what the badge counts.
+  const note = byId('shelfBadgeSr');
+  const words = n ? n + (n === 1 ? ' emergency waiting' : ' emergencies waiting') : '';
+  if (note && note.textContent !== words) note.textContent = words;
   const title = n ? '(' + n + ') ' + baseTitle : baseTitle;
   if (document.title !== title) document.title = title;
   try { if (n) navigator.setAppBadge?.(n)?.catch?.(() => {}); else navigator.clearAppBadge?.()?.catch?.(() => {}); } catch { /* badges are optional */ }
