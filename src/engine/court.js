@@ -505,6 +505,13 @@ function guestFinish(state, ep, now) {
     truth: k.truth, aired: Object.keys(c.best).length, total: COURT_CASES.length, guest: true, version: null, promotion: null };
 }
 
+// The server keeps the sender's resident in the plaintiff slot whichever side it
+// took, so a ruling is sent back in the slot's terms: for the visitor is always 'plaintiff'.
+export function slotVerdict(visitorSide, ruling) {
+  if (visitorSide !== 'd' || ruling === 'both') return ruling;
+  return ruling === 'plaintiff' ? 'defendant' : 'plaintiff';
+}
+
 // Summonses between friends pay a little on each side: the judge for hearing
 // one, the sender for learning the verdict. Once per summons, and at most
 // SUMMONS_DAILY_CAP of each kind per local day.

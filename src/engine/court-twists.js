@@ -135,7 +135,7 @@ export function twistProblems(k, twist) {
   const checkText = (text, label, max = 280) => {
     if (typeof text !== 'string' || !text.trim()) { say(label + ' is empty'); return; }
     if (text.length > max) say(label + ' is ' + text.length + ' characters, over ' + max);
-    if (/[–—]/.test(text)) say(label + ' contains a dash');
+    if (/[\u2013\u2014]/.test(text)) say(label + ' contains a dash');
     if (/["']/.test(text)) say(label + ' uses a straight quote');
     for (const [slot] of text.matchAll(/\{[^}]*\}/g)) if (!SLOTS.includes(slot)) say(label + ' uses the placeholder ' + slot);
   };

@@ -92,4 +92,14 @@ export function stageDressing(dress) {
     (dress.bench === 'velvet' ? '<span class="sc-candle l" aria-hidden="true">' + CANDLE + '</span><span class="sc-candle r" aria-hidden="true">' + CANDLE + '</span>' : '') +
     (dress.spotlight ? SPOT : '');
 }
+// Small marks for the seats and cards: what a resident's trait is doing here.
+const icon = (cls, body) => '<svg class="sc-ico ' + cls + '" viewBox="0 0 12 12" aria-hidden="true" focusable="false">' + body + '</svg>';
+const HEART = 'M6 10.6C1.4 7.2 1 4.6 2.4 3.3C3.8 2.1 5.4 2.7 6 4.1c.6-1.4 2.2-2 3.6-.8c1.4 1.3 1 3.9-3.6 7.3z';
+export const ROLE_ICONS = {
+  spiteful: icon('spiteful', '<path d="M6 .9c.4 2.6 3.6 3.6 3.6 6.6a3.6 3.6 0 0 1-7.2 0C2.4 5.5 3.9 4.5 4.4 3C5 4 5.4 4.5 6 4.5z" fill="#ff6b3d" stroke="#1a0a11" stroke-width=".8" stroke-linejoin="round"/>'),
+  loyal: icon('loyal', '<path d="' + HEART + '" fill="#ff8aa0" stroke="#1a0a11" stroke-width=".8" stroke-linejoin="round"/>'),
+  sleepy: icon('sleepy', '<path d="M8.6 1.2A4.7 4.7 0 1 0 10.8 8.7A3.8 3.8 0 0 1 8.6 1.2z" fill="#9fd8ff" stroke="#1a0a11" stroke-width=".8" stroke-linejoin="round"/>'),
+  gossip: icon('gossip', '<path d="M1.8 1.8h8.4a1 1 0 0 1 1 1v4.6a1 1 0 0 1-1 1H6.4L3.6 11V8.4H1.8a1 1 0 0 1-1-1V2.8a1 1 0 0 1 1-1z" fill="#c9b3ff" stroke="#1a0a11" stroke-width=".8" stroke-linejoin="round"/>'),
+  trusts: icon('trusts', '<path d="' + HEART + '" fill="none" stroke="#ff8aa0" stroke-width="1.3" stroke-linejoin="round"/>')
+};
 export const DRESS_ART = { banner: BANNER, plate: PLATE, drape: DRAPE, velvet: VELVET, candle: CANDLE, regularTopHat: REGULAR_TOPHAT, regularBonnet: REGULAR_BONNET };

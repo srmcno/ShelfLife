@@ -224,7 +224,7 @@ test('the cast explains itself: tags for each seat, a line for each effect, and 
   const ep = cast(s);
   const lines = describeCast(ep);
   assert.ok(lines.length >= 5);
-  for (const line of lines) assert.ok(line.text.length > 20 && !/[–—]/.test(line.text) && line.tag, JSON.stringify(line));
+  for (const line of lines) assert.ok(line.text.length > 20 && !/[\u2013\u2014]/.test(line.text) && line.tag, JSON.stringify(line));
   assert.deepEqual(seatTags(ep, 'p').map(t => t.role).sort(), ['receipts', 'showman']);
   assert.deepEqual(seatTags(ep, 'd').map(t => t.role).sort(), ['exaggerates', 'intimidating']);
   const dot = ep.jury.findIndex(j => j.id === 'g3');

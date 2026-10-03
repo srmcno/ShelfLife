@@ -171,7 +171,9 @@ export function readCase(raw) {
   const id = cleanUuid(raw.id), fromUser = cleanUuid(raw.from_user);
   const plaintiff = readResident(raw.plaintiff), defendant = readResident(raw.defendant, { art: false });
   if (!id || !fromUser || typeof raw.case_id !== 'string' || !CASE_ID.test(raw.case_id) || !plaintiff || !defendant) return null;
-  return { id, fromUser, fromName: cleanText(raw.from_name, 24), caseId: raw.case_id, plaintiff, defendant, createdAt: cleanTime(raw.created_at) };
+  // The sender's resident always travels in the plaintiff slot; `side` says which side of the case it takes.
+  const side = record(raw.plaintiff) && raw.plaintiff.side === 'd' ? 'd' : 'p';
+  return { id, fromUser, fromName: cleanText(raw.from_name, 24), caseId: raw.case_id, side, plaintiff, defendant, createdAt: cleanTime(raw.created_at) };
 }
 export function readResult(raw) {
   if (!record(raw)) return null;
@@ -387,13 +389,15 @@ export function createSocial({ cloud, getState = () => null, now = Date.now } = 
   // ---- summonses ----
   // The plaintiff travels with its art; the defendant lives on the other
   // shelf already, so only its id and name go back there.
-  async function serve({ to, caseId, plaintiff, defendant }) {
+  async function serve({ to, caseId, plaintiff, defendant, side = 'p' }) {
     if (typeof caseId !== 'string' || !CASE_ID.test(caseId)) throw refuse('bad_case');
     const d = readResident(defendant, { art: false });
     if (!plaintiff || !petId(plaintiff.id) || !d) throw refuse('bad_summons');
     let p = residentSnapshot(plaintiff);
     if (JSON.stringify(p).length > MAX_SUMMONS_CHARS) p = residentSnapshot(plaintiff, { image: false });
     const { art, ...defendantOnly } = d;
+    // The server only wants an object here, so the side the sender chose rides along inside it.
+    if (side === 'd') p = { ...p, side: 'd' };
     const r = await call('send_summons', { p_to: user(to), p_case: caseId, p_plaintiff: p, p_defendant: defendantOnly });
     return { id: cleanUuid(r?.id) };
   }

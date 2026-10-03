@@ -8,7 +8,7 @@ import { castEpisode, episodeRule, courtFinish, COURT_BY_ID } from '../src/engin
 import { courtroomState, normalizeCourtroom } from '../src/court-state.js';
 import { ACHIEVEMENTS, checkAchievements } from '../src/engine/achievements.js';
 import { seededRandom } from '../src/engine/arcade.js';
-import { DRESS_ART, GALLERY_REGULARS, LAUREL, dressClasses, benchDressing, stageDressing } from '../src/art/court-dress.js';
+import { DRESS_ART, GALLERY_REGULARS, LAUREL, ROLE_ICONS, dressClasses, benchDressing, stageDressing } from '../src/art/court-dress.js';
 
 const NOW = new Date(2026, 8, 25, 14, 0, 0).getTime();
 function household(n = 3) {
@@ -34,7 +34,7 @@ test('ten ranks climb in order and name what they pay and unlock', () => {
   BENCH_RANKS.forEach((r, i) => {
     if (i) { assert.ok(r.stars > BENCH_RANKS[i - 1].stars, 'thresholds climb'); assert.ok(r.souls > 0 && r.unlock, 'every promotion pays and unlocks'); }
     else assert.deepEqual([r.stars, r.souls, r.unlock], [0, 0, null]);
-    for (const t of [r.name, r.blurb, r.unlock?.name || '', r.unlock?.blurb || '']) assert.ok(!/[–—]/.test(t) && !/["']/.test(t), t);
+    for (const t of [r.name, r.blurb, r.unlock?.name || '', r.unlock?.blurb || '']) assert.ok(!/[\u2013\u2014]/.test(t) && !/["']/.test(t), t);
   });
   assert.equal(BENCH_RANKS.reduce((n, r) => n + r.souls, 0), 580);
   assert.equal(BENCH_UNLOCKS.length, 9);
@@ -146,6 +146,7 @@ function assertWellFormed(id, markup) {
 test('every piece of dressing is well-formed SVG, and the whole wardrobe can be put on the stage', () => {
   for (const [id, art] of Object.entries(DRESS_ART)) { assert.ok(art.startsWith('<svg ') && art.endsWith('</svg>'), id); assertWellFormed('DRESS_ART.' + id, art); }
   GALLERY_REGULARS.forEach((art, i) => assertWellFormed('regular ' + i, art));
+  for (const [role, art] of Object.entries(ROLE_ICONS)) assertWellFormed('ROLE_ICONS.' + role, art);
   assertWellFormed('LAUREL', '<svg>' + LAUREL + '</svg>');
   assert.ok(LAUREL.includes('class="sc-laurel"') && (LAUREL.match(/<ellipse/g) || []).length >= 16);
   const full = dressFor(9);
@@ -175,7 +176,7 @@ test('a promotion in the record is a thing the achievements can see', () => {
   const court = ACHIEVEMENTS.filter(a => a.id.startsWith('bench-') || a.id.startsWith('court-') || a.id.startsWith('twist'));
   assert.ok(court.length >= 8, 'the court has its own incidents');
   for (const a of court) {
-    for (const key of ['label', 'desc', 'hint', 'toastLine']) { assert.equal(typeof a[key], 'string'); assert.ok(!/[–—]/.test(a[key]) && !/["']/.test(a[key]), a.id + ' ' + key); }
+    for (const key of ['label', 'desc', 'hint', 'toastLine']) { assert.equal(typeof a[key], 'string'); assert.ok(!/[\u2013\u2014]/.test(a[key]) && !/["']/.test(a[key]), a.id + ' ' + key); }
     assert.equal(a.check(blankState()), false, a.id + ' is not given away to an empty shelf');
   }
   const by = id => ACHIEVEMENTS.find(a => a.id === id);

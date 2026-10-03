@@ -33,7 +33,7 @@ test('the bonus questions work in any case, are funny twice over, and follow the
     for (const set of lineSets(b.lines)) { assert.ok(set.length >= 2 && set.length <= 5, b.id + ' take length'); }
     for (const [s, , who] of lineSets(b.lines).flat()) { assert.ok(SPEAKERS.has(s), b.id + ' speaker ' + s); assert.equal(who, undefined, b.id + ' needs no cast member'); }
     for (const t of [b.ask, ...text(b.lines)]) {
-      assert.ok(!/[–—]/.test(t), b.id + ' has a dash');
+      assert.ok(!/[\u2013\u2014]/.test(t), b.id + ' has a dash');
       assert.ok(!/["']/.test(t), b.id + ' has a straight quote: ' + t);
       assert.ok(t.length <= 280, b.id + ' line over budget');
       for (const [slot] of t.matchAll(/\{[^}]*\}/g)) assert.ok(['{p}', '{d}', '{j}'].includes(slot), b.id + ' uses ' + slot);
@@ -41,7 +41,7 @@ test('the bonus questions work in any case, are funny twice over, and follow the
   }
   for (const group of [OBJECTION_STRIKE, OBJECTION_CONFIRM, OBJECTION_PRESS, RECEIPT_TAKES]) {
     assert.ok(group.length >= 3, 'three takes of each');
-    for (const t of group.flat().map(l => l[1])) assert.ok(!/[–—]/.test(t) && !/["']/.test(t), t);
+    for (const t of group.flat().map(l => l[1])) assert.ok(!/[\u2013\u2014]/.test(t) && !/["']/.test(t), t);
   }
 });
 

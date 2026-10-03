@@ -135,7 +135,7 @@ test('a sound twist passes, and each rule it can break is named', () => {
   broken(t => { t.id = 'base'; }, /id must be/);
   broken(t => { t.title = 'x'.repeat(41); }, /title/);
   broken(t => { t.questions[0].clue = 'x'.repeat(141); }, /over 140/);
-  broken(t => { t.questions[3].herring = 'Plenty of nothing — and more.'; }, /dash/);
+  broken(t => { t.questions[3].herring = 'Plenty of nothing ' + String.fromCharCode(0x2014) + ' and more.'; }, /dash/);
   broken(t => { t.questions[0].clue = 'A clue with a {x} slot'; }, /placeholder/);
   broken(t => { t.questions[0].clue = "It's a straight quote"; }, /straight quote/);
   broken(t => { t.questions[0].lines = alt([['p', 'Only one take.']]); }, /at least 2 takes/);
