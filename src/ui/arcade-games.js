@@ -67,7 +67,8 @@ export function frenzyView() {
       const now = g.t < g.frenzyUntil;
       if (now !== frenzied) { frenzied = now; A.field.classList.toggle('frenzied', now); }
       // The catcher walks when it is going somewhere.
-      const dir = g.dir || (g.target != null && Math.abs(g.target - g.x) > 0.012 ? Math.sign(g.target - g.x) * (g.mod?.mirror ? -1 : 1) : 0);
+      const flip = g.mod?.mirror ? -1 : 1, aim = g.target == null ? null : (flip < 0 ? 1 - g.target : g.target);
+      const dir = g.dir ? g.dir * flip : (aim != null && Math.abs(aim - g.x) > 0.012 ? Math.sign(aim - g.x) : 0);
       const key = dir ? String(Math.sign(dir)) : '';
       if (key !== moving) { moving = key; A.puppet?.move(!!dir, dir || 1); }
       for (const e of events) {
@@ -237,7 +238,7 @@ export function stackView() {
 
 /* ---------- The Séance ---------- */
 export function seanceView() {
-  let circle, candles, sched = null, lit = -2, showAt = 0, mediumEl, wasShowing = false, pendingSay = '';
+  let circle, candles, sched = null, lit = -2, showAt = 0, mediumEl, wasShowing = false, pendingSay = '', hinted = false;
   const lightCandle = (pad, on) => { candles.forEach((el, i) => el.classList.toggle('lit', on && i === pad)); };
   return {
     controls: () => '',
@@ -255,6 +256,9 @@ export function seanceView() {
         wasShowing = true; showAt = 0; sched = seanceSchedule(g); lit = -2;
         A.field.classList.add('listening');
         // What the last tap earned is said once more as the next show begins, instead of being overwritten.
+        // The first tune with a held breath in it says what the pauses are for.
+        const tuned = g.gaps.some((x, i) => i > 0 && x > 1);
+        if (tuned && !hinted) { hinted = true; pendingSay = pendingSay || 'Listen for the pauses. Keep them and earn a point.'; }
         A.say(pendingSay || (g.mod?.reverse ? 'The spirits are speaking… backwards.' : 'The spirits are speaking…'));
         pendingSay = '';
         lightCandle(-1, false);

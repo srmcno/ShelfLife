@@ -168,7 +168,9 @@ export function createFx(host, { level = 0, world = null, haptics = () => true }
   meter.innerHTML = '<small></small><b></b><i><u></u></i>';
   const banner = document.createElement('div'); banner.className = 'ar-banner'; banner.setAttribute('aria-hidden', 'true'); banner.hidden = true;
   banner.innerHTML = '<b></b><span></span>';
-  host.append(canvas, vignette, meter, banner);
+  // The same words, for anyone who is not watching the field.
+  const live = document.createElement('p'); live.className = 'ar-sr'; live.setAttribute('role', 'status'); live.setAttribute('aria-live', 'polite');
+  host.append(canvas, vignette, meter, banner, live);
   const particles = createParticles(caps.particles ? canvas : null, caps);
   if (!caps.particles) canvas.hidden = true;
   let w = 0, h = 0, dpr = 1;
@@ -239,6 +241,7 @@ export function createFx(host, { level = 0, world = null, haptics = () => true }
     },
     // A big line across the field: a wave, a skull, a record. Queued so none are lost.
     banner(text, sub = '', tone = 'good', ms = 1500) {
+      live.textContent = sub ? text + '. ' + sub : text;
       bannerQueue.push({ text, sub, tone, ms });
       if (bannerQueue.length > 3) bannerQueue.splice(0, bannerQueue.length - 3);
       if (!bannerBusy) nextBanner();
@@ -270,7 +273,7 @@ export function createFx(host, { level = 0, world = null, haptics = () => true }
     destroy() {
       dead = true;
       particles.clear();
-      canvas.remove(); vignette.remove(); meter.remove(); banner.remove();
+      canvas.remove(); vignette.remove(); meter.remove(); banner.remove(); live.remove();
       pops.forEach(p => p.node.remove());
       if (world) world.style.transform = '';
       host.classList.remove('dying');

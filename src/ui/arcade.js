@@ -52,7 +52,7 @@ function head(title, kicker) {
   return '<div class="sheet-head"><div><span class="eyebrow">' + esc(kicker) + '</span><h2>' + esc(title) + '</h2></div><button class="btn btn-ghost btn-sm" type="button" data-ar="close">Close</button></div>';
 }
 function clearResultTimers() {
-  resultTimers.forEach(t => { clearTimeout(t); clearInterval(t); });
+  resultTimers.forEach(t => { if (typeof t === 'function') t(); else { clearTimeout(t); clearInterval(t); } });
   resultTimers = [];
   resultFx?.destroy(); resultFx = null;
   resultPuppet?.release(); resultPuppet = null;
@@ -221,6 +221,7 @@ function startRun(daily = false) {
     }
   };
   run.A = A;
+  run.el = { score: sheet.querySelector('[data-ar-score]'), lives: sheet.querySelector('.ar-lives') };
   run.view.build(A);
   paintLadder(true);
   showReady(0);
@@ -293,14 +294,14 @@ function frame(now) {
   run.fx.update(slow);
 }
 function paintHud() {
-  const g = run.game, scoreEl = sheet.querySelector('[data-ar-score]');
+  const g = run.game, scoreEl = run.el.score;
   if (scoreEl && scoreEl.textContent !== String(g.score)) {
     scoreEl.textContent = g.score;
     if (!run.reduced && typeof scoreEl.animate === 'function' && run.fx.level < 2) scoreEl.animate([{ transform: 'scale(1.35)' }, { transform: 'scale(1)' }], { duration: 160, easing: 'ease-out' });
     paintLadder();
     milestones();
   }
-  const lives = sheet.querySelector('.ar-lives');
+  const lives = run.el.lives;
   if (lives && lives.dataset.n !== String(g.lives)) { lives.dataset.n = g.lives; lives.innerHTML = skulls(g.lives, run.maxLives); lives.setAttribute('aria-label', g.lives + ' lives left'); }
 }
 // Skulls, records and "nearly there", said on the field as they happen.
@@ -429,8 +430,8 @@ function gameOver() {
     let last = performance.now();
     const loop = now => { if (!resultFx) return; resultFx.update(Math.min(0.05, (now - last) / 1000)); last = now; raf = requestAnimationFrame(loop); };
     let raf = requestAnimationFrame(loop);
-    resultTimers.push({ [Symbol.toPrimitive]() { return 0; } });
-    const stopLoop = setTimeout(() => cancelAnimationFrame(raf), 4200); resultTimers.push(stopLoop);
+    resultTimers.push(() => cancelAnimationFrame(raf));
+    later(() => cancelAnimationFrame(raf), 4200);
   }
   // A beat before Again is live, so the key mashing that ended the run does
   // not start another one by accident.
@@ -470,7 +471,8 @@ function tapGrave(i) {
   run.view.hit(run.A, i);
 }
 function aim(field, e) {
-  const box = field.getBoundingClientRect();
+  // The field does not move during a drag, so it is measured once per touch rather than once per move.
+  const box = run.box || (run.box = field.getBoundingClientRect());
   run.game.target = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width));
   run.game.dir = 0;
 }
@@ -528,7 +530,7 @@ export function initArcade(state, onRefresh, { social } = {}) {
     if (run.id === 'frenzy') {
       const dir = e.target.closest('[data-ar-dir]');
       if (dir) { e.preventDefault(); beginPlay(); run.game.dir = Number(dir.dataset.arDir); run.game.target = null; dir.setPointerCapture?.(e.pointerId); return; }
-      if (field && !e.target.closest('.ar-paused')) { e.preventDefault(); beginPlay(); aim(field, e); run.dragging = true; field.setPointerCapture?.(e.pointerId); }
+      if (field && !e.target.closest('.ar-paused')) { e.preventDefault(); beginPlay(); run.box = null; aim(field, e); run.dragging = true; field.setPointerCapture?.(e.pointerId); }
     }
   });
   sheet.addEventListener('pointermove', e => { if (run?.id === 'frenzy' && run.dragging) aim(sheet.querySelector('[data-ar-field]'), e); });
