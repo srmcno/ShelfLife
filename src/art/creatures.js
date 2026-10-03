@@ -1611,8 +1611,17 @@ function shadingDefs(colors) {
     + `<stop offset="0" stop-color="${mixHex(colors.body, colors.bodyLight, 0.5)}"/>`
     + `<stop offset="0.42" stop-color="${colors.body}"/>`
     + `<stop offset="1" stop-color="${mixHex(colors.body, colors.bodyDark, 0.62)}"/>`
-    + `</radialGradient></defs>`;
+    + `</radialGradient>${RIM_DEF}</defs>`;
 }
+/* The rim light. One warm edge on the side the key light is on, drawn as a
+   gradient stroke over the ink line, fading out across the form. It replaces
+   the filter chain that used to wrap every sprite: it is plain vector, so it
+   costs nothing per frame and survives Light effects. css/fx.css retints the
+   stops from the room's own bulb (--key) and for furious or sleeping moods. */
+const RIM_DEF = `<linearGradient id="cr-rim" gradientUnits="userSpaceOnUse" x1="-34" y1="-44" x2="22" y2="22">`
+  + `<stop class="cr-rim-hi" offset="0" stop-color="#FFE2B0"/>`
+  + `<stop class="cr-rim-a" offset="0.42" stop-color="#F2C083" stop-opacity="0.78"/>`
+  + `<stop class="cr-rim-a" offset="0.8" stop-color="#F2C083" stop-opacity="0"/></linearGradient>`;
 // Set for the duration of one renderCreatureSVG call; paint() reads it.
 let SHADE_ID = null;
 
@@ -1775,6 +1784,7 @@ export function renderCreatureSVG(creature, opts = {}) {
   if (body.shade) bodyInner += shapesMarkup(body.shade, colors);
   bodyInner += `<ellipse cx="${num(head.x - head.r * 0.34)}" cy="${num(head.y - head.r * 0.46)}" rx="${num(head.r * 0.4)}" ry="${num(head.r * 0.24)}" fill="${colors.bodyLight}" opacity="0.38"/>`;
   bodyInner += `<path d="${body.path}" fill="none" stroke="${colors.bodyDark}" stroke-width="${num(OUTLINE_SW * 1.25)}" stroke-linejoin="round"/>`;
+  bodyInner += `<path class="cr-rim" d="${body.path}" fill="none" stroke="url(#cr-rim)" stroke-width="${num(OUTLINE_SW * 1.25)}" stroke-linejoin="round"/>`;
   const bodyMarkup = mount({ part:'body', x:0, y:0 }, bodyInner);
 
   /* --- blush (only faces that have the room, and never on a blind stare) ----- */

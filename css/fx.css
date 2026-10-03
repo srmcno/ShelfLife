@@ -168,3 +168,80 @@ body:not([data-effects="light"]) .empty-art .ea-knock{animation:fx-knock 6s ease
 @keyframes fx-dot{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1.15)}}
 body[data-effects="light"] .fx-loading-dots i{animation:none;opacity:.7}
 @media (prefers-reduced-motion:reduce){.fx-loading-dots i{animation:none;opacity:.7}}
+
+/* ---- 5. the lit shelf, phone grade ---------------------------------------------
+   The look in docs/art-direction.md is a key light above and to the left, so
+   every creature has a warm edge on that side and throws a shadow down and to
+   the right. That used to be a chain of three live drop-shadow filters on every
+   animated sprite, which phones could not afford, so Light effects switched the
+   lot off and left a flat shelf. It is now drawn from things that cost nothing
+   per frame:
+
+     * the rim light is a gradient stroke inside the creature's own SVG
+       (art/creatures.js, .cr-rim), retinted here from the room's bulb;
+     * the shadow on the wall behind is a pre-blurred ellipse (a radial
+       gradient on .sprite::before), the shadow on the board under the feet is
+       the existing .pet::after;
+     * nothing here animates, so Light and Full look the same and differ only
+       in how much moves.
+
+   The filter rules in style.css (the "shadow chain" blocks) are overridden, not
+   deleted, so that file stays merge-friendly; they can be removed outright. */
+body .sl2 .sprite-figure,
+body .pet .sprite-figure,
+body .pet:hover .sprite-figure,
+body .pet.furious .sprite-figure,
+body .pet.asleep .sprite-figure,
+body .card-portrait .sprite-figure,
+body .gen-mount .sprite-figure,
+body .draw-preview .sprite-figure,
+body .shelf-theatre-actor .sprite-figure,
+body[data-effects="light"] .guest-portrait .sprite{filter:none!important}
+
+/* the rim, retinted */
+.sprite-creature .cr-rim{stroke-width:2.5;stroke-linecap:round;transition:opacity .3s}
+.sprite-creature .cr-rim-hi{stop-color:color-mix(in srgb,var(--key) 48%,#fff)}
+.sprite-creature .cr-rim-a{stop-color:var(--key)}
+.pet:hover .sprite-creature .cr-rim,.pet:focus-visible .sprite-creature .cr-rim{stroke-width:3.3}
+.pet.furious .sprite-creature .cr-rim-hi{stop-color:#FFA0AA}
+.pet.furious .sprite-creature .cr-rim-a{stop-color:#FF4A57}
+.pet.asleep .sprite-creature .cr-rim{opacity:.45}
+body.night .sprite-creature .cr-rim{opacity:.85}
+
+/* a drawn creature has no vector edge to light; Full mode gives it one cheaply
+   (the filter sits on the still image, not on the breathing figure around it) */
+body:not([data-effects="light"]) .sl-handdrawn .sprite-body{filter:drop-shadow(-1.5px -1.5px 0 var(--key-hi))}
+
+/* The shadow on the board or the floor under any creature. On the shelf the
+   plank already has its own (.pet::after), so this one is for portraits. */
+.sprite.sl2::before{content:'';position:absolute;z-index:-1;pointer-events:none;left:50%;bottom:calc(var(--sl-foot-shadow, 5%) * 1);
+  width:64%;height:10%;transform:translateX(-50%);border-radius:50%;
+  background:radial-gradient(closest-side,rgba(0,0,0,.6),rgba(0,0,0,.25) 58%,transparent 100%)}
+/* On the shelf it is a cast shadow on the wall, thrown down and to the right by
+   the key, wider than the creature is thick and most of its height. */
+.slot .sprite.sl2::before{left:63%;bottom:7%;width:60%;height:70%;transform:translateX(-50%) skewX(-9deg);
+  border-radius:48% 52% 46% 54% / 58% 58% 42% 42%;
+  background:radial-gradient(closest-side at 46% 56%,rgba(0,0,0,.82),rgba(0,0,0,.52) 52%,rgba(0,0,0,.16) 82%,transparent 100%)}
+.pet.asleep .sprite.sl2::before{opacity:.55}
+.pet:hover .sprite.sl2::before{opacity:.85}
+.shelf-theatre-actor .sprite.sl2::before,.household-player .sprite.sl2::before{left:60%;bottom:6%;width:56%;height:62%;transform:translateX(-50%) skewX(-9deg);border-radius:48% 52% 46% 54% / 58% 58% 42% 42%;
+  background:radial-gradient(closest-side at 46% 56%,rgba(0,0,0,.55),rgba(0,0,0,.3) 55%,transparent 100%)}
+/* a creature in a bad way glows red behind itself, which is all it takes */
+.pet.furious .sprite.sl2::after{content:'';position:absolute;z-index:-2;pointer-events:none;inset:6% -8% 4%;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,74,87,.26),rgba(255,74,87,.08) 62%,transparent 100%)}
+
+/* props: one static shadow each, kept in Light too (they do not move) */
+body[data-effects="light"] .slot .prop svg{filter:drop-shadow(5px 4px 3px rgba(0,0,0,.5))!important}
+body[data-effects="light"] .prop[data-prop="candle"] svg,body[data-effects="light"] .prop[data-prop="lantern"] svg,
+body[data-effects="light"] .prop[data-prop="lamp"] svg{filter:drop-shadow(0 0 8px var(--key-mid))!important}
+body[data-effects="light"] .prop[data-prop="cauldron"] svg{filter:drop-shadow(0 0 8px rgba(143,224,122,.55))!important}
+
+/* The room in Light mode: static haze and dust stay, the flames still flicker
+   (a transform on a tiny element is free), and the sheets, which can no longer
+   blur what is behind them, get a heavier scrim instead. */
+body[data-effects="light"] #haze::after{display:block;animation:none;opacity:.34}
+body[data-effects="light"] .candle i{animation:candle-flicker 2.6s steps(7) infinite}
+body[data-effects="light"] .candle i::after{animation:none;opacity:.8}
+body[data-effects="light"] .veil{background:rgba(4,3,8,.92)}
+body[data-effects="light"] .tabbar{background:color-mix(in srgb,var(--night) 95%,transparent)}
+@media (prefers-reduced-motion:reduce){body[data-effects="light"] .candle i{animation:none}}
