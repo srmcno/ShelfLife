@@ -21,7 +21,7 @@ const DAY = 86400000;
 
 // Whole days away, as far as the chest is concerned: capped at a week.
 export function daysAway(ms) { return Math.min(RETURN_MAX_DAYS, Math.floor(ms / DAY)); }
-export function chestFor(days) { return { souls: 30 + 40 * days, xp: days ? RETURN_XP_PER_DAY * days : 5 }; }
+export function chestFor(days) { return { souls: 20 + 40 * days, xp: days ? RETURN_XP_PER_DAY * days : 5 }; }
 
 function pickFrom(list, n) { return list[Math.abs(Math.floor(n)) % list.length]; }
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => (k in vars ? vars[k] : '{' + k + '}'));

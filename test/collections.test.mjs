@@ -21,7 +21,7 @@ import { checkAchievements, ACHIEVEMENTS, INCIDENT_GROUPS } from '../src/engine/
 import { normalizeMayhem } from '../src/mayhem-state.js';
 import { readShelf } from '../src/cloud/social.js';
 
-const NODASH = /[–—]/;
+const NODASH = /[\u2013\u2014]/;
 function household() {
   const s = blankState();
   s.pets = [{ id: 'c0', name: 'Agnes', traits: [], needs: { food: 50, fuss: 50, clean: 50 }, bond: 3, cared: 0, grudges: 0 }, { id: 'c1', name: 'Pip', traits: [], needs: { food: 50, fuss: 50, clean: 50 }, bond: 3, cared: 0, grudges: 0 }];

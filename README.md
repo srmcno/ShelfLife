@@ -40,6 +40,28 @@ six seasonal curios, which stay in the cabinet once you have them. Streaks and s
 incidents. In the installed Android app, optional **nudges** (local notifications, no server) can tell
 you when the next emergency is due; they stay quiet overnight.
 
+### The long game
+
+**The Almanac** is a calendar of monthly chapters, written in advance from October 2026 to December 2027 and
+then repeated, so it never runs out. Each chapter has a free 30 tier track (souls, four limited curios, a
+room set, a title and a badge), a countdown, and a Court spotlight case. XP comes from things you already do
+(care, emergencies, the omen, chores, Shelf Court, the arcade, expeditions), a little each, up to a limit
+every day. Three **weekly challenges** and a weekly chest sit beside it. Miss a chapter and its curios come
+back in **Back Issues** at a higher price, so nothing is lost for good. The Thin Season is the October
+flagship, with its own flavour lines under every emergency.
+
+A **streak freeze** is earned for every seven days of the omen, the docket or the daily challenge (the shelf
+holds two) and covers one missed day on its own. Come back after six hours or more and the shelf has a
+**"while you were away"** card and a chest that grows with the days gone, up to seven. There is never a
+penalty for being away.
+
+**Collections** group the curios, keepsakes and souvenirs into sets with prizes, shown in the Cabinet. Past
+Unspeakable the ranks go on as thirty **Legacy ranks**, each paying a title and a Legacy Token. The
+**Collector's Exchange** is where souls and tokens go once the cabinet is full: Back Issues, cabinet and
+portrait frames, rooms, woods, walls, accents and commissions. Everything the game offered free before stays
+free and owned. In the Android app, optional nudges also cover a way-back ladder (a day, three, seven,
+fourteen and thirty days away, then no more), new chapters and the weekly chest, each switchable on its own.
+
 ## Make yourself at home
 
 Meet Mabel, Pip or Oswald, or create someone entirely your own. The face you choose is the
@@ -249,6 +271,9 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js`, `src/art/court-hallway.js` | Shelf Court: cases, episode state machine, TV studio stage, the drawn cast and the hall cam's corridor set |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
 | `src/cloud/social.js`, `src/ui/friends.js`, `css/social.css` | Friends, shelves on show, Shelf Court summonses and daily boards |
+| `src/almanac-state.js`, `src/content/almanac.js`, `src/engine/almanac.js`, `src/ui/almanac.js`, `css/almanac.css` | The Almanac: calendar, track, XP, weekly challenges, Back Issues and the screens |
+| `src/engine/streaks.js`, `src/engine/returns.js`, `src/engine/claimables.js` | Streak freezes, the return chest and one list of everything claimable |
+| `src/engine/collections.js`, `src/engine/legacy.js`, `src/ui/collections.js` | Sets, Legacy ranks and tokens, and the Collector's Exchange |
 | `src/native.js`, `capacitor.config.json`, `android/` | The Android app: native glue, Capacitor settings and the native project |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |

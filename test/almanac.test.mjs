@@ -25,7 +25,7 @@ function household(count = 3, when = NOW) {
   s.pets.forEach((p, i) => { s.slots[i] = p.id; });
   return s;
 }
-const NODASH = /[–—]/;
+const NODASH = /[\u2013\u2014]/;
 
 test('the calendar covers October 2026 to December 2027 without a gap or an overlap', () => {
   assert.equal(CHAPTERS.length, 15);

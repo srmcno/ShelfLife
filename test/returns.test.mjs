@@ -17,7 +17,7 @@ function household(count = 3) {
   s.pets.forEach((p, i) => { s.slots[i] = p.id; });
   return s;
 }
-const NODASH = /[–—]/;
+const NODASH = /[\u2013\u2014]/;
 
 test('a household with no recorded visit has nothing to be welcomed back from, then it does', () => {
   const s = household();
@@ -36,7 +36,7 @@ test('six hours away or more brings the card and a chest scaled by the days, cap
   assert.ok(card && card.days === 0 && card.souls === chestFor(0).souls);
   assert.ok(card.lines.length >= 4 && card.lines.every(l => typeof l === 'string' && l.length > 10 && !l.includes('{')), JSON.stringify(card.lines));
   const sizes = [0, 1, 2, 3, 7, 8, 30].map(d => chestFor(daysAway(d * DAY)).souls);
-  assert.deepEqual(sizes, [30, 70, 110, 150, 310, 310, 310]);
+  assert.deepEqual(sizes, [20, 60, 100, 140, 300, 300, 300]);
   assert.equal(RETURN_MAX_DAYS, 7);
   assert.ok(chestFor(7).xp === 7 * RETURN_XP_PER_DAY);
 });

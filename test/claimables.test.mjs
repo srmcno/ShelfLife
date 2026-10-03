@@ -29,7 +29,7 @@ test('the claimable shape is documented and every entry has it', () => {
   for (const c of list) {
     assert.deepEqual(Object.keys(c).sort(), [...CLAIMABLE_SHAPE].sort());
     assert.ok(typeof c.id === 'string' && c.label.length > 3 && c.hint.length > 3 && CLAIMABLE_TABS.includes(c.tab) && Number.isFinite(c.priority), JSON.stringify(c));
-    assert.ok(!/[–—]/.test(c.label + c.hint));
+    assert.ok(!/[\u2013\u2014]/.test(c.label + c.hint));
   }
   assert.deepEqual(list.map(c => c.priority), list.map(c => c.priority).sort((a, b) => b - a), 'highest first');
 });

@@ -22,7 +22,7 @@ function air(s, caseId, now) {
   episodeRule(ep, 'plaintiff', seededRandom(4));
   return courtFinish(s, ep, now);
 }
-const NODASH = /[–—]/;
+const NODASH = /[\u2013\u2014]/;
 
 test('every seventh day of a streak earns a freeze and the shelf holds two', () => {
   const s = household();

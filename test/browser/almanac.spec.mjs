@@ -76,11 +76,11 @@ test('coming back after days away brings a card and a chest, opened once', async
   const card = page.locator('#mayhemDesk .alm-return');
   await expect(card).toBeVisible();
   await expect(card).toContainText('While you were away');
-  await expect(card).toContainText('150 souls');
+  await expect(card).toContainText('140 souls');
   const before = (await saved(page)).mayhem.souls;
   await card.locator('[data-ret="claim"]').click();
   await expect(page.locator('#mayhemDesk .alm-return')).toHaveCount(0);
-  await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(before + 150);
+  await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(before + 140);
   await page.reload();
   await expect(page.locator('#mayhemDesk .alm-return')).toHaveCount(0);
   expect((await saved(page)).returns.claimed).toBe(4);

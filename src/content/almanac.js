@@ -21,7 +21,7 @@ export const EDITION_RARITY = { id: 'edition', label: 'Almanac edition', refund:
 // The track every chapter shares. Tier XP is spread over the chapter by its
 // length (engine/almanac.js tierXp), so a short month asks for less.
 export const TIERS = 30;
-export const TRACK_XP_PER_DAY = 36;
+export const TRACK_XP_PER_DAY = 40;
 
 /* What each tier pays. kind: souls | curio (index into the chapter's four) |
    decor (the room set) | title | badge (the final badge, plus souls). */
