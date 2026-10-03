@@ -237,11 +237,12 @@ export function stackView() {
 
 /* ---------- The Séance ---------- */
 export function seanceView() {
-  let circle, candles, sched = null, lit = -2, showAt = 0, mediumEl, wasShowing = false;
+  let circle, candles, sched = null, lit = -2, showAt = 0, mediumEl, wasShowing = false, pendingSay = '';
   const lightCandle = (pad, on) => { candles.forEach((el, i) => el.classList.toggle('lit', on && i === pad)); };
   return {
     controls: () => '',
     build(A) {
+      pendingSay = '';
       A.world.innerHTML = '<div class="ar-circle">' + [0, 1, 2, 3].map(i => '<button class="ar-candle c' + i + '" type="button" data-pad="' + i + '" aria-label="' + SEANCE_NAMES[i] + ', key ' + (i + 1) + '"><span class="ar-flame"></span><span class="ar-wax"></span><small>' + (i + 1) + '</small></button>').join('') + '<div class="ar-medium"></div></div>';
       circle = A.world.querySelector('.ar-circle'); candles = [...A.world.querySelectorAll('.ar-candle')]; mediumEl = A.world.querySelector('.ar-medium');
       A.mkPet(mediumEl);
@@ -253,7 +254,9 @@ export function seanceView() {
       if (!wasShowing) {
         wasShowing = true; showAt = 0; sched = seanceSchedule(g); lit = -2;
         A.field.classList.add('listening');
-        A.say(g.mod?.reverse ? 'The spirits are speaking… backwards.' : 'The spirits are speaking…');
+        // What the last tap earned is said once more as the next show begins, instead of being overwritten.
+        A.say(pendingSay || (g.mod?.reverse ? 'The spirits are speaking… backwards.' : 'The spirits are speaking…'));
+        pendingSay = '';
         lightCandle(-1, false);
       }
       showAt += dt;
@@ -288,13 +291,13 @@ export function seanceView() {
           else A.sfx('combo', Math.min(14, g.rounds));
           if (r.healed) { A.fx.pop('A mistake mended', 0.5, 0.24, 'gold'); A.sfx('gold', 0, { priority: 'high' }); }
           A.react('boop');
-          A.say('Round ' + (g.rounds + 1) + '. Listen…');
+          pendingSay = 'Round ' + (g.rounds + 1) + '. Listen…';
           A.fx.combo({ label: 'In time', count: g.streak, mult: Math.min(g.streak, 3), progress: (g.streak % 3) / 3, hot: g.streak >= 3, min: 2 });
         }
       } else if (r.forgiven) {
         A.sfx('wrong', 0, { priority: 'high' }); A.fx.shake(0.8); A.fx.flash('hurt'); A.haptic('bad'); A.react('deny');
         A.fx.pop('Forgiven. Once.', 0.5, 0.12, 'bad');
-        A.say(g.maxLives > 2 ? 'Wrong candle. ' + g.lives + ' mistakes left. Listen again.' : 'Wrong candle. The spirits forgive you once. Listen again.');
+        pendingSay = g.maxLives > 2 ? 'Wrong candle. ' + g.lives + ' mistakes left. Listen again.' : 'Wrong candle. The spirits forgive you once. Listen again.';
         A.fx.combo({ count: 0, min: 2 });
         A.fx.burst('soul', xs[pad], ys[pad], 0.8);
       } else {

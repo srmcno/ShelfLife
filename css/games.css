@@ -157,6 +157,12 @@ body[data-effects="light"] .hub-art *{animation:none}
 .ar-pad{flex:1;min-height:60px;font-size:24px}
 .ar-pad.wide{font-size:17px}
 
+/* Residents on the field move every frame, so they get one cheap shadow and, on a
+   struggling device, none. The grand multi-shadow look is for the shelf. */
+.ar-field .sprite-figure{filter:drop-shadow(2px 3px 2px rgba(0,0,0,.5))!important}
+.ar-field[data-fx="1"] .sprite-figure,.ar-field[data-fx="2"] .sprite-figure,body[data-effects="light"] .ar-field .sprite-figure{filter:none!important}
+.ar-field[data-fx="2"] .sprite-figure{animation:none!important}
+
 /* ---- scenes: the colours come from the arena ---- */
 .ar-layer .dot,.a-star{fill:var(--ar-star);opacity:.7}
 .a-moon{fill:var(--ar-star)}.a-halo{fill:var(--ar-glow);opacity:.14}.a-crater{fill:var(--ar-sky-b);opacity:.28}

@@ -36,7 +36,7 @@ export function fxLevelFor({ mode = 'full', reduced = false, remembered = 0 } = 
    milliseconds; once per window it returns the next level down if the mean
    frame was slow, and otherwise null. Gaps over `ignoreMs` are a pause or a
    hidden tab, not slowness, and are not counted. It only ever steps down. */
-export function createGovernor({ windowMs = 2000, slowMs = 26, minFrames = 24, ignoreMs = 250, warmup = 6 } = {}) {
+export function createGovernor({ windowMs = 2000, slowMs = 26, minFrames = 8, ignoreMs = 700, warmup = 6 } = {}) {
   let level = 0, sum = 0, frames = 0, span = 0, skipped = 0;
   return {
     get level() { return level; },

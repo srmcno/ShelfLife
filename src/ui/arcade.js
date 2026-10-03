@@ -355,6 +355,12 @@ function pause(on) {
   duckBed(on);
 }
 function stop() {
+  // A run that is over still counts if the sheet is closed during the slow-motion beat.
+  if (run?.dying && !run.settled) {
+    run.settled = true;
+    finishRun(S, run.id, run.game.score, run.petId, Date.now(), Math.random, { daily: run.daily });
+    save(); refresh();
+  }
   if (run) {
     if (run.raf) cancelAnimationFrame(run.raf);
     run.timers.forEach(clearTimeout);
@@ -370,13 +376,10 @@ function stop() {
 }
 
 /* ---------------- game over ---------------- */
-function resultFacts(result, id) {
-  const def = ARCADE_BY_ID[id], stats = runStats(run?.game);
-  return { def, stats };
-}
 function gameOver() {
   if (!run) return;
   const { id, game } = run, wasDaily = run.daily, stats = runStats(game);
+  run.settled = true;
   const result = finishRun(S, id, game.score, run.petId, Date.now(), Math.random, { daily: wasDaily });
   const reduced = run.reduced, level = run.fx.level;
   stop();
