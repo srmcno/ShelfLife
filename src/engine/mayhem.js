@@ -247,6 +247,16 @@ export function fill(text, a, b) {
    nudges the good ones. A resident with nothing special (stat 5, no trust) rolls
    every outcome equally, which is how the cards were written. */
 const TONE_STAT = { good: 'cute', bad: 'menace', weird: 'mystique' };
+// A card can write an ending for a kind of resident: `fits` lists trait ids and
+// `bondAt` a trust level. Someone who suits it makes that ending three times as
+// likely, and the risk read on the card moves with it.
+export const SUITED_BOOST = 3;
+function suitedFactor(pet, outcome) {
+  const traits = Array.isArray(pet?.traits) ? pet.traits : [];
+  const fits = Array.isArray(outcome.fits) && outcome.fits.some(id => traits.includes(id));
+  const trusted = outcome.bondAt > 0 && Number.isFinite(pet?.bond) && pet.bond >= outcome.bondAt;
+  return fits || trusted ? SUITED_BOOST : 1;
+}
 export function outcomeWeight(pet, outcome) {
   const raw = pet?.stats?.[TONE_STAT[outcome.tone]];
   const stat = Number.isFinite(raw) ? raw : 5;
@@ -254,7 +264,7 @@ export function outcomeWeight(pet, outcome) {
   let w = 1 + 0.1 * (stat - 5);
   if (outcome.tone === 'bad') w *= 1 - 0.02 * bond;
   if (outcome.tone === 'good') w *= 1 + 0.012 * bond;
-  return clamp(w, 0.2, 2);
+  return clamp(w, 0.2, 2) * suitedFactor(pet, outcome);
 }
 function pickOutcome(outcomes, pet, rnd) {
   const weights = outcomes.map(o => outcomeWeight(pet, o));

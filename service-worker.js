@@ -13,6 +13,7 @@ const SHELL = [
   "./src/ui/friends.js",
   "./css/social.css",
   "./src/content/mayhem.js",
+  "./src/content/emergencies-extra.js",
   "./src/mayhem-state.js",
   "./src/engine/mayhem.js",
   "./src/ui/mayhem.js",
