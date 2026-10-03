@@ -1,6 +1,8 @@
 import { save } from '../state.js';
+import { applyCalm } from './calm.js';
 
 export function effectsMode(settings, { coarse = false, memory = 8, residents = 0 } = {}) {
+  if (settings?.calm === true) return 'light';
   const mode = settings?.effects || 'auto';
   if (mode === 'light' || mode === 'full') return mode;
   return coarse || memory <= 4 || residents >= 8 ? 'light' : 'full';
@@ -9,6 +11,7 @@ let currentState = null;
 const preference = window.matchMedia('(pointer: coarse)');
 export function syncEffects(state) {
   currentState = state;
+  applyCalm(state.settings.calm === true);
   const mode = effectsMode(state.settings, { coarse: preference.matches, memory: navigator.deviceMemory || 8, residents: state.pets.length });
   if (document.body.dataset.effects !== mode) document.body.dataset.effects = mode;
   const picker = document.getElementById('effectsMode');

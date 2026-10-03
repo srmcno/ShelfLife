@@ -114,7 +114,9 @@
   <section class="pane pane-plots" id="panePlots" aria-label="Household stories">
     <div class="destination-heading"><span class="eyebrow">Life beyond the planks</span><h1>Household stories</h1><p>Little adventures. Questionable decisions. Things worth keeping.</p></div>
     <div id="needsYou" class="needs-you" aria-label="What needs you"></div>
+    <section id="acquaintPanel" class="acquaint" aria-label="Getting acquainted" hidden></section>
     <section id="welcomePanel" class="welcome-panel" aria-labelledby="welcomeTitle" hidden></section>
+    <div id="lockedFolders" class="locked-folders" aria-label="Still to come" hidden></div>
     <section id="escapadeHub" class="escapade-hub" aria-labelledby="escapadeHubTitle" hidden></section>
     <details class="story-folder" id="correspondenceFolder">
       <summary><span class="folder-number" aria-hidden="true">01</span><span><b>Visitors &amp; conspiracies</b><small>Someone always wants something.</small></span><span class="folder-arrow" aria-hidden="true">↗</span></summary>
@@ -138,7 +140,7 @@
       <button class="door" type="button" data-proxy="incidentsBtn">
         <span class="door-kicker">The record</span>
         <span class="door-title">Incidents</span>
-        <span class="door-sub" id="incidentsSub">Nothing on file. Give it time.</span>
+        <span class="door-sub" id="incidentsSub">Care for someone to file the first one.</span>
       </button>
       <button class="door" type="button" data-proxy="decorBtn">
         <span class="door-kicker">The room</span>
@@ -218,6 +220,7 @@
   </div></section>
   <section class="tray-section" aria-labelledby="trayPreferences"><h3 id="trayPreferences">Sound &amp; motion</h3><div class="tray-grid">
     <label class="effects-setting" for="effectsMode"><span>Animation & performance</span><select id="effectsMode"><option value="auto">Automatic</option><option value="light">Light effects</option><option value="full">Full effects</option></select><small id="effectsHint"></small></label>
+    <button class="btn tray-item" id="calmBtn" aria-pressed="false"><span>Calm mode</span><small>Stills the room and keeps effects light</small></button>
     <button class="btn tray-item" id="muteBtn" aria-pressed="false"><span>Sound</span><small>Small noises</small></button>
     <button class="btn tray-item" id="narratorBtn" aria-pressed="false"><span>Narrator</span><small>Reads the notes aloud</small></button>
     <button class="btn tray-item" id="voiceBtn" title="Choose who reads the notes out loud."><span>Voice</span><small>Who does the reading</small></button>
@@ -320,6 +323,7 @@
       <div class="tool-block">
         <div class="tool-label">Color</div>
         <div class="swatches" id="swatches"></div>
+        <p class="hint unlock-hint" id="swatchUnlock" role="status"></p>
       </div>
       <div class="tool-block">
         <div class="tool-label">Brush</div>
@@ -333,6 +337,7 @@
       <div class="tool-block">
         <div class="tool-label">Stamps: pick one, then tap the canvas</div>
         <div class="chiprow" id="stamps"></div>
+        <p class="hint unlock-hint" id="stampUnlock" role="status"></p>
       </div>
       <div class="tool-block">
         <div class="chiprow">

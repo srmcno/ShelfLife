@@ -99,6 +99,7 @@ body[data-guide="on"] .shelf-framing .framing-tools{display:none}
 .gloss-card{position:fixed;z-index:95;left:max(12px,var(--sal));right:max(12px,var(--sar));bottom:calc(var(--tabbar-h) + var(--sab) + 14px);max-width:440px;margin-inline:auto;
   padding:13px 15px;border-radius:14px;border:1px solid var(--key-mid);background:linear-gradient(180deg,var(--night-3),var(--night-2));color:var(--ink);box-shadow:0 18px 44px -14px #000}
 .gloss-card[hidden]{display:none}
+.veil>.gloss-card{bottom:calc(14px + var(--sab))}
 .gloss-card.show{animation:gloss-in .18s ease-out 1}
 @keyframes gloss-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .gloss-term{display:block;font:400 21px/1.2 var(--display)}
@@ -120,3 +121,92 @@ body[data-guide="on"] .shelf-framing .framing-tools{display:none}
 #toast{width:max-content;max-width:min(calc(100vw - 32px),460px)}
 /* A sheet's title takes focus so a screen reader starts there; it is not a control and needs no ring. */
 .sheet h2[tabindex="-1"]:focus,.sheet h2[tabindex="-1"]:focus-visible,.pane[tabindex="-1"]:focus-visible{outline:none}
+
+/* ---- Stories before the first memory: progress, and the folders it opens ------------------------ */
+.acquaint{margin:0 0 16px;padding:16px 18px;border:1px solid var(--hair-lit);border-radius:14px;background:linear-gradient(145deg,var(--night-3),var(--night-2))}
+.acquaint[hidden],.locked-folders[hidden]{display:none}
+.acquaint .eyebrow{display:flex;align-items:center;gap:10px;color:var(--mh-candle,#F6C768);font-size:11px;letter-spacing:.14em}
+.acquaint h2{margin:8px 0;font:400 24px/1.18 var(--display)}
+.acquaint p{margin:0 0 12px;color:var(--ink-2);font-size:14px;line-height:1.5}
+.acq-dots{display:inline-flex;gap:4px}
+.acq-dots i{display:block;width:16px;height:5px;border-radius:3px;background:var(--hair-lit)}
+.acq-dots i.done{background:var(--mh-good,#8FE0B4)}
+.acq-dots i.now{background:var(--mh-candle,#F6C768)}
+.locked-folders{display:grid;gap:10px;margin:0 0 18px}
+.folder-locked{display:flex;gap:18px;align-items:flex-start;width:100%;min-height:88px;padding:14px 16px;text-align:left;border:1px dashed var(--edge);border-radius:14px;background:transparent;color:var(--ink-2);cursor:pointer}
+.folder-locked:hover{background:var(--glass);border-color:var(--key-mid)}
+.folder-locked:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.folder-locked .folder-number{font:400 25px var(--display);color:var(--ink-3);opacity:.8}
+.folder-locked b{display:block;font:400 22px/1.2 var(--display);color:var(--ink)}
+.folder-locked small{display:block;margin-top:5px;font-size:13px;line-height:1.4;color:var(--ink-2)}
+.folder-locked em{display:flex;align-items:center;gap:8px;margin-top:8px;font:600 12px/1.4 var(--body);font-style:normal;color:var(--mh-candle,#F6C768)}
+.lock-mark{flex:none;position:relative;width:11px;height:9px;margin-top:5px;border-radius:2px;background:currentColor}
+.lock-mark::before{content:'';position:absolute;left:1.5px;bottom:100%;width:5px;height:5px;border:2px solid currentColor;border-bottom:0;border-radius:5px 5px 0 0}
+
+/* =============================================================================
+   Accessibility floor. Text at or above 11px, tap targets at or above 44px, a name
+   for everything that carries a number, and a ring you can see on every control.
+   ============================================================================= */
+.eyebrow{font-size:11px}
+.status>span,.topbar .status>span{font-size:11px}
+.mh-curio-flag,.mh-rarity,.mh-odds,.mh-drop-kicker{font-size:11px}
+.mh-mini-stamp{font-size:11px}
+.tabbar .tab,.room-nav .tab,.tab{font-size:11px}
+.tab-badge{font-size:11px}
+.filter-count{font-size:11px}
+#actions small,#paneShelf #actions small,.actions small{font-size:11px}
+.mh-chores li small{font-size:11px}
+.mh-season-note{font-size:12px}
+@media (max-width:720px){
+  #cabinet .pet .nameplate,#cabinet .prop .nameplate{font-size:11px;line-height:12px;height:25px;white-space:normal;overflow:hidden;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;top:calc(100% + 6px)}
+  .shelf-framing #shelfFocus{font-size:11px}
+  .shelf-heading .eyebrow{font-size:11px}
+  .room-live{font-size:11px}
+  .souls-count small{font-size:11px}
+  .mh-tile-kicker{font-size:11px}
+  #playroomVeil .activity-top>span:last-child,#playroomVeil .activity-bottom,#playroomVeil .playroom-company label{font-size:11px}
+}
+/* Phones show one number in the top bar: souls. Household trust, the day and the moon live on larger screens and in the Cabinet. */
+@media (max-width:720px){.topbar .status{display:none}}
+.status .trust-chip{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 4px;border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:help}
+.status .trust-chip:hover{color:var(--ink)}
+.status .trust-chip:focus-visible,.pip:focus-visible,.souls-hud:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.help-btn{gap:6px;min-width:44px}
+.help-btn svg{width:18px;height:18px}
+/* Locked props and anything else that says why it cannot be used yet keeps its focus and its explanation. */
+[aria-disabled="true"]{cursor:not-allowed}
+button:focus-visible,a:focus-visible,summary:focus-visible,select:focus-visible,[role="button"]:focus-visible,[role="tab"]:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+
+/* ---- a household's first trip: the words it has not met yet ------------------------------------- */
+.expedition-view.first-trip.phase-planning .expedition-reading-pane>p,.expedition-view.first-trip .trail-wager-settings{display:none}
+.expedition-view [data-gloss][role="button"]{cursor:help;text-decoration:underline dotted;text-underline-offset:3px}
+
+/* ---- game results: stars first, points as the small print ---------------------------------------------- */
+.result-stars{display:inline-flex;gap:6px;color:#ffffff24;font-style:normal}
+.result-stars i{font-style:normal;font-size:22px;line-height:1}
+.result-stars i.on{color:var(--mh-candle,#F6C768);text-shadow:0 0 12px color-mix(in srgb,var(--mh-candle,#F6C768) 60%,transparent)}
+.result-stars.big{display:flex;justify-content:center;margin:0 0 6px}
+.result-stars.big i{font-size:46px}
+.ar-over .ar-final b{font-size:40px}
+.ar-over .ar-final small{font-size:11px}
+@media (max-width:720px){.ar-over .ar-final b{font-size:36px}}
+
+/* ---- studio: what is still locked is shown, greyed, with a lock ------------------------------------------ */
+.sw.sw-locked{position:relative;opacity:.45;filter:saturate(.5);cursor:not-allowed}
+.sw.sw-locked::after{content:'';position:absolute;left:50%;top:50%;width:12px;height:9px;margin:-2px 0 0 -6px;border-radius:2px;background:#fffa;box-shadow:0 0 0 1px #0008}
+.sw.sw-locked::before{content:'';position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-9px 0 0 -3px;border:2px solid #fffa;border-bottom:0;border-radius:5px 5px 0 0;box-shadow:0 0 0 1px #0008}
+.chip.chip-locked{opacity:.55;border-style:dashed;cursor:not-allowed}
+.chip.chip-locked::before{content:'';display:inline-block;width:9px;height:7px;margin-right:7px;border-radius:2px;background:currentColor}
+.unlock-hint{min-height:1.5em;margin:8px 0 0;color:var(--ink-2)}
+@media (max-width:720px){#paneShelf #actions #roundsBtn small{display:block;font-size:11px}}
+
+/* ---- Calm mode: the same rules as the device's reduced-motion setting, switched on from inside the game -------- */
+body.calm *,body.calm *::before,body.calm *::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+body.calm .sprite.sl2,body.calm .sl2 .sprite-act,body.calm .sl2 .sprite-figure,body.calm .sl2 .stamp-art,body.calm .sl2 .sl-part{animation:none!important;transform:none!important;rotate:none!important;translate:none!important;scale:none!important}
+body.calm .sl2 .sprite-stamp{transform:translate(-50%,-50%)!important}
+body.calm .sl2 .sprite-creature{transform:translateY(var(--sl-foot,8%))!important}
+body.calm .sl2.sl-asleep .sl-part[data-part="eye"]{scale:1 .12!important}
+body.calm .sl-bubble,body.calm .sl-zzz,body.calm .care-motes,body.calm #wall::before,body.calm .haze-fog{display:none}
+body.calm .candle i,body.calm .souls-icon{animation:none!important}
+body.calm .guide-ring{animation:none}
+body.calm .earn-chip{opacity:1}

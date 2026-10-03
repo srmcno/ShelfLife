@@ -18,7 +18,7 @@ import { reactTo } from '../art/animator.js';
 import { playAchievement, playPowerUp, playStar, playStomp, playFeud, playUnlock } from '../audio/sound.js';
 import { save } from '../state.js';
 import { toast } from './toast.js';
-import { nudgesAvailable, enableNudges } from '../notify.js';
+import { enableNudges, nudgePromptDue, notePrompted } from '../notify.js';
 
 /* The mayhem loop's surfaces: a souls counter in the top bar, an alarm strip
    over the cabinet, a small desk under the actions, and one sheet that shows an
@@ -173,7 +173,7 @@ function showEmergency(state) {
     '<div class="mh-card"><div class="mh-scene"><div class="mh-prop">' + glyph(info.template.art) + '</div></div>' +
     '<h3 class="mh-title">' + esc(info.title) + '</h3>' +
     '<div class="mh-choices">' + info.choices.map((label, i) => '<button class="mh-choice" type="button" data-choice="' + i + '" aria-describedby="mhOdds' + i + '"><span>' + (i ? 'B' : 'A') + '</span><span class="mh-choice-text">' + esc(label) + '</span><em class="mh-odds-tag odds-' + info.odds[i].level + '" id="mhOdds' + i + '">' + esc(info.odds[i].label) + '</em></button>').join('') + '</div>' +
-    '<p class="mh-fineprint">Every choice pays souls. Who is involved changes the odds: menace makes things worse, trust turns them aside.</p></div>';
+    '<p class="mh-fineprint">Every choice pays souls. Who is involved changes the odds: menace makes things worse, a strong bond turns them aside.</p></div>';
   const scene = sheet.querySelector('.mh-scene');
   scene.prepend(sprite(info.a, 'mh-actor-a'));
   if (info.b) scene.appendChild(sprite(info.b, 'mh-actor-b'));
@@ -225,7 +225,7 @@ function choose(state, index) {
   card.querySelector('.mh-choices').outerHTML = '<div class="mh-outcome"><div class="mh-stamp tone-' + result.tone + '">' + esc(result.stamp) + '</div>' +
     '<p class="mh-text">' + esc(result.text) + '</p>' + rewardList(result) +
     (result.curio ? '<div class="mh-drop"><span class="mh-drop-kicker">Something was left behind</span>' + curioCard(result.curio) + '</div>' : '') +
-    (nudgesAvailable() && !state.settings.nudges && !state.settings.nudgeAsked ? '<p class="mh-nudge"><span>Want a buzz when something goes wrong?</span><button class="btn btn-sm" type="button" data-mh="nudge">Yes, nudge me</button><button class="btn btn-ghost btn-sm" type="button" data-mh="nudge-no">Not now</button></p>' : '') +
+    (nudgePromptDue(state) ? (notePrompted(), '<p class="mh-nudge"><span>Want a nudge when something goes wrong on the shelf?</span><button class="btn btn-sm" type="button" data-mh="nudge">Yes, nudge me</button><button class="btn btn-ghost btn-sm" type="button" data-mh="nudge-no">Not now</button></p>') : '') +
     '<div class="mh-next">' + (left ? '<button class="btn btn-primary" type="button" data-mh="emergency">Next emergency <small>(' + left + ' left)</small></button>' : mayhemState(state).souls >= POKE_COST ? '<button class="btn btn-primary" type="button" data-mh="poke">Poke the drawer · ' + POKE_COST + '</button><button class="btn" type="button" data-mh="close">Back to the shelf</button>' : '<button class="btn btn-primary" type="button" data-mh="close">Back to the shelf</button>') +
     '<button class="btn btn-ghost" type="button" data-mh="cabinet">Cabinet</button></div></div>';
   card.querySelector('.mh-fineprint')?.remove();

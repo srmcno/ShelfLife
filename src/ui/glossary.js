@@ -153,10 +153,14 @@ export function showGloss(id, anchor = null) {
   if (!entry) return false;
   const el = ensureCard();
   cardAnchor = anchor;
+  // Inside an open sheet the card lives in the sheet's veil, so it is not behind it and not inert.
+  const home = anchor?.closest?.('.veil') || document.body;
+  if (el.parentElement !== home) home.appendChild(el);
   el.dataset.id = id;
   el.setAttribute('aria-label', entry.term);
+  const inSheet = home !== document.body;
   el.innerHTML = '<b class="gloss-term">' + esc(entry.term) + '</b><p>' + esc(entry.short) + '</p><div class="gloss-actions">' +
-    (entry.action ? '<button class="btn btn-sm btn-primary" type="button" data-gl-act>' + esc(entry.action.label) + '</button>' : '') +
+    (entry.action && !inSheet ? '<button class="btn btn-sm btn-primary" type="button" data-gl-act>' + esc(entry.action.label) + '</button>' : '') +
     '<button class="btn btn-sm" type="button" data-gl-more>More in the glossary</button><button class="btn btn-sm btn-ghost" type="button" data-gl-close>Got it</button></div>';
   el.hidden = false;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
@@ -199,17 +203,20 @@ export function initHelp(state) {
     tabs[to].click();
   });
   // Anything marked data-gloss explains itself: a link in a sheet, a mark under a resident.
-  document.addEventListener('click', event => {
+  const explain = event => {
     const trigger = event.target.closest?.('[data-gloss]');
-    if (!trigger || !GLOSSARY_BY_ID[trigger.dataset.gloss]) return;
-    if (trigger.closest('#glossCard')) return;
+    if (!trigger || !GLOSSARY_BY_ID[trigger.dataset.gloss] || trigger.closest('#glossCard')) return false;
     event.preventDefault();
     event.stopPropagation();
-    const id = trigger.dataset.gloss;
-    // Inside a sheet the card would sit behind it, so the full entry opens instead.
-    if (trigger.closest('.veil')) { openHelp({ entry: id }); return; }
-    showGloss(id, trigger);
+    showGloss(trigger.dataset.gloss, trigger);
+    return true;
+  };
+  document.addEventListener('click', explain, true);
+  // Marks that are not buttons by nature (role="button") answer the keyboard as well.
+  document.addEventListener('keydown', event => {
+    if ((event.key === 'Enter' || event.key === ' ') && event.target.matches?.('[data-gloss][role="button"]')) explain(event);
   }, true);
+  new MutationObserver(() => hideGloss(false)).observe(document.body, { attributes: true, attributeFilter: ['data-active-dialog'] });
   document.addEventListener('pointerdown', event => { if (card && !card.hidden && !event.target.closest('#glossCard') && !event.target.closest('[data-gloss]')) hideGloss(false); }, true);
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && card && !card.hidden) { event.stopImmediatePropagation(); hideGloss(true); } }, true);
 }

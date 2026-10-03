@@ -1,3 +1,4 @@
+import './ui/calm.js';
 import { initLife } from './ui/life.js';
 import { initWelcome } from './ui/welcome.js';
 import { initEscapades } from './ui/escapades.js';
@@ -14,6 +15,7 @@ import { initStories } from './ui/stories.js';
 import { initMayhem } from './ui/mayhem.js';
 import { initNextStep } from './ui/nextstep.js';
 import { initHelp } from './ui/glossary.js';
+import { initCalm } from './ui/calm.js';
 import { initArcade } from './ui/arcade.js';
 import { initCourt } from './ui/court.js';
 import { accrueMayhem } from './engine/mayhem.js';
@@ -422,6 +424,7 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 
 initMayhem(state, () => renderAll(state));
 initNextStep(state, () => renderAll(state));
+initCalm(state, { save, onChange: () => renderAll(state) });
 initArcade(state, () => renderAll(state), { social });
 initCourt(state, () => renderAll(state), { social });
 initSchemeUI(state, () => renderAll(state));

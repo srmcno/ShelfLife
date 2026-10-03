@@ -5,12 +5,14 @@ import { save } from '../state.js';
 
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let scenePlayer = null, lastKey = '';
-export function welcomeRewardLabel(reward) {
+// `quiet` leaves discoveries unmentioned. Until the first memory opens the workshop
+// they are a number with nowhere to be spent, so the housewarming does not advertise one.
+export function welcomeRewardLabel(reward, { quiet = false } = {}) {
   const parts = [];
   if (reward.food) parts.push('+' + reward.food + ' food');
   if (reward.fuss) parts.push('+' + reward.fuss + ' attention');
   if (!parts.length) parts.push('Needs already full');
-  parts.push(reward.discovery ? '+1 discovery' : 'Memory kept');
+  parts.push(!reward.discovery ? 'Memory kept' : quiet ? 'First memory kept' : '+1 discovery');
   return parts.join(' · ');
 }
 export function renderWelcome(state) {
@@ -27,7 +29,7 @@ export function renderWelcome(state) {
   else {
     host.insertAdjacentHTML('beforeend','<div id="welcomeStage"></div>');
     scenePlayer=mountHouseholdScene(host.querySelector('#welcomeStage'),state,welcomeScene(state),{mini:v.stage==='ready'});
-    if(v.stage==='ready')host.insertAdjacentHTML('beforeend','<div class="welcome-actions"><button class="btn btn-primary" data-welcome="share" '+(v.reason?'disabled':'')+'>Share the serving<small>'+esc(welcomeRewardLabel(v.rewards.share))+'</small></button><button class="btn" data-welcome="keep" '+(v.reason?'disabled':'')+'>Keep the first bite<small>'+esc(welcomeRewardLabel(v.rewards.keep))+'</small></button></div><p class="hint">'+esc(v.reason||'Both choices use one real serving and discover a household memory. Sleeping care has half effect.')+'</p>');
+    if(v.stage==='ready')host.insertAdjacentHTML('beforeend','<div class="welcome-actions"><button class="btn btn-primary" data-welcome="share" '+(v.reason?'disabled':'')+'>Share the serving<small>'+esc(welcomeRewardLabel(v.rewards.share,{quiet:!lifeState(state).introDone}))+'</small></button><button class="btn" data-welcome="keep" '+(v.reason?'disabled':'')+'>Keep the first bite<small>'+esc(welcomeRewardLabel(v.rewards.keep,{quiet:!lifeState(state).introDone}))+'</small></button></div><p class="hint">'+esc(v.reason||'Both choices use one real serving and discover a household memory. Sleeping care has half effect.')+'</p>');
     else host.insertAdjacentHTML('beforeend','<div class="welcome-actions"><button class="btn btn-primary" data-welcome="neighbour">Make a permanent neighbour</button><button class="btn" data-welcome="play">Play together</button><button class="btn btn-ghost" data-welcome="dismiss">Back to the shelf</button></div><p class="hint">Your choice is saved. Appearance and names can change later; their history stays.</p>');
   }
 }

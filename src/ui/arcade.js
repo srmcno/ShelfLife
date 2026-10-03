@@ -1,3 +1,4 @@
+import { starsMarkup, starsForTier } from './stars.js';
 import { ARCADE_GAMES, ARCADE_BY_ID, FRENZY_ITEMS } from '../content/arcade.js';
 import {
   startGame, frenzyStep, stackStep, stackDrop, seanceShown, seanceInput, seanceBeat, whackStep, whackHit, finishRun, frenzyDirection, challengeToday, FRENZY
@@ -329,8 +330,7 @@ function gameOver() {
   const g = ARCADE_BY_ID[id];
   sheet.className = 'sheet sheet-arcade over ar-' + id;
   sheet.innerHTML = head(g.title, wasDaily ? 'Today’s challenge · run over' : 'Run over') +
-    '<div class="ar-over"><div class="ar-final"><small>Score</small><b>' + result.score + '</b>' + (result.newBest ? '<span class="ar-newbest">' + (wasDaily ? 'Best today' : 'New best') + '</span>' : '<em>' + (wasDaily ? 'Best today ' : 'Best ') + result.best + '</em>') + '</div>' +
-    '<div class="ar-tier" aria-label="' + result.tier + ' of 3">' + skulls(result.tier, 3) + '</div>' +
+    '<div class="ar-over">' + starsMarkup(starsForTier(result.tier), 3, 'result-stars big') + '<div class="ar-final"><small>Score</small><b>' + result.score + '</b>' + (result.newBest ? '<span class="ar-newbest">' + (wasDaily ? 'Best today' : 'New best') + '</span>' : '<em>' + (wasDaily ? 'Best today ' : 'Best ') + result.best + '</em>') + '</div>' +
     '<p class="ar-quip">' + esc(result.quip) + '</p>' + (result.bestLine ? '<p class="ar-bestline">' + esc(result.bestLine) + '</p>' : '') +
     '<ul class="mh-rewards">' + (result.souls ? '<li class="souls">' + glyph('soul') + '+' + result.souls + ' souls</li>' : '<li>' + (result.score ? 'Today’s arcade purse is empty. Play for glory.' : 'No score, no souls.') + '</li>') +
     (result.daily?.bonus ? '<li class="souls">' + glyph('soul') + '+' + result.daily.bonus + ' daily bonus' + (result.daily.streak > 1 ? ' · ' + result.daily.streak + ' days in a row' : '') + '</li>' : '') +

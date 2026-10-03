@@ -60,6 +60,8 @@ const SHELL = [
   "./src/engine/nextstep.js",
   "./src/ui/nextstep.js",
   "./src/ui/glossary.js",
+  "./src/ui/stars.js",
+  "./src/ui/calm.js",
   "./css/guide.css",
   "./src/engine/resident-memory.js",
   "./src/content/resident-life.js",

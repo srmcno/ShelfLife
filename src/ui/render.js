@@ -105,7 +105,7 @@ export function renderStatus(state) {
   updateMarkup(statusBar,
     '<span class="day">Day <b>' + days + '</b></span>' +
     '<span class="pop">Living here <b>' + state.pets.length + '</b><span class="of">of ' + state.slots.length + '</span></span>' +
-    '<span class="trust">Trust <b>' + totalBond(state) + '</b></span>' +
+    '<span class="trust"><button class="trust-chip" type="button" data-gloss="household-trust" aria-label="Household trust ' + totalBond(state) + '. What is this?">Household trust <b>' + totalBond(state) + '</b></button></span>' +
     (unrest ? '<span class="bad">Unrest <b>' + unrest + '</b></span>' : '') +
     '<span class="moon" title="' + escapeHtml(moon.name + '. ' + moon.line) + '" aria-label="' + escapeHtml(moon.name) + '"><i style="--ms:' + moon.shift + 'px"></i><span class="moon-name">' + escapeHtml(moon.name) + '</span></span>');
 }
@@ -124,6 +124,9 @@ function feudDirectionFor(state, pet, slotIndex, feuds) {
   return null;
 }
 
+// A need mark is a shape and a letter as well as a colour: round F is food, diamond A is attention, square W is washing.
+const PIP_LETTER = { food: 'F', fuss: 'A', clean: 'W' };
+const PIP_WORD = { food: 'Hungry', fuss: 'Lonely', clean: 'Grubby' };
 const artForNode = new WeakMap();
 function petEl(state, pet, slotIndex, existing, feuds, feudIds) {
   const mood = moodOf(pet);
@@ -170,7 +173,7 @@ function petEl(state, pet, slotIndex, existing, feuds, feudIds) {
   if (!pips) { pips = document.createElement('span'); pips.className = 'pips'; btn.appendChild(pips); }
   const pipMarkup = (plotting && !asleep ? '<span class="pip plotting">plotting</span>' : '') +
     (asleep ? '<span class="pip zzz">asleep</span>' : '') +
-    ['food', 'fuss', 'clean'].filter(k => pet.needs[k] < 42).map(k => '<span class="pip ' + k + '"></span>').join('');
+    ['food', 'fuss', 'clean'].filter(k => pet.needs[k] < 42).map(k => '<span class="pip ' + k + '" data-gloss="needs" role="img" aria-label="' + PIP_WORD[k] + '"><b aria-hidden="true">' + PIP_LETTER[k] + '</b></span>').join('');
   if (pips.innerHTML !== pipMarkup) pips.innerHTML = pipMarkup;
 
   return btn;
@@ -454,7 +457,7 @@ function renderProgress(state) {
   const bond = totalBond(state);
   const next = Object.values(PROPS).filter(p => p.at > bond).sort((a, b) => a.at - b.at)[0];
   if (!state.pets.length) { updateMarkup(host, ''); return; }
-  updateMarkup(host, next ? '<div><span class="eyebrow">Next unlock</span><p><strong>' + escapeHtml(next.name) + '</strong> at ' + next.at + ' trust <span>· ' + (next.at - bond) + ' to go. Care for someone individually.</span></p></div><meter min="0" max="' + next.at + '" value="' + bond + '" aria-label="Trust toward ' + escapeHtml(next.name) + '"></meter>' : '<div><span class="eyebrow">In far too deep</span><p>Every furnishing unlocked. They trust your judgment. An error, surely.</p></div>');
+  updateMarkup(host, next ? '<div><span class="eyebrow">Next unlock</span><p><strong>' + escapeHtml(next.name) + '</strong> at ' + next.at + ' household trust <span>· ' + (next.at - bond) + ' to go. Care for someone individually.</span></p></div><meter min="0" max="' + next.at + '" value="' + bond + '" aria-label="Household trust toward ' + escapeHtml(next.name) + '"></meter>' : '<div><span class="eyebrow">In far too deep</span><p>Every furnishing unlocked. They trust your judgment. An error, surely.</p></div>');
 }
 
 function renderDoors(state) {
@@ -464,7 +467,7 @@ function renderDoors(state) {
   const streak = state.streak && state.streak.count || 0;
   updateText(sub, n
     ? n + ' of ' + ACHIEVEMENTS.length + ' on record' + (streak > 1 ? ' · ' + streak + ' days running' : '')
-    : 'Milestones from care, games and household drama.');
+    : 'Care for someone, or play a game, to file the first one.');
 }
 
 let briefState;
