@@ -47,7 +47,9 @@ test('first install stays silent, a later real worker update offers refresh and 
     await page.locator('#decorClose').click();
     const saved = () => page.evaluate(() => {
       const state = JSON.parse(localStorage.getItem('shelflife.v4'));
-      return { resident: { id: state.pets[0].id, name: state.pets[0].name, art: state.pets[0].art }, decor: state.decor, slots: state.slots };
+      // `owned` is the grandfathered list the Exchange adds when a save is loaded; the chosen look is what must survive.
+      const { owned, ...decor } = state.decor;
+      return { resident: { id: state.pets[0].id, name: state.pets[0].name, art: state.pets[0].art }, decor, slots: state.slots };
     });
     const before = await saved();
 
