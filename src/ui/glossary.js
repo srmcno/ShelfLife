@@ -204,7 +204,12 @@ export function initHelp(state) {
   });
   // Anything marked data-gloss explains itself: a link in a sheet, a mark under a resident.
   const explain = event => {
-    const trigger = event.target.closest?.('[data-gloss]');
+    let trigger = event.target.closest?.('[data-gloss]');
+    // A resident holds pointer capture while it is pressed, so a tap on one of its need marks
+    // arrives aimed at the resident. Ask what is actually under the finger.
+    if (!trigger && event.detail !== 0 && event.target.closest?.('#cabinet .pet')) {
+      trigger = document.elementsFromPoint(event.clientX, event.clientY).find(el => el.matches?.('.pip[data-gloss]')) || null;
+    }
     if (!trigger || !GLOSSARY_BY_ID[trigger.dataset.gloss] || trigger.closest('#glossCard')) return false;
     event.preventDefault();
     event.stopPropagation();

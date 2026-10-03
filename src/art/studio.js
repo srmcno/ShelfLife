@@ -600,7 +600,7 @@ export function initStudio({ onSave }) {
   const bondNow = () => state.pets.reduce((n, p) => n + p.bond, 0);
   const unlockLine = u => 'Opens at household trust ' + u.at + ': ' + u.label + '. You have ' + bondNow() + '.';
   const sayUnlock = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
-  const nextLine = list => { const next = list.find(u => bondNow() < u.at); return next ? 'Next to open: ' + unlockLine(next) + ' Care for residents to raise it.' : ''; };
+  const nextLine = list => { const next = list.find(u => bondNow() < u.at); return next ? 'Next: ' + next.label + ' at household trust ' + next.at + '. You have ' + bondNow() + '. Care for residents to raise it.' : ''; };
   function rebuildPalette(unlockedBond) {
     swatchesWrap.innerHTML = '';
     unlockedColors(state).forEach(c => {

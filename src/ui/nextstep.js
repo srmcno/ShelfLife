@@ -1,7 +1,7 @@
 import { ensureGuide, advanceGuide, guideView, guideActive, guideOf, skipGuide, markGuideSeen, celebrateGuide } from '../engine/guide.js';
 import { nextSteps } from '../engine/nextstep.js';
 import { mayhemState } from '../mayhem-state.js';
-import { omenPending, nextEmergencyIn } from '../engine/mayhem.js';
+import { omenPending, nextEmergencyIn, onMayhem } from '../engine/mayhem.js';
 import { save } from '../state.js';
 import { toast } from './toast.js';
 
@@ -68,7 +68,6 @@ function announce(state, progress) {
     const line = (REWARD_LINES[id] || (() => 'Done.'))(name);
     toast(line + (souls ? ' +' + souls + ' souls.' : ''));
   });
-  if (progress.steps.some(step => step.id === 'coffin')) celebrate('coffin', $('soulsHud'));
 }
 
 /* ---------------- the card ---------------- */
@@ -103,8 +102,17 @@ function doneStep(state, now) {
     verb: 'On with it', tab: 'shelf', priority: 1000, action: { type: 'done' } };
 }
 
+// The first coffin is a moment, whether or not a tour led to it.
+let seenCoffins = null;
+function watchFirstCoffin(state) {
+  const coffins = mayhemState(state).coffins;
+  if (seenCoffins === 0 && coffins === 1) celebrate('coffin', $('soulsHud'));
+  seenCoffins = coffins;
+}
+
 export function renderNextStep(state, now = Date.now()) {
   S = state;
+  watchFirstCoffin(state);
   const host = $('nextStep');
   if (!host) return;
   if (!state.pets.length) { host.hidden = true; document.body.dataset.guide = ''; lastKey = ''; return; }
@@ -224,6 +232,8 @@ export function initNextStep(state, onRefresh) {
     }
     if (event.target.closest('[data-ns-go]') && host.__step) perform(host.__step);
   });
+  // A new rank lands with the same small flourish as a first coffin.
+  onMayhem(event => { if (event.type === 'rank') celebrate('rank', $('soulsHud')); });
   window.addEventListener('shelflife:guide-resumed', () => { lastKey = ''; save(); refresh(); });
   watchScreen();
 }

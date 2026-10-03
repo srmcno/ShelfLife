@@ -5,7 +5,7 @@
    ============================================================================= */
 
 /* ---- the one card --------------------------------------------------------- */
-.next-step{--ns-tone:var(--mint);position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center;margin:0 0 12px;padding:13px 15px;
+.next-step{--ns-tone:var(--mint);position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center;margin:0 0 30px;padding:13px 15px;
   border:1px solid color-mix(in srgb,var(--ns-tone) 42%,transparent);border-radius:14px;color:var(--ink);
   background:radial-gradient(120% 160% at 0% 0%,color-mix(in srgb,var(--ns-tone) 18%,transparent),transparent 62%),linear-gradient(180deg,var(--night-3),var(--night-2));
   box-shadow:0 12px 30px -20px color-mix(in srgb,var(--ns-tone) 70%,transparent),inset 0 1px 0 var(--glass-2)}
@@ -49,7 +49,7 @@
    badges, no extra number systems. The strip returns when the tour ends. */
 body[data-guide="on"] #mayhemAlert{display:none}
 body[data-guide="on"] #shelfBadge,body[data-guide="on"] #notesBadge,body[data-guide="on"] #plotsDot{display:none!important}
-body[data-guide="on"] .shelf-framing .framing-tools{display:none}
+body[data-guide="on"] .shelf-framing .framing-tools,body[data-guide="on"] #paneShelf #actions.actions{display:none}
 
 /* ---- the soft ring on the exact button -------------------------------------- */
 .guide-ring{position:relative;z-index:3;outline:3px solid var(--mh-candle,#F6C768);outline-offset:3px;border-radius:14px;animation:guide-pulse 1.8s ease-in-out infinite}
@@ -210,3 +210,28 @@ body.calm .sl-bubble,body.calm .sl-zzz,body.calm .care-motes,body.calm #wall::be
 body.calm .candle i,body.calm .souls-icon{animation:none!important}
 body.calm .guide-ring{animation:none}
 body.calm .earn-chip{opacity:1}
+
+/* Locked furniture explains itself, so its words must stay readable: dim the picture, not the sentence. */
+.prop-card.locked{opacity:1}
+.prop-card.locked b{color:var(--ink-2)}
+.prop-card.locked small{color:var(--warn)}
+/* A count inside a filter chip is read like any other number. */
+.filter-count{opacity:1;border-color:var(--edge)}
+/* A finished tour step is quieter, not fainter. */
+.gl-tour li.done{opacity:1}
+.gl-tour li.done b{color:var(--ink-2)}
+/* A coffin you cannot afford yet still says how many souls short you are, in readable type. */
+.mh-coffin-tile[aria-disabled="true"]{opacity:1}
+
+/* Once the tour is over the card is a single line of advice, not a poster: it sits beside the omen strip for
+   returning players and must not push the shelf down the screen. */
+.gl-entry{scroll-margin-top:110px}
+.next-step:not([data-kind="guide"]):not([data-kind="guide-done"]){margin-bottom:26px;padding:9px 12px;gap:6px 10px}
+.next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-title{font-size:18px;margin-top:1px}
+.next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-hint{margin-top:2px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-kicker{font-size:11px}
+@media (max-width:560px){
+  .next-step:not([data-kind="guide"]):not([data-kind="guide-done"]){grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  .next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-go{flex:none;min-width:96px;min-height:44px;padding-inline:12px}
+  .next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-title{font-size:17px}
+}

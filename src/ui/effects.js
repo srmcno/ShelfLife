@@ -17,7 +17,7 @@ export function syncEffects(state) {
   const picker = document.getElementById('effectsMode');
   if (picker && picker.value !== (state.settings.effects || 'auto')) picker.value = state.settings.effects || 'auto';
   const note = document.getElementById('effectsHint');
-  const text = mode === 'light' ? 'Light effects active. Creature reactions and game controls stay animated.' : 'Full effects active. Choose Light if this device feels sluggish.';
+  const text = state.settings.calm === true ? 'Calm mode is on: nothing moves and effects stay light.' : mode === 'light' ? 'Light effects active. Creature reactions and game controls stay animated.' : 'Full effects active. Choose Light if this device feels sluggish.';
   if (note && note.textContent !== text) note.textContent = text;
 }
 document.getElementById('effectsMode').addEventListener('change', e => {

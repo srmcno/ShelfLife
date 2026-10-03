@@ -111,8 +111,14 @@ export function buildDecor(state) {
     const scene = SHELF_SCENES.find(s=>s.propKind===kind);
     card.innerHTML = PROP_ART[kind] + '<b>' + escapeHtml(def.name) + '</b><small>' +
       (locked ? 'Needs household trust ' + def.at : escapeHtml(def.desc) + (scene ? '<br>Scene: '+escapeHtml(scene.title) : '') + (owned ? '<br>On the shelf: ' + owned : '')) + '</small>' + (locked ? '' : '<span class="prop-add-label">+ Add to shelf</span>');
-    if (locked) card.disabled = true;
-    else card.addEventListener('click', () => placeProp(state, kind, { nearResident: true }));
+    // A locked piece stays focusable (aria-disabled, not disabled) so it can say why, and what to do about it.
+    if (locked) {
+      card.type = 'button';
+      card.setAttribute('aria-disabled', 'true');
+      card.addEventListener('click', () => {
+        card.querySelector('small').textContent = 'Household trust is ' + totalBond(state) + ' of ' + def.at + '. Care for residents one at a time to raise it.';
+      });
+    } else card.addEventListener('click', () => placeProp(state, kind, { nearResident: true }));
     tray.appendChild(card);
   });
 }
