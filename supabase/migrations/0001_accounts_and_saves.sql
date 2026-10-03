@@ -47,11 +47,11 @@ grant select on table public.profiles, public.saves to authenticated;
 
 drop policy if exists "profiles are private to their owner" on public.profiles;
 create policy "profiles are private to their owner" on public.profiles
-  for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 drop policy if exists "saves are private to their owner" on public.saves;
 create policy "saves are private to their owner" on public.saves
-  for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- ---------------------------------------------------------------------------
 -- Helpers (not callable from the API)

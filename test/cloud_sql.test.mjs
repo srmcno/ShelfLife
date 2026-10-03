@@ -51,8 +51,9 @@ test('the migration is idempotent: one set of policies and functions after two r
   assert.deepEqual(policies.map(p => [p.tablename, p.cmd]), [['profiles', 'ALL'], ['saves', 'ALL']]);
   for (const p of policies) {
     assert.deepEqual(p.roles, ['authenticated']);
-    assert.match(p.qual, /auth\.uid\(\) = user_id/);
-    assert.match(p.with_check, /auth\.uid\(\) = user_id/);
+    // (select auth.uid()) is evaluated once per query instead of once per row.
+    assert.match(p.qual, /\( ?SELECT auth\.uid\(\) AS uid\) = user_id/);
+    assert.match(p.with_check, /\( ?SELECT auth\.uid\(\) AS uid\) = user_id/);
   }
   const rls = (await db.query("select relname, relrowsecurity from pg_class where relname in ('profiles', 'saves') and relnamespace = 'public'::regnamespace order by relname")).rows;
   assert.deepEqual(rls, [{ relname: 'profiles', relrowsecurity: true }, { relname: 'saves', relrowsecurity: true }]);

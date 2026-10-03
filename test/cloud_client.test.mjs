@@ -38,21 +38,33 @@ test('an unconfigured client never calls fetch and refuses every network method'
   assert.equal(storage.items.size, 0, 'nothing is written to storage either');
 });
 
-test('the shipped config is empty, and tests can inject one', () => {
-  assert.deepEqual(CLOUD_CONFIG, { url: '', anonKey: '' });
-  assert.equal(cloudConfigured(), false);
+test('the shipped config points at the Shelf Life project with a public key only, and tests can inject one', () => {
+  assert.match(CLOUD_CONFIG.url, /^https:\/\/[a-z0-9]{20}\.supabase\.co$/);
+  // Publishable keys, and the legacy JWT anon key, are safe to ship. Anything
+  // else (sb_secret_..., a service_role JWT) must never reach a public repo.
+  const key = CLOUD_CONFIG.anonKey;
+  const jwtRole = /^eyJ/.test(key) ? JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString()).role : '';
+  assert.ok(/^sb_publishable_[A-Za-z0-9_-]+$/.test(key) || jwtRole === 'anon', 'only a publishable or anon key may ship');
+  assert.equal(cloudConfigured(), true);
+  const previous = globalThis.SHELFLIFE_CLOUD_CONFIG;
   globalThis.SHELFLIFE_CLOUD_CONFIG = { url: 'https://x.supabase.co', anonKey: 'k' };
   try {
     assert.equal(cloudConfig().url, 'https://x.supabase.co');
     assert.equal(cloudConfigured(), true);
-  } finally { delete globalThis.SHELFLIFE_CLOUD_CONFIG; }
+    globalThis.SHELFLIFE_CLOUD_CONFIG = { url: '', anonKey: '' };
+    assert.equal(cloudConfigured(), false);
+  } finally {
+    if (previous === undefined) delete globalThis.SHELFLIFE_CLOUD_CONFIG; else globalThis.SHELFLIFE_CLOUD_CONFIG = previous;
+  }
   assert.equal(cloudConfigured({ url: 'not a url', anonKey: 'k' }), false);
 });
 
 test('the app singleton stays inert without config: no fetch, no storage, no listeners', async () => {
   const previous = globalThis.fetch;
+  const previousConfig = globalThis.SHELFLIFE_CLOUD_CONFIG;
   let calls = 0;
   globalThis.fetch = () => { calls++; return Promise.reject(new Error('no')); };
+  globalThis.SHELFLIFE_CLOUD_CONFIG = { url: '', anonKey: '' };
   try {
     const { cloud, sync, connectCloud } = await import('../src/cloud/index.js');
     assert.equal(cloud.configured, false);
@@ -60,7 +72,10 @@ test('the app singleton stays inert without config: no fetch, no storage, no lis
     await sync.check();
     await sync.push();
     assert.equal(calls, 0);
-  } finally { globalThis.fetch = previous; }
+  } finally {
+    globalThis.fetch = previous;
+    if (previousConfig === undefined) delete globalThis.SHELFLIFE_CLOUD_CONFIG; else globalThis.SHELFLIFE_CLOUD_CONFIG = previousConfig;
+  }
 });
 
 test('anonymous sign-in keeps its session in its own key and sends apikey and bearer', async () => {
