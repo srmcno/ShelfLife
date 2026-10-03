@@ -1062,5 +1062,270 @@ export const TWISTS_A = {
     }
   }],
 
+  /* ---------- 9. The Séance Under the Table: plaintiff becomes defendant ---------- */
+  'fake-seance': [{
+    id: 'night-desk',
+    title: 'Please Stay on the Line',
+    truth: 'defendant',
+    turn: alt([
+      ['narrator', '(Somewhere beneath the evidence table, a telephone rings. It is not a telephone anyone has seen. It rings eleven times and stops.)'],
+      ['judge', 'Was that your phone, Bailiff?'],
+      ['bailiff', 'I do not have a phone, Your Honour. I have a cheese. But I have been expecting this.']
+    ], [
+      ['bailiff', 'Your Honour, I have a leaflet. It was handed to me in the corridor by a very pale woman who would not give her name.'],
+      ['judge', 'What does it say?'],
+      ['bailiff', '“Spirits unavailable? We are here all night. Woooo.” There is a number on the back. I have called it. I will tell you about it later.']
+    ]),
+    questions: {
+      0: {
+        clue: '{d}’s “ghost” followed a Ministry script: “Pay your medium. Leave a review.” The bailiff rang the number and got the same woooo.',
+        lines: alt([
+          ['d', '“Woooo. This is Gertrude’s office. Pay {d}. Woooo. {d} is very gifted. Five stars.”'],
+          ['judge', 'Gertrude’s office asked for a tip.'],
+          ['bailiff', 'Your Honour, I rang the number on the leaflet last night. A lady said Gertrude was away. Then she said “woooo, pay your medium, leave a review”, and put me on hold.'],
+          ['d', 'That is Brenda. She is very thorough.']
+        ], [
+          ['d', 'She said, “Woooo. Pay {d}.” Then, “Pay {d} again. It is a long way from the other side.”'],
+          ['judge', 'Anything else?'],
+          ['d', '“And please stay on the line to rate this séance.”'],
+          ['judge', 'A séance with a satisfaction survey.'],
+          ['d', 'It is eleven questions long. Nobody has finished it.']
+        ])
+      },
+      1: {
+        clue: 'Ministry rule 14b: the night desk only connects at floor level, beneath a flat surface. That is why {d} sits under tables.',
+        lines: alt([
+          ['d', 'I have a condition where I can only take calls under a table.'],
+          ['judge', 'That is not a condition.'],
+          ['bailiff', 'Ministry regulation 14b, Your Honour. “Out-of-hours reception is available at floor level, beneath a flat surface.” It is on the back of the leaflet.'],
+          ['d', 'I am on the leaflet.']
+        ], [
+          ['d', 'Reasons of space, Your Honour. The line is very particular. You can only hear Brenda from underneath something.'],
+          ['judge', 'Brenda.'],
+          ['d', 'The night operator. She does not like to be called a ghost.'],
+          ['judge', 'What does she like to be called?'],
+          ['d', '“Speaking.”']
+        ])
+      },
+      2: {
+        sass: true,
+        lines: alt([
+          ['judge', 'Do the voice.'],
+          ['d', '…woooo.'],
+          ['judge', 'Again. Like you mean it.'],
+          ['d', '(flat, bored) Thank you for calling the other side. Your loved one is currently unavailable. Woooo. Please stay on the line.'],
+          ['narrator', '(The gallery nods. Several of them have been on hold for years.)']
+        ], [
+          ['judge', 'Do the voice, {d}. For the court.'],
+          ['narrator', '({d} will not do it until it has crawled under the bench.)'],
+          ['d', '(muffled, tired) Hello, you are through to the night desk. All our spirits are busy. Woooo. Your call is important to the dead.'],
+          ['judge', 'I have been on hold with the Ministry since 1702, and that is the first time I have recognised the tune.']
+        ])
+      },
+      3: {
+        clue: 'The Ministry confirms Gertrude was in Margate. Her calls go to a night desk, and Brenda from the night desk gave the message.',
+        lines: alt([
+          ['npc', 'Ministry of Haunting. I have reviewed the séance. That was Brenda, from our night desk. Gertrude is in Margate, and her calls are forwarded.', 'ghost'],
+          ['judge', 'Brenda is a ghost?'],
+          ['npc', 'Brenda is staff. Dead since 1963. On nights since 1964. We do not discuss her overtime.', 'ghost'],
+          ['judge', 'And {d} under the table?'],
+          ['npc', 'That is where the signal is. We have been asking the shelf to put in an aerial since 1902.', 'ghost']
+        ], [
+          ['npc', 'Ministry of Haunting. Gertrude signed out that night, Your Honour. Margate. Her calls are diverted to our night desk.', 'ghost'],
+          ['judge', 'And who answers?'],
+          ['npc', 'Brenda. She takes a message, and she says “woooo”. It is in the script. It is the only line we have never managed to remove.', 'ghost'],
+          ['p', 'SHE SAID “EAT SOMETHING”.'],
+          ['npc', 'That is Gertrude’s own message, left on the machine. She leaves it every holiday.', 'ghost']
+        ])
+      },
+      4: {
+        clue: 'The séance’s answer was right: the biscuits were behind the hatbox. {p} has been eating them all week.',
+        lines: alt([
+          ['p', 'Where she hid the good biscuits. The ones in the tin with the Scottie dog on.'],
+          ['judge', 'And did you get an answer?'],
+          ['d', 'Top of the wardrobe, behind the hatbox. Brenda looked it up.'],
+          ['p', 'IT WAS EXACTLY RIGHT. I HAVE BEEN EATING THEM ALL WEEK.']
+        ], [
+          ['p', 'Where she hid the good biscuits. The ones in the tin with the Scottie dog on.'],
+          ['judge', 'Did the line give you an answer?'],
+          ['d', 'It did. Top of the wardrobe, behind the hatbox.'],
+          ['judge', '{p}, is that where they were?'],
+          ['p', 'THEY WERE. THE TIN WAS FULL. I HAVE ALREADY STARTED ON THE SECOND ROW.']
+        ])
+      },
+      5: {
+        lines: alt([
+          ['judge', '{p}. The dead are not a vending machine. You do not put in five souls and get a Gertrude.'],
+          ['p', 'Then what are they?'],
+          ['judge', 'A call centre. I have been on hold since 1702.']
+        ], [
+          ['judge', '{p}, the dead are not a vending machine. Look at my gallery. Two hundred dead, and not one of them has ever handed anybody a biscuit.'],
+          ['audience', '(A ghost in the third row quietly puts a biscuit back in its pocket.)'],
+          ['audience', '(The ghost next to it quietly takes out a second biscuit, looks at the judge, and puts it back too.)']
+        ])
+      }
+    },
+    rulings: {
+      defendant: alt([
+        ['judge', 'Judgment for {d}. That was not a con. That was a Ministry night desk with a script and a leaflet. {d} sat under the table because that is where the signal is. {p} kicked the signal.'],
+        ['judge', 'Gertrude was in Margate. Her voicemail said “eat something”, and {p} cried at it. That is a perfectly good séance.'],
+        ['p', 'I WANT A REFUND.'],
+        ['judge', 'You want Gertrude. We all do. Press 2 for biscuits.']
+      ], [
+        ['judge', 'Judgment for {d}. {p} paid five souls to reach the other side and was put through to the other side. It was the night desk. It is the best the other side can do.'],
+        ['p', 'THE TABLE SAID OW.'],
+        ['judge', 'The table was {d}. {d} was under it. {p} kicked {d}, in the dark, twice.'],
+        ['judge', 'Pay the medium, {p}. And leave a nice review.']
+      ]),
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. That was a con with a tablecloth, whatever the Ministry says. If it was the night desk, {d} should have said so.'],
+        ['d', 'THEY HAVE A LEAFLET.'],
+        ['judge', 'I have signed leaflets. I was buried the following week.']
+      ], [
+        ['judge', 'Judgment for {p}. Five souls refunded. If the other side wants to charge by the minute, it can write in.'],
+        ['narrator', '(From beneath the table, very faintly: “Please stay on the line.”)']
+      ]),
+      both: alt([
+        ['judge', 'You are both fools. One pays five souls to be told to eat something. The other crawls under a table to relay it.'],
+        ['judge', 'Go home. Eat something.']
+      ], [
+        ['judge', 'You are both at fault. {d} should have said it was the night desk, and {p} should have asked before kicking.'],
+        ['judge', 'Next time, both of you stay on the line.']
+      ])
+    },
+    hallway: {
+      p: [
+        'She left a message. “Eat something.” I have played it all night. It is the nicest thing anyone has ever said to me.',
+        'I am going to Margate. I am going to find the donkey.',
+        'I kicked the table. I would like to apologise to the table. And to {d}. But mostly the table.'
+      ],
+      d: [
+        'The table said ow because of me, not because of the other side. I would like that on the record.',
+        'I have been put on hold by the afterlife. I am considering giving up séances. I may do hotlines.',
+        'The night desk offered me a job. Nights. Under a table. I said yes.'
+      ]
+    }
+  }],
+
+  /* ---------- 10. The Practice Burial: defendant becomes both ---------- */
+  'practice-burial': [{
+    id: 'guild-practical',
+    title: 'Hiding, Do Not Tell the Bailiff',
+    truth: 'both',
+    turn: alt([
+      ['narrator', '(The bailiff has been standing very close to {p} for some time, holding a long envelope behind his back. {p} has been edging away from him for the same length of time.)'],
+      ['judge', 'Bailiff. What is in the envelope?'],
+      ['bailiff', 'Nothing, Your Honour. Nothing that concerns {p}.'],
+      ['p', 'I am not here.']
+    ], [
+      ['narrator', '(A small tag is pinned to the plant pot on the evidence table. The bailiff reads it, frowns, and puts it in his pocket.)'],
+      ['judge', 'What did the tag say, Bailiff?'],
+      ['bailiff', '“Examined and passed.” I assume it means the pot, Your Honour.']
+    ]),
+    questions: {
+      0: {
+        clue: 'The form’s second page is {d}’s Guild exam slip. Under {p}’s “reason for volunteering”: “Hiding. Do not tell the bailiff.”',
+        lines: alt([
+          ['d', 'I have it in writing. Two pages.'],
+          ['bailiff', 'Page one: “Practice burial. Do not dig up until Thursday. No lilies. Signed, {p}.” Page two is a Guild examination slip. Candidate: {d}. Volunteer: {p}. Reason for volunteering: “Hiding. Do not tell the bailiff.”'],
+          ['judge', 'Bailiff.'],
+          ['bailiff', 'I would like it noted that I did not know.']
+        ], [
+          ['d', 'I have it in writing, Your Honour. Page one is the form. Page two is the Guild’s examination slip.'],
+          ['judge', 'Examination?'],
+          ['d', 'Practical burial, Thursday, nine o’clock. The Guild needs a living volunteer. {p} volunteered.'],
+          ['bailiff', 'Under “reason for volunteering”, {p} has written “Hiding. Do not tell the bailiff.”'],
+          ['p', 'I THOUGHT I WAS THE ONLY ONE USING THE POT.']
+        ])
+      },
+      1: {
+        clue: '{p} hid in the pot until nine on Thursday, when a jury summons for it expired. The bailiff had been waiting at the pot.',
+        lines: alt([
+          ['p', 'Thursday.'],
+          ['judge', 'The form says Thursday.'],
+          ['bailiff', 'Nine sharp, Your Honour. That is the minute a jury summons for {p} expired. I had stood by that pot since Monday. Nobody told me it was in there.'],
+          ['p', 'I DO NOT DO SERVICE OF ANY KIND. I WOULD RATHER BE BURIED.']
+        ], [
+          ['p', 'Thursday, Your Honour. After four days of struggle. It could have been any day.'],
+          ['bailiff', 'Nine o’clock, sir. The jury summons for {p} was valid until nine o’clock. I have the envelope. It is slightly damp.'],
+          ['judge', 'You served {p} with jury duty?'],
+          ['bailiff', 'I tried, sir. Monday, Tuesday and Wednesday.'],
+          ['p', 'I WOULD RATHER BE BURIED THAN JUDGE ANYBODY.']
+        ])
+      },
+      3: {
+        clue: 'Guild rule 9: a buried volunteer gets a means of escape (one teaspoon) and must be told it is an exam. {d} skipped the second part.',
+        lines: alt([
+          ['p', 'A good teaspoon. Silver. I am keeping it.'],
+          ['d', 'That is MY teaspoon. It is the Guild’s means of escape. Rule nine.'],
+          ['bailiff', 'Rule nine, Your Honour. “Every buried volunteer shall be given a means of escape, and shall be told that this is an examination.”'],
+          ['judge', 'And the second half, {d}?'],
+          ['d', 'I read the first half very carefully.']
+        ], [
+          ['p', 'Four days I dug with it, Your Honour. It is bent now. It has seen things.'],
+          ['d', 'It is regulation issue. One teaspoon, for fairness. Rule nine.'],
+          ['judge', 'Rule nine also says the volunteer must be told it is an exam. Were you told, {p}?'],
+          ['p', 'I WAS TOLD IT WAS A DAISY.'],
+          ['d', 'If you tell them it is an exam, Your Honour, they do not try hard enough.']
+        ])
+      },
+      4: {
+        lines: alt([
+          ['npc', 'There was a rat, Your Honour. A large one. He stood over the pot for four days, knocking.', 'geoffrey2'],
+          ['judge', 'Bailiff?'],
+          ['bailiff', 'I was serving a summons, Your Honour. The daisy accepted it.'],
+          ['npc', 'Father enjoyed the visits. He said it was nice to have someone call.', 'geoffrey2']
+        ], [
+          ['npc', 'Every morning at eight the rat knocked three times and said “post for the occupant”, Your Honour. Father signed for it.', 'geoffrey2'],
+          ['judge', 'Your father is dead, Geoffrey.'],
+          ['npc', 'He is a very good signer.', 'geoffrey2']
+        ])
+      }
+    },
+    rulings: {
+      both: alt([
+        ['judge', 'You are both at fault. {p} hid from jury service in a plant pot and called it curiosity. {d} buried a living volunteer for an exam and skipped the half of rule nine that said “tell them”.'],
+        ['judge', '{p} will serve on the next jury, wearing the daisy. {d} resits the exam, with the volunteer informed.'],
+        ['p', 'I WOULD RATHER BE BURIED.'],
+        ['judge', 'That is what you tried, {p}. It did not work.']
+      ], [
+        ['judge', 'You are both at fault. One lied to be buried and the other buried it and lied to pass. The pot is the only honest party here. It held you both for four days and said nothing.'],
+        ['judge', 'The Guild is informed. {d} fails on paperwork. {p} passes on staying down. Bailiff, serve them both.'],
+        ['bailiff', 'Both, Your Honour?'],
+        ['judge', 'Both. And the daisy.']
+      ]),
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}, on the narrow ground of rule nine, which I have read three times and enjoyed. A volunteer must be told.'],
+        ['judge', '{d} pays twenty souls and clears the soil out of {p}’s ears with the Guild teaspoon.'],
+        ['d', 'And the jury summons?'],
+        ['judge', 'Is for another day. The daisy has accepted it on {p}’s behalf.']
+      ], [
+        ['judge', 'Judgment for {p}. Four days in a pot for somebody else’s exam is not practice. It is a placement.'],
+        ['judge', '{d} pays twenty souls and, from now on, introduces every volunteer to the examiner. In writing. In person. With a biscuit.']
+      ]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}. {p} asked for a burial, signed for a burial, hid from a summons in the burial and came out at the agreed hour. I have never seen a client make such full use of a service.'],
+        ['p', 'I WAS NOT TOLD IT WAS AN EXAM.'],
+        ['judge', 'You were buried, {p}. The examiner gave you a merit.']
+      ], [
+        ['judge', 'Judgment for {d}. A volunteer who hides in a pot has no standing to complain about the pot. That is the first rule of pots.'],
+        ['p', 'THE FIRST RULE OF POTS?'],
+        ['judge', 'I have been buried. There are rules.']
+      ])
+    },
+    hallway: {
+      p: [
+        'The Guild gave me a merit for lying still. It is the first thing I have ever passed.',
+        'I have been summoned for jury service again. I am going to bury myself in a bigger pot.',
+        'The daisy never told on me. The daisy is the only one in this case with any integrity.'
+      ],
+      d: [
+        'I failed on paperwork. I have only ever failed on paperwork. It is my brand.',
+        'I would like it noted that the grief mark was four out of five. I cried at the daisy.',
+        'I am booking another volunteer. This time I will read the second half of the rule. Probably.'
+      ]
+    }
+  }],
+
   // @@NEXT
 };
