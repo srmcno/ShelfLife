@@ -67,14 +67,17 @@ test('the tray toggle turns nudges off and clears what was scheduled; a refusal 
   await page.locator('#tabMore').click();
   await expect(page.locator('#nudgeBtn')).toBeVisible();
   await expect(page.locator('#nudgeBtn span')).toHaveText('Nudges off');
+  await expect(page.locator('#nudgeCats')).toBeHidden();
   await page.locator('#nudgeBtn').click();
   await expect(page.locator('#nudgeBtn span')).toHaveText('Nudges on');
   await expect.poll(async () => (await saved(page)).settings.nudges).toBe(true);
+  await expect(page.locator('#nudgeCats [data-nudge-cat]')).toHaveCount(4);   // without a reload
   const cancelsBefore = await page.evaluate(() => window.__nudge.cancels);
   await page.locator('#nudgeBtn').click();
   await expect(page.locator('#nudgeBtn span')).toHaveText('Nudges off');
   await expect.poll(() => page.evaluate(() => window.__nudge.cancels)).toBeGreaterThan(cancelsBefore);
   expect((await saved(page)).settings.nudges).toBe(false);
+  await expect(page.locator('#nudgeCats')).toBeHidden();   // and the switches go away again
 });
 
 test('a refused permission keeps nudges off and says so', async ({ page }) => {

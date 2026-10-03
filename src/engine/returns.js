@@ -64,7 +64,8 @@ export function checkReturn(state, now = Date.now()) {
     if (r.pending) {
       // Gone again before opening the last one: the chest keeps the longer absence rather than stacking.
       const longer = Math.max(r.pending.days, days), c = chestFor(longer);
-      r.pending = { ...r.pending, days: longer, souls: c.souls, xp: c.xp, to: now, day };
+      // The card is written again for the longer absence, so its words match the bigger chest.
+      r.pending = { ...r.pending, days: longer, souls: c.souls, xp: c.xp, to: now, day, lines: awayLines(state, r.pending.from, now, longer, r.pending.id, now) };
     } else {
       r.serial += 1;
       r.pending = { id: r.serial, from: r.seenAt, to: now, days, souls: chest.souls, xp: chest.xp, day, lines: awayLines(state, r.seenAt, now, days, r.serial, now) };

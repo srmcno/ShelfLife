@@ -353,7 +353,8 @@ nudgeBtn.addEventListener('click', async () => {
     state.settings.nudges = true;
   } else state.settings.nudges = false;
   state.settings.nudgeAsked = true;
-  save(); syncNudgeButton(); syncNudges(state);
+  // The listener below updates the button and the schedule, and the per-kind switches listen too.
+  save(); window.dispatchEvent(new CustomEvent('shelflife:nudges'));
 });
 window.addEventListener('shelflife:nudges', () => { syncNudgeButton(); syncNudges(state); });
 syncNudgeButton();

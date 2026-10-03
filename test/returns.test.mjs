@@ -67,6 +67,9 @@ test('leaving again before opening the chest keeps the longer absence rather tha
   const second = checkReturn(s, NOW + 20 * HOUR + 3 * DAY);
   assert.equal(second.id, first.id, 'the same card');
   assert.equal(second.days, 3); assert.equal(second.souls, chestFor(3).souls);
+  const when = NOW + 20 * HOUR + 3 * DAY;
+  assert.deepEqual(second.lines, awayLines(s, second.from, when, 3, second.id, when), 'the words are rewritten for the longer absence');
+  assert.notDeepEqual(second.lines, first.lines, 'and no longer describe the short one');
   assert.equal(claimReturn(s, NOW + 11 * DAY).souls, chestFor(3).souls);
 });
 
