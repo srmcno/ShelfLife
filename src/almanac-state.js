@@ -135,7 +135,7 @@ export function blankExchange() { return { frames: [], frame: 'plain', portraits
 const FRAME_IDS = new Set(CABINET_FRAMES.map(f => f.id));
 const PORTRAIT_IDS = new Set(PORTRAIT_FRAMES.map(f => f.id));
 const TITLES = new Set(TITLE_IDS);
-export function normalizeExchange(raw, pets = []) {
+export function normalizeExchange(raw, pets = [], lifetime = 0) {
   const out = blankExchange();
   if (!object(raw)) return out;
   out.frames = unique((Array.isArray(raw.frames) ? raw.frames : []).filter(id => FRAME_IDS.has(id) && id !== 'plain'));
@@ -145,7 +145,9 @@ export function normalizeExchange(raw, pets = []) {
   if (object(raw.portrait)) for (const [pet, id] of Object.entries(raw.portrait)) if (petIds.has(pet) && out.portraits.includes(id)) out.portrait[pet] = id;
   out.commissions = unique((Array.isArray(raw.commissions) ? raw.commissions : []).filter(id => Object.hasOwn(COMMISSION_BY_ID, id)));
   out.titles = unique((Array.isArray(raw.titles) ? raw.titles : []).filter(id => TITLES.has(id)));
-  out.title = out.titles.includes(raw.title) ? raw.title : '';
+  // Legacy titles are not stored: they are earned from lifetime souls, so they count as owned too.
+  const legacyTitle = typeof raw.title === 'string' && /^lg:[1-9]\d*$/.test(raw.title) && Number(raw.title.slice(3)) <= legacyReached(lifetime);
+  out.title = out.titles.includes(raw.title) || legacyTitle ? raw.title : '';
   return out;
 }
 
@@ -176,7 +178,7 @@ export function normalizeRetention(s, now = Date.now()) {
   s.legacy = normalizeLegacy(s.legacy, s.mayhem?.lifetime);
   s.legacy.spent = Math.min(s.legacy.spent, legacyReached(s.mayhem?.lifetime || 0));
   s.collections = normalizeCollections(s.collections);
-  s.exchange = normalizeExchange(s.exchange, s.pets);
+  s.exchange = normalizeExchange(s.exchange, s.pets, s.mayhem?.lifetime || 0);
   if (object(s.decor)) s.decor.owned = normalizeOwned(s.decor.owned);
   if (object(s.settings)) s.settings.nudgeCats = normalizeNudgeCats(s.settings.nudgeCats);
   return s;

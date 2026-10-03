@@ -391,3 +391,31 @@ test('the Almanac state is bounded, idempotent and survives hostile input', () =
   assert.equal(normalizeAlmanac(undefined).init, 0, 'an older save is re-based on first sync');
   assert.ok(JSON.stringify(blankAlmanac()).length < 400, 'a blank Almanac is tiny');
 });
+
+test('a save with sixty old chapter records still records the new one, whatever the keys sort like', () => {
+  const s = household();
+  const key = chapterAt(NOW).key;
+  s.almanac.chapters = {};
+  for (let i = 0; i < 60; i++) s.almanac.chapters['zz-old-' + String(i).padStart(2, '0')] = { xp: 1, claimed: 0, badge: 0, spot: 0 };
+  assert.ok(key < 'zz', 'the live key sorts before every old one, the case that used to delete it');
+  assert.doesNotThrow(() => grantXp(s, 10, NOW));
+  assert.ok(s.almanac.chapters[key] && s.almanac.chapters[key].xp > 0, 'the new record is kept');
+  assert.equal(Object.keys(s.almanac.chapters).length, 60, 'and the oldest one made room');
+  assert.ok(!('zz-old-00' in s.almanac.chapters));
+});
+
+test('the weekly Back Issues markdown stays on one curio: buying it does not move it to another', () => {
+  const s = household();
+  addSouls(s, 5000);
+  const later = at(2027, 1, 15);
+  const list = backIssues(s, later);
+  assert.ok(list.bargain, 'there is a bargain this week');
+  const id = list.bargain.id;
+  assert.ok(buyBackIssue(s, id, later), 'it can be bought');
+  const after = backIssues(s, later);
+  assert.equal(after.bargain, null, 'once it is owned the week has no markdown left');
+  assert.equal(after.curios.filter(c => c.bargain).length, 0);
+  assert.ok(after.curios.every(c => c.cost === 450), 'every other curio stays at full price');
+  const next = backIssues(s, later + 7 * DAY);
+  assert.ok(next.bargain === null || next.bargain.id !== id, 'a new week picks again');
+});

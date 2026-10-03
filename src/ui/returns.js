@@ -5,7 +5,7 @@ import { save } from '../state.js';
 import { esc, plural, say, celebrate, chime } from './retention-kit.js';
 
 /* ================= WHILE YOU WERE AWAY: THE CARD =================
-   Sits at the top of the Today desk after six hours or more away, until its chest
+   Sits at the top of the Today desk after 16 hours or more away, until its chest
    is opened. It is not a sheet and does not take over the screen: you can ignore
    it, and it will still be there. Nothing here scolds. */
 

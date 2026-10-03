@@ -52,7 +52,7 @@ back in **Back Issues** at a higher price, so nothing is lost for good. The Thin
 flagship, with its own flavour lines under every emergency.
 
 A **streak freeze** is earned for every seven days of the omen, the docket or the daily challenge (the shelf
-holds two) and covers one missed day on its own. Come back after six hours or more and the shelf has a
+holds two) and covers one missed day on its own. Come back after a skipped day (16 hours or more) and the shelf has a
 **"while you were away"** card and a chest that grows with the days gone, up to seven. There is never a
 penalty for being away.
 

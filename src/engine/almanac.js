@@ -93,8 +93,9 @@ function ensureRecord(state, chapter) {
   const a = almanacState(state);
   if (!a.chapters[chapter.key]) {
     a.chapters[chapter.key] = { xp: 0, claimed: 0, badge: 0, spot: 0 };
-    const keys = Object.keys(a.chapters);
-    if (keys.length > 60) for (const k of keys.sort().slice(0, keys.length - 60)) delete a.chapters[k];
+    // Keep the newest 60 records. Insertion order is age, and the record just made is never the one to go.
+    const older = Object.keys(a.chapters).filter(k => k !== chapter.key);
+    for (const k of older.slice(0, Math.max(0, older.length - 59))) delete a.chapters[k];
   }
   return a.chapters[chapter.key];
 }
@@ -397,9 +398,12 @@ export function backIssues(state, now = Date.now()) {
     for (const k of c.curios) if (!m.curios[k.id]) curios.push({ kind: 'curio', id: k.id, chapter: c.id, chapterName: c.name, name: k.name, curio: ALMANAC_CURIO_BY_ID[k.id], cost: BACK_ISSUE_COST });
     if (decorKeys(c).some(key => !owned.has(key))) decor.push({ kind: 'decor', id: 'set:' + c.id, chapter: c.id, chapterName: c.name, name: c.decor.room.name + ' room set', cost: BACK_ISSUE_DECOR_COST });
   }
-  // One curio a week is marked down, chosen by the week number so it is the same all week.
-  const pick = curios.length ? curios[(weekNumber(now) * BARGAIN_PICK + 3) % curios.length] : null;
-  for (const item of curios) if (item === pick) { item.bargain = true; item.was = item.cost; item.cost = Math.round(item.cost * (1 - BACK_ISSUE_BARGAIN)); }
+  // One curio a week is marked down. It is chosen from every past curio, owned or not, so buying it
+  // does not move the markdown onto the next one: once it is yours, the week has no bargain left.
+  const every = pastChapters(now).flatMap(c => c.curios.map(k => k.id));
+  const pickId = every.length ? every[(weekNumber(now) * BARGAIN_PICK + 3) % every.length] : '';
+  const pick = curios.find(item => item.id === pickId) || null;
+  if (pick) { pick.bargain = true; pick.was = pick.cost; pick.cost = Math.round(pick.cost * (1 - BACK_ISSUE_BARGAIN)); }
   return { curios, decor, bargain: pick };
 }
 export function buyBackIssue(state, id, now = Date.now()) {

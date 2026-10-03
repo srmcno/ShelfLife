@@ -178,3 +178,11 @@ test('before the first chapter opens the Almanac says so and nothing breaks', as
   await expect(page.locator('#almanacSheet')).toContainText('1 October 2026');
   expect(await wide(page)).toBe(false);
 });
+
+test('a freeze that saved a streak is told once, even if the Almanac is never opened', async ({ page }) => {
+  await open(page, IN_CHAPTER, s => { s.streaks.notices = [{ kind: 'omen', type: 'saved', day: '2026-10-19', seen: 0 }]; });
+  await expect.poll(async () => (await saved(page)).streaks.notices[0]?.seen).toBe(1);
+  await page.reload();
+  await expect(page.locator('#cabinet .piece.pet').first()).toBeVisible();
+  expect((await saved(page)).streaks.notices[0].seen).toBe(1);
+});

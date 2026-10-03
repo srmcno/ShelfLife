@@ -7,7 +7,7 @@ import { addSouls } from './mayhem.js';
 import { grantXp, chapterAt, daysLeft } from './almanac.js';
 
 /* ================= WHILE YOU WERE AWAY =================
-   Come back after six hours or more and the shelf has a card for you: what it
+   Come back after 16 hours or more (a skipped day, not a night’s sleep) and the shelf has a card for you: what it
    got up to, and a chest. The chest grows with the days away, up to seven, and
    is claimed once per return, once per day. There is no penalty for being gone
    and no copy that suggests one. Being away is allowed.

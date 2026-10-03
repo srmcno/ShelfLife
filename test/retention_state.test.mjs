@@ -81,3 +81,19 @@ test('a brand new household starts level and the retention state is small', () =
   const loaded = normalizeState(JSON.parse(JSON.stringify({ ...s, pets: [] })));
   assert.deepEqual(RETENTION.map(k => loaded[k]), RETENTION.map(k => s[k]));
 });
+
+test('an equipped Legacy title survives a reload, because it is earned from lifetime souls and not stored', () => {
+  const s = blankState();
+  s.mayhem.lifetime = 40000;
+  s.exchange = { frames: [], frame: 'plain', portraits: [], portrait: {}, commissions: [], titles: [], title: 'lg:2' };
+  const once = normalizeState(JSON.parse(JSON.stringify(s)));
+  assert.equal(once.exchange.title, 'lg:2');
+  assert.equal(normalizeState(JSON.parse(JSON.stringify(once))).exchange.title, 'lg:2', 'and again');
+  const poor = blankState();
+  poor.exchange = { ...s.exchange };
+  assert.equal(normalizeState(JSON.parse(JSON.stringify(poor))).exchange.title, '', 'a title that has not been earned is dropped');
+  const wild = blankState();
+  wild.mayhem.lifetime = 40000;
+  wild.exchange = { ...s.exchange, title: 'lg:9999' };
+  assert.equal(normalizeState(JSON.parse(JSON.stringify(wild))).exchange.title, '', 'so is one beyond the ladder');
+});

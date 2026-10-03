@@ -25,7 +25,6 @@ const CHAPTER_COUNT = CHAPTERS.length;
 
 let S = null, refresh = () => {};
 let lastResults = [];     // what the last tap paid, shown at the top of the sheet until the next one
-const shown = new WeakSet();
 
 /* ---------- the quiet work done on every render ---------- */
 // Reads the counters, notices a return, checks the new achievements and says what happened.
@@ -45,7 +44,7 @@ function syncRetentionNow(state, now) {
   }
   for (const a of unlocked) say('Incident on file: ' + a.label + '.');
   // A freeze that saved a streak is told once, in plain words. One that was earned is told when the Almanac opens.
-  for (const n of unseenNotices(state)) if (n.type === 'saved' && !shown.has(n)) { shown.add(n); say(noticeText(n)); }
+  for (const n of unseenNotices(state)) if (n.type === 'saved') { n.seen = 1; say(noticeText(n)); }
   return events;
 }
 
