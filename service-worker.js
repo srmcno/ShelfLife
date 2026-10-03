@@ -23,6 +23,7 @@ const SHELL = [
   "./css/games.css",
   "./css/court.css",
   "./src/content/court.js",
+  "./src/content/court-twists-a.js",
   "./src/engine/court.js",
   "./src/court-state.js",
   "./src/ui/court.js",
