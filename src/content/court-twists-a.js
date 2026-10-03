@@ -838,5 +838,229 @@ export const TWISTS_A = {
     }
   }],
 
+  /* ---------- 7. The Crayon Will: plaintiff becomes defendant ---------- */
+  'crayon-will': [{
+    id: 'sleepwriter',
+    title: 'Everything, While Horizontal',
+    truth: 'defendant',
+    turn: alt([
+      ['narrator', '({p} yawns. It is a huge yawn, very sudden. The bailiff, who has been watching it closely, writes something down.)'],
+      ['judge', 'What did you write, Bailiff?'],
+      ['bailiff', '“Yawns like a person who has been up all night.” I do not know what it means, sir, but I felt it should be on record.']
+    ], [
+      ['narrator', '(Under {p}’s chair, something small and purple rolls out and stops against the bailiff’s foot.)'],
+      ['bailiff', 'Your Honour, {p} has dropped a crayon.'],
+      ['p', 'That is not mine. I own a spoon.'],
+      ['judge', 'It has your teeth marks on it, {p}.']
+    ]),
+    questions: {
+      0: {
+        clue: '{d} spells “everything” right. EVRYTHING, with the missing E, is scrawled forty times on {p}’s own walls in the same purple.',
+        lines: alt([
+          ['narrator', '({d} takes the purple crayon, writes EVERYTHING in neat capitals and dots the I with a heart. The judge counts the letters.)'],
+          ['judge', 'Nine. The will says EVRYTHING. Eight.'],
+          ['bailiff', 'Your Honour, I walked past {p}’s slot this morning. The wall says EVRYTHING, forty times, in the same purple.'],
+          ['p', 'THAT IS DECORATION.']
+        ], [
+          ['narrator', '({d} grips the crayon in its fist and writes EVERYTHING. Then, out of habit, it draws a heart.)'],
+          ['judge', 'It is spelled correctly. The will is not.'],
+          ['bailiff', 'The wall in {p}’s slot is not spelled correctly either, sir. Neither is the pillowcase. Nor, I think, the moth.'],
+          ['p', 'WHAT IS WRONG WITH THE MOTH?']
+        ])
+      },
+      1: {
+        clue: '{p} sleepwalks and sleepwrites every night in purple crayon. {d} has been following it round with a blanket.',
+        lines: alt([
+          ['p', 'No! I have never felt better. I sleep like a baby.'],
+          ['d', 'Like a baby that draws, Your Honour. It sleepwalks. It sleepwrites. It once signed the moth.'],
+          ['judge', 'Signed her?'],
+          ['d', 'With a heart. She was very touched.'],
+          ['p', 'I AM A HEAVY SLEEPER, NOT A WRITER.']
+        ], [
+          ['p', 'No, Your Honour. I have never felt better.'],
+          ['d', 'It is not dying. It is sleeping. Loudly. With a crayon.'],
+          ['judge', 'Sleeping with a crayon.'],
+          ['d', 'It will not let go. I pry it out of its hand every morning. It says “everything” in its sleep, with the E missing.'],
+          ['p', 'THAT IS A LIE. I SLEEP WITH THE SPOON.']
+        ])
+      },
+      3: {
+        clue: '{d}’s slot holds a night log: “{p} at the door, asleep, with a crayon. Walked it back to bed.” Eleven nights.',
+        lines: alt([
+          ['bailiff', 'Very little, Your Honour. A blanket, folded. One pencil. And a logbook, eleven entries, one per night.'],
+          ['judge', 'Read one.'],
+          ['bailiff', '“{p} was here again. Walked it back to bed. Crayon returned.” The last one just says “again”. It is underlined.']
+        ], [
+          ['bailiff', 'Nothing, Your Honour. A blanket, a torch and a logbook. Every entry: “3 a.m. {p} at the door, asleep, holding a crayon. Walked it home.”'],
+          ['judge', 'Eleven nights. Why not simply wake it, {d}?'],
+          ['d', 'You are not supposed to. Also it was holding my hand.']
+        ])
+      },
+      5: {
+        sass: true,
+        lines: alt([
+          ['d', 'Return it. Every morning. Folded. I have been doing it for a month.'],
+          ['judge', 'You are the first person in this court to be inconvenienced by an inheritance.'],
+          ['d', 'It is a lot of stuff to carry back at three in the morning, Your Honour.']
+        ], [
+          ['judge', 'What would you do with everything, {d}?'],
+          ['d', 'Put a lock on the door. And a bell on {p}.'],
+          ['judge', 'A bell.'],
+          ['d', 'So I know when the heart-drawing starts.']
+        ])
+      }
+    },
+    rulings: {
+      defendant: alt([
+        ['judge', 'Judgment for {d}. The will is genuine. {p} wrote it in its sleep, in its own crayon, and spelled “everything” the way it always does when it is asleep and in love.'],
+        ['judge', 'A will signed by the testator is a will, even if the testator was horizontal. {d} inherits everything. The spoon stays with the moth, as a prior commitment.'],
+        ['npc', 'Finally.', 'moth'],
+        ['p', 'I DO NOT LOVE {d}.'],
+        ['judge', 'Your pillowcase says otherwise. In purple. With a heart.']
+      ], [
+        ['judge', 'Judgment for {d}. {p} accused the one resident who walked it back to bed eleven nights running, with a blanket, in the dark, and never once woke it.'],
+        ['judge', 'The will stands, heart and all. If {p} wishes to amend it, {p} must do so awake, and sober, and in pencil.'],
+        ['p', 'I DO NOT SLEEPWRITE.'],
+        ['narrator', '(That night {p} writes “SORY” on the wall, in purple, with a heart. Nobody corrects it.)']
+      ]),
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. A forged will is a forged will, and {d} is banned from all stationery for a year.'],
+        ['d', 'I DID NOT FORGE IT. I WALKED {p} BACK TO BED ELEVEN TIMES.'],
+        ['judge', 'Then you were awake, with a blanket, near a crayon, for eleven nights. I have convicted people on less.']
+      ], [
+        ['judge', 'Judgment for {p}. The second page is struck out and burned in front of the jury.'],
+        ['narrator', '(The page is burned. That night {p} writes it again, on the wall, bigger.)']
+      ]),
+      both: alt([
+        ['judge', 'You are both ridiculous. One writes a will in its sleep. The other keeps a logbook about it instead of waking it up.'],
+        ['judge', 'New wills, both of you. Everything to the moth. Awake.']
+      ], [
+        ['judge', 'You are both unwell. One sleepwrites, one sleepwalks it home, and neither of you has had a full night since the spring.'],
+        ['judge', 'You will both sleep at the court tonight, under supervision.'],
+        ['narrator', '(The wall snores. Nobody thanks it.)']
+      ])
+    },
+    hallway: {
+      p: [
+        'I do not write in my sleep. I have asked the pillowcase. It will not say.',
+        'I am sleeping in a mitten tonight. On the crayon hand. And a bell. And a lock.',
+        'Apparently I am “mostly heart”. That cannot be right. I sleep like a stone.'
+      ],
+      d: [
+        'I’ll take everything. I’ll give it back in the morning. Folded. I have the practice.',
+        'I did not even draw the throne. The throne was all {p}. Very ambitious throne.',
+        'The best night I’ve had in a month was last night. It stayed in bed. I almost missed it.'
+      ]
+    }
+  }],
+
+  /* ---------- 8. The Labelled Biscuit: defendant becomes both ---------- */
+  'labelled-biscuit': [{
+    id: 'gift-receipt',
+    title: 'Happy Birthday, Do Not Eat',
+    truth: 'both',
+    turn: alt([
+      ['narrator', '(The bailiff places a small plate on the evidence table. On it: a card, face down, with a label stuck firmly over the front.)'],
+      ['judge', 'What is that, Bailiff?'],
+      ['bailiff', 'It is the other evidence, Your Honour. Nobody has lifted the label. I did not want to be labelled.']
+    ], [
+      ['bailiff', 'Your Honour, {d} has handed up a receipt. It is damp.'],
+      ['judge', 'Where was it?'],
+      ['bailiff', 'I would rather not say, sir. But it does say “GIFT” across the top, in capitals.']
+    ]),
+    questions: {
+      1: {
+        clue: '{d} bought the biscuit as a birthday present for {p}. The gift receipt says so. {p} labelled the plate before reading the card.',
+        lines: alt([
+          ['d', 'Me. With my own souls. I have the receipt.'],
+          ['narrator', '({d} takes a small, damp receipt out of its mouth. Across the top: “GIFT RECEIPT. Recipient: {p}.”)'],
+          ['judge', 'You bought the biscuit for {p}?'],
+          ['d', 'For its birthday. There was a card. I put it under the plate.'],
+          ['p', 'I LABELLED THE PLATE.']
+        ], [
+          ['d', 'I did, Your Honour. With my own souls, for {p}’s birthday. I kept the gift receipt in case of exchange.'],
+          ['p', 'It is not my birthday.'],
+          ['d', 'It is on the card.'],
+          ['judge', 'Where is the card?'],
+          ['d', 'On the plate, under the label. Nobody has lifted the label, Your Honour. Not even to see what it was stuck to.']
+        ])
+      },
+      3: {
+        clue: '{d} ate the present out of spite once {p} had labelled it, and left the card on the plate for {p} to find afterwards.',
+        lines: alt([
+          ['d', 'Like spite, Your Honour. And a bit like glue, from the label.'],
+          ['judge', 'You ate a present, {d}. In front of the person it was for.'],
+          ['d', 'It had been labelled. A present with a label on it is not a present, it is a hostage.'],
+          ['p', 'YOU LEFT THE CARD ON THE PLATE.'],
+          ['d', 'So you would find it afterwards. It was a very good biscuit. I wish you had been there.']
+        ], [
+          ['d', 'Buttery, Your Honour. Crumbly. With a faint aftertaste of being labelled.'],
+          ['judge', 'Did you know it was {p}’s birthday biscuit when you ate it?'],
+          ['d', 'I knew. I bought it. That was the worst bit. I ate my own present out of spite and it was the best thing I have ever tasted.'],
+          ['p', 'AND THE CARD?'],
+          ['d', 'I left it on the plate. I spelled “sorry” next to it, in crumbs.']
+        ])
+      },
+      4: {
+        lines: alt([
+          ['p', 'It means I have a system.'],
+          ['judge', 'What system?'],
+          ['p', 'If anybody gives me anything, I label it before they have finished saying happy birthday.'],
+          ['judge', 'Birthday?'],
+          ['p', '…Hypothetical birthday.']
+        ], [
+          ['p', 'It is a system, Your Honour. In eleven parts. Part one, the label. Part two, the label again, in case the first one falls off.'],
+          ['judge', 'And part three?'],
+          ['p', 'I do not open a card until the item is labelled.'],
+          ['judge', 'Why not?'],
+          ['p', 'Cards are an ambush.']
+        ])
+      }
+    },
+    rulings: {
+      both: alt([
+        ['judge', 'You are both at fault. {d} bought {p} a birthday biscuit. {p} labelled it, and the giver, before reading the card. {d} then ate it out of spite.'],
+        ['judge', 'A gift is not property, {p}, and a grudge is not a snack, {d}. All labels come off. {d} buys a second biscuit. {p} reads the card first.'],
+        ['p', 'Can I label it?'],
+        ['judge', 'You may label it “thank you”.']
+      ], [
+        ['judge', 'You are both at fault. {p} labels presents, people and benches. {d} eats presents out of spite. On this shelf, nobody has ever said “thank you” and “you’re welcome” in the right order.'],
+        ['judge', 'New biscuit. Card read first. Labels off. The bailiff will hold the card.'],
+        ['bailiff', 'I have read it already, Your Honour. I am sorry. I cried.']
+      ]),
+      plaintiff: alt([
+        ['judge', 'Judgment for {p}. A present belongs to the person it is for, even when that person labels the giver, and the plate, and the air above the plate.'],
+        ['judge', '{d} buys a second biscuit and presents it again, properly, with the card face up.'],
+        ['p', 'Can I label the card?'],
+        ['judge', 'No.']
+      ], [
+        ['judge', 'Judgment for {p}. A gift is a gift. You do not eat your own present out of spite, {d}. You take it back to the shop with the receipt and eat the refund.'],
+        ['d', 'THE RECEIPT WAS IN MY MOUTH.'],
+        ['judge', 'I know. I have seen it. It is the only damp thing in this court I have been willing to touch.']
+      ]),
+      defendant: alt([
+        ['judge', 'Judgment for {d}, who bought the biscuit, holds the receipt, and has been labelled like a jam jar. I note it was a present, and that {d} ate it, and this court has chosen to find that touching.'],
+        ['p', 'IT WAS MY BIRTHDAY.'],
+        ['judge', 'Then you have had your present. It was a lesson.']
+      ], [
+        ['judge', 'Judgment for {d}. A resident who is labelled must be allowed some revenge. This court has a soft spot for revenge, and a hard spot for labels.'],
+        ['p', 'It was a PRESENT.'],
+        ['judge', 'Then it was a present that tasted of justice.']
+      ])
+    },
+    hallway: {
+      p: [
+        'I read the card. It said “happy birthday”. I labelled it “MINE”. Then “THANK YOU”. Then “MINE” again.',
+        'I knew somebody had eaten it. I always know. I did not know it was a present. That is a gap in the system.',
+        'I will apologise to {d} in writing. With a label on the letter that says “SORRY, FROM {p}”.'
+      ],
+      d: [
+        'I would like it noted that it was a very good biscuit.',
+        'I spelled “sorry” on the plate in crumbs. Nobody read it. The bailiff ate it.',
+        'First time anyone has labelled me and then read my card. I may keep the label.'
+      ]
+    }
+  }],
+
   // @@NEXT
 };
