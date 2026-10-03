@@ -15,7 +15,7 @@ import { grantXp, chapterAt, daysLeft } from './almanac.js';
    The clock is the device’s, as for the omen and the docket. A chest is a few
    hundred souls at most and one a day, so there is nothing to gain by lying to it. */
 
-export const RETURN_AFTER_MS = 6 * 3600000;
+export const RETURN_AFTER_MS = 16 * 3600000;
 export const RETURN_MAX_DAYS = 7;
 const DAY = 86400000;
 
