@@ -38,7 +38,11 @@ import { applyDecor, initDecorUI } from './ui/decorUI.js';
 import { initDrag } from './ui/drag.js';
 import { renderAll, renderStatus, renderShelf, renderNotes, escapeHtml } from './ui/render.js';
 import { toast, dismissToast } from './ui/toast.js';
-import { nudgesAvailable, enableNudges, syncNudges } from './notify.js';
+import { nudgesAvailable, enableNudges, syncNudges, clearAwayNudges } from './notify.js';
+import { initAlmanac } from './ui/almanac.js';
+import { initCollections } from './ui/collections.js';
+import { initReturns } from './ui/returns.js';
+import { initNudgeSettings } from './ui/nudge-settings.js';
 import { openCard, closeCard, getOpenPetId } from './ui/card.js';
 import { initSoundNoteHook, isMuted, toggleMuted } from './audio/sound.js';
 import { initNarrator, initNarratorUI, isNarratorOn, toggleNarrator, stopSpeech } from './audio/narrator.js';
@@ -419,6 +423,10 @@ incidentsVeil.addEventListener('click', e => { if (e.target === incidentsVeil) c
 // ---------- wire the remaining self-contained widgets ----------
 
 initMayhem(state, () => renderAll(state));
+initAlmanac(state, () => renderAll(state));
+initCollections(state, () => renderAll(state));
+initReturns(state, () => renderAll(state));
+initNudgeSettings(state);
 initArcade(state, () => renderAll(state), { social });
 initCourt(state, () => renderAll(state), { social });
 initSchemeUI(state, () => renderAll(state));
@@ -502,6 +510,7 @@ function announceMayhem(added) {
   }
   syncAudioButtons();
   syncBackupBanner();
+  clearAwayNudges(); // opened: the way-back notes are for someone who is not here
 })();
 
 setInterval(() => {
@@ -530,6 +539,7 @@ function comingBack() {
   const newTrouble = accrueMayhem(state);
   welcomeBack(state);
   renderAll(state);
+  clearAwayNudges();
   if (!document.querySelector('.veil.open')) announceMayhem(newTrouble);
 }
 document.addEventListener('visibilitychange', () => {

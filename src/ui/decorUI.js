@@ -9,6 +9,7 @@ import { toast } from './toast.js';
 import { renderAll, escapeHtml } from './render.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { SHELF_SCENES } from '../content/shelf-theatre.js';
+import { decorOwned } from '../engine/collections.js';
 
 // Ported verbatim from ~/Documents/shelf-life.html's optButton (~line 1339).
 // Not part of the module's export contract — only buildDecor needs it.
@@ -83,6 +84,8 @@ export function buildDecor(state) {
   for (const [field, id, options, label, swatch] of groups) {
     const group = document.getElementById(id); group.replaceChildren();
     for (const [key, value] of Object.entries(options)) {
+      // Everything the game ever gave away is still here. New rooms, woods and walls show once earned or bought.
+      if (!decorOwned(state, field + ':' + key)) continue;
       const button = optButton(label(value), d[field] === key, swatch(value), () => {
         d[field] = key; applyDecor(state);
         const saved = save();
