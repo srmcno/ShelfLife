@@ -189,3 +189,16 @@ test('a freeze that saved a streak is told once, even if the Almanac is never op
   await expect(page.locator('#cabinet .piece.pet').first()).toBeVisible();
   expect((await saved(page)).streaks.notices[0].seen).toBe(1);
 });
+
+test('claiming a tier asks the celebration toolkit for the souls recipe', async ({ page }) => {
+  await open(page, IN_CHAPTER);
+  await page.evaluate(() => {
+    window.__fx = [];
+    const original = window.shelfFx.celebrate;
+    window.shelfFx.celebrate = (kind, ctx) => { window.__fx.push(kind); return original(kind, ctx); };
+  });
+  await page.locator('#mayhemDesk .alm-tile').click();
+  await page.locator('#almanacSheet .alm-row.ready [data-alm="claim"]').first().click();
+  await expect(page.locator('#almanacSheet .alm-result')).toContainText('Tier');
+  expect(await page.evaluate(() => window.__fx)).toContain('souls');
+});

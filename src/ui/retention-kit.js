@@ -9,10 +9,12 @@ export const plural = (n, one, many = one + 's') => n + ' ' + (n === 1 ? one : m
 export const byId = id => document.getElementById(id);
 export const num = n => Number(n).toLocaleString('en-GB');
 
-/* The celebration toolkit (window.ShelfFx) belongs to another part of the game and
-   may not be there yet, or ever. Ask it, politely, and carry on if it says nothing. */
+/* The celebration toolkit (window.shelfFx, ui/fx.js) belongs to another part of the game and
+   may not be there. Ask it, politely, and carry on if it says nothing. Tiers, chests and the
+   rest pay souls, so their recipe is the souls flying to the counter; a finished set has its own. */
+export const CELEBRATION_RECIPES = { tier: 'souls', chest: 'souls', souls: 'souls', set: 'set-complete', curio: 'curio' };
 export function celebrate(kind, detail = {}) {
-  try { window.ShelfFx?.celebrate?.({ kind, ...detail }); } catch { /* decoration must never break a claim */ }
+  try { window.shelfFx?.celebrate?.(CELEBRATION_RECIPES[kind] || kind, detail); } catch { /* decoration must never break a claim */ }
 }
 export function chime(kind) {
   try { ({ tier: playAchievement, curio: playUnlock, souls: playStar, chest: playPowerUp, set: playAchievement })[kind]?.(); } catch { /* sound is optional */ }

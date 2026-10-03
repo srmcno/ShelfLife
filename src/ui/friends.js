@@ -47,9 +47,11 @@ export function verdictLine(r) {
 }
 // Pays for each verdict once (engine/court.js keeps count) and tells the
 // server it has been seen. Friends and the Court both show them this way.
-export function collectVerdicts(state, social, results, now = Date.now()) {
+export function collectVerdicts(state, social, results, now = Date.now(), persist = save) {
   const out = results.map(r => ({ ...r, souls: summonsReward(state, r.id, 'verdict', now) }));
-  if (out.some(r => r.souls)) save();
+  // A reward over the daily cap is written down as owed, not paid, and the server stops sending the
+  // verdict once it is seen. So whatever was paid or owed is saved first, whether or not it paid today.
+  if (out.length) persist();
   for (const r of results) social.seen(r.id).catch(() => { /* shown again next time, never paid twice */ });
   return out;
 }

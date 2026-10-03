@@ -14,6 +14,7 @@ import {
 import { addSouls, resolveEmergency, openCoffin, drawOmen, accrueMayhem, CURIO_BY_ID, RARITY_BY_ID } from '../src/engine/mayhem.js';
 import { careFor } from '../src/engine/care.js';
 import { COURT_BY_ID } from '../src/engine/court.js';
+import { finishRun } from '../src/engine/arcade.js';
 
 const at = (y, m, d, h = 12) => new Date(y, m - 1, d, h).getTime();
 const DAY = 86400000;
@@ -150,7 +151,7 @@ test('XP follows the things the game already counts, and each source has a daily
 test('the whole day is capped too, whatever mix of things is done', () => {
   const s = household();
   syncAlmanac(s, NOW);
-  s.mayhem.resolved = 99; s.mayhem.coffins = 99; s.courtroom.episodes = 99; s.arcade.plays = { frenzy: 99 }; s.life.outings = 99;
+  s.mayhem.resolved = 99; s.mayhem.coffins = 99; s.courtroom.episodes = 99; s.pets.forEach(p => { p.arcadeRuns = 99; }); s.life.outings = 99;
   s.pets[0].careLog = { food: 90, fuss: 90, clean: 90 };
   s.mayhem.omen = { day: localDayKey(NOW), id: 'wet-hand', streak: 1, lastDay: localDayKey(NOW), grace: 1 };
   s.mayhem.chores = { day: localDayKey(NOW), list: [{ id: 'feed', have: 3, done: true }, { id: 'fuss', have: 3, done: true }, { id: 'wash', have: 2, done: true }], bonus: true };
@@ -274,7 +275,7 @@ test('finishing three weekly challenges opens a chest; unclaimed prizes are paid
   const wk = weekNumber(NOW), list = weeklyChallenges(wk);
   const bump = {
     emergency: () => { s.mayhem.resolved += 30; }, coffin: () => { s.mayhem.coffins += 10; }, care: () => { s.pets[0].careLog = { food: 100, fuss: 100, clean: 100 }; },
-    chore: () => {}, omen: () => {}, court: () => { s.courtroom.episodes += 9; }, arcade: () => { s.arcade.plays = { frenzy: 50 }; }, daily: () => {}, docket: () => {},
+    chore: () => {}, omen: () => {}, court: () => { s.courtroom.episodes += 9; }, arcade: () => { s.pets.forEach(p => { p.arcadeRuns = 50; }); }, daily: () => {}, docket: () => {},
     expedition: () => { s.life.outings += 5; }, curio: () => { for (let i = 0; i < 9; i++) s.mayhem.curios['fake' + i] = 1; }
   };
   // Kinds that depend on daily flags are driven across several days.
@@ -418,4 +419,18 @@ test('the weekly Back Issues markdown stays on one curio: buying it does not mov
   assert.ok(after.curios.every(c => c.cost === 450), 'every other curio stays at full price');
   const next = backIssues(s, later + 7 * DAY);
   assert.ok(next.bargain === null || next.bargain.id !== id, 'a new week picks again');
+});
+
+test('a zero-score arcade run is a warm-up: it earns no Almanac XP and no weekly progress, a scoring run does', () => {
+  const s = household();
+  syncAlmanac(s, NOW);
+  const chapter = chapterAt(NOW), xp = () => (s.almanac.chapters[chapter.key]?.xp || 0), arcadeWeek = () => s.almanac.week.counts.arcade || 0;
+  for (let i = 0; i < 5; i++) finishRun(s, 'frenzy', 0, s.pets[0].id, NOW + (i + 1) * 61000, () => 0.5);
+  syncAlmanac(s, NOW + 6 * 61000);
+  assert.equal(xp(), 0, 'five warm-ups paid nothing');
+  assert.equal(arcadeWeek(), 0, 'and counted for no weekly challenge');
+  finishRun(s, 'frenzy', 25, s.pets[0].id, NOW + 7 * 61000, () => 0.5);
+  syncAlmanac(s, NOW + 8 * 61000);
+  assert.ok(xp() > 0, 'a run that scored pays');
+  assert.equal(arcadeWeek(), 1);
 });

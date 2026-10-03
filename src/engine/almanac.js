@@ -176,8 +176,10 @@ function readCounters(state, now) {
     abs: {
       care: sum(pets.map(p => (p.careLog?.food || 0) + (p.careLog?.fuss || 0) + (p.careLog?.clean || 0))),
       resolved: m.resolved || 0, coffins: m.coffins || 0, outings: state.life?.outings || 0, episodes: court.episodes || 0,
-      arcade: sum(Object.values(arcade.plays || {}).map(v => Number(v) || 0)),
-      dplays: arcade.daily?.day === today ? arcade.daily.plays || 0 : 0,
+      // Runs that scored, challenge runs included. The plays counters also count a zero-score warm-up,
+      // which the arcade itself does not treat as a game, so they would let a player farm XP by quitting at once.
+      arcade: sum(pets.map(p => Number(p.arcadeRuns) || 0)),
+      dplays: 0,
       curios: Object.keys(m.curios || {}).length
     },
     flags: {
