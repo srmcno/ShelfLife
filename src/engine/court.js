@@ -175,10 +175,17 @@ export function episodePlan(k, rnd) {
   const breakBefore = rnd() < 0.5 ? 1 : 2;
   const extraScene = rnd() < 0.5;
   const order = shuffled(k.questions.map((_, i) => i), rnd);
+  // A bonus question takes the place of colour, never of a clue: first a plain
+  // question, then one that would have set off a scene, and only as a last
+  // resort the case's one zinger, which then gives way to a zinger.
   let bonus = null;
   if (rnd() < BONUS_CHANCE) {
-    const plain = k.questions.map((q, i) => (!q.clue && !q.herring && !q.sass && !q.happen ? i : -1)).filter(i => i >= 0);
-    if (plain.length) bonus = { index: pick(plain, rnd), id: pick(BONUS_QUESTIONS, rnd).id };
+    const free = k.questions.map((q, i) => (!q.clue && !q.herring ? i : -1)).filter(i => i >= 0);
+    const plain = free.filter(i => !k.questions[i].sass && !k.questions[i].happen), scenes = free.filter(i => !k.questions[i].sass);
+    const zingers = free.filter(i => k.questions[i].sass), zinging = BONUS_QUESTIONS.filter(b => b.sass);
+    const pool = plain.length ? plain : scenes;
+    if (pool.length) bonus = { index: pick(pool, rnd), id: pick(BONUS_QUESTIONS, rnd).id };
+    else if (zingers.length && k.questions.filter(q => q.sass).length === zingers.length) bonus = { index: pick(zingers, rnd), id: pick(zinging, rnd).id };
   }
   return { breakBefore, extraAfter: extraScene ? (breakBefore === 2 ? 0 : 1) : -1, order, bonus };
 }
