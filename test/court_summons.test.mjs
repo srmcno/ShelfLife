@@ -4,7 +4,7 @@ import { blankState, normalizeState } from '../src/state.js';
 import { COURT_CASES, QUESTIONS_PER_EPISODE } from '../src/content/court.js';
 import {
   castEpisode, episodeOpening, episodeQuestions, episodeAsk, episodeRule, courtFinish, docketToday, fill,
-  summonsReward, SUMMONS_SOULS, VERDICT_SOULS, SUMMONS_DAILY_CAP
+  summonsReward, payOwedSummons, SUMMONS_SOULS, VERDICT_SOULS, SUMMONS_DAILY_CAP
 } from '../src/engine/court.js';
 import { courtroomState, normalizeCourtroom } from '../src/court-state.js';
 import { seededRandom } from '../src/engine/arcade.js';
@@ -84,18 +84,25 @@ test('summons rewards: once per summons, three a day of each kind, fresh each mo
   summonsReward(s, ID(3), 'heard', NOW);
   assert.equal(SUMMONS_DAILY_CAP, 3);
   const start = souls();
-  assert.equal(summonsReward(s, ID(4), 'heard', NOW), 0, 'a fourth hearing today pays nothing');
+  assert.equal(summonsReward(s, ID(4), 'heard', NOW), 0, 'a fourth hearing today pays nothing yet');
   assert.equal(souls(), start);
+  assert.deepEqual(courtroomState(s).summonsOwed, [{ id: ID(4), kind: 'heard' }], 'it is written down as owed, not burned');
+  assert.equal(courtroomState(s).summonsPaid.includes(ID(4)), false, 'and not marked as paid');
   assert.equal(summonsReward(s, ID(5), 'verdict', NOW), VERDICT_SOULS, 'verdicts have their own three');
-  assert.equal(summonsReward(s, ID(4), 'heard', NOW + DAY), 0, 'a summons remembered as heard stays paid');
-  assert.equal(summonsReward(s, ID(6), 'heard', NOW + DAY), SUMMONS_SOULS, 'a new day, a new three');
+  assert.deepEqual(payOwedSummons(s, NOW), { souls: 0, count: 0 }, 'there is no room today');
+  assert.deepEqual(payOwedSummons(s, NOW + DAY), { souls: SUMMONS_SOULS, count: 1 }, 'tomorrow the owed one is paid');
+  assert.deepEqual(courtroomState(s).summonsOwed, []);
+  assert.equal(summonsReward(s, ID(4), 'heard', NOW + DAY), 0, 'and a summons that has paid stays paid');
+  assert.equal(summonsReward(s, ID(6), 'heard', NOW + DAY), SUMMONS_SOULS, 'a new day, a new three (one went to the owed reward)');
   assert.equal(summonsReward(s, '', 'heard', NOW + DAY), 0);
   const c = courtroomState(s);
-  assert.equal(c.summonsHeard, 1);
+  assert.equal(c.summonsHeard, 2);
   assert.equal(c.summonsVerdicts, 0);
-  assert.deepEqual(c.summonsPaid, [1, 2, 3, 4, 5, 6].map(ID));
-  for (let i = 10; i < 60; i++) summonsReward(s, ID(i), 'verdict', NOW + 2 * DAY + i);
+  assert.deepEqual(c.summonsPaid, [1, 2, 3, 5, 4, 6].map(ID));
+  for (let i = 10; i < 60; i++) summonsReward(s, ID(i), 'verdict', NOW + (2 + i) * DAY);
   assert.equal(courtroomState(s).summonsPaid.length, 40, 'the list of paid summonses is bounded');
+  for (let i = 100; i < 160; i++) summonsReward(s, ID(i), 'verdict', NOW + 90 * DAY);
+  assert.equal(courtroomState(s).summonsOwed.length, 20, 'and so is the list of owed ones');
 });
 
 test('summons records survive a reload and hostile data', () => {
@@ -104,8 +111,10 @@ test('summons records survive a reload and hostile data', () => {
   const back = normalizeState(JSON.parse(JSON.stringify(s)));
   assert.deepEqual(courtroomState(back).summonsPaid, [ID(9)]);
   assert.equal(courtroomState(back).summonsVerdicts, 1);
-  const bad = normalizeCourtroom({ summonsDay: 'today', summonsHeard: -4, summonsVerdicts: 1e9, summonsPaid: [ID(1), ID(1), 'x', 42, { id: ID(2) }, 'ABCDEF00-0000-4000-8000-000000000003'] });
+  const bad = normalizeCourtroom({ summonsDay: 'today', summonsHeard: -4, summonsVerdicts: 1e9, summonsPaid: [ID(1), ID(1), 'x', 42, { id: ID(2) }, 'ABCDEF00-0000-4000-8000-000000000003'],
+    summonsOwed: [{ id: ID(7), kind: 'heard' }, { id: ID(7), kind: 'verdict' }, { id: ID(1), kind: 'heard' }, { id: 'x', kind: 'heard' }, { id: ID(8), kind: 'nonsense' }, 'junk', null, { id: ID(9), kind: 'verdict' }] });
   assert.deepEqual([bad.summonsDay, bad.summonsHeard, bad.summonsVerdicts, bad.summonsPaid], ['', 0, 99, [ID(1)]]);
+  assert.deepEqual(bad.summonsOwed, [{ id: ID(7), kind: 'heard' }, { id: ID(9), kind: 'verdict' }], 'owed rewards are checked, de-duplicated and never include a paid summons');
   const loose = { courtroom: { episodes: 2, best: {} } };
   assert.deepEqual(courtroomState(loose).summonsPaid, [], 'an older record gains the fields when read');
 });

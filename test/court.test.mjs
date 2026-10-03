@@ -239,7 +239,8 @@ test('the guide offers unaired cases first and records survive a reload', () => 
   assert.deepEqual(reloaded.courtroom.best, s.courtroom.best);
   assert.deepEqual(normalizeCourtroom({ episodes: 3, justice: 9, best: { 'borrowed-coffin': 7, nope: 2, 'snoring-wall': -1 }, last: 'nope' }),
     { episodes: 3, justice: 3, best: { 'borrowed-coffin': 3 }, last: '', docketDay: '', docketStreak: 0, docketLastDay: '',
-      summonsDay: '', summonsHeard: 0, summonsVerdicts: 0, summonsPaid: [] });
+      summonsDay: '', summonsHeard: 0, summonsVerdicts: 0, summonsPaid: [],
+      versions: {}, recent: [], seats: {}, stars: 0, rank: 0, flawless: 0, flawlessBest: 0, summonsOwed: [] });
 });
 
 test('the hall cam: the announcer cuts to the hallway and a reporter asks each loser in turn', () => {
