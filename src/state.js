@@ -166,7 +166,7 @@ export function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 export function defaultNeeds() { return { food: 78, fuss: 78, clean: 82 }; }
 export function defaultDecor() { return { room: 'aubergine', wall: 'damask', wood: 'rosewood', accent: 'blood' }; }
 export function defaultStreak() { return { count: 0, lastCheckin: 0 }; }
-export function defaultSettings() { return { muted: false, narratorOn: false, narratorVoiceURI: null, effects: 'auto', nudges: false, nudgeAsked: false }; }
+export function defaultSettings() { return { muted: false, narratorOn: false, narratorVoiceURI: null, effects: 'auto', nudges: false, nudgeAsked: false, haptics: true }; }
 export function defaultCareLog() { return { food: 0, fuss: 0, clean: 0 }; }
 // meeting: how many times the shelf has convened over you. carried: how many times
 // Item 4 has been carried forward. struck: petId -> when that pet closed the matter.
@@ -329,7 +329,7 @@ export function normalizeState(raw) {
   if (!['auto', 'light', 'full'].includes(s.settings.effects)) s.settings.effects = 'auto';
   delete s.settings.matureMode; // Retired setting from older backups.
   if (typeof s.settings.theatreOn !== 'boolean') s.settings.theatreOn = true;
-  for (const key of ['muted', 'narratorOn', 'nudges', 'nudgeAsked']) {
+  for (const key of ['muted', 'narratorOn', 'nudges', 'nudgeAsked', 'haptics']) {
     if (typeof s.settings[key] !== 'boolean') s.settings[key] = defaultSettings()[key];
   }
   s.streak.count = Math.floor(finite(s.streak.count, 0));

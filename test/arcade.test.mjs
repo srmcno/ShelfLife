@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blankState, normalizeState } from '../src/state.js';
 import { ARCADE_GAMES, ARCADE_QUIPS, FRENZY_ITEMS } from '../src/content/arcade.js';
-import { GLYPH_NAMES } from '../src/art/mayhem-glyphs.js';
+import { allGlyphNames } from '../src/art/arcade-art.js';
 import {
   seededRandom, frenzyDirection, frenzyStart, frenzyStep, stackStart, stackStep, stackDrop, STACK, seanceStart, seanceShown, seanceInput,
   whackStart, whackStep, whackHit, finishRun, tierFor, normalizeArcade, startGame
@@ -19,13 +19,16 @@ function household() {
 
 test('every game has a catalogue entry, known glyphs and four tiers of jokes', () => {
   for (const g of ARCADE_GAMES) {
-    assert.ok(GLYPH_NAMES.includes(g.glyph), g.id);
+    assert.ok(allGlyphNames().includes(g.glyph), g.id);
     assert.equal(ARCADE_QUIPS[g.id].length, 4, g.id);
     assert.ok(ARCADE_QUIPS[g.id].every(pool => pool.length >= 2));
     assert.ok(g.howto.length < 120, g.id + ' instructions must stay one line');
     assert.ok(startGame(g.id, seededRandom(1)));
   }
-  for (const item of Object.values(FRENZY_ITEMS)) assert.ok(GLYPH_NAMES.includes(item.glyph));
+  for (const item of Object.values(FRENZY_ITEMS)) assert.ok(allGlyphNames().includes(item.glyph), item.glyph);
+  // Soap and the trap have glyphs of their own now, not a sun and a nail.
+  assert.equal(FRENZY_ITEMS.soap.glyph, 'soap');
+  assert.equal(FRENZY_ITEMS.trap.glyph, 'trap');
 });
 
 test('Feeding Frenzy scores catches, loses lives to bad things and speeds up', () => {
@@ -56,10 +59,11 @@ test('Frenzy movement follows held keys and pointer targets inside the walls', (
 test('Coffin Stack trims overhang, rewards perfect drops and ends on a miss', () => {
   const g = stackStart(seededRandom(1));
   const base = g.stack[0];
-  g.mover.x = base.x; // perfect
+  g.mover.x = base.x; // perfect: a coffin and one for the streak
   let r = stackDrop(g);
   assert.ok(r.perfect);
-  assert.equal(g.score, 1);
+  assert.equal(g.score, 2);
+  assert.equal(r.points, 2);
   assert.ok(Math.abs(g.stack[1].w - base.w) < 1e-9);
   g.mover.x = g.stack[1].x + 0.1;
   r = stackDrop(g);
@@ -74,14 +78,16 @@ test('Coffin Stack trims overhang, rewards perfect drops and ends on a miss', ()
   assert.ok(STACK.width > 0.3);
 });
 
-test('The Séance grows the sequence, forgives one mistake and then ends', () => {
+test('The Séance opens with three candles, grows by one, forgives one mistake and then ends', () => {
   const g = seanceStart(seededRandom(5));
+  assert.equal(g.seq.length, 3);
   assert.equal(seanceInput(g, 0).ignored, true, 'no input while the spirits speak');
   seanceShown(g);
-  const r = seanceInput(g, g.seq[0]);
+  let r;
+  for (const pad of [...g.seq]) r = seanceInput(g, pad);
   assert.ok(r.round);
-  assert.equal(g.score, 1);
-  assert.equal(g.seq.length, 2);
+  assert.equal(g.score, 3);
+  assert.equal(g.seq.length, 4);
   seanceShown(g);
   const wrong = (g.seq[0] + 1) % 4;
   assert.ok(seanceInput(g, wrong).forgiven);
@@ -124,7 +130,7 @@ test('finishing a run pays souls from a daily purse, keeps the best and lifts th
   assert.equal(zero.counted, false, 'a warm-up is not a game');
   for (let i = 0; i < 40; i++) finishRun(s, 'whack', 100, 'g0', NOW, () => 0);
   assert.ok(s.mayhem.gameSouls <= GAME_SOULS_PER_DAY);
-  assert.equal(tierFor('stack', 30), 3);
+  assert.equal(tierFor('stack', 42), 3);
   assert.ok(first.quip.includes('Agnes') || first.quip.length > 10);
 });
 
@@ -133,7 +139,7 @@ test('arcade records survive reload and hostile data', () => {
   finishRun(s, 'seance', 9, 'g0', NOW);
   const restored = normalizeState(JSON.parse(JSON.stringify(s)));
   assert.equal(restored.arcade.best.seance, 9);
-  assert.deepEqual(normalizeArcade({ best: { frenzy: -3, nope: 5, stack: 'x', whack: 12 }, lastGame: 'court' }), { best: { whack: 12 }, plays: {}, lastGame: '', daily: null, dailyStreak: 0, dailyLastDay: '' });
+  assert.deepEqual(normalizeArcade({ best: { frenzy: -3, nope: 5, stack: 'x', whack: 12 }, lastGame: 'court' }), { best: { whack: 12 }, plays: {}, lastGame: '', daily: null, dailyStreak: 0, dailyLastDay: '', medals: {}, runs: 0, theme: 'dusk', history: [] });
 });
 
 test('arcade trust is rationed by the same daily cap as every other bonus', async () => {

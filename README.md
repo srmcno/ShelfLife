@@ -33,8 +33,9 @@ pays for the first five each day.
 ### Coming back tomorrow
 
 The shelf desk lists **today in the Playroom**. **The daily challenge** puts one arcade game in a
-modifier (snack storm, slim coffins, a chatty spirit, a funeral crowd) that is the same for everyone
-on the same date. It keeps its own best, and the first scoring run each day pays a bonus that grows
+modifier (a snack storm, an impatient undertaker, a backwards séance, flooded corners, forty-eight in
+all, one cycle every 48 days) that is the same for everyone on the same date. A strip on the arcade
+hub shows the last fourteen challenge days. It keeps its own best, and the first scoring run each day pays a bonus that grows
 with your streak. **The docket** is one Shelf Court case a day that pays a bonus for airing it.
 **Seasons** recur every year: from 15 October to 2 November, *The Thin Season* lets some coffins hold
 six seasonal curios, which stay in the cabinet once you have them. Streaks and sets are recorded as
@@ -110,8 +111,11 @@ they say about the life they have had here.
 
 ## The Playroom
 
-Shelf Court, four quick arcade games and one expedition. Arcade games are endless, get faster,
-and end when your luck does. Instructions are one line. **Again** is always one key away.
+Shelf Court, four quick arcade games and one expedition. Arcade games are endless, come in waves,
+and end when your luck does. Instructions are one line. A quick 3, 2, 1 starts a run (any tap skips
+it) and **Again** is always one key away. Each game has three skulls to win, shown as a ladder on
+screen with what is left to the next one. The chosen resident reacts on the field and, on the result
+card, celebrates or sulks.
 
 ### Shelf Court
 
@@ -152,15 +156,19 @@ is owed and paid on the next day with room.
 
 | Game | What you do |
 | --- | --- |
-| Feeding Frenzy | Your resident catches falling snacks and dodges holy water, soap and mousetraps. Combos multiply; a still-beating heart doubles everything for six seconds. |
-| Coffin Stack | Drop coffins onto a growing tower. Overhang is sawn off; three perfect drops in a row win some width back. |
-| The Séance | Candles light in sequence. Repeat it. Each round adds one. The spirits forgive one mistake. |
-| Grave Whack | Push the hands back into their graves before they climb out. Never tap the widow. The landlord is worth five. |
+| Feeding Frenzy | Your resident catches falling snacks and dodges holy water, soap and mousetraps. Combos multiply; a still-beating heart doubles everything for six seconds. It runs in waves: a feast, a holy procession that leaves one lane open, and Brother Aldous, who throws the water by the bucket. Get through him untouched and you are paid, and a skull comes back. |
+| Coffin Stack | Drop coffins onto a growing tower under a sky that darkens with height. Overhang is sawn off; clean drops in a row pay more each time, and three in a row win some width back. A miss sends the whole coffin over the edge. |
+| The Séance | Candles light in sequence, some after a held breath. Repeat it, and keep the pauses for a point a round; three in time in a row mend a spared mistake. It opens with three candles and each round adds one. The spirits forgive one mistake. |
+| Grave Whack | Push the hands back into their graves before they climb out; a hand about to escape shakes. Never tap the widow. Stuffed gloves only break your streak, the landlord is worth five and the gold tooth is worth eight and mends a skull. |
 | Shelf Court | Judge your residents' petty lawsuits on live daytime TV. The rest of the shelf is the jury. Twenty-four cases. |
 | Expeditions | Pack a tool, choose a crew and recover parts for working household objects. |
 
-Every scoring run pays souls from a daily purse, beating your best pays a bonus, and a good run
-earns a little trust (within the usual daily cap). Little adventures ask for a specific game with
+Every scoring run pays souls from a daily purse of 160, beating your best pays a bonus, and a good run
+earns a little trust (within the usual daily cap). Each skull is worth about the same souls a minute in
+every game. Skulls are kept as medals on the hub cards; lifetime runs and medals open cosmetic arenas
+(Moonlit, Embers, Hard frost, Pea soup, Gilded), and the hub names the next one. Haptics (small buzzes,
+on by default, with a switch in More) and a quiet ambient bed for each game come with the sound, and
+effects thin out by themselves on a phone that cannot keep up. Little adventures ask for a specific game with
 the resident who invited you. Expeditions show your crew, packed equipment, route and exact
 choice consequences; two distinct recovered parts build a permanent household project.
 

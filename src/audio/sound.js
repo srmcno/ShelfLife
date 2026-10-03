@@ -592,28 +592,47 @@ const SFX = {
   }
 };
 
+// The arcade keeps its own sound design in audio/arcade-audio.js. It builds on
+// the same helpers and the same master chain, so everything shares one room.
+export function registerSfx(table) { Object.assign(SFX, table); }
+export const kit = { osc, gain, filter, noise, env, sweep, route, chain, shaper, rnd, vary, cents, graphFor, getCtx };
+
 // ---------- triggers ----------
 
 let lastSound = null;
+
+// A busy game can ask for dozens of sounds a second. Past this many still
+// ringing, ordinary sounds are dropped rather than stacked into mush; anything
+// marked priority 'high' (a skull, a new best, the fatal hit) always plays.
+const MAX_VOICES = 10;
+const voices = [];
+function voiceFree(c, priority) {
+  const now = c.currentTime;
+  for (let i = voices.length - 1; i >= 0; i--) if (voices[i] <= now) voices.splice(i, 1);
+  return priority === 'high' || voices.length < MAX_VOICES;
+}
 
 function play(name, opts) {
   if (state.settings.muted) return null;
   if (!audioAllowed()) return null;
   const c = getCtx();
   if (!c) return null;
-  const G = graphFor(c);
   const o = opts || {};
+  if (!SFX[name] || !voiceFree(c, o.priority)) return null;
+  const G = graphFor(c);
   const t0 = c.currentTime + 0.004 + (o.delay || 0);
   trace = { name, nodes: [] };
   let duration = 0;
   try {
-    duration = SFX[name](c, G, t0, o.step) || 0;
+    duration = SFX[name](c, G, t0, o.step, o) || 0;
   } finally {
     lastSound = { name, at: t0, duration, nodes: trace.nodes, nodeCount: trace.nodes.length, ctxState: c.state };
     trace = null;
   }
+  voices.push(t0 + duration);
   return lastSound;
 }
+export function playSfx(name, opts) { return play(name, opts); }
 
 export function playFeed(opts) { return play('feed', opts); }
 export function playFuss(opts) { return play('fuss', opts); }
@@ -665,7 +684,9 @@ export function renderSoundOffline(name, seconds) {
 }
 
 export function isMuted() { return !!state.settings.muted; }
-export function setMuted(v) { state.settings.muted = !!v; save(); }
+const muteListeners = new Set();
+export function onMuteChange(fn) { muteListeners.add(fn); return () => muteListeners.delete(fn); }
+export function setMuted(v) { state.settings.muted = !!v; save(); muteListeners.forEach(fn => { try { fn(!!v); } catch { /* a listener must never break the toggle */ } }); }
 export function toggleMuted() { setMuted(!isMuted()); return isMuted(); }
 
 // Self-registers so every note gets a cue without note-producing code
@@ -695,20 +716,20 @@ export function initSoundNoteHook() {
   });
 }
 
-// A plain voice for the arcade: one pitched blip with a soft tail. The séance
-// candles each own a note, so the sequence can be remembered by ear as well.
-export function playTone(freq = 440, { duration = 0.22, type = 'triangle', gain = 0.12 } = {}) {
+// A plain pitched blip with a soft tail, for anything that wants one note. It
+// goes through the master chain like every other sound (compressor, room), and
+// counts against the voice cap. The seance candles each own a note, so the
+// sequence can be remembered by ear as well.
+export function playTone(freq = 440, { duration = 0.22, type = 'triangle', gain: peak = 0.12, priority } = {}) {
   if (state.settings.muted || !audioAllowed()) return null;
   const c = getCtx();
-  if (!c) return null;
+  if (!c || !voiceFree(c, priority)) return null;
+  const G = graphFor(c);
   const t0 = c.currentTime + 0.004;
-  const osc = c.createOscillator(), amp = c.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, t0);
-  amp.gain.setValueAtTime(0.0001, t0);
-  amp.gain.exponentialRampToValueAtTime(gain, t0 + 0.015);
-  amp.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-  osc.connect(amp).connect(c.destination);
-  osc.start(t0); osc.stop(t0 + duration + 0.02);
+  const o = osc(c, type, freq, t0), amp = gain(c, 1);
+  env(amp.gain, t0, { peak, a: 0.015, d: Math.max(0.05, duration - 0.015) });
+  route(c, G, chain([o, amp]), 0.9, 0.12, 0);
+  o.start(t0); o.stop(t0 + duration + 0.02);
+  voices.push(t0 + duration);
   return { freq, at: t0 };
 }
