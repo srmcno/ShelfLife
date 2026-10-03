@@ -62,9 +62,9 @@ test('claiming pays souls and XP once, and a second return the same day brings n
 test('leaving again before opening the chest keeps the longer absence rather than stacking', () => {
   const s = household();
   checkReturn(s, NOW);
-  const first = checkReturn(s, NOW + 8 * HOUR);
+  const first = checkReturn(s, NOW + 20 * HOUR);
   assert.equal(first.days, 0);
-  const second = checkReturn(s, NOW + 8 * HOUR + 3 * DAY);
+  const second = checkReturn(s, NOW + 20 * HOUR + 3 * DAY);
   assert.equal(second.id, first.id, 'the same card');
   assert.equal(second.days, 3); assert.equal(second.souls, chestFor(3).souls);
   assert.equal(claimReturn(s, NOW + 11 * DAY).souls, chestFor(3).souls);
