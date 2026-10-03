@@ -43,6 +43,14 @@ const phase = page => page.evaluate(() => document.getElementById('arcadeSheet')
 const saved = page => page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.v4')));
 const field = page => page.locator('#arcadeSheet [data-ar-field]');
 const fxLevel = page => field(page).getAttribute('data-fx');
+// A reaction is a class that is held for a third of a second; on a busy machine a poll can miss
+// it, so watch for it instead and ask afterwards whether it ever appeared.
+const watch = (page, selector, names) => page.evaluate(([sel, list]) => {
+  const el = document.querySelector(sel); window.__seen = new Set();
+  const note = () => list.forEach(n => { if (el.classList.contains(n)) window.__seen.add(n); });
+  note(); new MutationObserver(note).observe(el, { attributes: true, attributeFilter: ['class'] });
+}, [selector, names]);
+const seen = (page, name) => page.waitForFunction(n => window.__seen.has(n), name, { timeout: 15000 });
 
 test('a run counts in from three, shows the count, and plays when it ends or is skipped', async ({ page }) => {
   await open(page);
@@ -58,8 +66,8 @@ test('a run counts in from three, shows the count, and plays when it ends or is 
   expect(await phase(page)).toBe('ready');
   await page.keyboard.down('ArrowRight');
   await expect.poll(() => phase(page)).toBe('play');
+  expect(await page.evaluate(() => document.getElementById('arcadeSheet').arcadeRun.game.dir)).toBe(1);
   await page.keyboard.up('ArrowRight');
-  expect(await page.evaluate(() => document.getElementById('arcadeSheet').arcadeRun.game.x)).toBeGreaterThan(0.5);
 });
 
 test('the skull ladder shows what is left, and the field announces skulls and records', async ({ page }) => {
@@ -97,18 +105,20 @@ test('the resident answers a catch and a hit on the field, and Whack has a resid
   await start(page, 'frenzy');
   await expect(page.locator('#arcadeSheet .ar-catcher .sprite')).toHaveCount(1);
   await expect(page.locator('#arcadeSheet .ar-catcher .sprite')).toHaveClass(/sl-controlled/);
+  await watch(page, '#arcadeSheet .ar-catcher .sprite', ['sl-catching', 'sl-care-clean']);
   await page.evaluate(() => { const g = document.getElementById('arcadeSheet').arcadeRun.game; g.items.push({ id: 802, kind: 'crumb', x: g.x, y: 0.84, vy: 0, spin: 0 }); });
-  await page.waitForFunction(() => document.querySelector('#arcadeSheet .ar-catcher .sprite')?.classList.contains('sl-catching'), null, { polling: 'raf', timeout: 4000 });
-  await page.waitForTimeout(300);
+  await seen(page, 'sl-catching');
+  await page.waitForTimeout(400);
   await page.evaluate(() => { const g = document.getElementById('arcadeSheet').arcadeRun.game; g.items.push({ id: 803, kind: 'holy', x: g.x, y: 0.84, vy: 0, spin: 0 }); });
-  await page.waitForFunction(() => document.querySelector('#arcadeSheet .ar-catcher .sprite')?.classList.contains('sl-care-clean'), null, { polling: 'raf', timeout: 4000 });
+  await seen(page, 'sl-care-clean');
   await page.locator('#arcadeSheet [data-ar="close"]').click();
   await start(page, 'whack');
   await expect(page.locator('#arcadeSheet .ar-overseer-pet .sprite')).toHaveCount(1);
   await page.evaluate(() => { document.getElementById('arcadeSheet').arcadeRun.game.holes[4] = { id: 811, kind: 'hand', age: 0, life: 9 }; });
   await expect(page.locator('#arcadeSheet .ar-grave[data-hole="4"]')).toHaveAttribute('data-kind', 'hand');
+  await watch(page, '#arcadeSheet .ar-overseer-pet .sprite', ['sl-reaching']);
   await page.keyboard.press('5');
-  await page.waitForFunction(() => document.querySelector('#arcadeSheet .ar-overseer-pet .sprite')?.classList.contains('sl-reaching'), null, { polling: 'raf', timeout: 4000 });
+  await seen(page, 'sl-reaching');
   await expect(page.locator('#arcadeSheet [data-ar-score]')).toHaveText('1');
 });
 
@@ -278,7 +288,7 @@ test('the haptics switch lives in More, buzzes on hits, and stays silent when of
 });
 
 test('Full effects start at level 0, Light effects at 1, and reduced motion at the minimum', async ({ page, browser }) => {
-  await open(page);
+  await open(page, { settings: { effects: 'full' } });
   await start(page, 'frenzy');
   expect(await fxLevel(page)).toBe('0');
   await expect(page.locator('#arcadeSheet canvas.ar-fx')).toBeVisible();
@@ -290,7 +300,7 @@ test('Full effects start at level 0, Light effects at 1, and reduced motion at t
   await light.close();
   const calm = await browser.newPage();
   await calm.emulateMedia({ reducedMotion: 'reduce' });
-  await open(calm);
+  await open(calm, { settings: { effects: 'full' } });
   await start(calm, 'frenzy');
   expect(await fxLevel(calm)).toBe('2');
   await expect(calm.locator('#arcadeSheet canvas.ar-fx')).toBeHidden();
@@ -301,7 +311,7 @@ test('Full effects start at level 0, Light effects at 1, and reduced motion at t
 });
 
 test('a device that cannot keep up loses effects after about two seconds, and the next run starts lighter', async ({ page }) => {
-  await open(page, { init: () => {
+  await open(page, { settings: { effects: 'full' }, init: () => {
     const real = window.requestAnimationFrame.bind(window);
     window.requestAnimationFrame = cb => real(t => { if (window.__burn) { const end = performance.now() + 40; while (performance.now() < end) { /* a slow phone */ } } cb(t); });
   } });

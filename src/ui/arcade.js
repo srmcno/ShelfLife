@@ -390,9 +390,9 @@ function gameOver() {
   sheet.style.cssText = '--ar-accent:' + g.accent + ';' + themeVars(theme());
   sheet.innerHTML = head(g.title, wasDaily ? 'Today’s challenge · run over' : 'Run over') +
     '<div class="ar-over"><div class="ar-over-stage" data-mood="' + (good ? 'win' : result.tier === 0 ? 'lose' : 'ok') + '"><span class="ar-over-pet"></span></div>' +
-    '<div class="ar-final"><small>Score</small><span class="ar-final-num"><b>' + result.score + '</b><span class="ar-count-up" aria-hidden="true"></span></span>' + (result.newBest ? '<span class="ar-newbest">' + (wasDaily ? 'Best today' : 'New best') + '</span>' : '<em>' + (wasDaily ? 'Best today ' : 'Best ') + result.best + '</em>') + '</div>' +
-    '<div class="ar-tier" aria-label="' + result.tier + ' of 3">' + skulls(result.tier, 3) + '</div>' +
-    (result.tier ? '<p class="ar-rank">' + esc(g.ranks[result.tier - 1]) + (result.newMedal ? ' · new medal' : '') + '</p>' : '<p class="ar-rank dim">' + (g.tiers[0] - result.score) + ' short of ' + esc(g.ranks[0]) + '</p>') +
+    '<div class="ar-final"><small>Score</small><span class="ar-final-num"><b>' + result.score + '</b><span class="ar-count-up" aria-hidden="true"></span>' + (result.newBest ? '<span class="ar-newbest">' + (wasDaily ? 'Best today' : 'New best') + '</span>' : '') + '</span>' + (result.newBest ? '' : '<em>' + (wasDaily ? 'Best today ' : 'Best ') + result.best + '</em>') + '</div>' +
+    '<div class="ar-medalrow"><div class="ar-tier" aria-label="' + result.tier + ' of 3">' + skulls(result.tier, 3) + '</div>' +
+    (result.tier ? '<p class="ar-rank">' + esc(g.ranks[result.tier - 1]) + (result.newMedal ? ' · new medal' : '') + '</p>' : '<p class="ar-rank dim">' + (g.tiers[0] - result.score) + ' short of ' + esc(g.ranks[0]) + '</p>') + '</div>' +
     '<ul class="ar-stats">' + stats.map(([k, v]) => '<li><b>' + esc(v) + '</b><small>' + esc(k) + '</small></li>').join('') + '</ul>' +
     '<p class="ar-quip">' + esc(result.quip) + '</p>' + (result.bestLine ? '<p class="ar-bestline">' + esc(result.bestLine) + '</p>' : '') +
     '<ul class="mh-rewards">' + (result.souls ? '<li class="souls">' + arcadeGlyph('soul') + '+' + result.souls + ' souls</li>' : '<li>' + (result.score ? 'Today’s arcade purse is empty. Play for glory.' : 'No score, no souls.') + '</li>') +
