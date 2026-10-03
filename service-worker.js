@@ -73,6 +73,7 @@ const SHELL = [
   "./css/fx.css",
   "./src/ui/fx.js",
   "./src/ui/effects-model.js",
+  "./src/ui/celebrate.js",
   "./src/art/empty-art.js",
   "./css/controls.css",
   "./src/engine/creation.js",

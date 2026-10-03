@@ -173,9 +173,9 @@ export function burst(target, kind = 'sparkles', opts = {}) {
   let longest = 0;
   for (const p of plan) {
     const el = document.createElement('i');
-    el.className = 'fx-p ' + p.shape;
+    el.className = 'fx-p fx-s-' + p.shape;
     el.style.cssText = '--x:' + p.x + 'px;--y:' + p.y + 'px;--lift:' + p.lift + 'px;--fall:' + p.fall + 'px;--r:' + p.spin + 'deg;--s:' + p.size +
-      'px;--c:' + p.color + ';--t:' + p.life + 'ms;--d:' + p.delay + 'ms';
+      ';--c:' + p.color + ';--t:' + p.life + 'ms;--d:' + p.delay + 'ms';
     host.appendChild(el);
     longest = Math.max(longest, p.life + p.delay);
   }
@@ -196,7 +196,7 @@ export function pulse(el, opts = {}) {
   if (motionLevel() === 'full' || opts.ring) {
     const ring = document.createElement('i');
     ring.className = 'fx-ring';
-    ring.style.cssText = 'left:' + Math.round(at.x) + 'px;top:' + Math.round(at.y) + 'px;--w:' + Math.round(Math.max(at.w || 40, 40)) + 'px;--c:' + (opts.color || '#F6C768');
+    ring.style.cssText = 'left:' + Math.round(at.x) + 'px;top:' + Math.round(at.y) + 'px;--w:' + Math.round(Math.max(at.w || 40, 40)) + ';--c:' + (opts.color || '#F6C768');
     layer().appendChild(ring);
     return new Promise(resolve => later(() => { ring.remove(); resolve(); }, 760));
   }
@@ -333,7 +333,10 @@ function nextBanner() {
   if (!spec) { bannerBusy = false; return; }
   bannerBusy = true;
   const el = document.createElement('div');
-  el.className = 'fx-banner tone-' + (spec.tone || 'candle');
+  // On a wide screen a sheet sits at the top of the page, so the banner takes the
+  // empty space below it instead of covering the thing being celebrated.
+  const low = innerWidth > 720 && !!document.querySelector('.veil.open');
+  el.className = 'fx-banner tone-' + (spec.tone || 'candle') + (low ? ' low' : '');
   el.innerHTML = '<span class="fx-banner-kicker"></span><b></b><p></p>';
   el.firstChild.textContent = spec.kicker || '';
   el.querySelector('b').textContent = spec.title || '';
@@ -380,6 +383,9 @@ export const CELEBRATIONS = {
     showBanner({ kicker: ctx.kicker || 'Still here', title: ctx.title || (n + ' nights running'), line: ctx.line || 'The candle has noticed. It will not say so.', tone: 'candle' });
     if (ctx.at) burst(ctx.at, 'souls');
     haptic('success');
+  },
+  'moved-in'(ctx) {
+    showBanner({ kicker: 'Moved in', title: (ctx.name || 'Someone') + ' has the shelf.', line: 'Nobody else has been told yet.', tone: 'mint' });
   },
   'set-complete'(ctx) {
     showBanner({ kicker: 'Set complete', title: ctx.title || 'Every last one.', line: ctx.line || 'The cabinet is, for once, entirely satisfied.', tone: 'mint' });
@@ -430,7 +436,9 @@ function watchSheets() {
       const veil = record.target;
       const was = (record.oldValue || '').split(/\s+/).includes('open');
       const is = veil.classList.contains('open');
-      if (is) { veil.classList.remove('fx-leaving'); clearTimeout(leaving.get(veil)); continue; }
+      // classList.remove on an absent token still writes the attribute, which
+      // would queue another record for this very observer: only touch it if set.
+      if (is) { if (veil.classList.contains('fx-leaving')) veil.classList.remove('fx-leaving'); clearTimeout(leaving.get(veil)); continue; }
       if (!was || motionLevel() === 'off' || document.querySelector('.veil.open')) continue;
       veil.classList.add('fx-leaving');
       clearTimeout(leaving.get(veil));

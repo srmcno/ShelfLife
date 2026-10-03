@@ -1,5 +1,6 @@
 import { save } from '../state.js';
 import { initFx } from './fx.js';
+import './celebrate.js';   // the celebration hooks start themselves
 import { BENCH_KEY, BENCH_FRAMES, classifyFrames, nextVerdict, effectsMode } from './effects-model.js';
 export { BENCH_KEY, FULL_MEDIAN_MS, FULL_P90_MS, BENCH_FRAMES, classifyFrames, nextVerdict, effectsMode } from './effects-model.js';
 

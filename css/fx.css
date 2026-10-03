@@ -71,12 +71,12 @@ body[data-effects="light"] details[open]>.folder-content{animation:none}
 .fx-p{position:absolute;left:0;top:0;width:calc(var(--s) * 1px);height:calc(var(--s) * 1px);margin:calc(var(--s) * -.5px) 0 0 calc(var(--s) * -.5px);
   color:var(--c);background:currentColor;will-change:transform,opacity;
   animation:fx-fly var(--t) cubic-bezier(.16,.74,.34,1) var(--d) both}
-.fx-p.star{clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
-.fx-p.chip{width:calc(var(--s) * .62px);height:calc(var(--s) * 1.1px);border-radius:1px}
-.fx-p.ember{border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;background:radial-gradient(60% 60% at 50% 66%,#fff 0 18%,currentColor 56%,transparent 100%);box-shadow:0 0 8px 1px color-mix(in srgb,currentColor 55%,transparent)}
-.fx-p.heart{background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21C4 15 2 11 2 7.5A5 5 0 0 1 12 6a5 5 0 0 1 10 1.5C22 11 20 15 12 21z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21C4 15 2 11 2 7.5A5 5 0 0 1 12 6a5 5 0 0 1 10 1.5C22 11 20 15 12 21z'/%3E%3C/svg%3E") center/contain no-repeat}
-.fx-p.puff{border-radius:50%;background:radial-gradient(circle at 38% 34%,color-mix(in srgb,currentColor 70%,#fff),currentColor 60%,transparent 100%);opacity:.9}
-body[data-effects="light"] .fx-p.ember{box-shadow:none}
+.fx-p.fx-s-star{clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
+.fx-p.fx-s-chip{width:calc(var(--s) * .62px);height:calc(var(--s) * 1.1px);border-radius:1px}
+.fx-p.fx-s-ember{border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;background:radial-gradient(60% 60% at 50% 66%,#fff 0 18%,currentColor 56%,transparent 100%);box-shadow:0 0 8px 1px color-mix(in srgb,currentColor 55%,transparent)}
+.fx-p.fx-s-heart{background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21C4 15 2 11 2 7.5A5 5 0 0 1 12 6a5 5 0 0 1 10 1.5C22 11 20 15 12 21z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21C4 15 2 11 2 7.5A5 5 0 0 1 12 6a5 5 0 0 1 10 1.5C22 11 20 15 12 21z'/%3E%3C/svg%3E") center/contain no-repeat}
+.fx-p.fx-s-puff{border-radius:50%;background:radial-gradient(circle at 38% 34%,color-mix(in srgb,currentColor 70%,#fff),currentColor 60%,transparent 100%);opacity:.9}
+body[data-effects="light"] .fx-p.fx-s-ember{box-shadow:none}
 @keyframes fx-fly{
   0%{transform:translate(0,0) rotate(0deg) scale(.15);opacity:0}
   9%{opacity:1}
@@ -99,21 +99,23 @@ body[data-effects="light"] .fx-flyer{filter:none}
 .fx-banner.tone-candle{--fx-tone:#F6C768}
 .fx-banner.tone-mint{--fx-tone:#7FD8C0}
 .fx-banner.tone-blood{--fx-tone:#FF6F7F}
+.fx-banner.low{top:auto;bottom:calc(40px + var(--sab, 0px));animation-name:fx-banner-in-low}
 .fx-banner.out{animation:fx-banner-out .3s ease-in both}
+.fx-banner.low.out{animation-name:fx-banner-out-low}
 .fx-banner-kicker{display:block;font:700 10.5px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--fx-tone)}
 .fx-banner b{display:block;margin-top:8px;font:400 28px/1.08 var(--display);color:#FFE7B0;text-wrap:balance}
 .fx-banner p{margin:8px 0 0;font:21px/1.3 var(--hand);color:var(--ink-2);text-wrap:balance}
 @keyframes fx-banner-in{from{opacity:0;transform:translateX(-50%) translateY(-18px) scale(.9)}to{opacity:1;transform:translateX(-50%)}}
 @keyframes fx-banner-out{to{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.97)}}
+@keyframes fx-banner-in-low{from{opacity:0;transform:translateX(-50%) translateY(18px) scale(.9)}to{opacity:1;transform:translateX(-50%)}}
+@keyframes fx-banner-out-low{to{opacity:0;transform:translateX(-50%) translateY(10px) scale(.97)}}
 body[data-effects="light"] .fx-banner{box-shadow:0 18px 36px -18px #000}
 
-/* a curio arriving is a small event of its own */
-.mh-curio-card.fresh{animation:fx-reveal .9s var(--fx-spring) both;transform-origin:50% 60%}
-@keyframes fx-reveal{0%{opacity:0;transform:scale(.55) rotate(-5deg)}30%{opacity:1}60%{transform:scale(1.07) rotate(1.5deg)}100%{transform:none}}
-.mh-curio-card.fresh.rarity-rare::after,.mh-curio-card.fresh.rarity-cursed::after,.mh-curio-card.fresh.rarity-unholy::after{content:'';position:absolute;inset:-26px;z-index:-1;pointer-events:none;border-radius:50%;
-  background:radial-gradient(closest-side,color-mix(in srgb,var(--rc,#F6C768) 34%,transparent),transparent);animation:fx-halo 2.4s ease-in-out infinite alternate}
-@keyframes fx-halo{from{opacity:.35;transform:scale(.9)}to{opacity:.8;transform:scale(1.05)}}
+/* a curio arriving is a small event of its own (celebrate.js marks the reveal) */
 .mh-curio-card{position:relative;isolation:isolate}
+.mh-curio-card[data-reveal=rare]::after,.mh-curio-card[data-reveal=cursed]::after,.mh-curio-card[data-reveal=unholy]::after{content:'';position:absolute;inset:-30px;z-index:-1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--rc,#F6C768) 36%,transparent),transparent);animation:fx-halo 2.4s ease-in-out infinite alternate}
+@keyframes fx-halo{from{opacity:.35;transform:scale(.9)}to{opacity:.85;transform:scale(1.06)}}
 
 /* the HUD number counts, so it should not jitter */
 .souls-count b,.fx-count{font-variant-numeric:tabular-nums}
@@ -121,7 +123,7 @@ body[data-effects="light"] .fx-banner{box-shadow:0 18px 36px -18px #000}
 @media (prefers-reduced-motion:reduce){
   #fxLayer,.fx-p,.fx-ring,.fx-flyer{display:none}
   .fx-banner{animation:none}
-  .mh-curio-card.fresh,.mh-curio-card.fresh::after{animation:none}
+  .mh-curio-card[data-reveal]::after{animation:none}
 }
 
 /* ---- 4. illustrated empty and loading states ----------------------------------- */
