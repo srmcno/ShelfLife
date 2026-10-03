@@ -14,7 +14,8 @@ let S = null, refresh = () => {};
 export function returnCardHTML(state) {
   const p = pendingReturn(state);
   if (!p) return '';
-  const [headline, ...rest] = p.lines;
+  // The card is for a glance: a headline and three lines. (The chapter line is last, and the tile beneath already says it.)
+  const [headline, ...rest] = p.lines.slice(0, 4);
   return '<section class="mh-tile alm-return" aria-label="While you were away"><span class="mh-tile-kicker">While you were away' + (p.days ? ' · ' + plural(p.days, 'day') : '') + '</span>' +
     '<p class="alm-return-head">' + esc(headline) + '</p>' +
     '<ul class="alm-return-lines">' + rest.map(line => '<li>' + esc(line) + '</li>').join('') + '</ul>' +
