@@ -12,8 +12,9 @@ Every twelve minutes something goes wrong on the shelf. Somebody finds the rat p
 writes you out of their will or holds a funeral for a raisin. Up to three emergencies pile up while you
 are away. Each one is a card with two choices and a random, usually regrettable, result. Who is
 involved changes the odds: cute residents tend to get good endings, menacing ones bad endings, mysterious
-ones strange endings, and trust turns disasters aside. Each choice shows a plain risk read, from
-*Safe enough* to *Ill-advised*.
+ones strange endings, and trust turns disasters aside. Some cards are written for a particular sort of
+resident (a Doomsayer, a Landlord, someone Theatrical) and tilt towards the ending that suits them. Each
+choice shows a plain risk read, from *Safe enough* to *Ill-advised*.
 
 Every result pays **souls**. Souls buy **coffins**, and every coffin holds a cursed curio for the
 **Cabinet of Curiosities**: 34 of them, from Common to Unholy. Souls earned for life set what the
@@ -244,7 +245,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | Location | Responsibility |
 | --- | --- |
 | `src/state.js`, `src/life-state.js` | Saves, validation, migration and bounded history |
-| `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
+| `src/mayhem-state.js`, `src/engine/mayhem.js`, `src/content/mayhem.js`, `src/content/emergencies-extra.js` | Emergencies, souls, coffins, curios, omens, chores and ranks |
 | `src/arcade-state.js`, `src/engine/arcade.js`, `src/ui/arcade.js` | The four arcade games, records and payouts |
 | `src/content/court.js`, `src/court-state.js`, `src/engine/court.js`, `src/ui/court.js`, `src/art/court-cast.js`, `src/art/court-hallway.js` | Shelf Court: cases, episode state machine, TV studio stage, the drawn cast and the hall cam's corridor set |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |

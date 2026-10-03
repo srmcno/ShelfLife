@@ -16,7 +16,9 @@
      * Effects: souls; need deltas for a/b; bond (+ only, rationed by the engine);
        grudge ('a' or 'b' files one); curio (true = a guaranteed drop). */
 
-export const EMERGENCIES = [
+import { EXTRA_EMERGENCIES } from './emergencies-extra.js';
+
+const BASE_EMERGENCIES = [
   { id: 'rat-poison', title: '{a} has found the rat poison.', art: 'bottle',
     choices: [
       { label: 'Take it off them', outcomes: [
@@ -682,6 +684,9 @@ export const EMERGENCIES = [
       ] }
     ] }
 ];
+
+// The base set above, then the second volume (content/emergencies-extra.js).
+export const EMERGENCIES = [...BASE_EMERGENCIES, ...EXTRA_EMERGENCIES];
 
 /* Rarity sets the drop weight, the colour of the frame and the soul refund on a
    duplicate. Order matters: the engine rolls through it top to bottom. */
