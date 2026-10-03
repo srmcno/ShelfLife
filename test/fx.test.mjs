@@ -125,3 +125,55 @@ test('Automatic follows the benchmark and the manual choice always wins', () => 
   assert.equal(effectsMode({}, { ...phone, tier: 'full', memory: 2 }), 'light');
   assert.equal(effectsMode(undefined, { coarse: false, memory: 8 }), 'full');
 });
+
+import { TRAIT_FIDGETS, ACT_IDS, fidgetBias, EMOTE_KINDS } from '../src/art/animator.js';
+import { TRAITS } from '../src/content/traits.js';
+import { completedSet, STREAK_MILESTONES, SET_LINES } from '../src/ui/celebrate.js';
+import { CURIOS, RARITIES } from '../src/content/mayhem.js';
+import { SEASONS } from '../src/content/seasons.js';
+
+test('every trait fidget names a real trait and a real behaviour', () => {
+  const traitIds = new Set(TRAITS.map(t => t.id));
+  for (const [trait, table] of Object.entries(TRAIT_FIDGETS)) {
+    assert.ok(traitIds.has(trait), trait + ' is a trait');
+    for (const [act, weight] of Object.entries(table)) {
+      assert.ok(ACT_IDS.includes(act), trait + ' asks for unknown behaviour ' + act);
+      assert.ok(Number.isFinite(weight) && weight >= 0 && weight <= 10);
+    }
+  }
+  assert.ok(Object.keys(TRAIT_FIDGETS).length >= 15, 'enough temperaments are covered to be noticed');
+  assert.equal(fidgetBias(''), null);
+  assert.equal(fidgetBias('nocturnal'), null, 'a trait without fidgets adds nothing');
+  assert.deepEqual(fidgetBias('paranoid cryptid').doubletake, 7, 'biases add up across traits');
+});
+
+test('a resident can react in the ways the brief names', () => {
+  for (const kind of ['happy', 'startled', 'proud', 'grossed']) assert.ok(EMOTE_KINDS.includes(kind), kind);
+});
+
+test('a finished set is announced for the rarity that was just completed, and only then', () => {
+  const owned = {};
+  const commons = CURIOS.filter(c => c.rarity === 'common');
+  commons.slice(0, -1).forEach(c => { owned[c.id] = 1; });
+  assert.equal(completedSet(owned, commons[0].id), null, 'one short of the set');
+  owned[commons.at(-1).id] = 1;
+  const done = completedSet(owned, commons.at(-1).id);
+  assert.equal(done.id, 'common');
+  assert.match(done.title, /^Every Common curio\.$/);
+  assert.equal(done.line, SET_LINES.common);
+  assert.equal(completedSet({}, 'not-a-curio'), null);
+  for (const season of SEASONS) {
+    const all = Object.fromEntries(season.curios.map(c => [c.id, 1]));
+    assert.equal(completedSet(all, season.curios[0].id).id, 'season');
+    assert.equal(completedSet({ [season.curios[0].id]: 1 }, season.curios[0].id), season.curios.length === 1 ? completedSet(all, season.curios[0].id) : null);
+  }
+  for (const rarity of RARITIES) assert.ok(SET_LINES[rarity.id], 'a line for ' + rarity.id);
+});
+
+test('streak milestones carry copy and no dashes', () => {
+  for (const [n, mark] of Object.entries(STREAK_MILESTONES)) {
+    assert.ok(Number(n) >= 3);
+    assert.ok(mark.title.length > 5 && mark.line.length > 10);
+    assert.ok(!/[–—]/.test(mark.title + mark.line));
+  }
+});

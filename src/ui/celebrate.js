@@ -113,6 +113,10 @@ function watchSheet() {
         if (node.nodeType !== 1) continue;
         const cards = node.matches('.mh-curio-card') ? [node] : [...node.querySelectorAll('.mh-curio-card')];
         cards.forEach(revealCurio);
+        // The rank ladder scrolls sideways: open it at the rung the house is on.
+        const ladder = node.matches('.mh-ladder') ? node : node.querySelector('.mh-ladder');
+        const rung = ladder?.querySelector('li.now');
+        if (rung) requestAnimationFrame(() => { ladder.scrollLeft = Math.max(0, rung.offsetLeft - (ladder.clientWidth - rung.offsetWidth) / 2); });
         const tarot = node.matches('.mh-tarot.flipping') ? node : node.querySelector('.mh-tarot.flipping');
         if (tarot) streakNight(tarot);
       }

@@ -143,11 +143,10 @@ ACTS.push(
   { id: 'preen',      name: 'sl2-wiggle',  ms: 950,  ease: 'cubic-bezier(.35,.85,.4,1)', gaze: 'down',
     w: { content: 0, fine: 0, annoyed: 0, furious: 0, asleep: 0 } }
 );
-const ACT_BY_ID = Object.fromEntries(ACTS.map(a => [a.id, a]));
-const DROWSY_ACTS = ['yawn', 'nod'];
+export const ACT_IDS = ACTS.map(a => a.id);
 // Bonus weight, by trait id, for a resident's favourite fidgets. Only traits
 // whose temperament shows are listed; the rest behave as their mood dictates.
-const TRAIT_FIDGETS = {
+export const TRAIT_FIDGETS = {
   theatrical: { perk: 3, sway: 2, sigh: 2, wave: 2, preen: 2 },
   terminal:   { sigh: 4, wobble: 3, stir: 0 },
   narcissist: { preen: 5, perk: 2, sway: 2 },
@@ -176,7 +175,7 @@ const TRAIT_FIDGETS = {
   critic:     { stare: 2, sigh: 2, leanaway: 2 }
 };
 const fidgetCache = new Map();
-function fidgetBias(traitString) {
+export function fidgetBias(traitString) {
   if (!traitString) return null;
   let bias = fidgetCache.get(traitString);
   if (bias === undefined) {

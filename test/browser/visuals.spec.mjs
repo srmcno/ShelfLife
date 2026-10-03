@@ -387,3 +387,118 @@ test.describe('empty states and transitions', () => {
     }
   });
 });
+
+test.describe('the first ten seconds', () => {
+  test('on a small phone the three residents and the way in all fit above the tab bar', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.goto('/');
+    await expect(page.locator('.arrival-resident')).toHaveCount(3);
+    await page.waitForTimeout(1800);
+    const fit = await page.evaluate(() => {
+      const bar = document.querySelector('.tabbar').getBoundingClientRect().top;
+      const bottoms = [...document.querySelectorAll('.arrival-action'), document.querySelector('.arrival-footer .btn')].map(el => el.getBoundingClientRect().bottom);
+      const tops = [...document.querySelectorAll('.arrival-action')].map(el => Math.round(el.getBoundingClientRect().top));
+      return { bar, lowest: Math.max(...bottoms), tops };
+    });
+    expect(fit.lowest, 'every button clears the tab bar').toBeLessThanOrEqual(fit.bar);
+    expect(new Set(fit.tops).size, 'the three Meet buttons share a baseline').toBe(1);
+    await noHorizontalOverflow(page);
+  });
+
+  test('choosing a resident sparkles and still opens the creator with that resident', async ({ page }) => {
+    await watchFx(page);
+    await page.addInitScript(() => localStorage.setItem('shelflife.perf', JSON.stringify({ tier: 'full', up: 0 })));
+    await page.goto('/');
+    await page.locator('[data-arrival="pip"]').click();
+    await expect(page.locator('#studioVeil')).toBeVisible();
+    await expect(page.locator('#quickAdopt')).toHaveText('Meet Pip');
+    expect(await fxSeen(page)).toBeGreaterThan(0);
+  });
+
+  test('the first frame is dark, the manifest and the splash agree with it, and a bare cabinet shows a candle', async ({ page }) => {
+    const manifest = await (await page.request.get('/manifest.webmanifest')).json();
+    expect(manifest.background_color.toLowerCase()).toBe('#0b0812');
+    expect(manifest.theme_color.toLowerCase()).toBe('#0b0812');
+    await page.goto('/');
+    const first = await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor);
+    expect(first).toBe('rgb(11, 8, 18)');
+    const waiting = await page.evaluate(() => { document.getElementById('cabinet').replaceChildren(); return getComputedStyle(document.getElementById('cabinet'), '::after').content; });
+    expect(waiting).toContain('Waking the creatures.');
+  });
+
+  test('the rank ladder opens on the rung the house is on', async ({ page }) => {
+    await openHousehold(page, s => { s.mayhem = mayhem({ lifetime: 2200, souls: 40 }); });
+    await page.locator('#mayhemDesk [data-mh="cabinet"]').click();
+    const visible = await page.evaluate(async () => {
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const ladder = document.querySelector('.mh-ladder'), now = ladder.querySelector('li.now');
+      const l = ladder.getBoundingClientRect(), n = now.getBoundingClientRect();
+      return { inside: n.left >= l.left - 1 && n.right <= l.right + 1, scrolled: ladder.scrollLeft };
+    });
+    expect(visible.inside).toBe(true);
+  });
+});
+
+test.describe('haptics', () => {
+  const stub = "window.__vibrations = []; Object.defineProperty(navigator, 'vibrate', { configurable: true, value: p => { window.__vibrations.push(p); return true; } });";
+  test('a touch gives a tick, unless the player turned haptics off', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'haptics are for touch screens');
+    await openHousehold(page, () => {}, { init: stub });
+    await page.locator('.tab[data-tab="notes"]').tap();
+    await expect.poll(() => page.evaluate(() => window.__vibrations.length)).toBeGreaterThan(0);
+    const patterns = await page.evaluate(() => window.__vibrations);
+    expect(patterns.flat().every(n => n > 0 && n < 60), 'short, tasteful pulses').toBe(true);
+  });
+
+  test('settings.haptics set to false silences every pulse', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'haptics are for touch screens');
+    await openHousehold(page, s => { s.settings.haptics = false; }, { init: stub });
+    await page.locator('.tab[data-tab="notes"]').tap();
+    await page.locator('.tab[data-tab="shelf"]').tap();
+    await page.evaluate(() => window.shelfFx.celebrate('moved-in', { name: 'X' }));
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.__vibrations)).toEqual([]);
+  });
+
+  test('a mouse never vibrates anything', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'this is the desktop case');
+    await openHousehold(page, () => {}, { init: stub });
+    await page.locator('.tab[data-tab="notes"]').click();
+    await page.evaluate(() => window.shelfFx.celebrate('moved-in', { name: 'X' }));
+    expect(await page.evaluate(() => window.__vibrations)).toEqual([]);
+  });
+});
+
+test.describe('consistency', () => {
+  test('a sheet title takes focus without wearing a ring', async ({ page }) => {
+    await openHousehold(page);
+    await page.evaluate(() => document.getElementById('decorBtn').click());
+    await expect(page.locator('#decorVeil')).toBeVisible();
+    const outline = await page.evaluate(() => { const h = document.querySelector('#decorVeil h2'); return { focused: document.activeElement === h, style: getComputedStyle(h).outlineStyle }; });
+    expect(outline.focused).toBe(true);
+    expect(outline.style).toBe('none');
+  });
+
+  test('the three rows of the Stories list start their titles in the same place', async ({ page }) => {
+    await openHousehold(page);
+    await page.locator('.tab[data-tab="plots"]').click();
+    const xs = await page.evaluate(() => ['#correspondenceFolder summary b', '#workshopFolder summary b', '.museum-door b'].map(s => Math.round(document.querySelector(s).getBoundingClientRect().left)));
+    expect(new Set(xs).size, 'titles at ' + xs).toBe(1);
+  });
+
+  test('the More drawer top-aligns its items and its links are a full tap target', async ({ page }) => {
+    await openHousehold(page);
+    await page.locator('#tabMore:visible, #moreBtn:visible').first().click();
+    const sizes = await page.evaluate(() => [...document.querySelectorAll('.tray-legal a')].map(a => Math.round(a.getBoundingClientRect().height)));
+    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(44);
+    const tops = await page.evaluate(() => ['#helpBtn', '#decorBtn', '#museumBtn'].map(s => { const b = document.querySelector(s), r = b.getBoundingClientRect(), t = b.querySelector('span').getBoundingClientRect(); return Math.round(t.top - r.top); }));
+    expect(new Set(tops).size, 'item labels start at ' + tops).toBe(1);
+  });
+
+  test('the note board toolbar no longer ends in a stray rule', async ({ page }) => {
+    await openHousehold(page);
+    await page.locator('.tab[data-tab="notes"]').click();
+    const display = await page.evaluate(() => getComputedStyle(document.querySelector('.notes-tools'), '::after').display);
+    expect(display).toBe('none');
+  });
+});

@@ -39,8 +39,6 @@
 /* a card that opens does it with a little weight */
 details[open]>.folder-content,details[open]>.theatre-buttons,details[open]>.gen-tuning,details[open]>.theatre-repertoire{animation:fx-unfold .42s var(--fx-settle) both;transform-origin:50% 0}
 @keyframes fx-unfold{from{opacity:0;transform:translateY(-8px) scale(.985)}to{opacity:1;transform:none}}
-.story-folder .folder-arrow{transition:rotate .34s var(--fx-spring)}
-.story-folder[open] .folder-arrow{rotate:90deg}
 .note--new{animation:fx-note-in .55s var(--fx-spring) both}
 @keyframes fx-note-in{from{opacity:0;transform:translateY(14px) rotate(-1.4deg) scale(.96)}to{opacity:1;transform:none}}
 
@@ -268,3 +266,105 @@ body.shelf-vacant .stories-vacant{display:block}
 .ar-board:has(>.ar-board-note:only-child)::before{content:'';flex:none;width:68px;height:48px;opacity:.85;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 70'%3E%3Cg fill='%23B8AB9D' fill-opacity='.14' stroke='%23B8AB9D' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 20h28v30a14 6 0 0 1-28 0z'/%3E%3Cellipse cx='22' cy='20' rx='14' ry='6'/%3E%3Cpath d='M84 20h28v30a14 6 0 0 1-28 0z'/%3E%3Cellipse cx='98' cy='20' rx='14' ry='6'/%3E%3C/g%3E%3Cpath d='M36 26c10 3 14 10 20 15M84 26c-9 3-14 8-18 14' fill='none' stroke='%237FD8C0' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M58 8l2.4 6 6 2.4-6 2.4L58 25l-2.4-6.2-6-2.4 6-2.4z' fill='%23F2C083'/%3E%3C/svg%3E") center/contain no-repeat}
 .ar-board:has(>.ar-board-note:only-child) .ar-board-note{font:19px/1.3 var(--hand);color:var(--ink-2)}
+
+/* ---- 6. consistency pass --------------------------------------------------------
+   The fifteen things that looked most wrong when the main screens were laid side
+   by side at 360, 375, 390, 768 and 1440. Each is a small correction made here so
+   the earlier sheets stay untouched. */
+
+/* 1. A sheet's title takes programmatic focus when it opens so screen readers
+   start in the right place. It is not a control, so it gets no ring: the ring
+   hugged the text and ran into the line under it. */
+.sheet h2:focus,.sheet h2:focus-visible,.field-guide h2:focus-visible,[role="dialog"] h2[tabindex="-1"]:focus-visible{outline:none}
+
+/* 2. The line under a sheet title sat touching the title. */
+.sheet-head h2+.card-meta,.sheet-head h2+p,.sheet-head h2+div{margin-top:5px}
+
+/* 3. The Stories list: the three rows each started their title in a different
+   place (the number, the star and the gap all differed). One column, one gap. */
+.story-folder>summary,.story-archives .museum-door{gap:18px;padding-inline:7px}
+.folder-number,.story-archives .museum-door>span:first-child{flex:none;min-width:34px;text-align:center}
+.story-archives .museum-door{align-items:center;min-height:96px;padding-block:16px}
+.story-archives .museum-door b{font:400 24px/1.2 var(--display)}
+.story-archives .museum-door small{font-size:12px;margin-top:7px}
+@media (max-width:720px){.story-archives .museum-door b{font-size:21px}.story-archives .museum-door small{font-size:11px}}
+
+/* 4. The note board toolbar kept a hairline from when it held a heading, so it
+   ended in a short stray rule beside the button. */
+.notes-tools::after{display:none}
+.notes-tools{justify-content:flex-end}
+
+/* 5. The More drawer: one-line and three-line items sat at different heights
+   inside their cells. Top-align them all, and give the active toggles a dot
+   that is a shape rather than a typed character. */
+.tray-item{justify-content:flex-start}
+.tray-item[aria-pressed="true"] span::after{content:'';display:inline-block;width:7px;height:7px;margin-left:8px;border-radius:50%;background:var(--key);box-shadow:0 0 8px var(--key-hi);vertical-align:middle}
+
+/* 6. The legal links at the foot of the drawer were 34 px tall. */
+.tray-legal a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px}
+
+/* 7. The rank ladder in the cabinet scrolls sideways and the last tile was cut
+   off with no sign there was more. A soft edge says so. */
+.mh-ladder{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+
+/* 8. "See it move" hung under the portrait at a different width to it. */
+.portrait-stage .motion-preview{width:100%}
+
+/* 9. The playroom's "playing with" bar touched the first game card. */
+#playroomVeil .playroom-company{margin-bottom:12px}
+
+/* 10. Buttons inside the empty states and banners keep the body face. */
+.fx-banner,.fx-empty{font-family:var(--body)}
+
+/* 11. Light mode: the sheets lose their blur, so give the sheet itself a
+   stronger edge instead of letting the dimmed room show through it. */
+body[data-effects="light"] .sheet{box-shadow:0 30px 70px -28px #000,inset 0 1px 0 var(--key-soft),0 0 0 1px #0008}
+
+/* ---- 7. the first ten seconds ---------------------------------------------------
+   A page that is still loading shows a candle and a line instead of an empty
+   frame (after half a second, so a fast load never sees it); the arrival comes
+   in one piece at a time; and on a small phone the three residents and the way
+   in all fit above the tab bar. */
+#cabinet:empty{min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#cabinet:empty::before{content:'';width:10px;height:17px;border-radius:50% 50% 45% 45% / 62% 62% 38% 38%;opacity:0;
+  background:radial-gradient(60% 60% at 50% 72%,#fff 0 20%,#ffe39a 38%,#ff9d3c 72%,#ff5a2a00 100%);box-shadow:0 0 22px 6px #ffb05055;
+  animation:fx-boot .6s ease .5s forwards,candle-flicker 1.4s steps(10) .5s infinite}
+#cabinet:empty::after{content:'Waking the creatures.';font:22px var(--hand);color:var(--ink-3);opacity:0;animation:fx-boot .6s ease .5s forwards}
+@keyframes fx-boot{to{opacity:1}}
+
+@keyframes fx-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fx-fade{from{opacity:0}to{opacity:1}}
+.arrival-copy>.empty-kicker{animation:fx-rise .6s var(--fx-settle) both}
+.arrival-copy>h1{animation:fx-rise .7s var(--fx-settle) .06s both}
+.arrival-copy>p{animation:fx-rise .7s var(--fx-settle) .12s both}
+.arrival-resident{animation:fx-rise .75s var(--fx-settle) both}
+.arrival-resident:nth-child(1){animation-delay:.16s}
+.arrival-resident:nth-child(2){animation-delay:.26s}
+.arrival-resident:nth-child(3){animation-delay:.36s}
+.arrival-footer{animation:fx-rise .7s var(--fx-settle) .5s both}
+body[data-effects="light"] :is(.arrival-copy>*,.arrival-resident,.arrival-footer){animation-name:fx-fade}
+/* the portraits stand in a pool of the candles' light and lift when you reach for one */
+.arrival-portrait::before{background:radial-gradient(ellipse at 50% 72%,color-mix(in srgb,var(--key) 26%,transparent),transparent 68%)}
+.arrival-resident:nth-child(2) .arrival-portrait::before{background:radial-gradient(ellipse at 50% 72%,color-mix(in srgb,#92c9b4 28%,transparent),transparent 68%)}
+.arrival-portrait .sprite{transition:translate .35s var(--fx-spring)}
+.arrival-resident:hover .arrival-portrait .sprite,.arrival-resident:focus-visible .arrival-portrait .sprite{translate:0 -6px}
+.arrival-resident:active .arrival-portrait .sprite{translate:0 1px}
+@media (hover:none){.arrival-resident:hover{background:none;border-color:transparent}.arrival-resident:hover .arrival-action{color:var(--key);background:none;border-color:var(--key-mid)}}
+@media (prefers-reduced-motion:reduce){.arrival-copy>*,.arrival-resident,.arrival-footer,#cabinet:empty::before,#cabinet:empty::after{animation:none;opacity:1}}
+
+@media (max-width:720px) and (max-height:700px){
+  .arrival-invitation .arrival-copy>p{display:none}
+  .arrival-invitation .arrival-copy>h1{font-size:clamp(29px,8.2vw,38px);margin:6px 0 4px}
+  .arrival-invitation .arrival-portrait{height:clamp(88px,24vw,122px)}
+  .arrival-invitation .arrival-portrait .sprite{--pet-h:clamp(84px,22vw,114px)}
+  .arrival-invitation .arrival-resident>b{font-size:18px;margin:6px 0 3px}
+  .arrival-invitation .arrival-line{min-height:0;margin-bottom:6px}
+  .arrival-invitation .arrival-cast{margin-bottom:8px}
+}
+/* the three "Meet" buttons share a baseline whatever their resident's line does */
+.arrival-resident{height:100%}
+.arrival-line{min-height:3.9em;margin-bottom:12px}
+.arrival-action{margin-top:auto}
+
+/* A pane slides in from the side, which must never make the page wider. */
+.app{overflow-x:clip;overflow-clip-margin:64px}
