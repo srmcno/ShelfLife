@@ -54,17 +54,17 @@ function frenzyScene() {
     '<g class="a-jar"><rect x="' + (x - 4) + '" y="' + (31 - 8 - k * 2) + '" width="8" height="' + (8 + k * 2) + '" rx="2"/><rect class="a-lid" x="' + (x - 3) + '" y="' + (31 - 10 - k * 2) + '" width="6" height="2.4" rx="1"/></g>').join('');
   const jars2 = [[14, 0], [26, 1], [72, 1], [85, 0]].map(([x, k]) =>
     '<g class="a-jar"><rect x="' + (x - 4.5) + '" y="' + (52 - 9 - k * 2) + '" width="9" height="' + (9 + k * 2) + '" rx="2.4"/><rect class="a-lid" x="' + (x - 3.5) + '" y="' + (52 - 11 - k * 2) + '" width="7" height="2.4" rx="1"/></g>').join('');
-  const back = '<defs>' + sky('af-wall') + '<pattern id="af-brick" width="14" height="7" patternUnits="userSpaceOnUse"><path d="M0 7h14M0 0v3.5M7 3.5v3.5M7 3.5h0" class="a-mortar"/><path d="M0 3.5h14M7 0v3.5M0 3.5v3.5" class="a-mortar"/></pattern></defs>' +
+  const back = '<defs>' + sky('af-wall') + '<pattern id="af-brick" width="14" height="7" patternUnits="userSpaceOnUse"><path d="M0 0h14M0 3.5h14M3.5 0v3.5M10.5 3.5v3.5" class="a-mortar"/></pattern></defs>' +
     '<rect width="100" height="115" fill="url(#af-wall)"/><rect width="100" height="115" fill="url(#af-brick)" opacity=".5"/>' +
-    '<g class="a-window"><path d="M40 52V28a10 10 0 0 1 20 0v24z" class="a-glass"/><circle cx="53" cy="24" r="4.2" class="a-moon"/><path d="M50 18v34M40 34h20M45 20v32M55 20v32" class="a-bars"/><path d="M38 52h24v3H38z" class="a-sill"/></g>' +
+    '<g class="a-window" transform="translate(16 0)"><path d="M40 52V28a10 10 0 0 1 20 0v24z" class="a-glass"/><circle cx="53" cy="24" r="4.2" class="a-moon"/><path d="M50 18v34M40 34h20M45 20v32M55 20v32" class="a-bars"/><path d="M38 52h24v3H38z" class="a-sill"/></g>' +
     '<rect x="2" y="31" width="30" height="2.4" class="a-plank"/><rect x="62" y="31" width="36" height="2.4" class="a-plank"/>' +
     '<rect x="6" y="52" width="26" height="2.4" class="a-plank"/><rect x="66" y="52" width="30" height="2.4" class="a-plank"/>' + jars + jars2;
   const mid = '<rect width="100" height="7" class="a-beam"/><rect x="0" y="7" width="100" height="1.4" class="a-beam-edge"/>' +
-    '<g class="a-sway s1"><path d="M14 8v12" class="a-string"/><ellipse cx="14" cy="24" rx="3.2" ry="5" class="a-meat"/><ellipse cx="14" cy="32" rx="3" ry="4.6" class="a-meat"/></g>' +
+    '<g class="a-sway s1"><path d="M10 8v12" class="a-string"/><ellipse cx="10" cy="24" rx="3.2" ry="5" class="a-meat"/><ellipse cx="10" cy="32" rx="3" ry="4.6" class="a-meat"/></g>' +
     '<g class="a-sway s2"><path d="M86 8v9" class="a-string"/><circle cx="86" cy="20" r="3" class="a-garlic"/><circle cx="83.4" cy="26" r="2.6" class="a-garlic"/><circle cx="88.6" cy="26.4" r="2.6" class="a-garlic"/><circle cx="86" cy="31" r="2.4" class="a-garlic"/></g>' +
-    '<g class="a-lamp"><path d="M50 8v8" class="a-string"/><path d="M44 28l3-12h6l3 12z" class="a-shade"/><circle cx="50" cy="26" r="2.4" class="a-bulb"/></g>' +
+    '<g class="a-lamp" transform="translate(-22 0)"><path d="M50 8v8" class="a-string"/><path d="M44 28l3-12h6l3 12z" class="a-shade"/><circle cx="50" cy="26" r="2.4" class="a-bulb"/></g>' +
     '<path d="M0 0l16 0-14 14z M100 0l-16 0 14 14z" class="a-web" opacity=".5"/>';
-  const front = '<g class="a-boards">' + [0, 1, 2, 3, 4, 5, 6, 7].map(i => '<path d="M' + (i * 14 - 4) + ' 105l' + (i % 2 ? 6 : -6) + ' 10" />').join('') + '<path d="M0 105h100"/></g>' + scatter(18, 7, 100, 12, 0.5, 'a-grit').replace(/cy="([\d.]+)"/g, (m, y) => 'cy="' + (105 + Number(y)).toFixed(1) + '"');
+  const front = '<g class="a-boards">' + [0, 1, 2, 3, 4, 5, 6, 7].map(i => '<path d="M' + (i * 14 - 4) + ' 105l' + (i % 2 ? 6 : -6) + ' 10" />').join('') + '<path d="M0 105h100"/></g>' + '<g transform="translate(0 105)">' + scatter(18, 7, 100, 10, 0.5, 'a-grit') + '</g>';
   return layer('l-back', back) + layer('l-mid', mid) + '<div class="ar-lampglow"></div>' + layer('l-front', front);
 }
 
@@ -95,7 +95,6 @@ function stackScene() {
 function seanceScene() {
   const wall = '<defs>' + sky('ac-wall') + '<pattern id="ac-damask" width="14" height="18" patternUnits="userSpaceOnUse"><path d="M7 2c2 3 3 5 0 8-3-3-2-5 0-8zM0 11c2 2 3 4 0 7M14 11c-2 2-3 4 0 7M7 12c1 2 1 3 0 5" class="a-motif"/></pattern></defs>' +
     '<rect width="100" height="115" fill="url(#ac-wall)"/><rect width="100" height="115" fill="url(#ac-damask)" opacity=".5"/>' +
-    '<g class="a-frame"><rect x="40" y="6" width="20" height="26" rx="2"/><path d="M45 28c2-9 8-14 10 0" class="a-portrait"/><circle cx="50" cy="16" r="3.4" class="a-portrait"/></g>' +
     '<path d="M0 0h22c-4 14-4 40 0 76-8 8-14 18-22 24z" class="a-curtain"/><path d="M100 0H78c4 14 4 40 0 76 8 8 14 18 22 24z" class="a-curtain"/>' +
     '<path d="M6 2c2 30 2 56 0 80M13 2c1 26 1 48-1 70" class="a-fold"/><path d="M94 2c-2 30-2 56 0 80M87 2c-1 26-1 48 1 70" class="a-fold"/>';
   const table = '<ellipse cx="50" cy="66" rx="47" ry="42" class="a-table"/><ellipse cx="50" cy="66" rx="43" ry="38" class="a-table-in"/>' +
