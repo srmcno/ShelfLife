@@ -238,7 +238,7 @@ async function declineSummons(id) {
   try {
     await courtSocial.decline(id);
     post.cases = post.cases.filter(x => x.id !== id);
-    post.note = 'Declined. ' + (c.fromName || 'Your friend') + ' is not told.';
+    post.note = 'Declined. ' + (c.fromName || 'Your friend') + ' can see that the papers were declined.';
   } catch (error) { post.note = error?.offline ? 'Offline. Try again once you are back online.' : 'That did not go through. The papers are still here.'; }
   renderSummons();
   sheet.querySelector('[data-sc-summons] button, .sc-roll')?.focus({ preventScroll: true });

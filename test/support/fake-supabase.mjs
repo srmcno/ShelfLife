@@ -185,10 +185,36 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
         const columns = (u.searchParams.get('select') || '*').split(',').map(c => c.trim());
         let rows = TABLES[name](who);
         for (const [key, value] of u.searchParams) {
-          if (key === 'select' || !value.startsWith('eq.')) continue;
+          if (['select', 'or', 'order', 'limit'].includes(key) || !value.startsWith('eq.')) continue;
           rows = rows.filter(row => String(row[key]) === value.slice(3));
         }
-        return json(200, rows.map(row => columns.includes('*') ? row : Object.fromEntries(columns.map(c => [c, row[c]]))));
+        // The small PostgREST surface used by the game: keyset cursor,
+        // ordered/limited rows, and aliased JSON text projections.
+        const cursor = u.searchParams.get('or');
+        if (cursor) {
+          const m = cursor.match(/^\(created_at\.lt\."([^"]+)",and\(created_at\.eq\."\1",id\.lt\.([a-f0-9-]+)\)\)$/);
+          if (!m) return rest(400, 'PGRST100', 'Unsupported filter in fake');
+          rows = rows.filter(row => row.created_at < m[1] || (row.created_at === m[1] && row.id < m[2]));
+        }
+        const order = u.searchParams.get('order');
+        if (order) {
+          const keys = order.split(',').map(term => term.split('.'));
+          rows.sort((a, b) => {
+            for (const [key, direction] of keys) {
+              const cmp = a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0;
+              if (cmp) return direction === 'desc' ? -cmp : cmp;
+            }
+            return 0;
+          });
+        }
+        const limit = u.searchParams.get('limit');
+        if (limit) rows = rows.slice(0, Number(limit));
+        const project = (row, column) => {
+          const [alias, expression] = column.includes(':') ? column.split(':') : [column, column];
+          const [key, field] = expression.split('->>');
+          return [alias, field ? row[key]?.[field] ?? null : row[key]];
+        };
+        return json(200, rows.map(row => columns.includes('*') ? row : Object.fromEntries(columns.map(c => project(row, c)))));
       }
     }
     return json(404, { message: 'Not found in the fake: ' + method + ' ' + path });
