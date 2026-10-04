@@ -175,7 +175,7 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
   // deletion page must never make one).
   async function requestEmailCode(address, { mode, create = true } = {}) {
     const target = cleanEmail(address);
-    const how = mode === 'link' || mode === 'signin' ? mode : isAnonymous() ? 'link' : 'signin';
+    let how = mode === 'link' || mode === 'signin' ? mode : isAnonymous() ? 'link' : 'signin';
     if (how === 'link') {
       // GoTrue automatically attaches an anonymous user's email, without
       // sending a code, when confirmation is disabled. This UI requires proof
@@ -184,7 +184,14 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
       if (settings?.mailer_autoconfirm !== false) {
         throw new CloudError('Email confirmation is not enabled on the server.', { code: 'email_confirmation_disabled' });
       }
-      await authed('/auth/v1/user', { method: 'PUT', body: { email: target } });
+      const user = await authed('/auth/v1/user', { method: 'PUT', body: { email: target } });
+      // A browser can retain its old guest session after the email was already
+      // confirmed. Updating an unchanged address succeeds without emailing.
+      // Request a sign-in code instead, keeping the account until it is verified.
+      if (user?.is_anonymous === false && user.email?.toLowerCase() === target) {
+        how = 'signin';
+        await send('/auth/v1/otp', { method: 'POST', body: { email: target, create_user: false } });
+      }
     }
     else await send('/auth/v1/otp', { method: 'POST', body: { email: target, create_user: create !== false } });
     setMeta({ pending: { email: target, mode: how, at: now() } });
