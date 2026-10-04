@@ -147,6 +147,22 @@ test('an anonymous account links an email with an email_change code and keeps it
   assert.equal(cloud.pendingEmail(), null);
 });
 
+test('a stale guest session requests a sign-in code when its email is already attached', async () => {
+  const { fake, cloud } = setup();
+  const { user } = await cloud.signInAnonymously();
+  Object.assign(fake.users.get(user.id), { email: 'mabel@example.com', is_anonymous: false });
+  assert.equal(cloud.isAnonymous(), true, 'this browser still has the old guest session');
+  const sent = await cloud.requestEmailCode('mabel@example.com');
+  assert.deepEqual(sent, { email: 'mabel@example.com', mode: 'signin' });
+  assert.deepEqual(fake.sent.map(item => item.type), ['email']);
+  assert.equal(JSON.parse(fake.calls('/auth/v1/otp')[0].body).create_user, false);
+  const result = await cloud.verifyEmailCode(sent.email, FAKE_CODE);
+  assert.equal(result.userId, user.id);
+  assert.equal(result.switched, false);
+  assert.equal(cloud.isAnonymous(), false);
+  assert.equal(fake.users.size, 1);
+});
+
 test('automatic email confirmation refuses linking before changing the account or promising a code', async () => {
   const fake = createFakeSupabase({ emailAutoconfirm: true });
   const cloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory() });

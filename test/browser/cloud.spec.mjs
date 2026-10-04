@@ -95,6 +95,31 @@ test('without config there is no Cloud save anywhere and not a single outside re
   expect(await page.evaluate(() => localStorage.getItem('shelflife.cloud'))).toBeNull();
 });
 
+test('an email already attached on the server recovers from an old guest session', async ({ page }) => {
+  const fake = createFakeSupabase();
+  const snapshot = await open(page, { fake });
+  await openCloud(page);
+  await page.locator('#cloudEnable').click();
+  await expect(page.locator('#cloudStatus')).toContainText('Cloud save is on.');
+  const [userId] = fake.users.keys();
+  Object.assign(fake.users.get(userId), { email: 'mabel@example.com', is_anonymous: false });
+  await page.locator('#cloudEmail').fill('mabel@example.com');
+  await page.locator('#cloudSendCode').click();
+  await expect(page.locator('#cloudSignIn')).toBeVisible();
+  await expect(page.locator('#cloudCodeForm')).toBeVisible();
+  expect(fake.sent.map(item => item.type)).toEqual(['email']);
+  await page.locator('#cloudCode').fill(FAKE_CODE);
+  await page.locator('#cloudCode').press('Enter');
+  await expect(page.locator('#cloudStatus')).toContainText('Signed in as mabel@example.com.');
+  await expect(page.locator('#cloudEmailShown')).toHaveText('mabel@example.com');
+  expect(fake.users.size).toBe(1);
+  expect((await saved(page)).pets.map(p => p.name)).toEqual(snapshot.pets.map(p => p.name));
+  await page.reload();
+  await openCloud(page);
+  await expect(page.locator('#cloudEmailShown')).toHaveText('mabel@example.com');
+  await expect(page.locator('#cloudAnon')).toBeHidden();
+});
+
 test('turn it on, add an email, and settle a conflict both ways', async ({ page }) => {
   test.setTimeout(60_000);
   const fake = createFakeSupabase();

@@ -149,7 +149,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
       if (method === 'GET') return json(200, publicUser(who));
       if (method === 'PUT') {
         const email = String(input.email || '').toLowerCase();
-        if (email) {
+        if (email && email !== who.email) {
           if (byEmail(email) && byEmail(email).id !== who.id) return auth(422, 'email_exists', 'A user with this email address has already been registered');
           who.new_email = email;
           codes.set(email, { type: 'email_change', userId: who.id });

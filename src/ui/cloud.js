@@ -219,6 +219,7 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
     e.preventDefault();
     act(async () => {
       const sent = await cloud.requestEmailCode(email.value, { mode: view === 'signin' ? 'signin' : 'link' });
+      if (sent.mode === 'signin') view = 'signin';
       codeFor = sent.email; code.value = '';
       message = 'Code requested. Check your email, including spam or junk. Delivery can take a minute.';
     }, 'Requesting an email code.', { emailRequest: true }).then(() => { if (codeFor) code.focus(); });
