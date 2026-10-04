@@ -239,8 +239,11 @@ button at all, and a player without cloud save is pointed at Cloud save first.
   Friends or last synced, at most every ten minutes. A drawing over 120 KB stays home; its resident
   appears without it.
 - **Serve papers** on a friend's resident and they hear the case in Shelf Court, with your resident
-  as a guest plaintiff and theirs defending. You hear the verdict, the stars and the ratings the next
-  time you open Friends or Shelf Court. Hearing a case pays 15 souls and hearing a verdict pays 10,
+  as a guest plaintiff and theirs defending. After you enable Friends, a notice on the shelf alerts
+  you to incoming papers and verdicts on startup, when you return or reconnect, and every 30 seconds
+  while the game is visible. **Open Shelf Court** reads the papers or verdict. These are in-game
+  notices; closed-game phone push notifications are not supported.
+  Hearing a case pays 15 souls and hearing a verdict pays 10,
   each for up to three summonses a day. A friend's resident never joins your shelf or its memories.
 - **Daily challenge scores** go up when you play today's challenge. Friends appear by name (top five);
   everyone else is one line, such as "You beat 64% of players today". No stranger is ever named.

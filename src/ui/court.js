@@ -41,7 +41,7 @@ let lobby = { caseId: '', plaintiffId: '', defendantId: '', standInSalt: Math.fl
 let ep = null, session = 0, backpay = '';
 // Summonses from friends (only when the social layer is on): what is in the
 // post, and the one being heard right now.
-let courtSocial = null, post = { cases: [], results: [], note: '' }, postToken = 0, hearing = null;
+let courtSocial = null, post = { cases: [], results: [], note: '' }, postToken = 0, postUser = null, hearing = null;
 let queue = [], onDone = null, current = null, typer = 0, onChoice = null;
 // A replay can skip the rest of the opening, or the hallway interview. `keep` stops the skip at the twist's hint.
 let skipMode = null, spoken = 0;
@@ -202,16 +202,22 @@ function renderSummons() {
   if (slot) slot.innerHTML = summonsMarkup();
 }
 // Never in the way: the lobby is already up, and the post arrives when it arrives.
+function scopePost() {
+  const uid = courtSocial?.userId() || null;
+  if (uid !== postUser) { postUser = uid; postToken++; post = { cases: [], results: [], note: '' }; }
+  return uid;
+}
 async function fetchPost() {
   if (!courtSocial?.active()) return;
+  const uid = scopePost();
   const token = ++postToken;
   try {
     const box = await courtSocial.inbox();
-    if (token !== postToken) return;
+    if (token !== postToken || courtSocial.userId() !== uid) return;
     post = { cases: box.cases, results: [...collectVerdicts(S, courtSocial, box.results), ...post.results.filter(r => !box.results.some(x => x.id === r.id))], note: '' };
     if (post.results.some(r => r.souls)) refresh();
   } catch (error) {
-    if (token !== postToken) return;
+    if (token !== postToken || courtSocial.userId() !== uid) return;
     post = { ...post, note: error?.offline ? 'Offline. Any papers will keep.' : '' };
   }
   renderSummons();
@@ -842,20 +848,42 @@ function roll() {
 const pickCase = id => { lobby.caseId = id; lobby.twist = ''; };
 
 export function openCourt(residentId, caseId) {
-  if (!S || !S.pets.length || document.querySelector('.veil.open:not(#courtVeil)')) return;
-  if (caseId && COURT_BY_ID[caseId]) pickCase(caseId);
-  // Residents who have not been at a podium lately go first.
-  defaultLobby(residentId, true);
+  if (!S || (!S.pets.length && !courtSocial?.active()) || document.querySelector('.veil.open:not(#courtVeil)')) return;
+  scopePost();
   // Summons rewards that were over the daily cap are paid on the first day with room.
   const owed = payOwedSummons(S);
   backpay = owed.souls ? '+' + owed.souls + ' souls in back pay for ' + (owed.count === 1 ? 'a summons' : owed.count + ' summonses') + ' heard when the till was shut.' : '';
   if (owed.souls) { save(); refresh(); }
+  // Mail remains readable after every resident has left. A missing defendant
+  // can still have their papers declined, and the sender can collect a verdict.
+  if (!S.pets.length) {
+    stopAll(); ep = null; hearing = null;
+    sheet.className = 'sheet sheet-court sc-lobby';
+    sheet.innerHTML = head('Shelf Court', 'Your court mail') +
+      '<p>Your shelf is empty. You can still read verdicts or decline papers for residents who have left.</p>' +
+      (backpay ? '<p class="sc-backpay">' + glyph('soul') + esc(backpay) + '</p>' : '') +
+      '<div data-sc-summons>' + summonsMarkup() + '</div>';
+    open(); sheet.querySelector('[data-sc="close"]')?.focus({ preventScroll: true });
+    fetchPost();
+    return;
+  }
+  if (caseId && COURT_BY_ID[caseId]) pickCase(caseId);
+  // Residents who have not been at a podium lately go first.
+  defaultLobby(residentId, true);
   showLobby();
   fetchPost();
 }
 
-export function initCourt(state, onRefresh, { social } = {}) {
+export function initCourt(state, onRefresh, { social, cloud } = {}) {
   S = state; refresh = onRefresh || refresh; courtSocial = social || null;
+  scopePost();
+  const accountChanged = () => {
+    if ((courtSocial?.userId() || null) === postUser) return;
+    scopePost();
+    if (veil.classList.contains('open')) close();
+  };
+  social?.subscribe(accountChanged);
+  cloud?.subscribe(accountChanged);
   window.addEventListener('shelflife:court', e => openCourt(e.detail?.petId, e.detail?.caseId));
   sheet.addEventListener('change', e => {
     if (e.target.dataset?.scVersion !== undefined) { lobby.twist = e.target.value; showLobby(); return; }
