@@ -93,3 +93,6 @@
 .ar-board-list span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ar-board-list em{font-style:normal;font-variant-numeric:tabular-nums}
 .ar-board-note{margin:0;font-size:12.5px;color:var(--ink-2)}
+.summons-notice{flex-wrap:wrap;background:var(--paper);color:#392937;border-bottom:1px solid #9b8174}
+.summons-notice span{flex:1 1 220px;max-width:680px}
+.summons-notice .btn{color:#392937;border-color:#9b8174;min-height:44px}

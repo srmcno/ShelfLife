@@ -315,12 +315,17 @@ const refuse = (code, status = 0) => new CloudError(TEXT[ALIAS[code] || code] ||
 
 export function createSocial({ cloud, getState = () => null, now = Date.now } = {}) {
   const listeners = new Set();
-  let lastStatus = '', publishing = null;
+  let lastStatus = '', publishing = null, inboxRequest = null, inboxUser = null;
+  let mail = { cases: [], results: [] }, inboxVersion = 0;
 
   const signedIn = () => !!cloud?.configured && cloud.signedIn();
   const active = () => signedIn() && cloud.meta().socialUser === cloud.userId();
   function emit() { const info = { inbox: inboxCount() }; listeners.forEach(fn => { try { fn(info); } catch { /* the UI's problem */ } }); }
   function inboxCount() { const m = signedIn() ? cloud.meta() : {}; return m.socialUser === cloud?.userId?.() ? count(m.inboxCount, 99) : 0; }
+  function inboxState() {
+    return inboxUser === cloud?.userId?.() && active()
+      ? { cases: [...mail.cases], results: [...mail.results] } : { cases: [], results: [] };
+  }
 
   async function call(name, args) {
     if (!signedIn()) throw refuse('signed_out', 401);
@@ -346,7 +351,7 @@ export function createSocial({ cloud, getState = () => null, now = Date.now } = 
     return out;
   }
   // Opening the Friends sheet is what switches the social layer on for this account.
-  function optIn() { if (signedIn()) cloud.setMeta({ socialUser: cloud.userId() }); return active(); }
+  function optIn() { if (signedIn()) { cloud.setMeta({ socialUser: cloud.userId() }); emit(); } return active(); }
 
   // ---- friends ----
   async function addFriend(value) {
@@ -403,18 +408,35 @@ export function createSocial({ cloud, getState = () => null, now = Date.now } = 
   }
   async function rule(id, { verdict, stars, ratings }) {
     if (!VERDICTS.includes(verdict)) throw refuse('bad_verdict');
+    const uid = cloud.userId();
     await call('rule_summons', { p_id: user(id), p_verdict: verdict, p_stars: count(stars, 3), p_ratings: count(ratings, 100) });
-    return handled();
+    return handled(id, uid);
   }
-  const decline = async id => { await call('decline_summons', { p_id: user(id) }); return handled(); };
-  const seen = async id => { const r = await call('mark_summons_seen', { p_id: user(id) }); handled(); return r?.ok === true; };
+  const decline = async id => { const uid = cloud.userId(); await call('decline_summons', { p_id: user(id) }); return handled(id, uid); };
+  const seen = async id => { const uid = cloud.userId(); const r = await call('mark_summons_seen', { p_id: user(id) }); if (r?.ok === true) handled(id, uid); return r?.ok === true; };
   // One fewer thing waiting, until the next look at the inbox says otherwise.
-  function handled() { cloud.setMeta({ inboxCount: Math.max(0, inboxCount() - 1) }); emit(); return true; }
-  async function inbox() {
-    const box = readInbox(await call('inbox', {}));
-    cloud.setMeta({ inboxCount: box.cases.length + box.results.length });
-    emit();
-    return box;
+  function handled(id, uid) {
+    if (!signedIn() || cloud.userId() !== uid) return true;
+    inboxVersion++;
+    if (inboxUser === cloud.userId()) mail = { cases: mail.cases.filter(c => c.id !== id), results: mail.results.filter(r => r.id !== id) };
+    cloud.setMeta({ inboxCount: Math.max(0, inboxCount() - 1) }); emit(); return true;
+  }
+  function inbox() {
+    const uid = cloud?.userId?.();
+    if (inboxRequest?.user === uid) return inboxRequest.promise;
+    const request = { user: uid, version: inboxVersion };
+    request.promise = call('inbox', {}).then(raw => {
+      // An old account's reply must never populate a newly signed-in shelf.
+      if (!signedIn() || cloud.userId() !== uid) return { cases: [], results: [] };
+      if (request.version !== inboxVersion) return inboxState();
+      const box = readInbox(raw);
+      inboxUser = uid; mail = box;
+      cloud.setMeta({ inboxCount: box.cases.length + box.results.length });
+      emit();
+      return { cases: [...box.cases], results: [...box.results] };
+    }).finally(() => { if (inboxRequest === request) inboxRequest = null; });
+    inboxRequest = request;
+    return request.promise;
   }
 
   // ---- daily scores ----
@@ -442,8 +464,8 @@ export function createSocial({ cloud, getState = () => null, now = Date.now } = 
   }
 
   return {
-    active, optIn, signedIn, profile, setName, addFriend, friends, respond, remove, block, report,
-    publish, shelf, serve, rule, decline, seen, inbox, inboxCount, submitScore, board, percentile, syncStatus,
+    active, optIn, signedIn, userId: () => signedIn() ? cloud.userId() : null, profile, setName, addFriend, friends, respond, remove, block, report,
+    publish, shelf, serve, rule, decline, seen, inbox, inboxCount, inboxState, submitScore, board, percentile, syncStatus,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
   };
 }
