@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { blankState, normalizeState } from '../src/state.js';
 import { createCloud } from '../src/cloud/client.js';
 import {
-  createSocial, readShelf, readFriends, readInbox, readBoard, readPercentile, cleanArt, cleanText, cleanCode,
+  createSocial, readSentCase, readShelf, readFriends, readInbox, readBoard, readPercentile, cleanArt, cleanText, cleanCode,
   shelfSnapshot, residentSnapshot, guestPet, isoDay, socialText, socialCode, MAX_IMAGE_CHARS, MAX_SHELF_CHARS, PUBLISH_GAP_MS
 } from '../src/cloud/social.js';
 import { generateCreature } from '../src/art/creatures.js';
@@ -380,4 +380,100 @@ test('refusals read as short, plain sentences without em dashes', () => {
   assert.equal(socialCode({ code: '23514' }), 'too_large');
   assert.equal(socialCode({ offline: true, code: 'offline' }), 'offline');
   assert.match(socialText({ code: 'bad_day' }), /score was refused/);
+});
+
+test('sent history keeps pending, declined and acknowledged verdicts without art or incoming cases', async () => {
+  const w = world(), a = await w.player('Ada'), b = await w.player('Bea'), c = await w.player('Cat');
+  await befriend(a, b);
+  const send = side => a.social.serve({ to: b.id, caseId: 'borrowed-coffin', plaintiff: a.shelf.pets[0], defendant: b.shelf.pets[1], side });
+  const waiting = (await send()).id;
+  const ruled = (await send('d')).id;
+  const declined = (await send()).id;
+  await b.social.rule(ruled, { verdict: 'plaintiff', stars: 2, ratings: 75 });
+  await b.social.decline(declined);
+  await a.social.seen(ruled);
+  await b.social.serve({ to: a.id, caseId: 'tontine', plaintiff: b.shelf.pets[0], defendant: a.shelf.pets[1] });
+  const history = await a.social.sentCases();
+  assert.equal(history.next, null);
+  assert.deepEqual(history.cases.map(r => [r.id, r.status]), [[declined, 'declined'], [ruled, 'ruled'], [waiting, 'open']]);
+  const outcome = history.cases[1];
+  assert.equal(outcome.side, 'd');
+  assert.equal(outcome.verdict, 'plaintiff', 'stored winner remains the sender resident on reversed cases');
+  assert.deepEqual(outcome.plaintiff, { id: 'p0', name: 'Mabel' });
+  assert.deepEqual(outcome.defendant, { id: 'p1', name: 'Pip' });
+  assert.ok(!JSON.stringify(history).includes('art'));
+  assert.deepEqual((await a.social.inbox()).results, [], 'history never makes read verdicts unread');
+  assert.deepEqual((await c.social.sentCases()).cases, []);
+  const select = new URLSearchParams(w.fake.calls('summons')[0].search);
+  assert.equal(select.get('from_user'), 'eq.' + a.id);
+  assert.ok(!select.get('select').split(',').includes('plaintiff'));
+  w.tick(30 * 86400000);
+  assert.equal((await a.social.sentCases()).cases.find(r => r.id === waiting).status, 'expired');
+  await a.social.remove(b.id);
+  assert.deepEqual((await a.social.sentCases()).cases.map(r => r.status), ['declined', 'ruled']);
+  await a.social.block(b.id);
+  assert.deepEqual((await a.social.sentCases()).cases, []);
+});
+
+test('sent history pages stably across new arrivals and identical submillisecond timestamps', async () => {
+  const w = world(), a = await w.player('Ada'), b = await w.player('Bea');
+  await befriend(a, b);
+  for (let i = 0; i < 43; i++) {
+    const { id } = await a.social.serve({ to: b.id, caseId: 'tontine', plaintiff: a.shelf.pets[0], defendant: b.shelf.pets[0] });
+    await b.social.decline(id);
+    w.fake.social.summons.get(id).created_at = '2026-09-29T12:00:00.123456+00:00';
+  }
+  const first = await a.social.sentCases();
+  assert.equal(first.cases.length, 20);
+  assert.equal(first.next.at, '2026-09-29T12:00:00.123456+00:00');
+  w.tick(1000);
+  await a.social.serve({ to: b.id, caseId: 'tontine', plaintiff: a.shelf.pets[0], defendant: b.shelf.pets[0] });
+  const second = await a.social.sentCases({ before: first.next });
+  const third = await a.social.sentCases({ before: second.next });
+  assert.deepEqual([second.cases.length, third.cases.length, third.next], [20, 3, null]);
+  assert.equal(new Set([...first.cases, ...second.cases, ...third.cases].map(r => r.id)).size, 43);
+  await assert.rejects(a.social.sentCases({ before: { id: first.next.id, at: 'x),id.gt.0' } }), refused('unexpected'));
+  w.fake.setOffline();
+  await assert.rejects(a.social.sentCases(), refused('offline'));
+});
+
+test('a sent history response cannot cross an account change', async () => {
+  let uid = '00000000-0000-4000-8000-000000000001', resolve;
+  const cloud = { configured: true, signedIn: () => !!uid, userId: () => uid,
+    select: () => new Promise(r => { resolve = r; }) };
+  const social = createSocial({ cloud });
+  const request = social.sentCases();
+  uid = '00000000-0000-4000-8000-000000000002';
+  resolve([]);
+  await assert.rejects(request, refused('signed_out'));
+});
+
+
+test('sent history rejects malformed responses and bounds display data', async () => {
+  const row = { id: '00000000-0000-4000-8000-000000000001', to_user: '00000000-0000-4000-8000-000000000002',
+    case_id: 'tontine', status: 'ruled', verdict: 'both', created_at: new Date(T0).toISOString(),
+    plaintiff_id: '__proto__', plaintiff_name: '<img src=x>\u202e', defendant_name: 'Pip', stars: 900, ratings: -1 };
+  const read = readSentCase(row, T0);
+  assert.deepEqual(read.plaintiff, { id: '', name: '<img src=x>' });
+  assert.deepEqual([read.stars, read.ratings], [3, 0]);
+  for (const bad of [null, [], { ...row, status: 'invented' }, { ...row, verdict: 'guilty' }, { ...row, created_at: 'today' }]) {
+    assert.equal(readSentCase(bad, T0), null);
+  }
+  const cloud = { configured: true, signedIn: () => true, userId: () => row.id, select: async () => ({ cases: [] }) };
+  await assert.rejects(createSocial({ cloud }).sentCases(), refused('unexpected'));
+  cloud.select = async () => [row, row];
+  await assert.rejects(createSocial({ cloud }).sentCases(), refused('unexpected'));
+});
+
+test('delayed profile replies never overwrite the next account metadata', async () => {
+  for (const name of ['profile', 'setName']) {
+    let uid = '00000000-0000-4000-8000-000000000001', resolve, writes = 0;
+    const cloud = { configured: true, signedIn: () => true, userId: () => uid,
+      rpc: () => new Promise(r => { resolve = r; }), setMeta: () => { writes++; } };
+    const request = createSocial({ cloud })[name]('Ada');
+    uid = '00000000-0000-4000-8000-000000000002';
+    resolve({ display_name: 'Ada', friend_code: 'ABCD2345' });
+    await assert.rejects(request, refused('signed_out'));
+    assert.equal(writes, 0);
+  }
 });

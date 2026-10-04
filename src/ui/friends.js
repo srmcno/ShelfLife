@@ -110,6 +110,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   let view = 'main', message = '', busy = false, menuFor = '', confirm = null;
   let me = { code: '', name: '' }, friends = [], loaded = false, waiting = 0;
   let visiting = null, serving = null, title = ['Friends', ''], drafts = {}, verdicts = [];
+  let sent = [], sentNext = null, sentLoaded = false, sentLoading = false, sentError = '', sentRetryOlder = false, sentUser = cloud.userId(), sentToken = 0, accountEpoch = 0, justServed = false;
   // Built once: the head stays a direct child of the sheet (it sticks on
   // phones) and the status line stays put, so screen readers hear each change.
   sheet.innerHTML = '<div class="sheet-head"><div><span class="eyebrow" data-fr-kicker></span><h2 data-fr-title tabindex="-1">Friends</h2></div><button class="btn btn-ghost btn-sm" type="button" data-fr="close">Close</button></div>' +
@@ -118,6 +119,65 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   const isOpen = () => veil.classList.contains('open');
   const accepted = () => friends.filter(f => f.status === 'accepted');
   const byId = id => friends.find(f => f.userId === id) || null;
+
+  function sentMarkup() {
+    const rows = sent.map(c => {
+      const p = c.plaintiff.name || 'Your resident', d = c.defendant.name || 'Their resident';
+      const from = c.side === 'd' ? d : p, against = c.side === 'd' ? p : d;
+      const friend = accepted().find(f => f.userId === c.toUser);
+      const who = friend ? friendName(friend) : 'A friend';
+      const outcome = c.status === 'open' ? 'Waiting for a hearing in Shelf Court.' : c.status === 'declined' ? 'Declined. No verdict was issued.'
+        : c.status === 'expired' ? 'Expired after 30 days without a hearing.'
+        : (c.verdict === 'both' ? 'Declared both residents idiots.' : 'Found for ' + (c.verdict === 'plaintiff' ? p : d) + '.') +
+          ' ' + c.stars + (c.stars === 1 ? ' star' : ' stars') + ', ratings ' + c.ratings + '.';
+      return '<li class="fr-sent-case" data-fr-sent-case="' + esc(c.id) + '"><p><b>' + esc(from + ' is suing ' + against) + '</b> over ' +
+        esc(COURT_BY_ID[c.caseId]?.title || 'a Shelf Court case') + '.</p><p class="fr-sent-meta">' + esc(who + '’s shelf. Sent ' + timeAgo(c.createdAt) + '.') +
+        '</p><p class="fr-sent-outcome" data-status="' + esc(c.status) + '">' + esc(outcome) + '</p></li>';
+    }).join('');
+    return '<section class="fr-sent" data-fr-sent aria-labelledby="frSentTitle" aria-busy="' + sentLoading + '"><div class="fr-sent-head"><h3 id="frSentTitle">Cases you’ve sent</h3>' +
+      '<button class="btn btn-ghost btn-sm" type="button" data-fr="sent-refresh">Refresh</button></div>' +
+      (sentError ? '<p class="fr-sent-error" role="status">Could not update your cases. ' + esc(sentError) + ' <button class="btn btn-sm" type="button" data-fr="sent-retry">Try again</button></p>' : '') +
+      (rows ? '<ul class="fr-sent-list">' + rows + '</ul>' : sentLoading ? loadingState('Fetching the cases you sent.') : sentLoaded && !sentError ? '<p class="fr-sent-empty">No cases sent yet. Visit a friend’s shelf and choose Serve papers.</p>' : '') +
+      (sentNext ? '<div class="fr-actions"><button class="btn" type="button" data-fr="sent-older">Show older cases</button></div>' : '') +
+      (sentLoading && rows ? '<p class="hint" role="status">Updating your cases.</p>' : '') + '</section>';
+  }
+  // Updating only this section leaves players' drafts, caret and form focus alone.
+  function renderSent() {
+    if (!isOpen() || view !== 'main') return;
+    const slot = body.querySelector('[data-fr-sent]');
+    if (!slot) return;
+    const focused = slot.contains(document.activeElement) ? focusKey(document.activeElement) : null;
+    const scroll = sheet.scrollTop;
+    slot.outerHTML = sentMarkup();
+    if (focused) body.querySelector(focused)?.focus({ preventScroll: true });
+    sheet.scrollTop = scroll;
+  }
+  function scopeSent() {
+    const user = social.signedIn() ? cloud.userId() : null;
+    if (user === sentUser) return false;
+    sentUser = user; sentToken++; sent = []; sentNext = null; sentLoaded = sentLoading = false; sentError = ''; justServed = false;
+    accountEpoch++; busy = false;
+    friends = []; loaded = false; waiting = 0; verdicts = []; me = { code: '', name: '' }; drafts = {}; message = '';
+    return true;
+  }
+  async function loadSent({ older = false } = {}) {
+    scopeSent();
+    if (!social.active() || sentLoading || (older && !sentNext)) return;
+    const user = sentUser, token = ++sentToken, cursor = older ? sentNext : null;
+    sentLoading = true; sentError = ''; sentRetryOlder = older; renderSent();
+    try {
+      const page = await social.sentCases({ before: cursor });
+      if (user !== cloud.userId() || token !== sentToken) return;
+      sent = older ? [...sent, ...page.cases.filter(c => !sent.some(old => old.id === c.id))]
+        : page.cases;
+      sentNext = page.next;
+      sentLoaded = true;
+    } catch (error) {
+      if (user === cloud.userId() && token === sentToken) sentError = socialText(error);
+    } finally {
+      if (user === cloud.userId() && token === sentToken) { sentLoading = false; renderSent(); }
+    }
+  }
 
   function syncTray() {
     const signedIn = social.signedIn(), count = signedIn ? social.inboxCount() : 0;
@@ -141,6 +201,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       '<form class="fr-form fr-add" data-fr-form="add"><label class="fr-label" for="frAdd">Add a friend by code</label><div class="fr-row"><input class="fr-input fr-code-input" id="frAdd" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD EFGH" value="' + esc(drafts.frAdd || '') + '"><button class="btn btn-primary" type="submit">Add</button></div></form>' +
       (verdicts.length ? '<section aria-labelledby="frVerdictsTitle"><h3 id="frVerdictsTitle">Verdicts</h3><ul class="fr-verdicts">' + verdicts.map(v => '<li>' + esc(verdictLine(v)) + '</li>').join('') + '</ul></section>' : '') +
       (waiting ? '<p class="fr-inbox"><b>' + waiting + (waiting === 1 ? ' set of papers waits' : ' sets of papers wait') + ' for you in Shelf Court.</b> <button class="btn btn-sm" type="button" data-fr="court">Open Shelf Court</button></p>' : '') +
+      sentMarkup() +
       (incoming.length ? '<section aria-labelledby="frRequestsTitle"><h3 id="frRequestsTitle">Requests</h3><ul class="fr-list">' + incoming.map(f => requestRow(f, { confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul></section>' : '') +
       '<section aria-labelledby="frListTitle"><h3 id="frListTitle">Friends' + (list.length ? ' <small>' + list.length + '</small>' : '') + '</h3>' +
       (list.length ? '<ul class="fr-list">' + list.map(f => friendRow(f, { menu: menuFor === f.userId, confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul>'
@@ -151,7 +212,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     const v = visiting, f = v.friend, s = v.shelf;
     const facts = s ? [RANKS[s.rank]?.title, s.curios + (s.curios === 1 ? ' curio' : ' curios'), v.updatedAt ? 'Updated ' + timeAgo(v.updatedAt) : ''].filter(Boolean).join(' · ') : '';
     title = [friendName(f) + '’s shelf', 'Visiting · look, do not touch'];
-    return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to friends</button></div>' +
+    return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to friends</button>' + (justServed ? '<button class="btn" type="button" data-fr="sent-view">View my cases</button>' : '') + '</div>' +
       (v.loading ? loadingState('Wiping their doormat.')
         : !s || !s.residents.length ? emptyState({ kind: 'friends', compact: true, line: 'Nothing on show yet. Their shelf appears here once they open Friends.', lineClass: 'fr-empty' })
         : '<p class="fr-facts">' + esc(facts) + '</p><div class="fr-shelf">' + s.residents.map(residentCard).join('') + '</div>');
@@ -195,13 +256,17 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
 
   async function act(work, focus = null) {
     if (busy) return;
+    const epoch = accountEpoch, user = cloud.userId();
+    const current = () => epoch === accountEpoch && user === cloud.userId();
     busy = true; message = ''; render();
-    try { await work(); }
-    catch (error) { message = socialText(error); }
-    finally { busy = false; render(focus); }
+    try { await work(current); }
+    catch (error) { if (current()) message = socialText(error); }
+    finally { if (current()) { busy = false; render(focus); } }
   }
   async function reload() {
+    const epoch = accountEpoch, user = cloud.userId();
     const [list, box] = await Promise.all([social.friends(), social.inbox()]);
+    if (epoch !== accountEpoch || user !== cloud.userId()) return null;
     friends = list; waiting = box.cases.length; loaded = true;
     const fresh = collectVerdicts(state, social, box.results).filter(v => !verdicts.some(x => x.id === v.id));
     if (fresh.length) { verdicts = [...fresh, ...verdicts]; onRefresh(); }
@@ -210,14 +275,21 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
 
   async function open() {
     if (!social.signedIn()) { openCloud(); return; }
+    scopeSent();
     social.optIn();
     view = 'main'; message = ''; menuFor = ''; confirm = null; visiting = serving = null; verdicts = [];
     veil.classList.add('open');
     render();
-    await act(async () => {
-      me = await social.profile();
+    const epoch = accountEpoch, user = cloud.userId();
+    await act(async current => {
+      const profile = await social.profile();
+      if (!current()) return;
+      me = profile;
       await reload();
+      if (!current()) return;
+      await loadSent();
     });
+    if (epoch !== accountEpoch || user !== cloud.userId()) return;
     // Friends see the shelf as it is now. Quietly: a failure here changes nothing.
     social.publish({ force: true }).catch(() => {});
   }
@@ -226,12 +298,13 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   async function visit(friend, { serve = false } = {}) {
     view = 'shelf'; visiting = { friend, shelf: null, loading: true, updatedAt: 0 }; menuFor = ''; confirm = null; message = '';
     render('[data-fr="back"]');
-    await act(async () => {
+    await act(async current => {
       try {
         const r = await social.shelf(friend.userId);
+        if (!current()) return;
         visiting = { friend, shelf: r?.shelf || null, loading: false, updatedAt: r?.updatedAt || 0 };
         if (serve && visiting.shelf?.residents.length) message = 'Choose whom to sue.';
-      } catch (error) { visiting.loading = false; throw error; }
+      } catch (error) { if (current() && visiting) visiting.loading = false; throw error; }
     }, serve ? '[data-fr="papers"]' : '[data-fr="back"]');
   }
   function papers(resident) {
@@ -249,24 +322,31 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     const form = e.target.dataset.frForm;
     if (form === 'add') {
       const input = $('frAdd');
-      act(async () => {
+      act(async current => {
         const r = await social.addFriend(input.value);
+        if (!current()) return;
         drafts.frAdd = '';
         await reload();
+        if (!current()) return;
         message = r.status !== 'accepted' ? 'Asked. They appear here once they add you back.'
           : (r.name ? 'You and ' + r.name + ' are friends now.' : 'Friends now.') + ' They had already asked.';
       }, '#frAdd');
     } else if (form === 'name') {
       const name = $('frName').value;
-      act(async () => { me = await social.setName(name); drafts.frName = undefined; message = me.name ? 'Friends now see you as ' + me.name + '.' : 'Friends now see your code instead of a name.'; social.publish({ force: true }).catch(() => {}); }, '#frName');
+      act(async current => { const profile = await social.setName(name); if (!current()) return; me = profile; drafts.frName = undefined; message = me.name ? 'Friends now see you as ' + me.name + '.' : 'Friends now see your code instead of a name.'; social.publish({ force: true }).catch(() => {}); }, '#frName');
     } else if (form === 'serve') {
       const caseId = $('frCase').value, plaintiff = state.pets.find(p => p.id === $('frPlaintiff').value), side = $('frSide').value === 'd' ? 'd' : 'p';
       serving.caseId = caseId; serving.plaintiffId = plaintiff?.id || ''; serving.side = side;
-      act(async () => {
+      act(async current => {
         await social.serve({ to: serving.friend.userId, caseId, plaintiff, defendant: serving.resident, side });
+        if (!current()) return;
         const who = friendName(serving.friend);
         view = 'shelf';
         message = 'Papers served. ' + who + ' will find them in Shelf Court.';
+        justServed = true;
+        // A request started before the papers were served cannot contain them.
+        sentToken++; sentLoading = false;
+        await loadSent();
       }, '[data-fr="back"]');
     }
   });
@@ -279,6 +359,10 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       case 'copy': copy(); break;
       case 'share': shareCode(); break;
       case 'court': close(); window.dispatchEvent(new CustomEvent('shelflife:court')); break;
+      case 'sent-view': view = 'main'; visiting = null; message = ''; render('[data-fr="sent-refresh"]'); break;
+      case 'sent-refresh': loadSent(); break;
+      case 'sent-retry': loadSent({ older: sentRetryOlder }); break;
+      case 'sent-older': loadSent({ older: true }); break;
       case 'menu': menuFor = menuFor === user ? '' : user; confirm = null; render(menuFor ? '[data-fr="visit"][data-user="' + CSS.escape(user) + '"]' : null); break;
       case 'visit': if (friend) visit(friend); break;
       case 'serve': if (friend) visit(friend, { serve: true }); break;
@@ -287,14 +371,14 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       case 'papers': { const r = visiting?.shelf?.residents.find(x => x.id === b.dataset.res); if (r) papers(r); break; }
       case 'remove': case 'block': case 'report': confirm = { kind: act_, userId: user }; menuFor = ''; render(act_ === 'report' ? '#frReportMore' : '[data-fr="' + act_ + '-yes"]'); break;
       case 'cancel': confirm = null; render(); break;
-      case 'accept': act(async () => { await social.respond(user, true); await reload(); message = 'Friends now. Their shelf is open to you, and yours to them.'; }, '#frAdd'); break;
-      case 'decline': act(async () => { await social.respond(user, false); await reload(); message = 'Declined. They are not told.'; }, '#frAdd'); break;
-      case 'withdraw': act(async () => { await social.remove(user); await reload(); message = 'Request withdrawn.'; }, '#frAdd'); break;
-      case 'remove-yes': act(async () => { await social.remove(user); confirm = null; await reload(); message = 'Removed.'; }, '#frAdd'); break;
-      case 'block-yes': act(async () => { await social.block(user); confirm = null; await reload(); message = 'Blocked. They will not find you again.'; }, '#frAdd'); break;
+      case 'accept': act(async current => { await social.respond(user, true); if (!current()) return; await reload(); if (current()) message = 'Friends now. Their shelf is open to you, and yours to them.'; }, '#frAdd'); break;
+      case 'decline': act(async current => { await social.respond(user, false); if (!current()) return; await reload(); if (current()) message = 'Declined. They are not told.'; }, '#frAdd'); break;
+      case 'withdraw': act(async current => { await social.remove(user); if (!current()) return; await reload(); if (current()) message = 'Request withdrawn.'; }, '#frAdd'); break;
+      case 'remove-yes': act(async current => { await social.remove(user); if (!current()) return; confirm = null; await reload(); if (current()) message = 'Removed.'; }, '#frAdd'); break;
+      case 'block-yes': act(async current => { await social.block(user); if (!current()) return; confirm = null; await reload(); if (current()) message = 'Blocked. They will not find you again.'; }, '#frAdd'); break;
       case 'report-yes': {
         const reason = [sheet.querySelector('input[name="frReason"]:checked')?.value, $('frReportMore')?.value].filter(Boolean).join(': ');
-        act(async () => { await social.report(user, reason); confirm = null; message = 'Reported. Block them too if you would rather not hear from them.'; }, '#frAdd');
+        act(async current => { await social.report(user, reason); if (!current()) return; confirm = null; message = 'Reported. Block them too if you would rather not hear from them.'; }, '#frAdd');
         break;
       }
     }
@@ -315,7 +399,13 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     } catch { /* the player changed their mind */ }
   }
 
-  social.subscribe(syncTray);
+  social.subscribe(() => {
+    const changed = scopeSent();
+    syncTray();
+    if (changed && isOpen()) { close(); return; }
+    if (isOpen() && view === 'main') loadSent();
+  });
+  cloud.subscribe(() => { if (scopeSent() && isOpen()) close(); });
   sync.subscribe(() => { syncTray(); if (isOpen() && !social.signedIn()) close(); });
   syncTray();
   return { open, close, refresh: render };

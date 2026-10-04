@@ -205,6 +205,16 @@ test('summonses: friends only, five open at a time, and only the recipient rules
   assert.deepEqual(await call(A, 'public.mark_summons_seen($1)', [ids[0]]), { ok: true });
   assert.deepEqual(await call(A, 'public.mark_summons_seen($1)', [ids[0]]), { ok: false });
   assert.deepEqual((await call(A, 'public.inbox()')).results, []);
+  const sent = await as(A, async () => (await db.query(`select id, status, verdict,
+    plaintiff->>'name' as plaintiff_name, defendant->>'name' as defendant_name
+    from public.summons where from_user = $1 order by created_at desc, id desc limit 21`, [A])).rows);
+  assert.equal(sent.length, 5, 'sender SELECT excludes the incoming case');
+  assert.deepEqual(sent.find(r => r.id === ids[0]), { id: ids[0], status: 'ruled', verdict: 'defendant', plaintiff_name: 'Mabel', defendant_name: 'Pip' },
+    'acknowledged outcomes remain selectable without fetching art');
+  assert.equal(sent.find(r => r.id === ids[1]).status, 'declined');
+  assert.equal(sent.filter(r => r.status === 'open').length, 3);
+  assert.deepEqual(await as(C, async () => (await db.query('select id from public.summons where from_user = $1', [A])).rows), [],
+    'forging the history sender filter cannot bypass RLS');
 });
 
 test('scores: sanity caps, a two day window, and the best of the day', async () => {

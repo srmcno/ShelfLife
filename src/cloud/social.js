@@ -184,6 +184,27 @@ export function readResult(raw) {
   return { id, toUser, toName: cleanText(raw.to_name, 24), caseId: raw.case_id, plaintiff: side(raw.plaintiff), defendant: side(raw.defendant),
     verdict: raw.verdict, stars: count(raw.stars, 3), ratings: count(raw.ratings, 100), ruledAt: cleanTime(raw.ruled_at) };
 }
+const SENT_PAGE = 20, SUMMONS_LIFETIME = 30 * 86400000;
+// Keep the server timestamp's microseconds for keyset pagination. Date.parse
+// is only used for display and expiry; rounding a cursor can skip older rows.
+const sentTimestamp = value => typeof value === 'string' &&
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && cleanTime(value) ? value : '';
+export function readSentCase(raw, now = Date.now()) {
+  if (!record(raw)) return null;
+  const id = cleanUuid(raw.id), toUser = cleanUuid(raw.to_user), at = sentTimestamp(raw.created_at);
+  if (!id || !toUser || !at || typeof raw.case_id !== 'string' || !CASE_ID.test(raw.case_id) ||
+      !['open', 'ruled', 'declined'].includes(raw.status) ||
+      (raw.status === 'ruled' && !VERDICTS.includes(raw.verdict))) return null;
+  const party = prefix => ({ id: petId(raw[prefix + '_id']) ? raw[prefix + '_id'] : '',
+    name: cleanText(raw[prefix + '_name'], 22) || 'Someone' });
+  const createdAt = cleanTime(at);
+  return { id, toUser, caseId: raw.case_id, side: raw.side === 'd' ? 'd' : 'p',
+    plaintiff: party('plaintiff'), defendant: party('defendant'),
+    status: raw.status === 'open' && createdAt <= now - SUMMONS_LIFETIME ? 'expired' : raw.status,
+    verdict: raw.status === 'ruled' ? raw.verdict : null, stars: count(raw.stars, 3), ratings: count(raw.ratings, 100),
+    createdAt, ruledAt: cleanTime(raw.ruled_at) };
+}
+
 export function readInbox(raw) {
   const r = record(raw) ? raw : {};
   const list = (rows, read) => {
@@ -339,13 +360,17 @@ export function createSocial({ cloud, getState = () => null, now = Date.now } = 
 
   // ---- you ----
   async function profile() {
+    const uid = cloud?.userId?.();
     const p = await call('ensure_profile', { p_name: '' });
+    if (!signedIn() || cloud.userId() !== uid) throw refuse('signed_out', 401);
     const out = { code: cleanCode(p?.friend_code), name: cleanText(p?.display_name, 24) };
     cloud.setMeta({ socialName: out.name });
     return out;
   }
   async function setName(value) {
+    const uid = cloud?.userId?.();
     const p = await call('set_display_name', { p_name: cleanText(value, 24) });
+    if (!signedIn() || cloud.userId() !== uid) throw refuse('signed_out', 401);
     const out = { code: cleanCode(p?.friend_code), name: cleanText(p?.display_name, 24) };
     cloud.setMeta({ socialName: out.name, shelfHash: '' });
     return out;
@@ -406,6 +431,34 @@ export function createSocial({ cloud, getState = () => null, now = Date.now } = 
     const r = await call('send_summons', { p_to: user(to), p_case: caseId, p_plaintiff: p, p_defendant: defendantOnly });
     return { id: cleanUuid(r?.id) };
   }
+  async function sentCases({ before = null } = {}) {
+    if (!signedIn()) throw refuse('signed_out', 401);
+    const uid = user(cloud.userId());
+    const query = new URLSearchParams({
+      select: 'id,to_user,case_id,status,verdict,stars,ratings,created_at,ruled_at,' +
+        'plaintiff_id:plaintiff->>id,plaintiff_name:plaintiff->>name,side:plaintiff->>side,' +
+        'defendant_id:defendant->>id,defendant_name:defendant->>name',
+      from_user: 'eq.' + uid, order: 'created_at.desc,id.desc', limit: String(SENT_PAGE + 1)
+    });
+    if (before !== null) {
+      const id = cleanUuid(before?.id), at = sentTimestamp(before?.at);
+      if (!id || !at) throw refuse('unexpected');
+      query.set('or', '(created_at.lt."' + at + '",and(created_at.eq."' + at + '",id.lt.' + id + '))');
+    }
+    let raw;
+    try { raw = await cloud.select('summons', query.toString()); }
+    catch (error) {
+      const code = socialCode(error);
+      throw Object.assign(refuse(code, error?.status || 0), { offline: code === 'offline' });
+    }
+    if (!signedIn() || cloud.userId() !== uid) throw refuse('signed_out', 401);
+    if (!Array.isArray(raw) || raw.length > SENT_PAGE + 1) throw refuse('unexpected');
+    const cases = raw.map(row => readSentCase(row, now()));
+    if (cases.some(row => !row) || new Set(cases.map(row => row.id)).size !== cases.length) throw refuse('unexpected');
+    const last = raw[SENT_PAGE - 1];
+    return { cases: cases.slice(0, SENT_PAGE), next: raw.length > SENT_PAGE
+      ? { id: cleanUuid(last.id), createdAt: cleanTime(last.created_at), at: last.created_at } : null };
+  }
   async function rule(id, { verdict, stars, ratings }) {
     if (!VERDICTS.includes(verdict)) throw refuse('bad_verdict');
     const uid = cloud.userId();
@@ -465,7 +518,7 @@ export function createSocial({ cloud, getState = () => null, now = Date.now } = 
 
   return {
     active, optIn, signedIn, userId: () => signedIn() ? cloud.userId() : null, profile, setName, addFriend, friends, respond, remove, block, report,
-    publish, shelf, serve, rule, decline, seen, inbox, inboxCount, inboxState, submitScore, board, percentile, syncStatus,
+    publish, shelf, serve, sentCases, rule, decline, seen, inbox, inboxCount, inboxState, submitScore, board, percentile, syncStatus,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
   };
 }

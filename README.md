@@ -245,6 +245,10 @@ button at all, and a player without cloud save is pointed at Cloud save first.
   notices; closed-game phone push notifications are not supported.
   Hearing a case pays 15 souls and hearing a verdict pays 10,
   each for up to three summonses a day. A friend's resident never joins your shelf or its memories.
+- **Cases you’ve sent** in Friends shows waiting papers, declined or expired cases, and verdicts
+  even after you read them. Refresh checks for updates; Show older loads earlier cases. Open papers
+  expire after 30 days. Rereading a verdict does not pay it again. Blocking deletes the shared cases;
+  removing a friend deletes their open papers. Server housekeeping may remove old history.
 - **Daily challenge scores** go up when you play today's challenge. Friends appear by name (top five);
   everyone else is one line, such as "You beat 64% of players today". No stranger is ever named.
 - **Remove**, **Block** and **Report** sit in each friend's row. Blocking removes the friendship,
