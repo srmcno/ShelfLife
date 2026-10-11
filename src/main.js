@@ -263,8 +263,8 @@ function applyRestoredState(normalized) {
   syncNight();
   renderAll(state);
   syncAudioButtons();
-  // Settings switches that live outside renderAll repaint from the new save.
-  window.dispatchEvent(new CustomEvent('shelflife:replaced'));
+  // Controls that paint themselves from settings (Calm, nudges, haptics) repaint here.
+  window.dispatchEvent(new CustomEvent('shelflife:state-replaced'));
 }
 document.getElementById('restoreConfirm').addEventListener('click', () => {
   if (!pendingRestore) return;

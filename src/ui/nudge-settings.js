@@ -27,7 +27,7 @@ export function initNudgeSettings(state) {
   });
   window.addEventListener('shelflife:nudges', render);
   // A restored backup or a cloud copy can bring different switches.
-  window.addEventListener('shelflife:replaced', render);
+  window.addEventListener('shelflife:state-replaced', render);
   render();
   return { render };
 }

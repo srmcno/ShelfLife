@@ -578,7 +578,7 @@ function initHapticsButton() {
   };
   paint();
   // A restored backup or a cloud copy can bring a different setting.
-  window.addEventListener('shelflife:replaced', paint);
+  window.addEventListener('shelflife:state-replaced', paint);
   btn.addEventListener('click', () => {
     S.settings.haptics = !hapticsOn();
     save(); paint();
