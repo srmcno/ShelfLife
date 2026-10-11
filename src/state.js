@@ -16,6 +16,7 @@ import { normalizeKin } from './kin-state.js';
 import { normalizeTrades } from './trade-state.js';
 import { normalizeMischief } from './mischief-state.js';
 import { normalizeCoop } from './coop-state.js';
+import { blankFriendVisits, normalizeFriendVisits } from './visits-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -184,6 +185,7 @@ export function blankState() {
     notes: [], paperwork: blankPaperwork(), seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
+    friendVisits: blankFriendVisits(),
     gone: [], visits: [], ledger: defaultLedger(), roster: {}, rosterSeeded: false,
     formLog: [], noteCount: 0, lastGoneNote: 0, lastBackup: 0, backupSnooze: 0
   };
@@ -415,6 +417,7 @@ export function normalizeState(raw) {
   s.coven = normalizeCovenState(s.coven); // covens: counting, chests, cupboard, trophies (src/coven-state.js)
   s.kin = normalizeKin(s.kin, s, now); // foundlings, kept letters and the step (kin-state.js)
   s.trades = normalizeTrades(s.trades, s, now); // trading with friends: wishlist, escrow, applied trades, portraits
+  s.friendVisits = normalizeFriendVisits(s.friendVisits); // friends' residents staying here, and ours away
   return s;
 }
 

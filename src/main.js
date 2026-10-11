@@ -7,7 +7,7 @@ import { initWelcome } from './ui/welcome.js';
 import { initEscapades } from './ui/escapades.js';
 import { createBackup } from './backup.js';
 import { initBackupTransfer } from './ui/backup.js';
-import { cloud, sync, social, connectCloud } from './cloud/index.js';
+import { cloud, sync, social, postbox, connectCloud } from './cloud/index.js';
 import { initCloudUI } from './ui/cloud.js';
 import { initFriends } from './ui/friends.js';
 import { initTrades } from './ui/trades.js';
@@ -17,6 +17,9 @@ import './ui/coven.js';
 import './ui/kin.js';
 import { initMischief } from './ui/mischief.js';
 import './ui/coop.js'; // co-op: hired help and arcade duels, through the social registry
+import './ui/social-court.js';
+import './ui/postbox.js';
+import { initGuests } from './ui/guests.js';
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
@@ -294,7 +297,8 @@ const CLOUD_ARRIVALS = {
   undo: 'Swapped back. Everyone is pretending nothing happened.'
 };
 cloudUI = initCloudUI({ cloud, sync, getState: () => state, onChange: () => syncBackupBanner() });
-initFriends({ state, cloud, sync, social, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
+initFriends({ state, cloud, sync, social, postbox, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
+initGuests({ state, postbox, social, save });
 initTrades({ state, cloud, social, save, renderAll: () => renderAll(state), toast });
 initMischief({ state, cloud, social, refresh: () => renderAll(state) });
 connectCloud({
@@ -455,7 +459,7 @@ initNextStep(state, () => renderAll(state), { getOpenPetId });
 initCalm(state, { save, onChange: () => renderAll(state) });
 initArcade(state, () => renderAll(state), { social });
 initCourt(state, () => renderAll(state), { social, cloud });
-initSocialInbox({ cloud, social });
+initSocialInbox({ cloud, social, postbox });
 initTesters({ state, cloud, save, refresh: () => renderAll(state) });
 initSchemeUI(state, () => renderAll(state));
 initLife(state, () => renderAll(state));

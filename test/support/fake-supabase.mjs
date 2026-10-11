@@ -15,6 +15,7 @@ import { createFakeKin } from './fake-kin.mjs';
 import { createFakeTrades } from './fake-trades.mjs';
 import { createFakeMischief } from './fake-mischief.mjs';
 import { createFakeCoop } from './fake-coop.mjs';
+import { createFakePostbox } from './fake-postbox.mjs';
 
 export const FAKE_URL = 'https://fake.supabase.test';
 export const FAKE_KEY = 'fake-anon-key';
@@ -97,7 +98,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
       return json(200, { friend_code: p.friend_code, display_name: p.display_name });
     },
     delete_my_account(user) {
-      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); feedback.forget(user.id); coop.forget(user.id);
+      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); postbox.forget(user.id); feedback.forget(user.id); coop.forget(user.id);
       for (const [token, entry] of access) if (entry.userId === user.id) access.delete(token);
       for (const [token, entry] of refresh) if (entry.userId === user.id) refresh.delete(token);
       return { status: 204, body: '', headers: {} };
@@ -106,6 +107,9 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const social = createFakeSocial({ users, profiles, now, json, rest, uuid,
     ensureProfile: user => RPC.ensure_profile(user, {}) });
   Object.assign(RPC, social.RPC);
+  // The postbox wraps the social functions first; every later feature wraps the live chain.
+  const postbox = createFakePostbox({ social, users, profiles, now, json, rest, uuid });
+  Object.assign(RPC, postbox.RPC, postbox.wrap({ ...RPC }));
   const feedback = createFakeFeedback({ now, json, rest }); Object.assign(RPC, feedback.RPC);
   social.hearings = attachFakeHearings({ RPC, social, profiles, now, json, rest, uuid });
   Object.assign(RPC, createFakeCoven({ users, profiles, social, now, json, rest, uuid }).RPC); // fake.social.coven
@@ -262,7 +266,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   }
 
   return {
-    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, feedback, kin, mischief, coop,
+    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, postbox, feedback, kin, mischief, coop,
     fetch: fakeFetch, route, handle,
     setOffline(value = true) { offline = !!value; },
     failNext(count = 1, status = 500) { for (let i = 0; i < count; i++) failures.push(status); },
