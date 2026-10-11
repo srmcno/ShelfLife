@@ -2,8 +2,9 @@ import { COURT_CAST, QUESTIONS_PER_EPISODE } from '../content/court.js';
 import {
   courtCases, nextCaseId, castEpisode, episodeCase, episodeOpening, episodeReceipts, episodeQuestions, episodeAsk,
   randomHappening, resolveHappening, episodeBreak, episodeRule, courtFinish, fill, COURT_BY_ID, docketToday, DOCKET_SOULS, summonsReward,
-  rotateCast, payOwedSummons, slotVerdict
+  rotateCast, payOwedSummons, slotVerdict, episodeWitnesses
 } from '../engine/court.js';
+import { BEATS, beatRandom, markKey } from '../engine/court-joint.js';
 import { versionView, versionTotals, BASE } from '../engine/court-twists.js';
 import { castBriefing, seatTags, describeCast } from '../engine/court-traits.js';
 import { objectionOptions, checkNote, pressWitness } from '../engine/court-objection.js';
@@ -19,6 +20,7 @@ import { glyph } from '../art/mayhem-glyphs.js';
 import { escapadeView } from '../engine/escapades.js';
 import { guestPet } from '../cloud/social.js';
 import { guestPortrait, collectVerdicts, verdictLine } from './friends.js';
+import { initJointBench } from './court-joint.js';
 import { playTone, playStomp, playAchievement, playError, playStar, playUnlock } from '../audio/sound.js';
 
 /* Shelf Court, the daytime TV show. You are Judge Mortis. The sheet is a
@@ -43,7 +45,13 @@ let ep = null, session = 0, backpay = '';
 // Summonses from friends (only when the social layer is on): what is in the
 // post, and the one being heard right now.
 let courtSocial = null, post = { cases: [], results: [], note: '' }, postToken = 0, postUser = null, hearing = null;
-let queue = [], onDone = null, current = null, typer = 0, onChoice = null;
+let queue = [], onDone = null, current = null, typer = 0, onChoice = null, lineAt = 0;
+// The Joint Bench (ui/court-joint.js): `bench` is its module, `joint` the
+// hearing being heard right now, if this episode is one.
+let bench = null, joint = null;
+// A joint episode draws every beat of script from its own seeded stream, so
+// both judges hear the same lines; anything else rolls as it always has.
+const R = label => (ep?.joint && ep.seed ? beatRandom(ep.seed, label) : Math.random);
 // A replay can skip the rest of the opening, or the hallway interview. `keep` stops the skip at the twist's hint.
 let skipMode = null, spoken = 0;
 const timers = new Set();
@@ -60,10 +68,12 @@ function stopAll() {
   for (const t of timers) clearTimeout(t);
   timers.clear(); clearInterval(typer); typer = 0;
   queue = []; onDone = null; current = null; onChoice = null; skipMode = null; spoken = 0;
+  bench?.stopped();
 }
 function portrait(who) {
   if (who.kind === 'npc') return castSvg(who.art);
   if (who.kind === 'guest') return hearing?.pet ? guestPortrait(hearing.pet) : '';
+  if (who.kind === 'visitor') return who.resident ? guestPortrait(who.resident) : '';
   const pet = S.pets.find(p => p.id === who.id);
   if (!pet) return '';
   const holder = document.createElement('span');
@@ -126,7 +136,7 @@ function whyMarkup(preview) {
     '<p>This cast plays it straight. Residents who are Theatrical, Terminally Dramatic or Cult Adjacent change the maths, and so do bonds and old quarrels.</p>') + '</div>';
 }
 function showLobby() {
-  stopAll(); ep = null;
+  stopAll(); ep = null; joint = null;
   const c = courtroomState(S), cases = courtCases(S), docket = docketToday(S);
   const k = COURT_BY_ID[lobby.caseId];
   const preview = castEpisode(S, { ...lobby, twist: undefined }, () => 0);  // lobby.standInSalt names the same neighbour the episode will use
@@ -139,6 +149,7 @@ function showLobby() {
     (backpay ? '<p class="sc-backpay">' + glyph('soul') + esc(backpay) + '</p>' : '') +
     docketLine(docket, k) +
     (courtSocial?.active() ? '<div data-sc-summons>' + summonsMarkup() + '</div>' : '') +
+    (bench?.active() ? '<div data-jc-lobby>' + bench.lobbyMarkup() + '</div>' : '') +
     careerPanel() +
     '<section class="sc-tonight" aria-label="Tonight’s episode"><span class="sc-kicker">Tonight’s episode</span><h3>' + esc(k.title) + '</h3>' +
     '<div class="sc-vs"><figure><span class="sc-vs-art">' + portrait(preview.p) + '</span><figcaption><small>Plaintiff</small>' + esc(preview.p.name) + tagChips(seatTags(preview, 'p')) + '</figcaption></figure><b>v.</b><figure><span class="sc-vs-art">' + portrait(preview.d) + '</span><figcaption><small>Defendant</small>' + esc(preview.d.name) + tagChips(seatTags(preview, 'd')) + '</figcaption></figure></div>' +
@@ -228,7 +239,7 @@ function takeSummons(id) {
   if (!c || !home || !pet || !COURT_BY_ID[c.caseId]) return;
   stopAll();
   const side = c.side === 'd' ? 'd' : 'p';
-  hearing = { summons: c, pet, side };
+  hearing = { summons: c, pet, side }; joint = null;
   // The visitor takes the side its owner chose; our resident takes the other.
   ep = castEpisode(S, { caseId: c.caseId, ...(side === 'p' ? { defendantId: home.id } : { plaintiffId: home.id }), guest: { side, pet } });
   if (ep) runEpisode(); else hearing = null;
@@ -267,8 +278,14 @@ function seatIcons(i) {
   const tags = seatTags(ep, i);
   return tags.length ? '<span class="sc-seat-tags" role="img" aria-label="' + esc(tags.map(t => t.text).join(' ')) + '">' + tags.map(t => ROLE_ICONS[t.role] || '').join('') + '</span>' : '';
 }
+// A juror from another shelf is labelled with where it came from: a suitcase
+// on the seat, the words in its title and in the cast notes.
+const SUITCASE = '<svg viewBox="0 0 12 12"><path d="M4 3V2h4v1h2.5v7h-9V3zm1 0h2V2.8H5z" fill="currentColor"/></svg>';
+const fromLine = who => (who.kind !== 'visitor' ? '' : who.owner === 'from' || who.owner === 'to' ? 'from ' + (who.from || 'a friend') + '’s shelf' : 'visiting from ' + (who.from || 'a friend'));
 function seat(juror, i) {
-  return '<span class="sc-seat" data-seat="' + i + '" title="' + esc(juror.name) + '"><span class="sc-seat-art">' + portrait(juror) + '</span>' + seatIcons(i) + '<i class="sc-vote" aria-hidden="true"></i><i class="sc-zzz" aria-hidden="true">z<b>z</b><b>z</b></i></span>';
+  const from = fromLine(juror);
+  return '<span class="sc-seat' + (from ? ' sc-visiting' : '') + '" data-seat="' + i + '" title="' + esc(juror.name + (from ? ', ' + from : '')) + '"><span class="sc-seat-art">' + portrait(juror) + '</span>' + seatIcons(i) +
+    (from ? '<span class="sc-seat-from" aria-hidden="true">' + SUITCASE + '</span>' : '') + '<i class="sc-vote" aria-hidden="true"></i><i class="sc-zzz" aria-hidden="true">z<b>z</b><b>z</b></i></span>';
 }
 const party = side => '<span class="sc-lectern"><small>' + (side === 'p' ? 'Plaintiff' : 'Defendant') + '</small><span>' + esc(ep[side].name) + '</span></span>';
 function studioMarkup(dress) {
@@ -297,7 +314,9 @@ function dressJudge(root, dress) {
 }
 // The cast, in a line you can read at a glance and a list that says what each one does.
 function castNotes() {
-  const notes = describeCast(ep);
+  const visitors = [...ep.jury.map(j => [j, 'sits on the jury']), ...(ep.witnesses || []).map(w => [w, 'is a character witness'])].filter(([who]) => fromLine(who))
+    .map(([who, role]) => ({ tag: 'Guest', text: who.name + ', ' + fromLine(who) + ', ' + role + '.' }));
+  const notes = [...describeCast(ep), ...visitors];
   if (!notes.length) return '';
   const chips = ['p', 'd'].flatMap(side => seatTags(ep, side).map(t => '<span class="sc-chip ' + t.role + '">' + esc(ep[side].name) + ' · ' + esc(t.tag) + '</span>')).join('');
   return '<details class="sc-castnotes"><summary><span class="sc-castnotes-label">Cast notes · ' + notes.length + '</span><span class="sc-tags">' + chips + '</span></summary><ul>' +
@@ -312,6 +331,7 @@ function showStudio() {
     castNotes() +
     '<div class="sc-box" data-sc-box role="button" tabindex="0" aria-label="Next line"><span class="sc-name" data-sc-name></span><p class="sc-text" data-sc-text aria-live="polite"></p><span class="sc-more" aria-hidden="true">▼</span></div>' +
     '<div class="sc-skiprow" data-sc-skiprow hidden><button class="btn btn-ghost btn-sm" type="button" data-sc="skip"></button></div>' +
+    (bench && joint ? bench.studioMarkup(joint) : '') +
     '<div class="sc-controls" data-sc-controls hidden></div>';
   meters();
   open();
@@ -327,9 +347,11 @@ function meters() {
 }
 
 /* ---------------- lines ---------------- */
-function play(list) {
+// `beat` names the stretch of script, so a Joint Bench reaction can be pinned
+// to the line it was made on and played back on the same line for the other judge.
+function play(list, beat = '') {
   return new Promise(resolve => {
-    queue = list.slice(); onDone = resolve; spoken = 0;
+    queue = list.map((line, i) => (beat ? { ...line, key: markKey(beat, i) } : line)); onDone = resolve; spoken = 0;
     const controls = $('[data-sc-controls]');
     if (controls) controls.hidden = true;
     nextLine();
@@ -356,6 +378,7 @@ function skip() {
 }
 function nameFor(line) {
   if (line.s === 'npc') return COURT_CAST[line.who]?.name || 'A witness';
+  if (line.s === 'w') { const w = ep.witnesses?.[line.who]; return w ? w.name + ', ' + (fromLine(w) || 'a character witness') : 'A witness'; }
   if (line.s === 'p') return ep.p.name + ', plaintiff';
   if (line.s === 'd') return ep.d.name + ', defendant';
   return ({ judge: 'Judge Mortis (you)', bailiff: 'Bailiff Rattigan', announcer: 'Announcer', reporter: 'Hall cam reporter', audience: 'Studio audience', jury: 'The jury' })[line.s] || '';
@@ -366,12 +389,13 @@ function setSpeaker(who) {
   st.querySelectorAll('.talking').forEach(el => el.classList.remove('talking'));
   st.classList.toggle('sc-applauding', who === 'audience');
 }
-function showWitness(who) {
+function showWitness(who, guest = null) {
   const spot = $('.sc-witness'); if (!spot) return;
   if (!who) { spot.hidden = true; spot.dataset.who = ''; return; }
   if (spot.dataset.who === who && !spot.hidden) return;
   spot.dataset.who = who;
-  spot.querySelector('.sc-witness-art').innerHTML = castSvg(COURT_CAST[who].art);
+  spot.querySelector('.sc-witness-art').innerHTML = guest ? portrait(guest) : castSvg(COURT_CAST[who].art);
+  spot.querySelector('.sc-witness-tag').textContent = guest ? 'Character witness' : 'Surprise witness';
   spot.hidden = false;
   spot.classList.remove('enter'); void spot.offsetWidth; spot.classList.add('enter');
   playTone(660, { duration: 0.1, type: 'square', gain: 0.05 });
@@ -385,16 +409,20 @@ function speak(line) {
   name.textContent = nameFor(line);
   name.hidden = !name.textContent;
   if (line.s === 'npc') showWitness(line.who);
-  setSpeaker(line.s);
+  else if (line.s === 'w' && ep.witnesses?.[line.who]) showWitness('guest-' + line.who, ep.witnesses[line.who]);
+  setSpeaker(line.s === 'w' ? 'npc' : line.s);
+  if (line.gavel) gavel('OPENED!');
+  lineAt = Date.now();
+  bench?.onLine(line, joint);
   cue(line);
   spoken++; skipUi();
   const hall = $('.sc-hall');
   if (hall && (line.s === 'reporter' || line.s === 'p' || line.s === 'd')) aimHall(line.s === 'reporter' ? line.who : line.s);
-  (hall?.querySelector('[data-actor="' + line.s + '"]') || $('[data-actor="' + line.s + '"]'))?.classList.add('talking');
+  (hall?.querySelector('[data-actor="' + line.s + '"]') || $('[data-actor="' + (line.s === 'w' ? 'npc' : line.s) + '"]'))?.classList.add('talking');
   let typed = 0;
   text.textContent = '';
   const full = line.t;
-  const voice = line.s === 'npc' ? NPC_VOICES[line.who] || 400 : VOICES[line.s];
+  const voice = line.s === 'npc' ? NPC_VOICES[line.who] || 400 : line.s === 'w' ? 420 : VOICES[line.s];
   typer = setInterval(() => {
     typed = Math.min(full.length, typed + 1);
     text.textContent = full.slice(0, typed);
@@ -558,8 +586,9 @@ function hallMarkup(losers, walker, boom) {
 function enterHallway(result) {
   const st = stage(); if (!st || !result.losers?.length) return;
   const tok = session;
-  const walker = result.winner && !reduced() && Math.random() < 0.65 ? ep[result.winner] : null;
-  st.insertAdjacentHTML('beforeend', hallMarkup(result.losers, walker, !busyEffects() && Math.random() < 0.6));
+  const roll = R(BEATS.hall);
+  const walker = result.winner && !reduced() && roll() < 0.65 ? ep[result.winner] : null;
+  st.insertAdjacentHTML('beforeend', hallMarkup(result.losers, walker, !busyEffects() && roll() < 0.6));
   st.classList.add('sc-hallway');
   aimHall(result.losers[0]);
   timecode(tok);
@@ -617,46 +646,52 @@ async function runEpisode() {
   applause(1600);
   // On a rerun the statements can be skipped after the first line; the twist's hint never is.
   if (ep.recap) skipMode = { label: 'Skip the opening', keep: true };
-  await play(episodeOpening(ep)); if (!alive()) return;
-  for (const gift of episodeReceipts(ep)) {
-    await play(gift.lines); if (!alive()) return;
+  await play(episodeOpening(ep, R(BEATS.opening)), BEATS.opening); if (!alive()) return;
+  // Character witnesses: guests visiting the shelf, or a friend's residents on a Joint Bench.
+  const witnesses = episodeWitnesses(ep, R(BEATS.witnesses));
+  if (witnesses.length) { await play(witnesses, BEATS.witnesses); if (!alive()) return; showWitness(''); }
+  const gifts = episodeReceipts(ep, R(BEATS.receipts));
+  for (const [n, gift] of gifts.entries()) {
+    await play(gift.lines, BEATS.receipts + n); if (!alive()) return;
     noteClue(gift.note); await wait(900); if (!alive()) return;
     meters();
   }
   for (let round = 0; round < QUESTIONS_PER_EPISODE; round++) {
     if (round === ep.plan.breakBefore && !ep.hadBreak) {
       await commercial(); if (!alive()) return;
-      await runHappening(randomHappening(ep)); if (!alive()) return;
+      await runHappening(randomHappening(ep, R(BEATS.scene(round)))); if (!alive()) return;
     }
     const index = await pickQuestion(round); if (!alive()) return;
     showWitness('');
-    const r = episodeAsk(ep, index);
-    await play(r.lines); if (!alive()) return;
+    const r = episodeAsk(ep, index, R(BEATS.ask(index)));
+    await play(r.lines, BEATS.ask(index)); if (!alive()) return;
     if (r.note) { noteClue(r.note); await wait(900); if (!alive()) return; }
     if (r.perks.some(perk => perk.id === 'showman')) { bubble('SHOWTIME!', 'sc-bang'); await wait(500); if (!alive()) return; }
     meters();
     if (r.happening) await runHappening(r.happening);
-    else if (round === ep.plan.extraAfter) await runHappening(randomHappening(ep));
+    else if (round === ep.plan.extraAfter) await runHappening(randomHappening(ep, R(BEATS.scene('x' + round))));
     if (!alive()) return;
   }
   showWitness('');
+  // A replay of a revealed hearing ends with the envelopes, not a ruling.
+  if (joint?.replay) { await bench.replayEnd(joint); return; }
   const ruling = await pickRuling(); if (!alive()) return;
-  const result = episodeRule(ep, ruling);
+  const result = episodeRule(ep, ruling, R(BEATS.rule(ruling)));
   gavel(ruling === 'both' ? 'BOTH IDIOTS!' : 'JUDGMENT!');
   if (ruling === 'both') later(() => judgeMood('sigh'), 950);
   await wait(700); if (!alive()) return;
-  await play(result.ruling); if (!alive()) return;
+  await play(result.ruling, BEATS.rule(ruling)); if (!alive()) return;
   await juryVote(result); if (!alive()) return;
   if (result.agree * 2 < ep.jury.length) judgeMood('irked');
-  await play(result.jury); if (!alive()) return;
+  await play(result.jury, BEATS.jury); if (!alive()) return;
   meters();
   if (ep.ratings >= 50) applause(2200);
-  await play([result.audience]); if (!alive()) return;
+  await play([result.audience], 'aud'); if (!alive()) return;
   // Cut to the hall cam under the static; the announcer talks over the cut.
   tvStatic(700);
   enterHallway(result);
   if (ep.recap) skipMode = { label: 'Skip the interview', keep: false };
-  await play(result.hallway); if (!alive()) return;
+  await play(result.hallway, BEATS.hall); if (!alive()) return;
   tvStatic(500);
   await wait(260); if (!alive()) return;
   leaveHallway();
@@ -666,14 +701,14 @@ async function runHappening(h) {
   if (!h || !ep) return;
   const tok = session;
   happeningStart(h);
-  await play(h.lines); if (tok !== session) return;
+  await play(h.lines, 'h:' + h.id); if (tok !== session) return;
   let choice = null;
   if (h.choice) {
     choice = await choose('<p class="sc-prompt">It is kicking off. Your call, Your Honour.</p><div class="sc-choice-row"><button class="btn sc-gavel-btn" type="button" data-sc-choice="gavel">Bang the gavel<small>The jury likes order</small></button><button class="btn sc-let-btn" type="button" data-sc-choice="let">Let it play<small>The ratings like chaos</small></button></div>');
     if (tok !== session) return;
-    if (choice === 'gavel') gavel(); else applause(1400);
+    if (choice === 'gavel') { gavel(); bench?.autoMark(joint, 'gavel', markKey('h:' + h.id, h.lines.length - 1)); } else applause(1400);
     await wait(choice === 'gavel' ? 600 : 300); if (tok !== session) return;
-    await play(resolveHappening(ep, h, choice)); if (tok !== session) return;
+    await play(resolveHappening(ep, h, choice, R(BEATS.resolve(h.id, choice))), BEATS.resolve(h.id, choice)); if (tok !== session) return;
   }
   happeningEnd(h, choice);
   meters();
@@ -724,18 +759,18 @@ async function objectionFlow(final) {
   const value = await choose(objectionPanel(final));
   if (tok !== session || value === 'cancel') return;
   if (value === 'press') {
-    const res = pressWitness(ep);
+    const res = pressWitness(ep, R(BEATS.press));
     if (!res) return;
     bubble('OBJECTION!', 'sc-bang'); judgeMood('irked');
     await wait(500); if (tok !== session) return;
-    await play(res.lines); if (tok !== session) return;
+    await play(res.lines, BEATS.press); if (tok !== session) return;
     noteClue(res.note); await wait(900);
   } else if (value.startsWith('note:')) {
-    const res = checkNote(ep, Number(value.slice(5)));
+    const res = checkNote(ep, Number(value.slice(5)), R(BEATS.objection));
     if (!res) return;
     bubble(res.outcome === 'struck' ? 'SUSTAINED!' : 'OVERRULED!', 'sc-bang');
     await wait(500); if (tok !== session) return;
-    await play(res.lines); if (tok !== session) return;
+    await play(res.lines, BEATS.objection); if (tok !== session) return;
     playUnlock();
   }
   meters();
@@ -765,16 +800,16 @@ function chooseRuling() {
 }
 async function commercial() {
   const tok = session;
-  const br = episodeBreak(ep);
-  await play([br.into]); if (tok !== session) return;
+  const br = episodeBreak(ep, R(BEATS.break));
+  await play([br.into], BEATS.break); if (tok !== session) return;
   tvStatic(600);
   await wait(300); if (tok !== session) return;
   const ad = layer('sc-ad', '<span class="sc-ad-tag">Advertisement</span><b>' + esc(br.ad.brand) + '</b>', 0);
   [523.3, 659.3, 784, 1046.5].forEach((f, i) => later(() => playTone(f, { duration: 0.14, type: 'square', gain: 0.04 }), i * 110));
-  await play(br.ad.lines.map(t => ({ s: 'announcer', t }))); if (tok !== session) return;
+  await play(br.ad.lines.map(t => ({ s: 'announcer', t })), 'ad'); if (tok !== session) return;
   ad?.remove();
   tvStatic(500);
-  await play([br.back]);
+  await play([br.back], 'back');
 }
 async function juryVote(result) {
   const tok = session;
@@ -809,7 +844,7 @@ function versionLine(res) {
     ' Versions seen: ' + v.seen + ' of ' + v.of + (v.isNew ? ' (a new one)' : '') + '</li>';
 }
 function finish() {
-  const res = courtFinish(S, ep, Date.now()), heard = ep.guest ? hearing : null;
+  const res = courtFinish(S, ep, Date.now()), heard = ep.guest ? hearing : null, judged = ep.joint ? joint : null;
   save();
   const k = episodeCase(ep);
   const truth = res.truth === 'plaintiff' ? ep.p.name + ' was right.' : res.truth === 'defendant' ? ep.d.name + ' was right.' : 'They were both idiots.';
@@ -818,20 +853,23 @@ function finish() {
   controls.innerHTML = '<div class="sc-wrap ' + (res.correct ? 'right' : 'wrong') + '"><span class="sc-kicker">That’s a wrap</span>' +
     '<div class="sc-wrap-stars" aria-label="' + res.stars + ' of 3 stars">' + stars(res.stars) + '</div>' +
     '<h3>' + (res.correct ? 'Justice, allegedly, was served' : 'You got it wrong, live on air') + '</h3>' +
-    '<p>' + esc(truth) + ' Ratings ' + res.ratings + '. The jury agreed ' + res.agree + ' to ' + (ep.jury.length - res.agree) + '.</p>' +
+    '<p>' + esc(truth) + ' Ratings ' + res.ratings + '. The jury agreed ' + res.agree + ' to ' + res.disagree + '.' + (ep.disagree + ep.agree < ep.jury.length ? ' ' + plural(ep.jury.length - ep.agree - ep.disagree, 'juror') + ' slept through it.' : '') + '</p>' +
     '<ul class="mh-rewards">' + (res.souls ? '<li class="souls">' + glyph('soul') + '+' + res.souls + ' souls</li>' : '<li>Today’s game purse is empty. You did it for the art.</li>') +
     (res.docket ? '<li class="souls">' + glyph('soul') + '+' + res.docket.bonus + ' for today’s docket' + (res.docket.streak > 1 ? ' · ' + res.docket.streak + ' days in session' : '') + '</li>' : '') +
     (res.trust ? '<li class="good">' + esc(res.trust) + ' trusts you a little more</li>' : '') +
     (res.grudge ? '<li class="bad">' + esc(res.grudge) + ' will remember this</li>' : '') +
     (res.firstAir ? '<li>Episode ' + (courtCases(S).findIndex(c => c.id === k.id) + 1) + ' aired · ' + res.aired + ' of ' + res.total + '</li>' : '') +
     versionLine(res) +
-    (heard ? '<li class="souls" data-sc-verdict>Sending the verdict to ' + esc(heard.summons.fromName || 'your friend') + '.</li>' : '') + '</ul>' +
+    (heard ? '<li class="souls" data-sc-verdict>Sending the verdict to ' + esc(heard.summons.fromName || 'your friend') + '.</li>' : '') +
+    (judged ? '<li class="jc-seal" data-jc-seal>' + esc(bench.sealingLine(judged)) + '</li>' : '') + '</ul>' +
     promotionMarkup(res.promotion) + careerLine(res) +
     (escapadeView(S).active?.ready ? '<div class="sc-actions"><button class="btn btn-primary" type="button" data-escapade="open">Our story’s ending ↗</button></div>' : '') +
-    '<div class="sc-actions"><button class="btn btn-primary sc-next" type="button" data-sc="next" disabled>Next episode</button><button class="btn" type="button" data-sc="lobby">Episode guide</button><button class="btn btn-ghost" type="button" data-sc="close">Back to the shelf</button></div></div>';
+    (judged ? '<div class="sc-actions" data-jc-wrap></div>' : '') +
+    '<div class="sc-actions">' + (judged ? '' : '<button class="btn btn-primary sc-next" type="button" data-sc="next" disabled>Next episode</button>') + '<button class="btn" type="button" data-sc="lobby">Episode guide</button><button class="btn btn-ghost" type="button" data-sc="close">Back to the shelf</button></div></div>';
   (res.promotion || res.stars >= 3 ? playAchievement : res.correct ? playStar : playError)();
   if (res.promotion) { bubble('PROMOTED!', 'sc-bang'); applause(2600); }
   if (heard) deliverVerdict(heard, res, ep.ruling);
+  if (judged) bench.sealed(judged, ep, res);
   const next = controls.querySelector('.sc-next');
   later(() => { if (next?.isConnected) { next.disabled = false; next.focus({ preventScroll: true }); } }, 650);
   refresh();
@@ -839,17 +877,17 @@ function finish() {
 
 /* ---------------- wiring ---------------- */
 function open() { if (!veil.classList.contains('open')) veil.classList.add('open'); }
-function close() { stopAll(); ep = null; hearing = null; veil.classList.remove('open'); refresh(); }
+function close() { stopAll(); ep = null; hearing = null; joint = null; veil.classList.remove('open'); refresh(); }
 // Today’s docket is a fixed version for everyone, so the lobby's choice does not apply to it.
 function roll() {
   stopAll();
-  hearing = null;
+  hearing = null; joint = null;
   ep = castEpisode(S, { ...lobby, twist: docketLocked(lobby.caseId) ? undefined : lobby.twist || undefined });
   if (ep) runEpisode();
 }
 const pickCase = id => { lobby.caseId = id; lobby.twist = ''; };
 
-export function openCourt(residentId, caseId) {
+export function openCourt(residentId, caseId, route = null) {
   if (!S || (!S.pets.length && !courtSocial?.active()) || document.querySelector('.veil.open:not(#courtVeil)')) return;
   scopePost();
   // Summons rewards that were over the daily cap are paid on the first day with room.
@@ -874,6 +912,27 @@ export function openCourt(residentId, caseId) {
   defaultLobby(residentId, true);
   showLobby();
   fetchPost();
+  bench?.refresh();
+  // Sent here from Friends: straight to a Joint Bench view.
+  if (route && bench?.active()) bench.route(route);
+}
+
+/* What the Joint Bench module may do with the studio. It owns its views and
+   its hearings; the studio, the lines and the episode stay here. */
+function courtStage() {
+  return {
+    state: () => S, sheet, esc, head, open, stopAll, choose, play, wait, later, gavel, applause, bubble, layer, reduced, stars, portrait,
+    alive: tok => tok === session, session: () => session, current: () => current, lineAt: () => lineAt, episode: () => ep, context: () => joint,
+    // Hear an episode as one of the two judges (or replay one): the studio takes it from here.
+    hear(next, context) { stopAll(); hearing = null; ep = next; joint = context; runEpisode(); },
+    // The studio with this cast on stage, for the reveal.
+    stageFor(next, context) { stopAll(); hearing = null; ep = next; joint = context; showStudio(); },
+    controls: () => $('[data-sc-controls]'),
+    // A page of the sheet that is not an episode (the Joint Bench's own forms).
+    view(cls, html) { stopAll(); ep = null; hearing = null; joint = null; sheet.className = 'sheet sheet-court sc-lobby ' + cls; sheet.innerHTML = html; open(); },
+    lobby() { if (S.pets.length) { defaultLobby(''); showLobby(); } else close(); },
+    save() { save(); }, refresh: () => refresh(), isOpen: () => veil.classList.contains('open')
+  };
 }
 
 export function initCourt(state, onRefresh, { social, cloud } = {}) {
@@ -886,8 +945,10 @@ export function initCourt(state, onRefresh, { social, cloud } = {}) {
   };
   social?.subscribe(accountChanged);
   cloud?.subscribe(accountChanged);
-  window.addEventListener('shelflife:court', e => openCourt(e.detail?.petId, e.detail?.caseId));
+  window.addEventListener('shelflife:court', e => openCourt(e.detail?.petId, e.detail?.caseId, e.detail?.joint || null));
+  bench = initJointBench({ state, social, cloud, stage: courtStage() });
   sheet.addEventListener('change', e => {
+    if (bench?.onChange(e)) return;
     if (e.target.dataset?.scVersion !== undefined) { lobby.twist = e.target.value; showLobby(); return; }
     const key = e.target.dataset?.scCast;
     if (!key) return;
@@ -897,6 +958,7 @@ export function initCourt(state, onRefresh, { social, cloud } = {}) {
     showLobby();
   });
   sheet.addEventListener('click', e => {
+    if (bench?.onClick(e)) return;
     const take = e.target.closest('[data-sc-take]');
     if (take) { takeSummons(take.dataset.scTake); return; }
     const decline = e.target.closest('[data-sc-decline]');

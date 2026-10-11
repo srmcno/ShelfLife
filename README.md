@@ -253,6 +253,17 @@ button at all, and a player without cloud save is pointed at Cloud save first.
   notices; closed-game phone push notifications are not supported.
   Hearing a case pays 15 souls and hearing a verdict pays 10,
   each for up to three summonses a day. A friend's resident never joins your shelf or its memories.
+- **The Joint Bench.** Serving papers now means judging them too: you hear the episode first (same case,
+  version, cast and seed as your friend will get), rule in secret, and your ruling is sealed on the server.
+  Your friend hears the identical episode, with the reactions you tapped (laugh, gasp, gavel) played back as
+  noises from the gallery, and rules. Then the bailiff opens both envelopes: a full bench (both right) pays
+  each of you 25 souls, three times a day; a divided bench reminds you that one of you is competent.
+  **Serve without judging** keeps the old one-sided summons. **Hear a case together** (from a friend’s
+  profile, or the Court lobby) does the same with any case you have aired or today’s docket, your household
+  on the podiums and their residents as character witnesses. Each friend’s profile and the Court lobby keep
+  the record: hearings, full benches and who is the better judge, with a replay of any revealed hearing.
+  Five open hearings per pair; an unanswered one expires after 14 days and your ruling then stands alone.
+  Residents visiting from a friend’s shelf sit on the jury, or give evidence when it is full.
 - **Cases you’ve sent** in Friends shows waiting papers, declined or expired cases, and verdicts
   even after you read them. Refresh checks for updates; Show older loads earlier cases. Open papers
   expire after 30 days. Rereading a verdict does not pay it again. Blocking deletes the shared cases;
@@ -394,7 +405,7 @@ abandoned runs, emergencies, coffins and the curio cabinet, expedition returns, 
 replay identity, all sixteen keepsakes,
 cancelled gestures, failed saves, responsive layouts, cloud save and friends against an in-memory Supabase
 (`test/support/fake-supabase.mjs`) and runtime errors
-in desktop Chromium and phone-sized Chromium/WebKit. `npm test` also runs both SQL migrations in PGlite. Offline reload is tested in Chromium;
+in desktop Chromium and phone-sized Chromium/WebKit. `npm test` also runs the SQL migrations in PGlite. Offline reload is tested in Chromium;
 Playwright does not support WebKit service-worker tooling. This is browser automation, not physical-device
 testing. `test/responsive-harness.html` provides additional local fixture exploration.
 
@@ -407,6 +418,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/content/court-twists*.js`, `src/engine/court-twists.js`, `src/engine/court-traits.js`, `src/engine/court-objection.js`, `src/engine/court-career.js`, `src/content/court-bonus.js`, `src/art/court-dress.js` | Shelf Court replay: twisted case versions and their validation, trait-driven cast, the Objection, the bench career and its cosmetics, bonus questions |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
 | `src/cloud/social.js`, `src/ui/friends.js`, `css/social.css` | Friends, shelves on show, Shelf Court summonses and daily boards |
+| `src/cloud/hearings.js`, `src/engine/court-joint.js`, `src/ui/court-joint.js`, `src/content/court-joint.js`, `src/engine/court-guests.js` | The Joint Bench: sealed hearings between friends, the reveal, the record, and guests on the jury |
 | `src/almanac-state.js`, `src/content/almanac.js`, `src/engine/almanac.js`, `src/ui/almanac.js`, `css/almanac.css` | The Almanac: calendar, track, XP, weekly challenges, Back Issues and the screens |
 | `src/engine/streaks.js`, `src/engine/returns.js`, `src/engine/claimables.js` | Streak freezes, the return chest and one list of everything claimable |
 | `src/engine/collections.js`, `src/engine/legacy.js`, `src/ui/collections.js` | Sets, Legacy ranks and tokens, and the Collector's Exchange |
