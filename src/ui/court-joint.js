@@ -9,8 +9,10 @@
 // section on a friend's profile. Nothing a friend sent is markup: every name
 // and title goes through esc().
 import { registerFriendAction, registerPostboxSource, registerFriendsSection } from './social-registry.js';
+import { sync } from '../cloud/index.js';
+import { toast } from './toast.js';
 import { createHearings, hearingText } from '../cloud/hearings.js';
-import { coopText } from '../cloud/coop.js';
+import { coopText, coopCode } from '../cloud/coop.js';
 import { socialText } from '../cloud/social.js';
 import { COURT_CASES } from '../content/court.js';
 import { REACTIONS, REACTION_IDS, FULL_BENCH_PAID, FULL_BENCH_SPENT, OUTCOMES } from '../content/court-joint.js';
@@ -305,7 +307,7 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
     const script = revealScript(ep, h, truth, nameOf(h));
     await stage.wait(400); if (!stage.alive(tok)) return;
     await stage.play(script.lines, 'reveal'); if (!live()) return;
-    let paid = 0, rewardError = '';
+    let paid = 0, rewardError = '', rewardRecovery = false;
     if (script.outcome === 'full') {
       try {
         const alreadyCollected = !!domain.rewards[owner]?.[h.id];
@@ -321,8 +323,11 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
         stage.refresh();
       } catch (error) {
         if (!live()) return;
-        rewardError = error.code === 'save_unavailable' ? 'The full-bench reward could not be saved. Free some storage and open the envelopes again.'
-          : error.code === 'reward_legacy' ? coopText(error)
+        const code = coopCode(error);
+        rewardRecovery = ['cloud_copy_required', 'household_sync_required'].includes(code);
+        rewardError = code === 'save_unavailable' ? 'The full-bench reward could not be saved. Free some storage and open the envelopes again.'
+          : code === 'reward_legacy' ? coopText(error)
+          : rewardRecovery ? 'Open Cloud save to choose your matching household or finish syncing. Then open the envelopes again to collect the full-bench reward.'
           : 'The full-bench reward is waiting. Open the envelopes again when you are online.';
       }
     }
@@ -335,7 +340,8 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
       '<h3>' + esc(script.title) + '</h3><ul class="jc-envelopes">' + envelope('You', h.mine) + envelope(nameOf(h), h.theirs) +
       '<li class="jc-truth"><b>The truth</b> ' + esc(truthLine(ep, truth)) + '</li></ul>' +
       (paid > 0 ? '<ul class="mh-rewards"><li class="souls">' + glyph('soul') + esc(FULL_BENCH_PAID.replace('{n}', paid)) + '</li></ul>' : paid < 0 ? '<p class="jc-note">' + esc(FULL_BENCH_SPENT) + '</p>' : '') +
-      (rewardError ? '<p class="jc-note" role="status">' + esc(rewardError) + '</p>' : '') + '<p class="jc-record" data-jc-record></p>' +
+      (rewardError ? '<p class="jc-note" role="status">' + esc(rewardError) + '</p>' : '') +
+      (rewardRecovery ? '<button class="btn btn-sm" type="button" data-jc="reward-copy">Open cloud save</button>' : '') + '<p class="jc-record" data-jc-record></p>' +
       '<div class="sc-actions">' + (h.status === 'revealed' ? '<button class="btn btn-primary" type="button" data-jc="replay" data-jc-id="' + esc(h.id) + '">Replay the hearing</button>' : '') +
       '<button class="btn" type="button" data-jc="lobby">Back to the lobby</button><button class="btn btn-ghost" type="button" data-sc="close">Back to the shelf</button></div></div>';
     controls.querySelector('.btn')?.focus({ preventScroll: true });
@@ -450,6 +456,16 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
   }
 
   /* ---------------- clicks and changes inside the Court sheet ---------------- */
+  async function openRewardCopy() {
+    const owner = hearings.userId(), domain = courtroomState(S).joint;
+    if (!owner || !active()) return;
+    sheet.querySelector?.('[data-sc="close"]')?.click();
+    document.getElementById('cloudBtn')?.click();
+    try { await sync.requestCopyChoice(); }
+    catch (error) {
+      if (hearings.userId() === owner && courtroomState(S).joint === domain) toast('Cloud save could not be read. Try opening it again when you are online.');
+    }
+  }
   function onClick(e) {
     const reactButton = e.target.closest('[data-jc-react]');
     const ctx = stage.context();
@@ -458,6 +474,7 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
     if (!b || b.disabled) return false;
     const action = b.dataset.jc, id = b.dataset.jcId || '';
     switch (action) {
+      case 'reward-copy': openRewardCopy(); return true;
       case 'invite': pickFriend(); return true;
       case 'serve': pickFriend({ serve: true }); return true;
       case 'friend': { const f = view?.friends?.find(x => x.userId === id); if (f) (view.serve ? serve(f) : invite(f)); return true; }

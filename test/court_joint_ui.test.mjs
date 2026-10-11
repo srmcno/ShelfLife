@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { sync } from '../src/cloud/index.js';
 import { initJointBench } from '../src/ui/court-joint.js';
 import { friendsSections, resetSocialRegistry } from '../src/ui/social-registry.js';
 
@@ -18,11 +19,12 @@ function setup() {
     return result;
   } };
   const social = { active: () => true };
-  const bench = initJointBench({ state: { pets: [] }, cloud, social, stage: { sheet: {}, isOpen: () => false } });
+  const stage = { sheet: {}, isOpen: () => false };
+  const bench = initJointBench({ state: { pets: [] }, cloud, social, stage });
   const section = friendsSections('friend').find(s => s.id === 'bench-record');
   let refreshed = 0;
   const ctx = { refresh: () => { refreshed++; }, isCurrent: () => true };
-  return { bench, section, friend, ctx, calls, refreshes: () => refreshed,
+  return { bench, stage, section, friend, ctx, calls, refreshes: () => refreshed,
     changeUser: value => { user = value; listeners.forEach(fn => fn()); }, count: value => { count = value; }, hold: () => { hold = true; }, release: () => release() };
 }
 
@@ -65,4 +67,19 @@ test('an account change clears records even while the Friends profile is closed'
   assert.doesNotMatch(w.section.render(w.ctx, w.friend), /1 hearing/);
   await tick();
   assert.match(w.section.render(w.ctx, w.friend), /4 hearings/);
+});
+
+
+test('the Joint reward recovery control closes Court and reads real Cloud save choices without adopting a shelf', async t => {
+  // Minimal host controls; the primary Cloud save journey is exercised through
+  // actual import/choice controls in browser/covens.spec.mjs.
+  const previous = globalThis.document, calls = [], w = setup();
+  globalThis.document = { getElementById: id => id === 'cloudBtn' ? { click: () => calls.push('cloud') } : null };
+  t.after(() => { if (previous === undefined) delete globalThis.document; else globalThis.document = previous; });
+  w.stage.context = () => null; w.stage.sheet.querySelector = () => ({ click: () => calls.push('close') });
+  t.mock.method(sync, 'requestCopyChoice', async () => { calls.push('choices'); return { status: 'conflict' }; });
+  t.mock.method(sync, 'resolve', () => assert.fail('the recovery launcher never chooses a copy for the player'));
+  const button = { disabled: false, dataset: { jc: 'reward-copy' } };
+  assert.equal(w.bench.onClick({ target: { closest: selector => selector === '[data-jc]' ? button : null } }), true);
+  await tick(); assert.deepEqual(calls, ['close','cloud','choices']);
 });

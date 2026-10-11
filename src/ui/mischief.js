@@ -10,6 +10,7 @@
 // mischief-doorstep; postbox sources are mischief-incoming, mischief-news,
 // mischief-helps and mischief-doorstep. Buttons inside carry data-sx.
 import { registerFriendAction, registerPostboxSource, registerFriendsSection, registerSocialView } from './social-registry.js';
+import { coopCode } from '../cloud/coop.js';
 import { createMischief, mischiefText, mischiefCode, FINAL } from '../cloud/mischief.js';
 import {
   receiveInbox, settleMischief, declineHex, dropFriend, outboxFor, clearOutbox, helped, takeKnock, activeHaunt,
@@ -234,7 +235,15 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
       if ((state.coop?.money?.pending || []).some(op => op.owner === user && op.detail?.reward === 'mischief_shoo')) {
         const purse = state.coop;
         try { await (await import('./coop.js')).reconcileCoopWallet(user); }
-        catch (error) { if (current(user, null, domain)) toast(error.code === 'reward_legacy' ? 'The saved ghost reward needs recovery before it can be collected.' : 'The ghost reward is saved and waiting for a connection.'); }
+        catch (error) {
+          if (current(user, null, domain)) {
+            const code = coopCode(error);
+            toast(code === 'save_unavailable' ? 'The ghost reward is saved. Free some device storage before collecting it.'
+              : ['cloud_copy_required', 'household_sync_required'].includes(code) ? 'The ghost reward is saved. Open Cloud save to choose your matching household or finish syncing.'
+              : code === 'reward_legacy' ? 'The saved ghost reward needs recovery before it can be collected.'
+              : 'The ghost reward is saved and waiting for a connection.');
+          }
+        }
         if (!current(user, null, domain) || state.coop !== purse) return null;
       }
       announce(news, added);

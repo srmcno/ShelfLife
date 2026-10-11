@@ -14,7 +14,7 @@
 import { registerFriendAction, registerPostboxSource, registerFriendsSection, registerSocialView } from './social-registry.js';
 import { cloud, social, sync } from '../cloud/index.js';
 import { createCovenClient, covenText } from '../cloud/coven.js';
-import { coopText } from '../cloud/coop.js';
+import { coopText, coopCode } from '../cloud/coop.js';
 import { CloudError } from '../cloud/client.js';
 import { formatCode, cleanCode } from '../cloud/social.js';
 import { state as liveState, save, Store } from '../state.js';
@@ -493,11 +493,12 @@ async function busyRun(ctx, work, focus) {
   try { await work(); }
   catch (error) {
     if (identity(user, version)) {
-      recoveryCode = error.code || '';
-      say(ctx, error.code === 'save_unavailable' ? 'Your device could not save the reward. Free some storage and try again.'
-        : error.code === 'cloud_copy_required' ? 'Choose the matching household in Cloud save before collecting this reward.'
-        : error.code === 'household_sync_required' ? 'Your complete household needs to finish syncing before this reward can be collected.'
-        : error.code === 'reward_legacy' ? coopText(error) : covenText(error));
+      const code = coopCode(error);
+      recoveryCode = code;
+      say(ctx, code === 'save_unavailable' ? 'Your device could not save the reward. Free some storage and try again.'
+        : code === 'cloud_copy_required' ? 'Choose the matching household in Cloud save before collecting this reward.'
+        : code === 'household_sync_required' ? 'Your complete household needs to finish syncing before this reward can be collected.'
+        : code === 'reward_legacy' ? coopText(error) : covenText(error));
     }
   }
   finally { if (identity(user, version)) { busy = false; if (currentCtx(ctx)) repaint(focus); } }
