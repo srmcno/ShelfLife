@@ -11,9 +11,42 @@
 // compatibility fixture for the unreleased prototype; live-path tests use
 // the real opening/budget checks. Raw state: wallets, receipts, holds.
 
+import { createHash } from 'node:crypto';
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PET = /^[A-Za-z0-9_-]{1,100}$/;
 const TRAIT = /^[a-z0-9-]{1,24}$/;
+// UUIDv8 from sha256('shelflife.currency.v1:' + lowercase owner + ':' + key), mirroring private.currency_id.
+export function currencyId(owner, key) {
+  const h = createHash('sha256').update('shelflife.currency.v1:' + String(owner).toLowerCase() + ':' + key, 'utf8').digest().subarray(0, 16);
+  h[6] = (h[6] & 0x0f) | 0x80;
+  h[8] = (h[8] & 0x3f) | 0x80;
+  const x = h.toString('hex');
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
+}
+const canon = v => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, canon(v[k])])) : v;
+const UINT = v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 999999999;
+function checkSemantic(owner, id, detail, stop) {
+  const reward = detail?.reward;
+  let key = null;
+  if (reward === 'coven_chest') {
+    if (!UINT(detail.week) || !UINT(detail.tier)) stop('bad_op');
+    key = `coven_chest:${detail.week}:${detail.tier}`;
+  } else if (reward === 'coven_invite') {
+    if (typeof detail.userId !== 'string' || !UUID.test(detail.userId)) stop('bad_op');
+    key = 'coven_invite:' + detail.userId.toLowerCase();
+  } else if (reward === 'joint_bench') {
+    if (typeof detail.hearing !== 'string' || !UUID.test(detail.hearing)) stop('bad_op');
+    key = 'joint_bench:' + detail.hearing.toLowerCase();
+  }
+  if (key === null) return;
+  if (id !== currencyId(owner, key)) stop('bad_op');
+  for (const f of ['curio', 'frame']) {
+    if (f in detail && detail[f] !== null && typeof detail[f] !== 'string') stop('bad_op');
+    if (typeof detail[f] === 'string' && detail[f].length > 64) stop('bad_op');
+  }
+}
+
 export const COOP_CAPS = { frenzy: 3000, stack: 500, seance: 150, whack: 2500 };
 const HOUR = 3600000, DAY = 24 * HOUR;
 const size = value => new TextEncoder().encode(JSON.stringify(value)).length;
@@ -380,11 +413,9 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       const won = d.outcome === (user.id === d.challenger ? 'challenger' : 'opponent');
       const mine = holdsOf(d).filter(h => !h.released_at && (won || (h.owner === user.id && (d.outcome === 'void' || d.outcome === 'tie'))));
       const owed = mine.reduce((n, h) => n + h.amount, 0), own = mine.filter(h => h.owner === user.id).reduce((n, h) => n + h.amount, 0);
-      let r = null;
-      if (owed > 0) {
-        r = append(user.id, 'duel', d.id, owed, owed - own, duelDetail(user.id, d));
-        for (const h of mine) Object.assign(h, { released_at: now(), released_to: user.id, release_receipt: r.id });
-      }
+      // Every settlement leaves a receipt, a zero one when nothing is owed.
+      const r = append(user.id, 'duel', d.id, owed, owed > 0 ? owed - own : 0, duelDetail(user.id, d));
+      if (owed > 0) for (const h of mine) Object.assign(h, { released_at: now(), released_to: user.id, release_receipt: r.id });
       if (user.id === d.challenger) d.claimed_challenger = true; else d.claimed_opponent = true;
       return { ok: true, souls: owed, receipt: receiptJson(r) };
     },
@@ -404,6 +435,36 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       return { ...walletJson(user.id), accepted };
     },
     coop_wallet(user) { return walletJson(user.id); },
+    // Mirrors souls earned or spent elsewhere (one shared purse). Idempotent per id and payload; a spend may leave debt.
+    coop_adjust(user, { p_ops }) {
+      if (!Array.isArray(p_ops) || p_ops.length < 1 || p_ops.length > 100) stop('bad_op');
+      const w = walletOf(user.id);
+      if (w.opening === null) stop('needs_opening');
+      const staged = [];
+      const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+      for (const item of p_ops) {
+        if (!item || typeof item !== 'object' || Array.isArray(item) || Object.keys(item).some(k => !['id', 'delta', 'earned', 'detail'].includes(k))) stop('bad_op');
+        if (typeof item.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(item.id)) stop('bad_op');
+        if (!Number.isInteger(item.delta) || Math.abs(item.delta) > 100000000) stop('bad_op');
+        if (!Number.isInteger(item.earned) || item.earned < 0 || item.earned > 100000000) stop('bad_op');
+        const detail = item.detail === undefined || item.detail === null ? null : item.detail;
+        if (detail !== null && (typeof detail !== 'object' || Array.isArray(detail) || JSON.stringify(detail).length > 4096)) stop('bad_op');
+        checkSemantic(user.id, item.id, detail, stop);
+        const had = receiptOf(user.id, 'game', item.id) || staged.find(x => x.id === item.id);
+        if (had) {
+          if (had.delta !== item.delta || had.earned !== item.earned || !same(had.detail ?? null, detail)) stop('bad_op');
+          staged.push({ id: item.id, same: true, delta: had.delta, earned: had.earned, detail: had.detail ?? null });
+          continue;
+        }
+        staged.push({ id: item.id, delta: item.delta, earned: item.earned, detail });
+      }
+      const made = new Map();
+      const out = staged.map(x => {
+        if (!x.same) { const r = append(user.id, 'game', x.id, x.delta, x.earned, x.detail); made.set(x.id, r); return r; }
+        return receiptOf(user.id, 'game', x.id);
+      });
+      return { ok: true, receipts: out.map(receiptJson), balance: available(user.id), last_seq: w.last_seq };
+    },
     coop_receipts(user, { p_after = 0 } = {}) {
       if (p_after !== null && p_after !== undefined && !Number.isInteger(p_after)) return badType('bigint');
       const after = Math.max(p_after || 0, 0);

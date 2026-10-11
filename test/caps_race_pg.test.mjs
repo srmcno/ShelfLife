@@ -136,3 +136,64 @@ test('the day-count switch serialises with passive marks: after a switch-off not
   // However the marks were ordered against the switch-off, once it stands nothing remains counted.
   assert.equal(out, '1|0|0');
 });
+
+// ---------------------------------------------------------------------------
+// Co-op shared purse: the same operation from many connections lands once, a
+// known reward cannot be granted twice under any id, and a spend racing stakes
+// never lets a stake through without funds. There are no earning caps.
+// ---------------------------------------------------------------------------
+test('Co-op: one game receipt sent from eight connections at once is one receipt', opts, async () => {
+  const U = USERS[15];
+  await profile(U, 'Uma');
+  await db.as(U, `select public.coop_open(50, 0);`);
+  const op = '40000000-0000-4000-8000-000000000001';
+  const results = await db.race(Array.from({ length: 8 }, () => [U, `select public.coop_adjust('[{"id":"${op}","delta":0,"earned":120,"detail":{"reason":"income"}}]'::jsonb);`]));
+  assert.equal(ok(results), 8, JSON.stringify(refusals(results)));
+  assert.equal(await db.admin(`select count(*) from public.coop_receipts where owner = '${U}' and kind = 'game';`), '1');
+  assert.equal(await db.admin(`select delta || '/' || earned from public.coop_receipts where owner = '${U}' and kind = 'game';`), '0/120');
+});
+
+test('Co-op: a changed payload racing the original lands exactly one version, the other is refused', opts, async () => {
+  const U = USERS[11];
+  await profile(U, 'Val');
+  await db.as(U, `select public.coop_open(0, 0);`);
+  const op = '41000000-0000-4000-8000-000000000001';
+  const calls = [10, 20, 10, 20].map(d => [U, `select public.coop_adjust('[{"id":"${op}","delta":${d},"earned":${d}}]'::jsonb);`]);
+  const results = await db.race(calls);
+  assert.ok(refusals(results).every(e => /bad_op/.test(e)), JSON.stringify(refusals(results)));
+  assert.equal(await db.admin(`select count(*) from public.coop_receipts where owner = '${U}' and kind = 'game';`), '1');
+  const won = Number(await db.admin(`select delta from public.coop_receipts where owner = '${U}' and kind = 'game';`));
+  assert.equal(ok(results), results.filter((_, i) => [10, 20, 10, 20][i] === won).length);
+});
+
+test('Co-op: the canonical reward id races from many devices and pays once; a random id for the same reward never lands', opts, async () => {
+  const U = USERS[10];
+  await profile(U, 'Wes');
+  await db.as(U, `select public.coop_open(0, 0);`);
+  const id = await db.admin(`select private.currency_id('${U}', 'coven_chest:7:2');`);
+  const detail = '{"reward":"coven_chest","week":7,"tier":2,"curio":"moth-wing","frame":null}';
+  const calls = Array.from({ length: 6 }, () => [U, `select public.coop_adjust('[{"id":"${id}","delta":15,"earned":15,"detail":${detail}}]'::jsonb);`]);
+  calls.push([U, `select public.coop_adjust('[{"id":"42000000-0000-4000-8000-000000000001","delta":15,"earned":15,"detail":${detail}}]'::jsonb);`]);
+  const results = await db.race(calls);
+  assert.equal(ok(results), 6, JSON.stringify(refusals(results)));
+  assert.equal(await db.admin(`select count(*) from public.coop_receipts where owner = '${U}' and kind = 'game';`), '1');
+  assert.equal(await db.admin(`select coalesce(sum(delta), 0) from public.coop_receipts where owner = '${U}';`), '15');
+});
+
+test('Co-op: big real earnings land without a cap, and a spend racing stakes cannot fund a stake that is not there', opts, async () => {
+  const U = USERS[9], targets = USERS.slice(0, 3);
+  await profile(U, 'Xan');
+  for (const t of targets) await friends(U, t);
+  await db.as(U, `select public.coop_open(30, 0);`);
+  const big = await db.as(U, `select public.coop_adjust('[{"id":"43000000-0000-4000-8000-000000000001","delta":9000000,"earned":9000000}]'::jsonb);`);
+  assert.equal(big.value.balance, 9000030, JSON.stringify(big));
+  await db.as(U, `select public.coop_adjust('[{"id":"43000000-0000-4000-8000-000000000002","delta":-9000000,"earned":0}]'::jsonb);`);
+  const calls = targets.map(t => [U, `select public.coop_duel_create('${t}', 'stack', 25);`]);
+  calls.push([U, `select public.coop_adjust('[{"id":"43000000-0000-4000-8000-000000000003","delta":-5,"earned":0}]'::jsonb);`]);
+  const results = await db.race(calls);
+  const staked = Number(await db.admin(`select count(*) from public.coop_receipts where owner = '${U}' and kind = 'stake';`));
+  const balance = Number(await db.admin(`select (opening + total - opening_base) from public.coop_wallets where owner = '${U}';`));
+  // 30 funds exactly one 25 stake whichever order the -5 spend lands in; the rest are refused.
+  assert.equal(staked, 1, JSON.stringify(refusals(results)));
+  assert.equal(balance, 30 - 5 - 25 + 9000000 - 9000000);
+});
