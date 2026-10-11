@@ -84,3 +84,55 @@ test('Kin: introductions to one recipient from many senders at once stop at ten 
   assert.equal(ok(results), 10, JSON.stringify(refusals(results)));
   assert.equal(await db.admin(`select count(*) from public.kin_pals where (user_a = '${recipient}' or user_b = '${recipient}') and history = 'introduced';`), '10');
 });
+
+// ---------------------------------------------------------------------------
+// Lock order. Every RPC takes the shared account locks (private.lock_account
+// and private.lock_accounts) BEFORE any friendship, basket, pal, letter,
+// hearing or coven row lock. A kin basket (friendship row, then account) and a
+// hearing (account, then friendship row) between the same two players used to
+// wait on each other, and Postgres aborted one with SQLSTATE 40P01.
+// ---------------------------------------------------------------------------
+test('mixed operations between one pair never deadlock: baskets, hearings, introductions and replies', opts, async () => {
+  const [P, Q] = [USERS[12], USERS[13]];
+  await profile(P, 'Pax'); await profile(Q, 'Quin');
+  await friends(P, Q);
+  await shelf(P, [resident('p0', 'Pip'), resident('p1', 'Pop')]);
+  await shelf(Q, [resident('q0', 'Quill'), resident('q1', 'Quip')]);
+  await db.admin(`insert into public.summons (from_user, to_user, case_id, plaintiff, defendant)
+    values ('${P}', '${Q}', 'borrowed-coffin', '{"id":"p0","name":"Pip"}', '{"id":"q0","name":"Quill"}');`);
+  const cast = JSON.stringify({ v: 1, p: { kind: 'pet', id: 'p0', name: 'Pip', owner: 'from' }, d: { kind: 'pet', id: 'q0', name: 'Quill', owner: 'to' },
+    jury: [{ kind: 'stock', id: 'j1', name: 'A Juror' }], witnesses: [] });
+  const ruling = JSON.stringify({ ruling: 'defendant', truth: 'plaintiff', stars: 2, ratings: 87, agree: 4, dissent: 1 });
+  const parent = JSON.stringify(resident('p0', 'Pip'));
+  let deadlocks = 0, total = 0;
+  for (let round = 0; round < 4; round++) {
+    const calls = [];
+    for (let i = 0; i < 3; i++) {
+      calls.push([P, `select public.kin_leave_basket('${Q}', '${parent}'::jsonb, 'q0');`]);
+      calls.push([P, `select public.open_hearing('${Q}', 'served', 'borrowed-coffin', '', ${6000 + round * 10 + i}, '${cast}'::jsonb, '${ruling}'::jsonb, '[]'::jsonb);`]);
+      calls.push([Q, `select public.open_hearing('${P}', 'invite', 'borrowed-coffin', '', ${7000 + round * 10 + i}, '${cast}'::jsonb, '${ruling}'::jsonb, '[]'::jsonb);`]);
+      calls.push([Q, `select public.kin_introduce('${P}', 'q1', 'p1');`]);
+      calls.push([P, `select public.kin_introduce('${Q}', 'p0', 'q0');`]);
+    }
+    const results = await db.race(calls);
+    total += results.length;
+    deadlocks += results.filter(r => !r.ok && /deadlock/i.test(r.error)).length;
+    await db.admin(`delete from public.kin_baskets where from_user in ('${P}', '${Q}'); delete from public.hearings where from_user in ('${P}', '${Q}');`);
+  }
+  assert.ok(total >= 60);
+  assert.equal(deadlocks, 0, 'a call was aborted by the deadlock detector');
+});
+
+test('the day-count switch serialises with passive marks: after a switch-off nothing is counted', opts, async () => {
+  const U = USERS[14];
+  const today = await db.admin(`select to_char(current_date, 'YYYY-MM-DD');`);
+  await db.as(U, `select public.mark_play_day('${today}');`);
+  const calls = [[U, `select public.forget_play_days();`]];
+  for (let i = 0; i < 6; i++) calls.push([U, `select public.mark_play_day('${today}');`], [U, `select public.mark_active_day();`]);
+  const results = await db.race(calls);
+  assert.ok(results.every(r => r.ok), JSON.stringify(refusals(results)));
+  const out = await db.admin(`select (select count(*) from private.play_day_optouts where user_id = '${U}'),
+    (select count(*) from public.play_days where user_id = '${U}'), (select count(*) from public.active_days where user_id = '${U}');`);
+  // However the marks were ordered against the switch-off, once it stands nothing remains counted.
+  assert.equal(out, '1|0|0');
+});

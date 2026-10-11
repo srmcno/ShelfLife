@@ -349,8 +349,8 @@ begin
   if p_seed is null or p_seed < 1 then perform private.refuse('bad_hearing'); end if;
   perform private.check_cast(p_cast);
   ruling := private.clean_ruling(p_ruling);
-  -- The sender's daily cap is counted under the sender's lock.
-  perform private.lock_account(uid);
+  -- Both players' account locks come before the pair's friendship row lock below.
+  perform private.lock_accounts(uid, p_to);
   if (select count(*) from public.hearings where from_user = uid and created_at > now() - interval '1 day') >= 20 then
     perform private.refuse('rate_limited');
   end if;

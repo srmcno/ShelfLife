@@ -529,6 +529,7 @@ begin
   if private.coven_blocked(p_user, c) then perform private.refuse('not_found'); end if;
   if private.coven_dnd(p_user) then perform private.refuse('dnd'); end if;
   if private.coven_of(p_user) is not null then perform private.refuse('in_a_coven'); end if;
+  perform private.lock_account(uid);  -- account lock before the coven row lock, as in coven_rate
   perform 1 from public.covens where id = c for update;
   if (select count(*) from public.coven_members where coven_id = c) >= 6 then perform private.refuse('coven_full'); end if;
   delete from public.coven_invites where coven_id = c and created_at < now() - interval '7 days';
@@ -941,6 +942,7 @@ declare
   uid uuid := private.require_user();
   today date := private.coven_today();
 begin
+  perform private.lock_account(uid);
   -- A player who switched the day count off (0006's private.play_day_optouts) is not counted here either.
   if to_regclass('private.play_day_optouts') is not null then
     if exists (select 1 from private.play_day_optouts where user_id = uid) then
