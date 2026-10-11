@@ -84,7 +84,7 @@ export function friendRow(f, { confirm = '', level = null, count = 0, mail = fal
   const when = f.shelfAt ? 'Shelf updated ' + timeAgo(f.shelfAt) : 'No shelf on show yet';
   const sub = [level?.name, count ? count + (count === 1 ? ' resident' : ' residents') : '', when].filter(Boolean).join(' · ');
   return '<li class="fr-friend" data-user="' + id + '"><button class="fr-row-open" type="button" data-fr="profile" data-user="' + id + '">' +
-    '<span class="fr-who"><b>' + who + (mail ? '<i class="fr-dot" title="Mail from ' + who + '"></i><span class="sr-only">, has sent you something</span>' : '') + '</b>' +
+    '<span class="fr-who"><b>' + who + (mail ? '<i class="fr-dot" title="Mail from ' + who + '"></i>' : '') + '</b>' + (mail ? '<span class="sr-only">Has sent you something.</span>' : '') +
     '<small>' + esc(sub) + '</small></span><span class="fr-strip" data-fr-strip="' + id + '" aria-hidden="true">' + strip + '</span></button>' +
     (confirm ? confirmBox(confirm, f) : '') + '</li>';
 }

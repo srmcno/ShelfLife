@@ -104,6 +104,7 @@ registerPostboxSource({
         ctx.save(); ctx.renderAll();
         window.dispatchEvent(new CustomEvent('shelflife:guests'));
         shown = { ending, kept };
+        await ctx.reloadMail();
       });
       if (shown) showEnding(ctx, shown.ending, shown.kept);
     }

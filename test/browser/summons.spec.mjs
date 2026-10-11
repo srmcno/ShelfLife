@@ -131,8 +131,8 @@ test('papers served, the case heard in Shelf Court, the verdict read, and friend
   await page.locator('#tabMore').click();
   await page.locator('#friendsBtn').click();
   const beaRow = page.locator('#friendsSheet .fr-friend').filter({ hasText: 'Bea' });
-  await beaRow.locator('[data-fr="menu"]').click();
-  await beaRow.locator('[data-fr="serve"]').click();
+  await beaRow.locator('[data-fr="profile"]').click();
+  await page.locator('#friendsSheet [data-fr-action="serve"]').click();
   await expect(page.locator('#friendsSheet .fr-status')).toHaveText('Choose whom to sue.');
   await expect(page.locator('#friendsSheet .fr-res [data-fr="papers"]').first()).toBeFocused();
   await page.locator('#friendsSheet .fr-res').filter({ hasText: 'Snag' }).locator('[data-fr="papers"]').click();
@@ -150,9 +150,13 @@ test('papers served, the case heard in Shelf Court, the verdict read, and friend
   await page.locator('#tabMore').click();
   await expect(page.locator('#friendsBtnSub')).toHaveText('Shelves, papers and scores');
   await page.locator('#friendsBtn').click();
-  await expect(page.locator('#friendsSheet .fr-inbox')).toContainText('1 set of papers waits for you in Shelf Court.');
+  // The papers are in the postbox, the one list for everything friends send.
+  await expect(page.locator('#friendsSheet [data-fr="postbox"]')).toContainText('1 waiting for you');
   await expect(page.locator('#friendsBadge')).toHaveText('1');
-  await page.locator('#friendsSheet [data-fr="court"]').click();
+  await page.locator('#friendsSheet [data-fr="postbox"]').click();
+  const served = page.locator('#friendsSheet [data-fr-mail="summons"]');
+  await expect(served).toContainText('Agnes, from Ada, is suing Snag over The Borrowed Coffin.');
+  await served.locator('[data-sx="court"]').click();
   await expect(page.locator('#courtVeil')).toHaveClass(/open/);
   const summons = page.locator('#courtSheet .sc-summons-case');
   await expect(summons).toHaveText(/Agnes, from Ada, is suing Snag over The Borrowed Coffin\./);

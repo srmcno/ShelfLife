@@ -67,8 +67,8 @@ test('serving papers immediately adds a waiting case and offers View my cases', 
   await openFriends(page);
   await expect(history(page)).toContainText('No cases sent yet.');
   const bea = page.locator('#friendsSheet .fr-friend').filter({ hasText: 'Bea' });
-  await bea.locator('[data-fr="menu"]').click();
-  await bea.locator('[data-fr="serve"]').click();
+  await bea.locator('[data-fr="profile"]').click();
+  await page.locator('#friendsSheet [data-fr-action="serve"]').click();
   await page.locator('#friendsSheet .fr-res').filter({ hasText: 'Snag' }).locator('[data-fr="papers"]').click();
   await page.locator('#frCase').selectOption('borrowed-coffin');
   await page.locator('#frPlaintiff').selectOption('qa0');

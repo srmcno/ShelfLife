@@ -365,8 +365,8 @@ test('a sender who chose to be the defendant is heard that way, and the verdict 
   await page.locator('#tabMore').click();
   await page.locator('#friendsBtn').click();
   const row = page.locator('#friendsSheet .fr-friend').filter({ hasText: 'Bea' });
-  await row.locator('[data-fr="menu"]').click();
-  await row.locator('[data-fr="serve"]').click();
+  await row.locator('[data-fr="profile"]').click();
+  await page.locator('#friendsSheet [data-fr-action="serve"]').click();
   await page.locator('#friendsSheet .fr-res').filter({ hasText: 'Snag' }).locator('[data-fr="papers"]').click();
   await page.locator('#frCase').selectOption('borrowed-coffin');
   await page.locator('#frPlaintiff').selectOption({ label: 'Agnes' });

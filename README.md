@@ -259,9 +259,29 @@ button at all, and a player without cloud save is pointed at Cloud save first.
   removing a friend deletes their open papers. Server housekeeping may remove old history.
 - **Daily challenge scores** go up when you play today's challenge. Friends appear by name (top five);
   everyone else is one line, such as "You beat 64% of players today". No stranger is ever named.
-- **Remove**, **Block** and **Report** sit in each friend's row. Blocking removes the friendship,
-  tears up any papers between you and makes your code stop working for them; they are not told.
+- **Remove**, **Block** and **Report** sit on each friend's profile and on every piece of their mail.
+  Blocking removes the friendship, tears up everything between you (papers, visits, treats, signatures,
+  waves) and makes your code stop working for them; they are not told.
   Reports go to a table only the project owner can read, with the name and shelf the reporter saw.
+- **The hub.** Home shows the postbox, requests, your friends (a strip of their residents, how close you
+  are, a dot when they have sent you something), your code and **Do not disturb**. Tap a friend for their
+  profile: household, cabinet highlights, guestbook, your history together and everything you can do with
+  them, with the reason when something is not available today.
+- **The postbox** is one list for everything friends send: papers, verdicts, visit requests, postcards,
+  treats, guestbook signatures and waves, newest first, with **Clear read**. The More tray badge and the
+  shelf notice count all of it.
+- **Visits.** Send a copy of one resident to stay on a friend's shelf for one to three days. They accept
+  or decline within 48 hours. A guest sits on the spare plank under the host's cabinet with a "visiting
+  from" tag; the host can feed, fuss and wash it (nothing can harm it) and it answers in character. At
+  home the resident shows "away at Bea’s". When the stay ends the sender gets a postcard written from what
+  the host actually did and a souvenir, the host gets a thank-you note, and both get a few souls (three
+  visits a day pay). Guests never count towards the household, achievements, rank or the arcade.
+- **Treats** (one a day per friend, the first five opened each day pay souls, unopened ones go off after
+  a week), **guestbooks** (one signature a day from 24 lines and six stamps; the owner can tear out any
+  page) and **waves and pokes** at a friend's resident (three a day) are all chosen from canned lines.
+- **Friendship levels** count cases, visits, treats, signatures, waves, trades and joint hearings, a few
+  a day each, from Acquaintance to Co-conspirators.
+- **Do not disturb** stops new visits, treats, waves and papers; what has arrived stays.
 
 Nothing is public: there is no search, no global list of names and no way to see a stranger's shelf.
 Every reply from the server is checked again before the game draws it: text is clamped and escaped,
@@ -312,6 +332,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/content/court-twists*.js`, `src/engine/court-twists.js`, `src/engine/court-traits.js`, `src/engine/court-objection.js`, `src/engine/court-career.js`, `src/content/court-bonus.js`, `src/art/court-dress.js` | Shelf Court replay: twisted case versions and their validation, trait-driven cast, the Objection, the bench career and its cosmetics, bonus questions |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
 | `src/cloud/social.js`, `src/ui/friends.js`, `css/social.css` | Friends, shelves on show, Shelf Court summonses and daily boards |
+| `src/ui/social-registry.js`, `src/cloud/postbox.js`, `src/engine/visits.js`, `src/visits-state.js`, `src/ui/postbox.js`, `src/ui/guests.js`, `css/postbox.css` | The Friends hub's plug points, the postbox, visits, treats, guestbooks, waves and levels |
 | `src/almanac-state.js`, `src/content/almanac.js`, `src/engine/almanac.js`, `src/ui/almanac.js`, `css/almanac.css` | The Almanac: calendar, track, XP, weekly challenges, Back Issues and the screens |
 | `src/engine/streaks.js`, `src/engine/returns.js`, `src/engine/claimables.js` | Streak freezes, the return chest and one list of everything claimable |
 | `src/engine/collections.js`, `src/engine/legacy.js`, `src/ui/collections.js` | Sets, Legacy ranks and tokens, and the Collector's Exchange |
@@ -424,7 +445,8 @@ a real project (set `SHELF_REAL_CLOUD_CONFIG=1` to serve the real one).
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run `supabase/migrations/0001_accounts_and_saves.sql`, then
-   `supabase/migrations/0002_social.sql` for Friends. Running either again is harmless.
+   `supabase/migrations/0002_social.sql` for Friends and `supabase/migrations/0003_postbox_visits.sql` for the
+   postbox, visits, treats, guestbooks and levels. Running any of them again is harmless.
 3. Authentication → Sign In / Providers: enable **Anonymous sign-ins**, keep **Email** on, and enable
    **Confirm email**. Disabling confirmation automatically attaches email addresses to anonymous
    accounts without sending a code; the game refuses that configuration before changing the account.
