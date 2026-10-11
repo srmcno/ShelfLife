@@ -143,6 +143,7 @@ const SHELL = [
   "./src/ui/mischief-ghost.js",
   "./css/mischief.css",
   "./src/coop-state.js",
+  "./src/reward-state.js",
   "./src/content/coop.js",
   "./src/engine/coop.js",
   "./src/engine/coop-money.js",
