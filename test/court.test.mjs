@@ -241,7 +241,7 @@ test('the guide offers unaired cases first and records survive a reload', () => 
     { episodes: 3, justice: 3, best: { 'borrowed-coffin': 3 }, last: '', docketDay: '', docketStreak: 0, docketLastDay: '',
       summonsDay: '', summonsHeard: 0, summonsVerdicts: 0, summonsPaid: [],
       versions: {}, recent: [], seats: {}, stars: 0, rank: 0, flawless: 0, flawlessBest: 0, summonsOwed: [],
-      joint: { paid: [], day: '', benches: 0 } });
+      joint: { paid: [], day: '', benches: 0, rewards: {}, unowned: [] } });
 });
 
 test('the hall cam: the announcer cuts to the hallway and a reporter asks each loser in turn', () => {
