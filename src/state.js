@@ -11,6 +11,7 @@ import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.
 import { RESIDENT_TENURE } from './content/resident-life.js';
 import { blankRetention, normalizeRetention } from './almanac-state.js';
 import { normalizeTesting } from './tester-state.js';
+import { normalizeCovenState } from './coven-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -404,6 +405,7 @@ export function normalizeState(raw) {
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
   s.tester = s.tester === true; // set for good by the tester panel (src/tester-state.js)
   s.testing = normalizeTesting(s.testing); // What's new, check-ins and the play-day switch
+  s.coven = normalizeCovenState(s.coven); // covens: counting, chests, cupboard, trophies (src/coven-state.js)
   return s;
 }
 

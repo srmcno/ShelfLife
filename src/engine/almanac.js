@@ -169,7 +169,7 @@ export function weeklyChallenges(weekNo) {
   });
 }
 
-function readCounters(state, now) {
+export function readCounters(state, now) {
   const m = mayhemState(state), pets = state.pets || [], today = localDayKey(now), arcade = state.arcade || {}, court = state.courtroom || {};
   const chores = m.chores?.day === today ? m.chores : null;
   return {
