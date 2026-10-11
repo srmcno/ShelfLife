@@ -805,6 +805,7 @@ test('a known reward has one canonical semantic id: derived from sha256, validat
 });
 
 test('Joint Bench pays at most three times a local day: the rest are canonical unpaid, and the original request is remembered', async () => {
+  await call(M, 'public.coop_open($1, $2)', [0, 0]);
   const hid = n => '27000000-0000-4000-8000-' + String(n).padStart(12, '0');
   const jb = (n, day, paid = true) => game(currencyId(M, 'joint_bench:' + hid(n)), paid ? 25 : 0, paid ? 25 : 0, { reward: 'joint_bench', hearing: hid(n), day, curio: null, frame: null, paid });
   const first = await adjust(M, [jb(1, '2026-11-3'), jb(2, '2026-11-3')]);
