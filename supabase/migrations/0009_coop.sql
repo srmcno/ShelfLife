@@ -1426,7 +1426,10 @@ $$;
 -- the reward and the keys are
 --   coven_chest  coven_chest:<week>:<tier>      detail.week, detail.tier (integers)
 --   coven_invite coven_invite:<userId>          detail.userId (the referred uuid)
---   joint_bench  joint_bench:<hearingUuid>      detail.hearing (uuid)
+--   joint_bench  joint_bench:<hearingUuid>      detail.hearing (uuid), day (local Y-M-D), paid (bool),
+--                                               delta = earned = 25 if paid else 0
+--   mischief_shoo mischief_shoo:<hauntUuid>     detail.haunt_id (uuid), day, paid (bool), taps (5..99),
+--                                               delta = earned = 15 if paid else 0
 -- and the id must equal the derived one (bad_op otherwise). curio and frame are
 -- the actual award ids or null. Other detail fields are kept as sent.
 create or replace function private.currency_id(p_owner uuid, p_key text)
@@ -1501,10 +1504,25 @@ begin
         v_key := 'coven_invite:' || lower(v_detail ->> 'userId');
       elsif v_reward = 'joint_bench' then
         if jsonb_typeof(v_detail -> 'hearing') is distinct from 'string'
-           or (v_detail ->> 'hearing') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
+           or (v_detail ->> 'hearing') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+           or jsonb_typeof(v_detail -> 'day') is distinct from 'string' or (v_detail ->> 'day') !~ '^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$'
+           or jsonb_typeof(v_detail -> 'paid') is distinct from 'boolean'
+           or v_delta <> (25 * (v_detail ->> 'paid')::boolean::int) or v_earned <> v_delta then
           perform private.refuse('bad_op');
         end if;
         v_key := 'joint_bench:' || lower(v_detail ->> 'hearing');
+      elsif v_reward = 'mischief_shoo' then
+        if jsonb_typeof(v_detail -> 'haunt_id') is distinct from 'string'
+           or (v_detail ->> 'haunt_id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+           or jsonb_typeof(v_detail -> 'day') is distinct from 'string' or (v_detail ->> 'day') !~ '^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$'
+           or jsonb_typeof(v_detail -> 'paid') is distinct from 'boolean'
+           or jsonb_typeof(v_detail -> 'taps') is distinct from 'number' or (v_detail ->> 'taps') !~ '^[0-9]{1,3}$'
+           or (v_detail ->> 'taps')::int not between 5 and 99
+           or v_delta <> (15 * (v_detail ->> 'paid')::boolean::int) or v_earned <> v_delta then
+          perform private.refuse('bad_op');
+        end if;
+        -- The day is not in the key: a restored retry on a later day is the same event.
+        v_key := 'mischief_shoo:' || lower(v_detail ->> 'haunt_id');
       end if;
       if v_key is not null then
         if v_id <> private.currency_id(uid, v_key) then perform private.refuse('bad_op'); end if;
