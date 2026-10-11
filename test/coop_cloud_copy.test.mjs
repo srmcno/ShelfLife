@@ -46,16 +46,20 @@ test('a new populated device must choose its existing cloud household before usi
   assert.equal(safety.mayhem.souls, 0); assert.equal(safety.pets[0].name, 'Different shelf');
 });
 
-test('keeping an unrelated local shelf preserves both copies without declaring another opening grant', async () => {
+test('the trusted boundary refuses keeping an unrelated local shelf over an existing account wallet household', async () => {
   const d = await setup(household(50, 'Local choice'));
   assert.equal((await d.sync.check()).status, 'conflict');
-  assert.equal((await d.sync.resolve('local')).status, 'idle');
+  const refused = await d.sync.resolve('local');
+  assert.equal(refused.status, 'conflict'); assert.equal(refused.error.code, 'cloud_copy_required');
   assert.equal(d.local.mayhem.souls, 50); assert.equal(d.local.pets[0].name, 'Local choice');
   assert.equal(d.local.coop.money.pending.length, 0);
+  assert.equal(d.fake.saves.get(d.player.id).data.mayhem.souls, 120, 'the complete account copy survives the refused overwrite');
   const wallet = await d.server.wallet();
   assert.throws(() => assertCoopOpening(d.local, d.player.id, wallet), { code: 'cloud_copy_required' });
   const safety = JSON.parse(d.saved.getItem(SAFETY_KEY)); assert.equal(safety.mayhem.souls, 120);
   assert.equal((await d.server.wallet()).balance, 100, 'the cloud-copy choice is not a currency adjustment');
+  assert.equal((await d.sync.resolve('cloud')).status, 'idle');
+  assert.equal(d.local.mayhem.souls, 120); assert.equal(JSON.parse(d.saved.getItem(SAFETY_KEY)).mayhem.souls, 50);
 });
 
 test('keeping a matching household preserves its genuine unsynced earnings but blocks during the unresolved conflict', async t => {

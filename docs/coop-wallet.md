@@ -4,7 +4,7 @@ Co-op uses one durable receipt ledger per signed-in account. The shelf remains a
 
 Before the first wager, the client saves an opening snapshot with its owner and receipt cursor. The server accepts that opening once. Subsequent ordinary game earnings and purchases are separate saved operations, rather than another opening balance.
 
-A device whose local household has no matching opening cannot adopt an existing account's server balance or declare a second grant. Co-op offers **Open cloud save**. The existing cloud dialog lets the player choose between **Keep this device** and **Use the cloud copy**, retaining the other shelf as a safety copy for one week. Using the matching cloud household restores its opening, cursor and pending operations. Keeping an unrelated local household preserves normal offline gameplay, but Co-op still needs the account's matching cloud household. A copy choice never counts as game income.
+A device whose local household has no matching opening cannot adopt an existing account's server balance or declare a second grant. Co-op offers **Open cloud save**. The existing cloud dialog lets the player choose between **Keep this device** and **Use the cloud copy**, retaining the other shelf as a safety copy for one week. Using the matching cloud household restores its opening, cursor and pending operations. The server refuses an unrelated local copy that would remove the existing opening or confirmed ordinary reward/purchase provenance, including after **Keep this device**. Both copies survive; local offline gameplay remains available, and **Use the cloud copy** restores that account's household. A copy choice never counts as game income.
 
 ## Saving and retrying
 

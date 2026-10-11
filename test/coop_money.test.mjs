@@ -182,6 +182,11 @@ test('the labelled strict server budget tracks ordinary spend after opening and 
   bindCoopMoney(s, ada.id); bindCoopMoney(twin, ada.id); await server.openWallet(100);
   const duel = await server.duelCreate(bea.id, 'stack', 25);
   spendSouls(s, 90); const operation = captureCoopMoney(s, ada.id, id);
+  await assert.rejects(server.adjustMoney([operation]), { code: 'household_sync_required' });
+  assert.equal((await server.wallet()).balance, 75, 'unacknowledged gameplay cannot change the durable budget');
+  // Labelled full-household fixture checkpoint; actual upload/CAS behavior is
+  // exercised by the wallet-controller and cloud-copy tests.
+  fake.setRemote(ada.id, s, { device: 'android-source' });
   await server.adjustMoney([operation]); await server.adjustMoney([operation]);
   assert.equal((await server.wallet()).balance, -15, 'the spend is retained rather than ignored or clamped');
   await assert.rejects(server.duelCreate(bea.id, 'stack', 25), { code: 'insufficient_souls' });
@@ -200,7 +205,9 @@ test('the labelled strict server budget tracks ordinary spend after opening and 
   }
   assert.equal((await server.wallet()).balance, 10);
   assert.equal(fake.coop.receipts.filter(r => r.owner === ada.id && r.kind === 'game').length, 1);
-  addSouls(s, 100); const earned = captureCoopMoney(s, ada.id, id); await server.adjustMoney([earned]);
+  addSouls(s, 100); const earned = captureCoopMoney(s, ada.id, id);
+  fake.setRemote(ada.id, s, { device: 'android-source' });
+  await server.adjustMoney([earned]);
   const next = await server.receipts(s.coop.ledger[ada.id].seq);
   assert.throws(() => applyCoopReceipts(twin, ada.id, next.receipts), { code: 'cloud_copy_required' });
   twin = normalizeState(structuredClone(s));
