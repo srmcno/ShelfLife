@@ -10,6 +10,8 @@ import { recordEscapadeEvent } from '../escapade-state.js';
 import { fileScene } from '../paperwork-state.js';
 import { RESIDENT_TENURE } from '../content/resident-life.js';
 import { rewardGame } from './mayhem.js';
+import { guestCrew, queueHireReport } from './coop.js';
+import { normalizeOutingGuest } from '../coop-state.js';
 const checked = new WeakSet();
 export function lifeState(state) {
   if (!state.life || !checked.has(state.life)) { state.life=normalizeLife(state.life,state.pets.length>0); checked.add(state.life); }
@@ -135,11 +137,14 @@ export function outingSnapshot(state) {
     return {choice,available,preview:available?{nerve:move.nerve,toolUsed:move.toolUsed,points:move.points,partIndex:o.mission&&choice!==0?o.step:null,partNew:!!(o.mission&&choice!==0&&!stored.includes(o.step))}:null,label:choice===0?(o.mission?'Leave this part & recover':'Take the quiet way around'):choice===1?step.options[1]:step.good===o.gear?step.options[0]:o.mission?'Save the tool for another stop':'Improvise with '+GEAR.find(g=>g.id===o.gear).name.toLowerCase(),hint:o.masteryTier>=2&&o.step===0&&choice===1?missionHint+' · opens a different route for stops 2 and 3':o.mission?missionHint:choice===0?'0 points · restore 2 nerve (maximum 3)':choice===1?'+'+step.points+' points · costs '+cost+' nerve'+(expertise.includes(step.stat)?' · crew skill helps':''):toolUsed?'Equipment already used this trip':'+'+(step.good===o.gear?3:1)+' points · use your equipment once · no nerve cost'};
   }):[]};
 }
-export function outingPreview(state, routeId, gearId, cast) {
+// `guest` is hired help from a friend's shelf (engine/coop.js): its stats count
+// at every stop, and it is never one of state.pets.
+export function outingPreview(state, routeId, gearId, cast, guest=null) {
   const route=OUTINGS.find(x=>x.id===routeId);
   const crew=state.pets.filter(p=>Array.isArray(cast)&&cast.includes(p.id));
   if(!route||!GEAR.some(x=>x.id===gearId)||!crew.length)return null;
-  return route.steps.map(step=>({gear:step.good===gearId,skill:crew.some(p=>(p.stats?.[step.stat]||0)>=7),stat:step.stat}));
+  const all=[...crew,...guestCrew(guest)];
+  return route.steps.map(step=>({gear:step.good===gearId,skill:all.some(p=>(p.stats?.[step.stat]||0)>=7),stat:step.stat}));
 }
 export function startOuting(state, routeId, gearId, cast, options={}) {
   const l=lifeState(state);
@@ -147,12 +152,14 @@ export function startOuting(state, routeId, gearId, cast, options={}) {
   const learning = options.learning ? (options.practice ? 0 : mastery(state,'expedition').tier) : null;
   const ids=[...new Set(cast)].filter(id=>state.pets.some(p=>p.id===id)).slice(0,2);
   if(!outingPreview(state,routeId,gearId,ids))return false;
-  const crew=state.pets.filter(p=>ids.includes(p.id));
+  const guest=options.practice?null:normalizeOutingGuest(options.guest);
+  const crew=[...state.pets.filter(p=>ids.includes(p.id)),...guestCrew(guest)];
   const edition=Number.isInteger(options.edition)&&options.edition>=0&&options.edition<8?options.edition:l.outings%8;
   const expertise=learning===0?[]:['cute','menace','damp','mystique'].filter(stat=>crew.some(p=>(p.stats?.[stat]||0)>=7));
   l.outing={...(learning!==null?{masteryTier:learning,practice:options.practice===true,receipt:masteryTicket(state,'expedition')}:{}),version:2,edition,expertise,route:routeId,gear:gearId,cast:ids,step:0,score:0,log:[],choices:[],nerve:2,toolUsed:false};
   if(options.mission===true){l.outing.mission=true;if(options.missionRevision!==1)l.outing.missionRevision=2;}
   if(OUTING_DARES.some(d=>d.id===options.dare))l.outing.dare=options.dare;
+  if(guest)l.outing.guest=guest;
   return true;
 }
 // Replay the same route rules with a fresh completion receipt. Mastery may
@@ -162,7 +169,8 @@ export function retryOuting(state) {
   if(!previous||previous.version!==2||previous.step!==3||!finishOuting(state))return false;
   const learning=Number.isInteger(previous.masteryTier);
   const started=startOuting(state,previous.route,previous.gear,previous.cast,{edition:previous.edition,dare:previous.dare,mission:previous.mission===true,missionRevision:previous.missionRevision||1,learning,practice:previous.practice===true});
-  if(started){const next=lifeState(state).outing;next.expertise=previous.expertise.slice();if(learning)next.masteryTier=previous.masteryTier;}
+  // Hired help is hired for one trip: a retry keeps only what this shelf's own crew knows.
+  if(started){const next=lifeState(state).outing,own=state.pets.filter(p=>previous.cast.includes(p.id));next.expertise=previous.expertise.filter(stat=>!previous.guest||own.some(p=>(p.stats?.[stat]||0)>=7));if(learning)next.masteryTier=previous.masteryTier;}
   return started;
 }
 export function chooseOuting(state, choice, now=Date.now()) {
@@ -192,7 +200,8 @@ export function chooseOuting(state, choice, now=Date.now()) {
   l.outings++;dailyActivity(state,'outing',now);l.introDone=true;
   crew.forEach(p=>{p.needs.fuss=clamp(p.needs.fuss+8,0,100);p.expeditions=(p.expeditions||0)+1;});
   if(crew.length===2){state.stories||={};state.stories.relationships||={};const key=crew.map(p=>p.id).sort().join('|');const r=state.stories.relationships[key]||={time:0,plots:0};r.plots=(r.plots||0)+1;r.lastPlotAt=now;}
-  const text=crew.map(p=>p.name).join(' and ')+' returned with '+relic.name.toLowerCase()+'. '+relic.line+' '+line;
+  const names=[...crew.map(p=>p.name),...(o.guest?[o.guest.name+' (from '+(o.guest.from.name||'a friend')+'’s shelf)']:[])];
+  const text=(names.length>2?names.slice(0,-1).join(', ')+' and '+names.at(-1):names.join(' and '))+' returned with '+relic.name.toLowerCase()+'. '+relic.line+' '+line;
   recordScene(state,'outing',route.name,text,crew.map(p=>p.id),now,{key:'outing',branch:route.id,object:relic.id});addNote(state,text,'beyond the shelf','scheme');rewardGame(state,now);
   o.result={relic:relic.id,fresh};
   if(o.receipt && !o.practice && !o.returnedAt && o.score>=3) {
@@ -214,6 +223,7 @@ export function chooseOuting(state, choice, now=Date.now()) {
       if(o.result.pageFresh){l.trailPages.push(page);l.xp+=2;}
     }
   }
+  if(o.guest)queueHireReport(state,o,outingSnapshot(state)?.steps||[],tier,crew.map(p=>p.name),now);
   return {complete:true,text,fresh,relic,supported};
 }
 export function useProject(state,id,now=Date.now()) {

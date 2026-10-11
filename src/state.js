@@ -10,6 +10,7 @@ import { blankCourtroom, normalizeCourtroom } from './court-state.js';
 import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.js';
 import { RESIDENT_TENURE } from './content/resident-life.js';
 import { blankRetention, normalizeRetention } from './almanac-state.js';
+import { normalizeCoop } from './coop-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -398,6 +399,7 @@ export function normalizeState(raw) {
   delete s.rug; // The retired play rug kept trick journals here; earned discoveries stay in life.
   s.mayhem = normalizeMayhem(s.mayhem, s, now);
   s.arcade = normalizeArcade(s.arcade);
+  s.coop = normalizeCoop(s.coop); // co-op: hired help and duels (coop-state.js)
   s.courtroom = normalizeCourtroom(s.courtroom);
   normalizeRetention(s, now); // the Almanac, streak freezes, return chest, Legacy, collections, exchange and owned decor
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);

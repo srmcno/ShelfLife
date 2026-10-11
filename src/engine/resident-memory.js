@@ -3,6 +3,7 @@
 import { normalizeEscapades } from '../escapade-state.js';
 import { escapadeAtVersion } from '../content/escapades-legacy.js';
 import { RESIDENT_TENURE } from '../content/resident-life.js';
+import { coopMemories } from '../coop-state.js';
 const traits = (pet, list) => list.some(id => pet.traits?.includes(id));
 const count = n => Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 const pairKey = (a, b) => [a, b].sort().join('|');
@@ -39,6 +40,8 @@ export function residentMemories(state, pet, now = Date.now()) {
   const tenure = RESIDENT_TENURE.find(milestone => milestone.days === latestTenureDay);
   if (tenure) add('tenure:' + tenure.days, tenure.callbacks[residentVoice(pet)] || tenure.callbacks.plain,
     tenure.title + ' was recorded from this resident\'s move-in date.');
+  // A trip on a friend's expedition as hired help (engine/coop.js).
+  for (const m of coopMemories(state, pet)) add(m.key, m.text, m.evidence);
   const episode = escapadeAtVersion(replay?.stage?.branch || kept?.episodeId, replay ? replay.stage?.contentVersion : kept?.contentVersion);
   const ending = episode?.endings.find(e => replay ? (replay.stage?.endingId ? e.id === replay.stage.endingId : e.keepsake === replay.stage?.object) : e.id === kept?.endingId);
   if (ending) add('escapade:' + episode.id + ':' + ending.id, ending.callback.replaceAll('{name}', () => pet.name),

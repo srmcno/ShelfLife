@@ -1,4 +1,5 @@
 // Compact, versioned save data. No DOM, clock changes, or external services.
+import { normalizeOutingGuest } from './coop-state.js';
 export function blankLife() {
   return { v:1, introDone:false, introStarted:false, xp:0, day:'', daily:[], awards:[], scenes:[], serial:0,
     relics:[], displayed:[], frame:'wood', visitorEpisodes:{}, outing:null, outings:0, projects:[], projectParts:{}, trailPages:[],
@@ -32,6 +33,7 @@ export function normalizeLife(raw, established=false) {
       if(['bold','thrifty','steady'].includes(o.dare))s.outing.dare=o.dare;
       if(o.mission===true){s.outing.mission=true;if(o.missionRevision===2)s.outing.missionRevision=2;}
       if(o.mission===true&&Number.isInteger(o.returnedAt)&&o.returnedAt>=1&&o.returnedAt<=2)s.outing.returnedAt=o.returnedAt;
+      const guest=normalizeOutingGuest(o.guest);if(guest)s.outing.guest=guest;
     }else s.outing.choices=s.outing.choices.filter(x=>x===0||x===1);
     if(obj(o.result)&&typeof o.result.relic==='string'){
       s.outing.result={relic:o.result.relic.slice(0,30),fresh:o.result.fresh===true};
