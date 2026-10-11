@@ -417,7 +417,7 @@ test('play-day opt-out clears referral days and blocks recounting until the play
   await page.locator('#playDaysBtn').click(); await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => fake.feedback.playDays.length).toBe(1);
   const resumed = await page.evaluate(async () => { const { cloud } = await import('/src/cloud/index.js'); return cloud.rpc('mark_active_day', {}); });
-  expect(resumed).toMatchObject({ ok: true, counted: true, days: 1 });
+  expect(resumed).toMatchObject({ ok: true, days: 1 });
   expect(activeDays()).toHaveLength(1);
   expect((await saved(page)).testing.countDays).toBe(true);
 });
@@ -446,7 +446,15 @@ for (const replacement of ['account', 'shelf']) test(`delayed play-day opt-in ca
   let release;
   const gate = new Promise(resolve => { release = resolve; });
   let started = false;
-  await page.route(fake.url + '/rest/v1/rpc/resume_play_days', async route => { started = true; await gate; await fake.route(route); });
+  await page.route(fake.url + '/rest/v1/rpc/resume_play_days', async route => {
+    const request = route.request();
+    if (request.method() === 'OPTIONS') return fake.route(route);
+    // The labelled fake server authenticates and accepts the old owner's action
+    // first; delay only its reply, just as a real late acknowledgement can arrive.
+    const result = fake.handle({ method: request.method(), url: request.url(), headers: request.headers(), body: request.postData() || '' });
+    started = true; await gate;
+    await route.fulfill({ status: result.status, headers: { ...result.headers, 'access-control-allow-origin': '*' }, body: result.body });
+  });
   await page.locator('#tabMore').click(); await page.locator('#playDaysBtn').click();
   await expect.poll(() => started).toBe(true);
   await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'false');

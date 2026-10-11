@@ -184,3 +184,27 @@ test('broken fake renderers and missing custom handlers leave the Friends sheet 
   await page.evaluate(async () => { const registry = await import('/src/ui/social-registry.js'); registry.resetSocialRegistry(); registry.registerPostboxSource({ id: 'fake-empty', load: async () => [] }); });
   await page.locator('[data-fr="postbox"]').click(); await expect(page.locator('#friendsSheet')).toContainText('Empty. Not even a bill.');
 });
+
+test('the host renderAll callback repaints the wallet and ignores an obsolete account context', async ({ page }) => {
+  const { bea } = await setup(page);
+  await page.evaluate(async () => {
+    const registry = await import('/src/ui/social-registry.js');
+    registry.registerFriendAction({ id: 'fake-wallet', label: 'Fake wallet reward', run: (_, ctx) => {
+      globalThis.fakeWalletContext = ctx;
+      ctx.state.mayhem.souls += 30; ctx.save(); ctx.renderAll();
+    } });
+  });
+  await openFriends(page); await visit(page, bea);
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.v4')).mayhem.souls);
+  await page.getByRole('button', { name: 'Fake wallet reward' }).click();
+  await expect(page.locator('#soulsHud .souls-count b')).toHaveText(String(before + 30));
+  await expect(page.locator('#soulsHud')).toHaveAttribute('aria-label', before + 30 + ' souls. Open the Cabinet of Curiosities.');
+  await page.evaluate(async () => { const { cloud, social } = await import('/src/cloud/index.js'); await cloud.signOut(); await cloud.signInAnonymously(); social.optIn(); });
+  const displayed = await page.locator('#soulsHud .souls-count b').textContent();
+  await page.evaluate(async () => {
+    const { state } = await import('/src/state.js'); state.mayhem.souls += 71;
+    // A paused test clock isolates this callback from ordinary scheduled renders.
+    fakeWalletContext.renderAll();
+  });
+  await expect(page.locator('#soulsHud .souls-count b')).toHaveText(displayed);
+});
