@@ -15,7 +15,7 @@ import { createTradeSync } from '../src/cloud/trade-sync.js';
 import { normalizeTrades, blankTrades, tradesState } from '../src/trade-state.js';
 import {
   spareCount, spares, applyTrade, packingFor, residentBlock, offerBlock, acceptBlock, toggleWish, seatWaiting, lastLineFor, firstLineFor, tradeBook,
-  collectWaiting, effectAsTrade, ledgerCursor, declaredHoldings
+  collectWaiting, effectAsTrade, ledgerCursor, declaredHoldings, setLedgerCursor, pruneApplied
 } from '../src/engine/trades.js';
 import { readLedger, readLedgerEntry } from '../src/cloud/trades.js';
 import { LAST_LINES, FIRST_LINES, WELCOME_LINES, FAREWELL_LINES, TRADE_LINES } from '../src/content/trades.js';
@@ -64,6 +64,25 @@ async function world(adaCurios = { 'moth-wing': 3, 'glass-eye': 2, 'tiny-coffin'
 }
 const curioDraft = (give, want = {}) => ({ mode: 'curio', give, want });
 const curios = state => ({ ...state.mayhem.curios });
+
+test('returning to an account after old notices and eight other account cursors cannot replay its gift', async () => {
+  const { ada, bea } = await world({ 'moth-wing': 3 }, {});
+  const gift = await ada.sync.propose({ to: bea.id, toName: 'Bea', draft: curioDraft({ 'moth-wing': 1 }) });
+  await bea.sync.sync({ force: true });
+  await bea.sync.accept(bea.sync.cache().trades.find(t => t.id === gift.id));
+  await bea.sync.sync({ force: true });
+  assert.equal(bea.state.mayhem.curios['moth-wing'], 1);
+  assert.equal(ledgerCursor(bea.state, bea.id), 1);
+  clock += 76 * DAY;
+  pruneApplied(bea.state, clock);
+  assert.equal(bea.state.trades.applied.length, 0, 'old display history has been pruned');
+  for (let i = 1; i <= 8; i++) setLedgerCursor(bea.state, `10000000-0000-4000-8000-${String(i).padStart(12, '0')}`, i);
+  bea.state.trades = normalizeTrades(clone(bea.state.trades), bea.state, clock);
+  assert.equal(ledgerCursor(bea.state, bea.id), 1, 'the durable account cursor survives rotation and reload');
+  const result = await bea.sync.sync({ force: true });
+  assert.equal(result.results.length, 0);
+  assert.equal(bea.state.mayhem.curios['moth-wing'], 1, 'the permanent ledger does not pay the same gift again');
+});
 
 test('the content pools are long enough, curly and dash free', () => {
   for (const [pool, min] of [[LAST_LINES, 12], [FIRST_LINES, 12], [WELCOME_LINES, 12], [FAREWELL_LINES, 6], [TRADE_LINES, 8]]) {

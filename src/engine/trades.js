@@ -16,7 +16,7 @@
 // Settlements arrive from the account's ledger (0004 trade_ledger), in the
 // order they were sealed, after the cursor this copy saved. A restored backup
 // has an old cursor and so reads everything since, however long ago.
-import { tradesState, TRADE_CURIO_IDS, WISHLIST_MAX, APPLIED_MAX, PORTRAIT_MAX, NOTICE_MAX, MAX_ART_CHARS, LEDGER_USERS_MAX, tradeArt } from '../trade-state.js';
+import { tradesState, TRADE_CURIO_IDS, WISHLIST_MAX, APPLIED_MAX, PORTRAIT_MAX, NOTICE_MAX, MAX_ART_CHARS, tradeArt } from '../trade-state.js';
 import { mayhemState } from '../mayhem-state.js';
 import { addNote, defaultNeeds, normalizePetArt, clamp } from '../state.js';
 import { CURIO_BY_ID } from './mayhem.js';
@@ -105,9 +105,10 @@ export function ledgerCursor(state, me) {
 export function setLedgerCursor(state, me, seq) {
   const t = tradesState(state);
   if (!t.ledger || typeof t.ledger !== 'object') t.ledger = {};
-  if (!me || !Number.isSafeInteger(seq) || seq <= ledgerCursor(state, me)) return false;
-  delete t.ledger[me];
-  t.ledger = { [me]: seq, ...Object.fromEntries(Object.entries(t.ledger).slice(0, LEDGER_USERS_MAX - 1)) };
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(me || '') || !Number.isSafeInteger(seq) || seq <= ledgerCursor(state, me)) return false;
+  // Display history expires; the account cursor must survive so its permanent
+  // settlement ledger cannot debit or deliver the same trade a second time.
+  t.ledger[me] = seq;
   return true;
 }
 // Settlements before this belong to an older copy's history (see trade-state.js).

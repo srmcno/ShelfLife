@@ -43,7 +43,6 @@ export const WISHLIST_MAX = 12;
 export const ESCROW_MAX = 50;
 export const APPLIED_MAX = 400;
 export const PORTRAIT_MAX = 24;
-export const LEDGER_USERS_MAX = 8;
 export const NOTICE_MAX = 20;
 export const NOTICE_KINDS = ['sealed', 'declined', 'expired', 'cancelled', 'countered', 'restored', 'arrived-waiting'];
 export const MAX_ART_CHARS = 120 * 1024;
@@ -115,7 +114,7 @@ export function normalizeTrades(raw, state = {}, now = Date.now()) {
   }
   out.applied = [...applied.values()].sort((a, b) => b.at - a.at).slice(0, APPLIED_MAX);
   if (object(raw.ledger)) {
-    for (const [user, seq] of Object.entries(raw.ledger).slice(0, LEDGER_USERS_MAX)) {
+    for (const [user, seq] of Object.entries(raw.ledger)) {
       if (UUID.test(user) && Number.isSafeInteger(seq) && seq >= 0) out.ledger[user] = seq;
     }
     out.floor = finite(raw.floor, 0, 0, now);
