@@ -78,6 +78,8 @@ export function refreshCoop({ force = false } = {}) {
 // A single reconciliation owns each cursor until its page is persisted.
 // Account changes cancel it; the next owner starts a separate reconciliation.
 let reconciling = null;
+// The wallet transaction can be verified independently of a rendered shelf.
+export const coopWalletView = { refresh: renderAll };
 export async function reconcileCoopWallet(owner = coop.userId()) {
   if (!owner || owner !== coop.userId()) return 0;
   const origin = coopState(state), current = () => owner === coop.userId() && coopState(state) === origin;
@@ -98,16 +100,7 @@ export async function reconcileCoopWallet(owner = coop.userId()) {
     assertCurrent();
     assertCoopOpening(state, owner, opened);
     let paid = 0;
-    do {
-      // New gameplay can save while a request is in flight. Each batch is
-      // durable before transmission and stays pending until its receipt is
-      // persisted; then any newly added operations get their own batch.
-      persisted();
-      const pending = origin.money.pending.filter(p => p.owner === owner);
-      for (let i = 0; i < pending.length; i += 100) {
-        await coop.adjustMoney(pending.slice(i, i + 100));
-        assertCurrent();
-      }
+    const download = async () => {
       let more = true;
       while (more) {
         const after = origin.ledger[owner]?.seq || 0;
@@ -119,9 +112,33 @@ export async function reconcileCoopWallet(owner = coop.userId()) {
         paid += applied.paid;
         persisted(); more = page.more;
       }
+    };
+    // Another device may already have settled a semantic proposal. Its first
+    // receipt determines both money and cosmetics before any local mutation.
+    await download();
+    do {
+      persisted();
+      const pending = origin.money.pending.filter(p => p.owner === owner);
+      if (!pending.length) break;
+      let retry = false;
+      for (let i = 0; i < pending.length; i += 100) {
+        const batch = pending.slice(i, i + 100);
+        try { await coop.adjustMoney(batch); }
+        catch (error) {
+          if (error.code !== 'bad_op' || !batch.some(p => p.preApplied === false)) throw error;
+          // The first device may have won after our preflight read. Only a
+          // typed, un-applied semantic proposal can take its canonical award.
+          await download();
+          if (!batch.some(p => p.preApplied === false && !origin.money.pending.some(q => q.owner === owner && q.id === p.id))) throw error;
+          retry = true; break;
+        }
+        assertCurrent();
+      }
+      if (retry) continue;
+      await download();
       if (pending.some(p => origin.money.pending.some(q => q.owner === owner && q.id === p.id))) throw new Error('Currency receipt was missing');
     } while (origin.money.pending.some(p => p.owner === owner));
-    if (current()) renderAll(state);
+    if (current()) coopWalletView.refresh(state);
     return paid;
   })();
   reconciling = work;

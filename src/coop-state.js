@@ -17,7 +17,7 @@ const petId = x => typeof x === 'string' && PET.test(x) && !['__proto__', 'const
 const intIn = (x, lo, hi) => Number.isInteger(x) && x >= lo && x <= hi;
 
 export function blankCoop() {
-  return { v: 2, listed: [], listedOwner: '', outbox: [], memories: [], done: [], stakes: [], attempts: [], seen: [], records: {}, recordsOwner: '', ledger: {}, money: { checkpoint: null, openings: {}, pending: [], rewards: {} } };
+  return { v: 2, listed: [], listedOwner: '', outbox: [], memories: [], done: [], stakes: [], attempts: [], seen: [], records: {}, recordsOwner: '', ledger: {}, money: { checkpoint: null, openings: {}, pending: [], rewards: {}, received: {} } };
 }
 
 // The trip report a hirer sends: ids and numbers only (see 0009_coop.sql).
@@ -87,13 +87,17 @@ export function normalizeCoop(raw) {
     .map(([owner, o]) => [uuid(owner), { souls: o.souls, after: o.after }]));
   s.money.rewards = Object.fromEntries(Object.entries(obj(money.rewards) ? money.rewards : {}).filter(([owner, ids]) => uuid(owner) && Array.isArray(ids))
     .map(([owner, ids]) => [uuid(owner), [...new Set(ids.map(uuid).filter(Boolean))]]));
+  s.money.received = Object.fromEntries(Object.entries(obj(money.received) ? money.received : {}).filter(([owner, receipts]) => uuid(owner) && obj(receipts))
+    .map(([owner, receipts]) => [uuid(owner), Object.fromEntries(Object.entries(receipts).filter(([id, r]) => uuid(id) && obj(r)
+      && Number.isInteger(r.delta) && Math.abs(r.delta) <= 100000000 && balance(r.earned) && obj(r.detail) && JSON.stringify(r.detail).length < 4000)
+      .map(([id, r]) => [uuid(id), { delta: r.delta, earned: r.earned, detail: JSON.parse(JSON.stringify(r.detail)) }]))]));
   const operations = new Set();
   // Unacknowledged money operations are never pruned by an activity limit.
   s.money.pending = (Array.isArray(money.pending) ? money.pending : []).filter(p => {
     if (!uuid(p?.id) || !uuid(p?.owner) || operations.has(p.owner + ':' + p.id) || !Number.isInteger(p.delta)
       || Math.abs(p.delta) > 100000000 || !balance(p.earned)) return false;
     operations.add(p.owner + ':' + p.id); return true;
-  }).map(p => ({ id: uuid(p.id), owner: uuid(p.owner), delta: p.delta, earned: p.earned,
+  }).map(p => ({ id: uuid(p.id), owner: uuid(p.owner), delta: p.delta, earned: p.earned, ...(p.preApplied === false ? { preApplied: false } : {}),
     ...(obj(p.detail) && JSON.stringify(p.detail).length < 4000 ? { detail: JSON.parse(JSON.stringify(p.detail)) } : {}) }));
   // Unowned v1 prototype records remain quarantined. An owner is never
   // guessed from whichever account happens to be signed in on load.

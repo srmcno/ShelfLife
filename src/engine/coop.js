@@ -1,4 +1,4 @@
-import { advanceCoopMoney, applyCoopReward, readCoopRewardDetail } from './coop-money.js';
+import { advanceCoopMoney, applyCoopReward, readCoopRewardDetail, sameCoopReward } from './coop-money.js';
 import { coopState, normalizeOutingGuest, normalizeTripReport, COOP_LIMITS } from '../coop-state.js';
 import { residentVoice } from './resident-memory.js';
 import { addSouls } from './mayhem.js';
@@ -266,7 +266,12 @@ export function applyCoopReceipts(state, owner, receipts) {
     }
     if (r.kind === 'game' && r.detail && !readCoopRewardDetail(r.detail)) throw new Error('Invalid currency reward detail');
     const pending = r.kind === 'game' && local.get(r.sourceId);
-    if (pending && (pending.delta !== r.delta || pending.earned !== r.earned || JSON.stringify(pending.detail || null) !== JSON.stringify(r.detail || null))) throw new Error('Currency receipt does not match saved operation');
+    const mismatch = pending && (pending.delta !== r.delta || pending.earned !== r.earned || JSON.stringify(pending.detail || null) !== JSON.stringify(r.detail || null));
+    if (pending?.preApplied === false && !sameCoopReward(pending.detail, r.detail)) throw new Error('Currency receipt does not match reward source');
+    if (mismatch && pending.preApplied !== false) {
+      if (pending.detail && r.detail) throw Object.assign(new Error('This prototype reward differs from the account’s original receipt. Restore the matching cloud shelf or a backup from before that reward.'), { code: 'reward_legacy' });
+      throw new Error('Currency receipt does not match saved operation');
+    }
   }
   const m = mayhemState(state), soulsBefore = m.souls, lifetimeBefore = m.lifetime;
   c.ledger[owner] = position;
@@ -275,7 +280,8 @@ export function applyCoopReceipts(state, owner, receipts) {
   m.souls -= repayment; position.debt -= repayment;
   let paid = 0;
   for (const r of fresh) {
-    if (r.kind === 'game' && local.has(r.sourceId)) {
+    const pending = r.kind === 'game' && local.get(r.sourceId), preApplied = pending && pending.preApplied !== false;
+    if (preApplied) {
       // This operation already changed the wallet before it was saved. Its
       // receipt advances the cursor, but never pays or charges it again.
       c.money.pending = c.money.pending.filter(p => p.owner !== owner || p.id !== r.sourceId);
@@ -299,10 +305,12 @@ export function applyCoopReceipts(state, owner, receipts) {
       if (r.kind === 'hire' && r.detail) collectReport(state, r.detail, r.delta, Date.now(), owner, { credit: false });
     }
     if (r.kind === 'game' && r.detail) {
-      if (!local.has(r.sourceId)) applyCoopReward(state, owner, r.detail);
+      if (!preApplied) applyCoopReward(state, owner, r.detail);
       const rewards = c.money.rewards[owner] ||= [];
       if (!rewards.includes(r.sourceId)) rewards.push(r.sourceId);
+      (c.money.received[owner] ||= {})[r.sourceId] = { delta: r.delta, earned: r.earned, detail: readCoopRewardDetail(r.detail) };
     }
+    if (pending) c.money.pending = c.money.pending.filter(p => p.owner !== owner || p.id !== r.sourceId);
     position.seq = r.seq;
   }
   advanceCoopMoney(state, owner, soulsBefore, lifetimeBefore);

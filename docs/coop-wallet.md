@@ -12,7 +12,7 @@ The central save boundary records genuine wallet and lifetime-earned changes in 
 
 The adjustment contract is `coop_adjust(p_ops)` with at most100 `{id, delta, earned, detail?}` operations. The owner comes from authentication. The server stores an immutable `game` receipt with `source_id=id`; repeating that payload is harmless, while changing an existing operation is refused. Receipt pages expose `has_more` and `last_seq` and must be contiguous for their owner.
 
-A matching pending operation already changed the local purse, so its server receipt only acknowledges it. An older backup without that pending operation applies the receipt once. Opening snapshots, pending operations, owner cursors and semantic reward histories are financial bookkeeping and are never pruned as recent activity.
+A matching ordinary pending operation already changed the local purse, so its server receipt only acknowledges it. A semantic reward proposal stores `preApplied:false`; its cash and cosmetic effects remain un-applied until its canonical receipt arrives. An older backup without a pending operation applies the receipt once. Opening snapshots, pending operations, owner cursors and semantic reward histories are financial bookkeeping and are never pruned as recent activity.
 
 Offline purchases can overtake a stake placed on another device. The local purse stays nonnegative and carries any unpaid debit as debt. Later receipts repay debt before giving spendable souls. The server may have a negative budget from genuine offline purchases; a new stake must still be fully funded. A missing debit is never erased merely because the restored local purse is empty.
 
@@ -20,7 +20,9 @@ Offline purchases can overtake a stake placed on another device. The local purse
 
 Backend-idempotent rewards need more than an anonymous wallet delta. Their operation UUID derives from the owner and semantic source key using SHA-256 UUIDv8. The receipt also includes validated metadata that restores the paid marker and actual cosmetic award. This prevents restoring an old backup, replaying its currency receipt and collecting the same chest again.
 
-Reward handlers rebuild markers and non-currency effects only; the receipt engine owns the money. When an operation remains pending locally, both its cash and effects are already applied and must not be applied again. Pending metadata survives normalization before its feature controller loads.
+Reward handlers rebuild markers and non-currency effects only; the receipt engine owns the money. Network rewards first save a pure proposal, then obtain the first immutable server award before changing cash, ranks, cosmetics or paid markers. Two devices may propose different next-unowned curios or duplicate-soul bonuses for the same source. The canonical first receipt settles both devices; the second proposal does not grant its speculative item or amount. Reconciliation downloads receipts before uploads and resolves a racing semantic `bad_op` by reading the canonical receipt before retrying remaining operations. Generic changed payloads are still refused. Pending metadata survives normalization before its feature controller loads.
+
+An unreleased prototype may contain an already-applied semantic reward whose payload conflicts with the server’s original award. The client preserves that save and refuses to guess an inventory or currency rollback. Recovery requires the matching original cloud household or a backup from before the reward.
 
 Replacing/importing a household rebases the currency checkpoint without interpreting the imported balance as an earning. Reconciliation and gameplay callbacks also capture the Co-op state object's identity, so an in-place restore under the same account cancels old work. Account changes prevent submitting or applying another owner's operations.
 
@@ -28,4 +30,4 @@ Unowned v1 prototype holds, attempts and reward marks are retained in quarantine
 
 ## Verification checkpoint
 
-The client journal, real cloud-copy decision engine and receipt replay are covered by unit tests. Browser journeys use explicitly labelled in-memory Supabase fixtures and real player controls. The original four Co-op journeys passed across Chromium desktop, Chromium mobile and WebKit mobile before this journal extension. The new adjustment endpoint, reward metadata and new-device browser journey still require alignment and verification against the final server migration; none of these results proves a live deployment.
+The client journal, real cloud-copy decision engine, canonical proposal races, lost replies and receipt replay are covered by unit tests. Browser journeys use explicitly labelled in-memory Supabase fixtures and real player controls. The original four Co-op journeys passed across Chromium desktop, Chromium mobile and WebKit mobile before this journal extension. The new adjustment endpoint, reward metadata and new-device browser journey still require alignment and verification against the final server migration; none of these results proves a live deployment.

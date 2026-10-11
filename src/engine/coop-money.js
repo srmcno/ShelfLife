@@ -64,9 +64,9 @@ export async function currencyRewardId(owner, key) {
 }
 
 const rewardHandlers = new Map();
-export function registerCoopReward(reward, { normalize, apply }) {
+export function registerCoopReward(reward, { normalize, apply, key }) {
   if (!/^[a-z_]{1,40}$/.test(reward || '') || typeof normalize !== 'function' || typeof apply !== 'function') throw new Error('Invalid currency reward handler');
-  rewardHandlers.set(reward, { normalize, apply });
+  rewardHandlers.set(reward, { normalize, apply, key });
 }
 export function readCoopRewardDetail(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
@@ -75,6 +75,33 @@ export function readCoopRewardDetail(raw) {
   const clean = handler.normalize(raw);
   return clean ? { ...clean, reward: raw.reward } : null;
 }
+export function sameCoopReward(a, b) {
+  const first = readCoopRewardDetail(a), second = readCoopRewardDetail(b);
+  if (!first || !second || first.reward !== second.reward) return false;
+  const key = rewardHandlers.get(first.reward).key;
+  if (typeof key !== 'function') return false;
+  const source = key(first);
+  return typeof source === 'string' && source.length > 0 && source === key(second);
+}
+
+// Save a proposal before asking the server; no provisional cash, ranks or
+// cosmetic effects enter the shelf. The first immutable receipt is authority.
+export function queueCoopReward(state, { id, owner, delta, earned, detail }) {
+  const clean = readCoopRewardDetail(detail);
+  if (!UUID.test(id || '') || !UUID.test(owner || '') || !clean || !sameCoopReward(clean, clean) || !Number.isInteger(delta) || Math.abs(delta) > LIMIT
+    || !Number.isInteger(earned) || earned < 0 || earned > LIMIT) throw new Error('Invalid currency reward proposal');
+  const c = coopState(state);
+  if (c.money.rewards[owner]?.includes(id)) return null;
+  const old = c.money.pending.find(p => p.owner === owner && p.id === id);
+  if (old) {
+    if (old.preApplied !== false || !sameCoopReward(old.detail, clean)) throw new Error('Currency reward already recorded');
+    return old;
+  }
+  bindCoopMoney(state, owner);
+  const proposal = { id, owner, delta, earned, detail: clean, preApplied: false };
+  c.money.pending.push(proposal); return proposal;
+}
+
 export function applyCoopReward(state, owner, raw) {
   const detail = readCoopRewardDetail(raw);
   if (!detail) throw new Error('Unknown currency reward detail');
@@ -88,6 +115,13 @@ export function hasCoopReward(state, owner, id) {
   const c = coopState(state);
   return !!c.money.rewards[owner]?.includes(id) || c.money.pending.some(p => p.owner === owner && p.id === id);
 }
+export function coopRewardReceipt(state, owner, id) {
+  const receipt = coopState(state).money.received[owner]?.[id];
+  if (!receipt) return null;
+  const detail = readCoopRewardDetail(receipt.detail);
+  return detail ? { delta: receipt.delta, earned: receipt.earned, detail } : null;
+}
+
 export function recordCoopReward(state, { id, owner, delta, earned, detail }) {
   const c = coopState(state), checkpoint = c.money.checkpoint;
   const clean = readCoopRewardDetail(detail);

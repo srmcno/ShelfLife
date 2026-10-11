@@ -166,3 +166,37 @@ test('the adjustment wrapper uses the deployed argument name and preserves earne
   await coop.adjustMoney([operation]);
   assert.deepEqual(request, { name: 'coop_adjust', args: { p_ops: [{ id: operation.id, delta: 0, earned: 100 }] } });
 });
+
+test('the labelled strict server budget tracks ordinary spend after opening and preserves a competing-device stake debt', async () => {
+  const { createFakeSupabase } = await import('./support/fake-supabase.mjs');
+  const { socialPlayer } = await import('./support/social-world.mjs');
+  const fake = createFakeSupabase(), s = wallet(100), twin = wallet(100);
+  const ada = await socialPlayer(fake, 'Ada', s), bea = await socialPlayer(fake, 'Bea', wallet(100));
+  await ada.social.addFriend(bea.code); await bea.social.respond(ada.id, true);
+  const server = createCoop({ cloud: ada.cloud, social: ada.social });
+  bindCoopMoney(s, ada.id); bindCoopMoney(twin, ada.id); await server.openWallet(100);
+  const duel = await server.duelCreate(bea.id, 'stack', 25);
+  spendSouls(s, 90); const operation = captureCoopMoney(s, ada.id, id);
+  await server.adjustMoney([operation]); await server.adjustMoney([operation]);
+  assert.equal((await server.wallet()).balance, -15, 'the spend is retained rather than ignored or clamped');
+  await assert.rejects(server.duelCreate(bea.id, 'stack', 25), { code: 'insufficient_souls' });
+  await assert.rejects(server.adjustMoney([{ ...operation, delta: -89 }]), { code: 'bad_op' });
+  assert.equal((await server.wallet()).balance, -15, 'changing an operation cannot change the budget');
+  await server.duelDecline(duel.id); await server.duelClaim(duel.id);
+  const page = await server.receipts();
+  applyCoopReceipts(s, ada.id, page.receipts); applyCoopReceipts(twin, ada.id, page.receipts);
+  for (const household of [s, twin]) {
+    assert.equal(household.mayhem.souls, 10); assert.equal(household.mayhem.lifetime, 100);
+    assert.equal(household.coop.ledger[ada.id].debt, 0);
+    assert.equal(captureCoopMoney(household, ada.id, id), null);
+  }
+  assert.equal((await server.wallet()).balance, 10);
+  assert.equal(fake.coop.receipts.filter(r => r.owner === ada.id && r.kind === 'game').length, 1);
+  addSouls(s, 100); const earned = captureCoopMoney(s, ada.id, id); await server.adjustMoney([earned]);
+  const next = await server.receipts(s.coop.ledger[ada.id].seq);
+  applyCoopReceipts(s, ada.id, next.receipts); applyCoopReceipts(twin, ada.id, next.receipts);
+  assert.equal((await server.wallet()).balance, 110, 'ordinary play after opening replenishes the shared wager budget');
+  assert.deepEqual([s.mayhem.souls, twin.mayhem.souls, s.mayhem.lifetime, twin.mayhem.lifetime], [110, 110, 200, 200]);
+  await server.duelCreate(bea.id, 'stack', 25);
+  assert.equal((await server.wallet()).balance, 85, 'newly earned souls can fund a later stake');
+});

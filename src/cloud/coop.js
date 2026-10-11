@@ -33,6 +33,8 @@ const TEXT = {
   save_unavailable: 'Your device could not save the wager. Free some storage and try again.',
   needs_opening: 'Connect once to prepare your souls for a duel.',
   insufficient_souls: 'You need more souls to match that stake. Play or take care of your residents first.',
+  bad_op: 'Your saved reward could not be matched to its receipt. Try syncing again.',
+  reward_legacy: 'This prototype reward differs from the account’s original receipt. Restore the matching cloud shelf or a backup from before that reward.',
   bad_balance: 'Your souls could not be checked. Nothing was changed.',
   bad_seq: 'Your souls need to finish syncing. Try again.',
   bad_log: 'The duel run could not be sent. Nothing was changed.',

@@ -119,7 +119,11 @@ test('two players match a real 25-soul wager, play the same seed, and conserve t
 
 test('a committed refund survives a lost response, reload and restoring a backup before the wager', async ({ page }) => {
   const { fake, a, aShelf } = await world(), pageErrors = errors(page, '/coop_duel_claim');
-  await open(page, fake, a, aShelf); await challenge(page); await leaveRun(page, false);
+  await open(page, fake, a, aShelf); await friends(page);
+  await expect.poll(async () => (await saved(page)).coop.money.openings[a.id]?.souls).toBe(100);
+  const beforeWager = await saved(page);
+  await page.locator('#friendsSheet [data-fr="close"]').click();
+  await challenge(page); await leaveRun(page, false);
   const d = [...fake.coop.duels.values()][0];
   fake.coop.age(49 * 3600000);
   let lost = 0;
@@ -138,7 +142,7 @@ test('a committed refund survives a lost response, reload and restoring a backup
   await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(100);
   expect(lost).toBe(1);
   await page.locator('#friendsSheet [data-fr="close"]').click();
-  await page.locator('#importFile').setInputFiles({ name: 'before-wager.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(aShelf)) });
+  await page.locator('#importFile').setInputFiles({ name: 'before-wager.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(beforeWager)) });
   await expect(page.locator('#restoreVeil')).toBeVisible(); await page.locator('#restoreConfirm').click();
   await postbox(page);
   await expect.poll(async () => (await saved(page)).coop.ledger[a.id]?.seq).toBe(2);
@@ -205,7 +209,12 @@ test('switching the signed-in player on one shelf keeps both players attempts an
   await page.locator('[data-co-mail="duel:' + d.id + '"] [data-sx="claim"]').click();
   await expect.poll(async () => (await saved(page)).coop.ledger[b.id]?.seq).toBe(2);
   expect((await saved(page)).mayhem.souls).toBe(50);
-  await replaceAccount(a); await postbox(page);
+  await replaceAccount(a); await friends(page);
+  await page.locator('[data-sx="cloud-copy"]').click();
+  await expect(page.locator('#cloudConflict')).toBeVisible();
+  await page.locator('#cloudKeepLocal').click();
+  await expect(page.locator('#cloudStatus')).toContainText('Kept this device.');
+  await page.locator('#cloudClose').click(); await postbox(page);
   await page.locator('[data-co-mail="duel:' + d.id + '"] [data-sx="claim"]').click();
   await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(100);
   expect((await saved(page)).coop.ledger[a.id].seq).toBe(2);
