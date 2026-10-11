@@ -10,6 +10,7 @@
 // and title goes through esc().
 import { registerFriendAction, registerPostboxSource, registerFriendsSection } from './social-registry.js';
 import { createHearings, hearingText } from '../cloud/hearings.js';
+import { coopText } from '../cloud/coop.js';
 import { socialText } from '../cloud/social.js';
 import { COURT_CASES } from '../content/court.js';
 import { REACTIONS, REACTION_IDS, FULL_BENCH_PAID, FULL_BENCH_SPENT, OUTCOMES } from '../content/court-joint.js';
@@ -313,14 +314,16 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
         const operation = await currencyRewardId(owner, 'joint_bench:' + h.id); if (!live()) return;
         const plan = planFullBench(S, h.id, script.outcome, owner);
         if (plan) queueCoopReward(S, { ...plan, owner, id: operation });
-        if (!save() || !Store.persistent) throw new Error('The reward could not be saved. Free some device space and open the envelopes again.');
+        if (!save() || !Store.persistent) throw Object.assign(new Error('The reward could not be saved.'), { code: 'save_unavailable' });
         await wallet.reconcileCoopWallet(owner); if (!live()) return;
         const receipt = coopRewardReceipt(S, owner, operation);
         paid = alreadyCollected ? 0 : receipt ? receipt.detail.paid ? receipt.delta : -1 : 0;
         stage.refresh();
       } catch (error) {
         if (!live()) return;
-        rewardError = 'The full-bench reward is waiting. Open the envelopes again when you are online. ' + (error.code === 'reward_legacy' ? 'This saved reward needs recovery before it can be collected.' : '');
+        rewardError = error.code === 'save_unavailable' ? 'The full-bench reward could not be saved. Free some storage and open the envelopes again.'
+          : error.code === 'reward_legacy' ? coopText(error)
+          : 'The full-bench reward is waiting. Open the envelopes again when you are online.';
       }
     }
     if (script.outcome === 'full') { stage.applause(2600); playAchievement(); } else if (script.outcome === 'divided') playStar(); else playError();

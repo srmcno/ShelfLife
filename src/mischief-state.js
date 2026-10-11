@@ -79,7 +79,7 @@ const OPS = new Set(['resolve', 'decline', 'shoo', 'ack', 'seen']);
 function normalizeOutboxItem(raw, now) {
   if (!object(raw) || !OPS.has(raw.op) || !uuid(raw.ref)) return null;
   const at = finite(raw.at, now, 0, now);
-  if (raw.op !== 'shoo' && at < now - WEEK) return null;
+  if (raw.op !== 'shoo' && uuid(raw.user) && at < now - WEEK) return null;
   const out = { op: raw.op, ref: raw.ref, user: uuid(raw.user), at };
   if (raw.op === 'resolve') Object.assign(out, { choice: Math.floor(finite(raw.choice, 0, 0, 3)), outcome: Math.floor(finite(raw.outcome, 0, 0, 3)), rebound: raw.rebound === true });
   if (raw.op === 'shoo') out.taps = Math.floor(finite(raw.taps, 1, 1, 99));
@@ -114,8 +114,8 @@ export function normalizeMischief(raw, state = {}, now = Date.now()) {
   out.hexes = (Array.isArray(raw.hexes) ? raw.hexes : []).map(h => normalizeHexPayload(h, now))
     .filter(h => h && !refs.has(h.ref) && refs.add(h.ref)).slice(0, PENDING_MAX);
   const outbox = (Array.isArray(raw.outbox) ? raw.outbox : []).map(x => normalizeOutboxItem(x, now)).filter(Boolean);
-  const activity = new Set(outbox.filter(item => item.op !== 'shoo').slice(-OUTBOX_MAX));
-  out.outbox = outbox.filter(item => item.op === 'shoo' || activity.has(item));
+  const activity = new Set(outbox.filter(item => item.op !== 'shoo' && item.user).slice(-OUTBOX_MAX));
+  out.outbox = outbox.filter(item => item.op === 'shoo' || !item.user || activity.has(item));
   out.shooRewards = normalizeRewardHistory(raw.shooRewards);
   const seen = new Set();
   out.helps = (Array.isArray(raw.helps) ? raw.helps : []).map(x => normalizeHelp(x, now)).filter(h => h && !seen.has(h.id) && seen.add(h.id)).slice(0, HELP_LOG_MAX);

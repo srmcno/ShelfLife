@@ -94,7 +94,7 @@ function forgetHex(ms, ref) {
 function queueOutbox(ms, item, now) {
   if (ms.outbox.some(o => o.op === item.op && o.ref === item.ref)) return;
   ms.outbox.push({ ...item, user: ms.user, at: now });
-  const ordinary = ms.outbox.filter(item => item.op !== 'shoo');
+  const ordinary = ms.outbox.filter(item => item.op !== 'shoo' && item.user);
   const trimmed = new Set(ordinary.slice(0, Math.max(0, ordinary.length - OUTBOX_MAX)));
   ms.outbox = ms.outbox.filter(item => !trimmed.has(item));
 }
@@ -104,7 +104,9 @@ function rollDay(ms, now) {
 }
 // What still has to reach the server for this account, oldest first.
 export function outboxFor(state, userId) {
-  return mischiefState(state).outbox.filter(o => !o.user || !userId || o.user === userId);
+  // Ownerless prototype reports stay in the save for recovery. They must not
+  // become authenticated writes from whichever account signs in next.
+  return mischiefState(state).outbox.filter(o => !!userId && o.user === userId);
 }
 export function clearOutbox(state, items) {
   const ms = mischiefState(state), gone = new Set(items);
@@ -124,7 +126,7 @@ function dropFromTray(state, ref, now) {
 function changeAccount(state, userId, now) {
   const ms = mischiefState(state);
   for (const h of ms.hexes.slice()) dropFromTray(state, h.ref, now);
-  ms.hexes = []; ms.outbox = ms.outbox.filter(item => item.op === 'shoo'); ms.haunt = null;
+  ms.hexes = []; ms.outbox = ms.outbox.filter(item => item.op === 'shoo' || !item.user); ms.haunt = null;
   ms.done = []; ms.paid = { day: '', help: 0, knock: 0, shoo: 0 };
   ms.user = userId;
 }

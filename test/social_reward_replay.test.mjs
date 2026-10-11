@@ -71,3 +71,15 @@ test('ghost effects from an old account cannot dismiss the replacement visitor a
   assert.equal(readCoopRewardDetail({reward:'mischief_shoo',haunt_id:U(30),day:localDayKey(NOW),paid:true,taps:4}),null);
   assert.equal(readCoopRewardDetail({reward:'joint_bench',hearing:U(30),day:'2026-1-30',paid:true}),null);
 });
+
+
+test('ownerless prototype reports remain quarantined through reload and account changes', () => {
+  const s=shelf();
+  s.mischief.outbox=[{op:'shoo',ref:U(50),user:'',taps:5,at:NOW},{op:'resolve',ref:U(51),user:'',choice:0,outcome:0,rebound:false,at:NOW}];
+  const loaded=normalizeState(s,NOW+8*DAY);
+  assert.equal(loaded.mischief.outbox.length,2,'unowned reports remain available for recovery');
+  assert.deepEqual(outboxFor(loaded,A),[]);assert.deepEqual(outboxFor(loaded,B),[]);assert.deepEqual(outboxFor(loaded,''),[]);
+  loaded.mischief.user=A;
+  receiveInbox(loaded,{hexes:[],helps:[],hauntings:[]},B,NOW+8*DAY);
+  assert.equal(loaded.mischief.outbox.length,2);assert.deepEqual(outboxFor(loaded,B),[]);
+});
