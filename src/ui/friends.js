@@ -489,6 +489,8 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   function render(focus = null) {
     if (!isOpen()) { syncTray(); return; }
     const active = document.activeElement, key = focus || (active && body.contains(active) ? focusKey(active) : null);
+    const selection = active && key && key === focusKey(active) && Number.isInteger(active.selectionStart)
+      ? { value: active.value, start: active.selectionStart, end: active.selectionEnd, direction: active.selectionDirection } : null;
     const retained = view === 'custom' && custom === renderedCustom;
     if (busy && view === 'custom' && !customFocus && body.contains(active)) customFocus = active;
     if (!retained) body.innerHTML = view === 'shelf' && visiting ? shelfMarkup() : view === 'serve' ? serveMarkup() : view === 'friend' && profile ? profileMarkup()
@@ -504,7 +506,13 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     });
     const target = !busy && retained && body.contains(customFocus) ? customFocus : key && sheet.querySelector(key);
     if (!busy) customFocus = null;
-    if (target && !target.disabled) target.focus({ preventScroll: true });
+    if (target && !target.disabled) {
+      target.focus({ preventScroll: true });
+      // Background Postbox updates redraw ordinary forms. Restore the caret
+      // only for the same unchanged field, never after an intentional new value.
+      if (selection && target.value === selection.value && Number.isInteger(target.selectionStart))
+        target.setSelectionRange(selection.start, selection.end, selection.direction);
+    }
     else if (key) sheet.querySelector('h2')?.focus({ preventScroll: true });
     syncTray();
   }
