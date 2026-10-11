@@ -158,6 +158,32 @@ async function hearDocket(page, testInfo) {
   await close(page, '#tabPlay');
 }
 
+test('adopting the first resident makes its two emergencies available immediately', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-29T17:00:00Z') });
+  await page.goto('/');
+  // Stop background ticks before adoption, then permit only the animation
+  // frames needed by the guide. Startup must not depend on the next 1-second
+  // countdown tick or 30-second shelf tick to create its promised emergency.
+  await page.clock.pauseAt(new Date('2026-10-29T17:01:00Z'));
+  await page.locator('[data-arrival="mabel"]').click();
+  await page.locator('#quickAdopt').click();
+  await expect(page.locator('#cabinet .piece.pet')).toHaveCount(1);
+  expect((await saved(page)).mayhem.queue, 'adoption persists the two initial emergencies before a background tick').toHaveLength(2);
+  await page.clock.runFor(16);
+  await go(page).click();
+  await page.clock.runFor(16);
+  await page.locator('#cardVeil [data-care="food"]').click();
+  await page.clock.runFor(16);
+  await expect.poll(async () => (await saved(page)).life.guide.done).toEqual(['meet', 'feed']);
+  await close(page, '#nextStepGo');
+  await go(page).click();
+  await expect(page.locator('#mayhemSheet .mh-choice')).toHaveCount(2);
+  await page.locator('#mayhemSheet [data-choice="0"]').click();
+  await page.clock.runFor(16);
+  expect((await saved(page)).mayhem.resolved).toBe(1);
+  await close(page, '#nextStepGo');
+});
+
 test('returning from an expedition to games preserves the original shelf launcher', async ({ page }) => {
   await page.goto('/');
   await page.locator('[data-arrival="mabel"]').click();

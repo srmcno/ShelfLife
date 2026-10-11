@@ -234,6 +234,33 @@ test('closing the sheet in the middle of the slow-motion death still counts the 
   expect((await saved(page)).arcade.best.frenzy).toBe(18);
 });
 
+test('closing a result during its Again delay keeps focus on the shelf launcher', async ({ page }) => {
+  await open(page, { size: { width: 360, height: 640 } });
+  await page.locator('#tabPlay').click();
+  await page.locator('#playroomVeil [data-game="frenzy"]').click();
+  await page.locator('#arcadeSheet [data-ar="play"]').click();
+  await waitForArcadePlay(page);
+  await page.evaluate(() => {
+    const sheet = document.getElementById('arcadeSheet');
+    window.__closedArcadeResult = new Promise(resolve => {
+      const observer = new MutationObserver(() => {
+        if (!sheet.querySelector('.ar-over')) return;
+        observer.disconnect();
+        // Close just before Again becomes live, while the veil's outgoing
+        // animation still allows the old button to receive focus.
+        setTimeout(() => { sheet.querySelector('.sheet-head [data-ar="close"]').click(); resolve(); }, 500);
+      });
+      observer.observe(sheet, { childList: true });
+    });
+    const run = sheet.arcadeRun;
+    run.game.score = 18; run.game.lives = 0; run.game.over = true;
+  });
+  await page.evaluate(() => window.__closedArcadeResult);
+  await expect(page.locator('#tabPlay')).toBeFocused();
+  await expect(page.locator('#arcadeVeil')).toBeHidden();
+  await expect(page.locator('#tabPlay')).toBeFocused();
+});
+
 test('the hub shows skull medals, the last fortnight and the arena to unlock, and an unlocked arena can be chosen', async ({ page }) => {
   const day = d => { const t = new Date(Date.now() - d * 86400000); const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(t).map(x => [x.type, x.value])); return p.year + '-' + (Number(p.month) - 1) + '-' + Number(p.day); };
   await open(page, { arcade: { best: { frenzy: 50, stack: 12 }, plays: { frenzy: 8, stack: 4 }, medals: { frenzy: 2, stack: 1 }, runs: 12,

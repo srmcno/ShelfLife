@@ -102,6 +102,8 @@ const studio = initStudio({
     if (anatomy.horns || anatomy.halo || anatomy.motion.canFlap) addNote(state, finalName + ': ' + anatomy.features[0].text, 'made this way', 'note');
     checkAchievements(state);
     advanceSchemes(state);
+    // The guide can reach its emergency immediately, before a shelf tick.
+    accrueMayhem(state);
     renderAll(state);
     requestAnimationFrame(()=>{reactTo(pet.id,'notice');toast(finalName+': '+TRAIT_BY_ID[traits[0]].blurb);});
   }

@@ -464,7 +464,7 @@ function gameOver() {
   // A beat before Again is live, so the key mashing that ended the run does
   // not start another one by accident.
   const again = sheet.querySelector('.ar-again');
-  setTimeout(() => { if (again?.isConnected) { again.disabled = false; again.focus({ preventScroll: true }); } }, 650);
+  later(() => { if (again?.isConnected && veil.classList.contains('open')) { again.disabled = false; again.focus({ preventScroll: true }); } }, 650);
   refresh();
   if (wasDaily && result.daily && arcadeSocial?.active()) loadBoard({ game: id, day: result.day, mod: result.daily.mod }, submission?.score || 0, submission?.user || arcadeSocial.userId());
 }
