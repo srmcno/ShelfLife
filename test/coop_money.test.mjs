@@ -5,7 +5,7 @@ import { coopState } from '../src/coop-state.js';
 import { mayhemState } from '../src/mayhem-state.js';
 import { addSouls } from '../src/engine/mayhem.js';
 import { spendSouls } from '../src/engine/almanac.js';
-import { bindCoopMoney, captureCoopMoney, currencyRewardId, hasCoopReward } from '../src/engine/coop-money.js';
+import { bindCoopMoney, captureCoopMoney, currencyRewardId, hasCoopReward, queueCoopReward, coopRewardReceipt } from '../src/engine/coop-money.js';
 import { applyCoopReceipts } from '../src/engine/coop.js';
 import { createCoop, readCoopReceipts } from '../src/cloud/coop.js';
 const A = '00000000-0000-4000-8000-000000000001', B = A.replace(/1$/, '2');
@@ -26,13 +26,16 @@ test('a failed initial opening keeps its original funding snapshot while ordinar
   assert.deepEqual(reload.coop.money.pending, [earned, spent]);
 });
 
-test('local pre-applied currency operations are acknowledged once; an older backup replays the same real changes', () => {
+test('local currency is acknowledged once; an older incomplete household must restore the complete copy', () => {
   const local = wallet(10), old = wallet(10); bindCoopMoney(local, A); bindCoopMoney(old, A);
   addSouls(local, 100); captureCoopMoney(local, A, id);
   spendSouls(local, 80); captureCoopMoney(local, A, id);
   const receipts = rows(coopState(local).money.pending);
+  const householdCopy = normalizeState(structuredClone(local));
+  assert.throws(() => applyCoopReceipts(old, A, receipts), { code: 'cloud_copy_required' });
+  assert.equal(old.mayhem.souls, 10); assert.equal(old.coop.ledger[A], undefined);
   applyCoopReceipts(local, A, receipts); applyCoopReceipts(local, A, receipts);
-  applyCoopReceipts(old, A, receipts);
+  Object.assign(old, householdCopy); applyCoopReceipts(old, A, receipts);
   assert.deepEqual([mayhemState(local).souls, mayhemState(local).lifetime], [30, 110]);
   assert.deepEqual([mayhemState(old).souls, mayhemState(old).lifetime], [30, 110]);
   assert.deepEqual(coopState(local).money.pending, []);
@@ -43,7 +46,9 @@ test('earned lifetime can exceed net wallet change when rewards and purchases sh
   const s = wallet(10); bindCoopMoney(s, A);
   addSouls(s, 100); spendSouls(s, 100);
   const op = captureCoopMoney(s, A, id); assert.deepEqual([op.delta, op.earned], [0, 100]);
-  const old = wallet(10); bindCoopMoney(old, A); applyCoopReceipts(old, A, rows([op]));
+  const old = wallet(10); bindCoopMoney(old, A);
+  assert.throws(() => applyCoopReceipts(old, A, rows([op])), { code: 'cloud_copy_required' });
+  Object.assign(old, normalizeState(structuredClone(s))); applyCoopReceipts(old, A, rows([op]));
   assert.deepEqual([mayhemState(old).souls, mayhemState(old).lifetime], [10, 110]);
 });
 
@@ -170,7 +175,7 @@ test('the adjustment wrapper uses the deployed argument name and preserves earne
 test('the labelled strict server budget tracks ordinary spend after opening and preserves a competing-device stake debt', async () => {
   const { createFakeSupabase } = await import('./support/fake-supabase.mjs');
   const { socialPlayer } = await import('./support/social-world.mjs');
-  const fake = createFakeSupabase(), s = wallet(100), twin = wallet(100);
+  const fake = createFakeSupabase(), s = wallet(100); let twin = wallet(100);
   const ada = await socialPlayer(fake, 'Ada', s), bea = await socialPlayer(fake, 'Bea', wallet(100));
   await ada.social.addFriend(bea.code); await bea.social.respond(ada.id, true);
   const server = createCoop({ cloud: ada.cloud, social: ada.social });
@@ -184,6 +189,9 @@ test('the labelled strict server budget tracks ordinary spend after opening and 
   assert.equal((await server.wallet()).balance, -15, 'changing an operation cannot change the budget');
   await server.duelDecline(duel.id); await server.duelClaim(duel.id);
   const page = await server.receipts();
+  assert.throws(() => applyCoopReceipts(twin, ada.id, page.receipts), { code: 'cloud_copy_required' });
+  assert.equal(twin.mayhem.souls, 100, 'an incomplete receipt page cannot partially debit or move the cursor');
+  twin = normalizeState(structuredClone(s));
   applyCoopReceipts(s, ada.id, page.receipts); applyCoopReceipts(twin, ada.id, page.receipts);
   for (const household of [s, twin]) {
     assert.equal(household.mayhem.souls, 10); assert.equal(household.mayhem.lifetime, 100);
@@ -194,9 +202,60 @@ test('the labelled strict server budget tracks ordinary spend after opening and 
   assert.equal(fake.coop.receipts.filter(r => r.owner === ada.id && r.kind === 'game').length, 1);
   addSouls(s, 100); const earned = captureCoopMoney(s, ada.id, id); await server.adjustMoney([earned]);
   const next = await server.receipts(s.coop.ledger[ada.id].seq);
+  assert.throws(() => applyCoopReceipts(twin, ada.id, next.receipts), { code: 'cloud_copy_required' });
+  twin = normalizeState(structuredClone(s));
   applyCoopReceipts(s, ada.id, next.receipts); applyCoopReceipts(twin, ada.id, next.receipts);
   assert.equal((await server.wallet()).balance, 110, 'ordinary play after opening replenishes the shared wager budget');
   assert.deepEqual([s.mayhem.souls, twin.mayhem.souls, s.mayhem.lifetime, twin.mayhem.lifetime], [110, 110, 200, 200]);
   await server.duelCreate(bea.id, 'stack', 25);
   assert.equal((await server.wallet()).balance, 85, 'newly earned souls can fund a later stake');
+});
+
+
+for (const cupboard of ['a different next curio', 'all curios already owned']) test('real Coven proposals with ' + cupboard + ' accept the first immutable fake-server award', async () => {
+  const { createFakeSupabase } = await import('./support/fake-supabase.mjs');
+  const { socialPlayer } = await import('./support/social-world.mjs');
+  const { planChest, chestPaid } = await import('../src/engine/coven.js');
+  const { covenState } = await import('../src/coven-state.js');
+  const { COVEN_CURIOS } = await import('../src/content/coven.js');
+  const first = wallet(100), second = wallet(100), fake = createFakeSupabase();
+  const ada = await socialPlayer(fake, 'Ada', first), server = createCoop({ cloud: ada.cloud, social: ada.social });
+  bindCoopMoney(first, ada.id); bindCoopMoney(second, ada.id); await server.openWallet(100);
+  const canonical = planChest(first, 42, 2, ada.id);
+  covenState(second).curios[canonical.detail.curio] = 1;
+  if (cupboard === 'all curios already owned') for (const curio of COVEN_CURIOS) covenState(second).curios[curio.id] = 1;
+  const alternative = planChest(second, 42, 2, ada.id), before = structuredClone(second.coven.curios);
+  assert.notDeepEqual(alternative, canonical);
+  const operation = await currencyRewardId(ada.id, 'coven_chest:42:2');
+  const p1 = queueCoopReward(first, { id: operation, owner: ada.id, ...canonical });
+  const p2 = queueCoopReward(second, { id: operation, owner: ada.id, ...alternative });
+  assert.deepEqual([first.mayhem.souls, second.mayhem.souls], [100, 100]);
+  assert.equal(captureCoopMoney(second, ada.id, id), null, 'proposing an award does not create ordinary income');
+  await server.adjustMoney([p1]);
+  await assert.rejects(server.adjustMoney([p2]), { code: 'bad_op' });
+  const receipts = (await server.receipts()).receipts;
+  for (const household of [first, second]) {
+    applyCoopReceipts(household, ada.id, receipts); applyCoopReceipts(household, ada.id, receipts);
+    assert.equal(household.mayhem.souls, 100 + canonical.delta);
+    assert.equal(household.mayhem.lifetime, 100 + canonical.earned);
+    assert.equal(chestPaid(household, 42, 2, ada.id), true);
+    assert.equal(coopRewardReceipt(household, ada.id, operation).detail.curio, canonical.detail.curio);
+    assert.equal(household.coop.money.pending.length, 0);
+  }
+  assert.deepEqual(second.coven.curios, before, 'an already owned canonical gift does not mutate other inventory or give the speculative item');
+  assert.equal((await server.wallet()).balance, 100 + canonical.delta);
+});
+
+test('an ambiguous already-paid prototype reward preserves its entire save and offers recovery', async () => {
+  const { payChest, planChest } = await import('../src/engine/coven.js');
+  const { covenState } = await import('../src/coven-state.js');
+  const { COVEN_CURIOS } = await import('../src/content/coven.js');
+  const first = wallet(100), old = wallet(100); bindCoopMoney(first, A); bindCoopMoney(old, A);
+  const canonical = planChest(first, 42, 2, A), operation = await currencyRewardId(A, 'coven_chest:42:2');
+  for (const curio of COVEN_CURIOS) covenState(old).curios[curio.id] = 1;
+  payChest(old, 42, 2, A, operation);
+  const before = structuredClone(old);
+  const [receipt] = rows([{ id: operation, owner: A, ...canonical }]);
+  assert.throws(() => applyCoopReceipts(old, A, [receipt]), { code: 'reward_legacy' });
+  assert.deepEqual(old, before, 'cash, lifetime, rank, inventory, paid marker, pending journal and cursor remain intact');
 });

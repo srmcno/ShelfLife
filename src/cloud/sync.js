@@ -21,6 +21,8 @@
 //     closed) is treated as ours, not as a conflict.
 //   * The 20 s debounce has a 2 minute ceiling during continuous play and a
 //     1 minute floor between background pushes.
+import { assertCoopGameOwnership } from '../engine/coop-money.js';
+import { readCoopReceipts } from './coop.js';
 import { normalizeState } from '../state.js';
 import { CloudError, browserStorage } from './client.js';
 
@@ -177,6 +179,47 @@ export function createSync({
     return had;
   }
 
+  // ---- explicit recovery and financial household provenance ----
+  async function readCopyChoice(uid) {
+    const remote = await cloud.rpc('pull_save');
+    if (!cloud.signedIn() || cloud.userId() !== uid) throw new CloudError('Your account changed.', { code: 'session_changed' });
+    if (!remote?.data) throw new CloudError('Sync the original device first; no complete cloud household was found.', { code: 'missing_remote' });
+    const normalized = normalize(remote.data), rev = Number(remote.rev);
+    if (!normalized || !Number.isSafeInteger(rev) || rev < 1) return refuse(rev || 0);
+    const there = shelfSummary(normalized);
+    pending = { kind: 'conflict', userId: uid, rev, data: remote.data,
+      remote: { ...there, lastSaved: Date.parse(remote.updated_at) || there.lastSaved, device: deviceKind(remote.device || '') } };
+    needsCheck = false;
+    setStatus('conflict');
+  }
+  function requestCopyChoice() {
+    if (!cloud.signedIn()) return Promise.resolve(info());
+    return exclusive(() => readCopyChoice(cloud.userId())).catch(fail).then(info);
+  }
+  async function financialPreflight(uid, snapshot, origin) {
+    if (!snapshot.coop?.money?.openings?.[uid]) return;
+    const domain = origin.coop;
+    const current = () => cloud.signedIn() && cloud.userId() === uid && getState() === origin && getState().coop === domain;
+    let after = snapshot.coop.ledger?.[uid]?.seq || 0;
+    for (;;) {
+      const page = readCoopReceipts(await cloud.rpc('coop_receipts', { p_after: after }), uid);
+      if (!current()) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
+      let next = after;
+      for (const receipt of page.receipts) if (receipt.seq !== ++next) throw new CloudError('A financial receipt was missing.', { code: 'bad_reply' });
+      try { assertCoopGameOwnership(snapshot, uid, page.receipts); }
+      catch (error) {
+        if (error.code === 'cloud_copy_required') { await readCopyChoice(uid); throw new CloudError(error.message, { code: error.code }); }
+        throw error;
+      }
+      if (!page.more) {
+        if (next !== page.lastSeq) throw new CloudError('A financial receipt page was incomplete.', { code: 'bad_reply' });
+        return;
+      }
+      if (next <= after) throw new CloudError('A financial receipt page did not advance.', { code: 'bad_reply' });
+      after = next;
+    }
+  }
+
   // ---- pushing ----
   async function pushNow({ base, force = false, keepalive = false, requireDirty = false, depth = 0 } = {}) {
     if (!cloud.signedIn() || pending) return settle();
@@ -185,18 +228,22 @@ export function createSync({
     const known = m.syncUser === uid;
     const rev = base ?? (known ? m.baseRev || 0 : 0);
     if (requireDirty && !m.dirty) return settle();
-    const text = exportState(getState());
+    const origin = getState(), domain = origin.coop, text = exportState(origin);
     if (text.length > MAX_SAVE_CHARS) throw new CloudError('This shelf is too large for cloud save.', { code: 'too_large' });
     const hash = saveHash(text);
     if (!force && known && rev === m.baseRev && hash === m.lastPushHash) { clean(); return settle(); }
+    const snapshot = JSON.parse(text);
     const wasDirty = !!m.dirty;
     clean();
     setStatus('syncing');
     lastPushAt = now();
     let result;
     try {
-      result = await cloud.rpc('push_save', { p_base_rev: rev, p_data: JSON.parse(text), p_device: deviceId() },
+      await financialPreflight(uid, snapshot, origin);
+      if (!cloud.signedIn() || cloud.userId() !== uid || getState() !== origin || getState().coop !== domain) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
+      result = await cloud.rpc('push_save', { p_base_rev: rev, p_data: snapshot, p_device: deviceId() },
         { keepalive: keepalive && text.length < KEEPALIVE_LIMIT });
+      if (!cloud.signedIn() || cloud.userId() !== uid || getState() !== origin || getState().coop !== domain) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
     } catch (e) {
       if (wasDirty || force) cloud.setMeta({ dirty: true });
       throw e;
@@ -420,7 +467,7 @@ export function createSync({
   }
 
   const api = {
-    start, stop, enable, check, syncNow: () => check({ manual: true }), push, resolve, undo, signOut, deleteAccount,
+    start, stop, enable, check, requestCopyChoice, syncNow: () => check({ manual: true }), push, resolve, undo, signOut, deleteAccount,
     dropSafetyCopy, markDirty, deviceId, info, status: () => status,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
   };

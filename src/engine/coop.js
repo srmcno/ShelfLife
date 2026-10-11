@@ -1,4 +1,4 @@
-import { advanceCoopMoney, applyCoopReward, readCoopRewardDetail, sameCoopReward } from './coop-money.js';
+import { advanceCoopMoney, applyCoopReward, readCoopRewardDetail, sameCoopReward, assertCoopGameOwnership } from './coop-money.js';
 import { coopState, normalizeOutingGuest, normalizeTripReport, COOP_LIMITS } from '../coop-state.js';
 import { residentVoice } from './resident-memory.js';
 import { addSouls } from './mayhem.js';
@@ -273,6 +273,7 @@ export function applyCoopReceipts(state, owner, receipts) {
       throw new Error('Currency receipt does not match saved operation');
     }
   }
+  assertCoopGameOwnership(state, owner, fresh);
   const m = mayhemState(state), soulsBefore = m.souls, lifetimeBefore = m.lifetime;
   c.ledger[owner] = position;
   // Another local feature may have earned souls since a debit was deferred.

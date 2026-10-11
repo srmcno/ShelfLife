@@ -1,6 +1,7 @@
 import { registerFriendAction, registerPostboxSource, registerFriendsSection, registerSocialView } from './social-registry.js';
 import { state, save, onBeforeSave, Store } from '../state.js';
-import { sync } from '../cloud/index.js';
+import { sync, cloud } from '../cloud/index.js';
+import { saveHash } from '../cloud/sync.js';
 import { coop, flushOutbox } from './coop-hire.js';
 import { coopText } from '../cloud/coop.js';
 import { coopState } from '../coop-state.js';
@@ -80,6 +81,7 @@ export function refreshCoop({ force = false } = {}) {
 let reconciling = null;
 // The wallet transaction can be verified independently of a rendered shelf.
 export const coopWalletView = { refresh: renderAll };
+export const coopWalletCloud = { push: options => sync.push(options), info: () => sync.info(), meta: () => cloud.meta(), markDirty: () => sync.markDirty() };
 export async function reconcileCoopWallet(owner = coop.userId()) {
   if (!owner || owner !== coop.userId()) return 0;
   const origin = coopState(state), current = () => owner === coop.userId() && coopState(state) === origin;
@@ -90,15 +92,43 @@ export async function reconcileCoopWallet(owner = coop.userId()) {
     try { await reconciling; } catch (error) { if (error?.code !== 'state_changed') throw error; }
     assertCurrent();
   }
+  const checkpointHousehold = async () => {
+    let previousHash = '';
+    for (;;) {
+      coopWalletCloud.markDirty();
+      persisted();
+      const text = JSON.stringify(state), body = JSON.parse(text), hash = saveHash(text);
+      const acknowledged = () => {
+        const info = coopWalletCloud.info(), meta = coopWalletCloud.meta();
+        return info.status === 'idle' && !info.conflict && meta.syncUser === owner && meta.baseRev > 0 && meta.lastPushHash === hash;
+      };
+      // A cloud adoption can mark a normalized/rendered shelf as clean without
+      // uploading that exact body. Request a real forced checkpoint here.
+      const info = await coopWalletCloud.push({ force: true });
+      assertCurrent();
+      if (info.conflict || info.status === 'conflict') throw Object.assign(new Error('Choose the matching household in Cloud save before continuing Co-op.'), { code: 'cloud_copy_required' });
+      if (info.status !== 'idle') throw Object.assign(new Error('Co-op needs the complete shelf saved to the cloud. Finish syncing in Cloud save, then try again.'), { code: 'household_sync_required' });
+      if (acknowledged()) return body;
+      if (previousHash === hash) throw Object.assign(new Error('The complete household was not acknowledged by cloud save. Try syncing again.'), { code: 'household_sync_required' });
+      previousHash = hash;
+      // If gameplay saved while the sync queue was waiting, its newer body may
+      // have been uploaded instead. Capture and acknowledge that exact body;
+      // no operation is transmitted merely because a timestamp moved forward.
+    }
+  };
   const work = (async () => {
     const wallet = await coop.wallet();
     assertCurrent();
     assertCoopOpening(state, owner, wallet, { conflict: !!sync.info().conflict });
     const opening = bindCoopMoney(state, owner);
     persisted();
-    const opened = await coop.openWallet(opening.souls, opening.after);
-    assertCurrent();
-    assertCoopOpening(state, owner, opened);
+    if (wallet.opening === null) {
+      await checkpointHousehold();
+      assertCurrent();
+      const opened = await coop.openWallet(opening.souls, opening.after);
+      assertCurrent();
+      assertCoopOpening(state, owner, opened);
+    }
     let paid = 0;
     const download = async () => {
       let more = true;
@@ -118,8 +148,13 @@ export async function reconcileCoopWallet(owner = coop.userId()) {
     await download();
     do {
       persisted();
-      const pending = origin.money.pending.filter(p => p.owner === owner);
+      let pending = origin.money.pending.filter(p => p.owner === owner);
       if (!pending.length) break;
+      if (pending.some(p => !p.detail)) {
+        const body = await checkpointHousehold();
+        assertCurrent();
+        pending = body.coop.money.pending.filter(p => p.owner === owner);
+      }
       let retry = false;
       for (let i = 0; i < pending.length; i += 100) {
         const batch = pending.slice(i, i + 100);
@@ -524,14 +559,14 @@ registerFriendsSection({
         '<b>' + esc(p.name) + '</b><small>' + esc(skilled.length ? 'good for ' + skilled.join(' and ') : 'no specialities, plenty of opinions') + '</small><span>' + (on ? 'For hire' : 'At home') + '</span></button></li>';
     }).join('');
     return '<section class="co-section" aria-labelledby="coHireHomeTitle"><h3 id="coHireHomeTitle">Hired help</h3>' +
-      (cache.error ? '<p role="status">' + esc(cache.error) + '</p>' + (cache.errorCode === 'cloud_copy_required' ? '<button class="btn btn-sm" type="button" data-sx="cloud-copy">Open cloud save</button>' : '') : '') +
+      (cache.error ? '<p role="status">' + esc(cache.error) + '</p>' + (['cloud_copy_required', 'household_sync_required'].includes(cache.errorCode) ? '<button class="btn btn-sm" type="button" data-sx="cloud-copy">Open cloud save</button>' : '') : '') +
       '<p>Put up to two residents up for hire. A friend can take one on an expedition: you get a field report and wages, your resident gets a story, and nothing else about it changes.</p>' +
       (away.length ? '<p class="co-away">' + away.map(a => esc(a.name) + ' is out on ' + esc(a.hirerName || 'a friend') + '’s expedition.').join(' ') + '</p>' : '') +
       '<details class="co-hire-list"' + (listed.length ? '' : ' open') + '><summary>' + (listed.length ? 'For hire: ' + esc(listed.map(id => state.pets.find(p => p.id === id)?.name).filter(Boolean).join(' and ')) : 'Nobody is for hire. They have been told this is a compliment.') + '</summary>' +
       '<ul class="co-listing">' + rows + '</ul></details></section>';
   },
   async onClick(action, el, ctx) {
-    if (action === 'cloud-copy') { ctx.close(); document.getElementById('cloudBtn')?.click(); await sync.syncNow(); return; }
+    if (action === 'cloud-copy') { ctx.close(); document.getElementById('cloudBtn')?.click(); await sync.requestCopyChoice(); return; }
     if (action !== 'hire-toggle' || busy) return;
     const id = el.dataset.sxId, c = coopState(state), listed = c.listedOwner === coop.userId() ? c.listed : [];
     const next = listed.includes(id) ? listed.filter(x => x !== id) : [...listed, id].slice(0, 2);

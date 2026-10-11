@@ -23,6 +23,22 @@ export function assertCoopOpening(state, owner, wallet, { conflict = false } = {
     throw Object.assign(new Error('Open Cloud save to choose your shelf. For Co-op, use the cloud copy with this account’s souls.'), { code: 'cloud_copy_required' });
 }
 
+// An anonymous game delta is not a household restore: it has no paid flags,
+// purchased item or decor data. Only the full, pre-applied source operation
+// proves that those business effects are present in this copy.
+export function assertCoopGameOwnership(state, owner, receipts) {
+  // This also runs on the exact cloud-upload snapshot; normalization here
+  // would change the body after its acknowledgement hash was computed.
+  const c = state.coop, after = c?.ledger?.[owner]?.seq || 0;
+  const pending = new Map((Array.isArray(c?.money?.pending) ? c.money.pending : []).filter(p => p.owner === owner).map(p => [p.id, p]));
+  for (const r of receipts) {
+    if (r.seq <= after || r.kind !== 'game' || r.detail) continue;
+    const local = pending.get(r.sourceId);
+    if (!local || local.preApplied === false) throw Object.assign(new Error('Open Cloud save and use the latest complete household, including earned rewards and bought items.'), { code: 'cloud_copy_required' });
+    if (local.delta !== r.delta || local.earned !== r.earned || local.detail) throw Object.assign(new Error('Currency receipt does not match saved operation'), { code: 'bad_op' });
+  }
+}
+
 export function captureCoopMoney(state, signedInOwner, uuid = operationId) {
   const c = coopState(state), money = c.money, checkpoint = money.checkpoint;
   if (!checkpoint) return null;

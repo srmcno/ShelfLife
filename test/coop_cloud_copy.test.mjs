@@ -4,7 +4,7 @@ import { normalizeState } from '../src/state.js';
 import { bindCoopMoney, captureCoopMoney, assertCoopOpening } from '../src/engine/coop-money.js';
 import { addSouls } from '../src/engine/mayhem.js';
 import { createCloud } from '../src/cloud/client.js';
-import { createSync, SAFETY_KEY } from '../src/cloud/sync.js';
+import { createSync, SAFETY_KEY, saveHash } from '../src/cloud/sync.js';
 import { createCoop } from '../src/cloud/coop.js';
 import { createFakeSupabase } from './support/fake-supabase.mjs';
 import { socialPlayer } from './support/social-world.mjs';
@@ -14,18 +14,20 @@ function household(souls, name = 'Agnes') {
   const raw = householdFixture('established'); raw.pets[0].name = name;
   raw.mayhem.souls = souls; raw.mayhem.lifetime = souls; return normalizeState(raw);
 }
-async function setup(local) {
+async function setup(local, effect = s => addSouls(s, 20)) {
   // Labelled in-memory Supabase; authentication, copy decisions and wallet
   // readers use the actual clients and sync engine, without a live account.
   const fake = createFakeSupabase(), owned = household(100), player = await socialPlayer(fake, 'Ada', owned);
   bindCoopMoney(owned, player.id);
   const server = createCoop({ cloud: player.cloud, social: player.social }); await server.openWallet(100);
-  addSouls(owned, 20); captureCoopMoney(owned, player.id);
+  effect(owned, player.id); captureCoopMoney(owned, player.id);
   fake.setRemote(player.id, owned, { device: 'android-original' });
   const saved = storage(); saved.setItem('shelflife.cloud', JSON.stringify({ session: player.session }));
   const cloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: saved });
-  const sync = createSync({ cloud, storage: saved, getState: () => local, applyRemote(next) { local = next; return true; }, events: new EventTarget() });
-  return { fake, player, server, owned, sync, saved, get local() { return local; } };
+  const events = new EventTarget(), callbacks = new Map(); let timerId = 0;
+  const timers = { setTimeout(fn, ms) { const id = ++timerId; callbacks.set(id, { fn, ms }); return id; }, clearTimeout: id => callbacks.delete(id) };
+  const sync = createSync({ cloud, storage: saved, getState: () => local, applyRemote(next) { local = next; return true; }, events, timers });
+  return { fake, player, server, owned, sync, saved, events, async runScheduled() { const next = [...callbacks].sort((a, b) => a[1].ms - b[1].ms)[0]; assert.ok(next); callbacks.delete(next[0]); next[1].fn(); for (let i = 0; i < 30; i++) await new Promise(resolve => setImmediate(resolve)); }, replaceLocal(next) { local = next; }, get local() { return local; } };
 }
 
 test('a new populated device must choose its existing cloud household before using that account wallet', async () => {
@@ -71,4 +73,67 @@ test('keeping a matching household preserves its genuine unsynced earnings but b
   assert.doesNotThrow(() => assertCoopOpening(d.local, d.player.id, wallet, { conflict: !!d.sync.info().conflict }));
   assert.equal(d.local.mayhem.souls, 160); assert.ok(d.local.coop.money.pending.some(p => p.id === op.id));
   assert.equal(captureCoopMoney(d.local, d.player.id), null);
+});
+
+
+for (const action of ['weekly reward', 'curio purchase']) test('an old backup cannot replay a ' + action + ' without its complete cloud business state', async t => {
+  const { almanacState } = await import('../src/almanac-state.js');
+  const { weekNumber, weeklyChallenges, claimWeekly } = await import('../src/engine/almanac.js');
+  const { commissionCurio } = await import('../src/engine/mayhem.js');
+  const { applyCoopReceipts } = await import('../src/engine/coop.js');
+  const now = Date.now(), task = weeklyChallenges(weekNumber(now))[0], curio = 'tooth-not-yours';
+  let old;
+  const d = await setup(household(100), s => {
+    if (action === 'weekly reward') {
+      const a = almanacState(s); a.week.no = weekNumber(now); a.week.done = [task.id]; a.week.claimed = [];
+      old = normalizeState(structuredClone(s));
+      assert.equal(claimWeekly(s, task.id, now).souls, 30);
+    } else {
+      delete s.mayhem.curios[curio]; old = normalizeState(structuredClone(s));
+      assert.equal(commissionCurio(s, curio).cost, 80);
+    }
+  });
+  // A real CAS push acknowledges the complete source household before the
+  // ordinary money operation. The fixture's source device never vanishes with
+  // only a wallet delta left behind on the server.
+  const sourceSync = createSync({ cloud: d.player.cloud, storage: storage(), events: new EventTarget(), getState: () => d.owned, applyRemote: () => false });
+  assert.equal((await sourceSync.check()).status, 'idle');
+  assert.equal((await sourceSync.push({ force: true })).status, 'idle');
+  assert.equal(d.player.cloud.meta().lastPushHash, saveHash(JSON.stringify(d.owned)));
+  await d.server.adjustMoney(d.owned.coop.money.pending);
+  const receipts = (await d.server.receipts()).receipts, before = structuredClone(old);
+  assert.throws(() => applyCoopReceipts(old, d.player.id, receipts), { code: 'cloud_copy_required' });
+  assert.deepEqual(old, before, 'no partial debit, credit, paid marker or cursor may change');
+  assert.equal((await d.sync.check()).status, 'conflict');
+  assert.equal((await d.sync.resolve('cloud')).status, 'idle');
+  applyCoopReceipts(d.local, d.player.id, receipts);
+  d.sync.start(); t.after(() => d.sync.stop()); await d.sync.check();
+  // This is the same browser, with a current known baseRev. Restoring an old
+  // backup must not let the usual autosave or manual Sync now overwrite the
+  // needed source household just because its cloud revision is unchanged.
+  const writes = d.fake.calls('push_save').length;
+  d.replaceLocal(normalizeState(structuredClone(old))); d.sync.markDirty();
+  d.events.dispatchEvent(new Event('shelflife:storage')); await d.runScheduled();
+  assert.ok(d.sync.info().conflict); assert.equal(d.fake.calls('push_save').length, writes);
+  assert.equal(d.fake.saves.get(d.player.id).data.mayhem.souls, action === 'weekly reward' ? 130 : 20);
+  assert.equal(d.local.mayhem.souls, 100);
+  await d.sync.resolve('cloud'); applyCoopReceipts(d.local, d.player.id, receipts);
+  d.replaceLocal(normalizeState(structuredClone(old))); d.sync.markDirty();
+  await d.sync.syncNow();
+  assert.ok(d.sync.info().conflict); assert.equal(d.fake.calls('push_save').length, writes);
+  assert.equal(d.local.mayhem.souls, 100);
+  assert.equal((await d.sync.requestCopyChoice()).status, 'conflict');
+  assert.equal(d.fake.calls('push_save').length, writes, 'the recovery button is read-only even with the known current cloud revision');
+  assert.equal((await d.sync.resolve('cloud')).status, 'idle');
+  applyCoopReceipts(d.local, d.player.id, receipts); applyCoopReceipts(d.local, d.player.id, receipts);
+  if (action === 'weekly reward') {
+    assert.equal(d.local.mayhem.souls, 130); assert.ok(d.local.almanac.week.claimed.includes(task.id));
+    assert.equal(claimWeekly(d.local, task.id, now), null); assert.equal(d.local.mayhem.souls, 130);
+  } else {
+    assert.equal(d.local.mayhem.souls, 20); assert.equal(d.local.mayhem.curios[curio], 1);
+    assert.equal(commissionCurio(d.local, curio), null, 'the price is not paid twice and the bought item is present');
+  }
+  assert.equal(d.local.coop.money.pending.length, 0); assert.equal(d.local.coop.ledger[d.player.id].seq, 1);
+  const safety = JSON.parse(d.saved.getItem(SAFETY_KEY)); assert.equal(safety.mayhem.souls, 100);
+  assert.equal(captureCoopMoney(d.local, d.player.id), null, 'restoring the whole shelf never becomes new income');
 });
