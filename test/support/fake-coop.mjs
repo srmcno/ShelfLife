@@ -5,6 +5,14 @@
 //
 // Knobs for tests: setDnd(userId, on), age(ms) to move every co-op clock
 // back, and the raw maps (listings, hires, duels, records).
+//
+// The money ledger (coop_open, coop_wallet, coop_receipts, and the `receipt`
+// fields on create, play, claim and collect) mirrors the SQL, with one knob:
+// until setStrictFunds(true), a player who never called coop_open may still
+// stake (the SQL refuses with needs_opening), so older tests that stake
+// without declaring an opening keep working. Once an opening is declared,
+// insufficient_souls is enforced either way. Raw state: wallets, receipts,
+// holds.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PET = /^[A-Za-z0-9_-]{1,100}$/;
@@ -19,6 +27,8 @@ const copy = value => value === undefined ? undefined : JSON.parse(JSON.stringif
 
 export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, blocks }) {
   const listings = new Map(), hires = new Map(), duels = new Map(), records = new Map(), attempts = [], dnd = new Set();
+  const wallets = new Map(), receipts = [], holds = new Map();
+  let strictFunds = false;
   const iso = t => new Date(t).toISOString();
   const day = (t = now()) => new Date(t).toISOString().slice(0, 10);
   const refuse = token => rest(400, 'P0001', token);
@@ -74,14 +84,62 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
     x.updated_at = y.updated_at = now();
   }
 
+  // The ledger, as private.coop_append and friends do it.
+  const walletOf = owner => {
+    if (!wallets.has(owner)) wallets.set(owner, { owner, opening: null, opening_seq: 0, opening_base: 0, last_seq: 0, total: 0, opened_at: null });
+    return wallets.get(owner);
+  };
+  const available = owner => { const w = wallets.get(owner); return w && w.opening !== null ? w.opening + (w.total - w.opening_base) : null; };
+  const receiptOf = (owner, kind, source) => receipts.find(r => r.owner === owner && r.kind === kind && r.source_id === source) || null;
+  const receiptJson = r => r ? { id: r.id, owner: r.owner, seq: r.seq, kind: r.kind, source_id: r.source_id, delta: r.delta, earned: r.earned,
+    created_at: iso(r.created_at), detail: copy(r.detail) } : null;
+  function append(owner, kind, source, delta, earned, detail) {
+    const had = receiptOf(owner, kind, source);
+    if (had) return had;
+    const w = walletOf(owner);
+    w.last_seq++; w.total += delta;
+    const r = { id: uuid(), owner, seq: w.last_seq, kind, source_id: source, delta, earned, created_at: now(), detail: copy(detail) };
+    receipts.push(r);
+    return r;
+  }
+  const holdsOf = d => [...holds.values()].filter(h => h.duel_id === d.id);
+  const duelDetail = (owner, d) => {
+    const other = d.challenger === owner ? d.opponent : d.challenger;
+    return { duel_id: d.id, game: d.game, stake: d.stake, against: other, against_name: blocked(d.challenger, d.opponent) ? '' : nameOf(other),
+      outcome: d.outcome, wins_mine: d.challenger === owner ? d.wins_challenger : d.wins_opponent,
+      wins_theirs: d.challenger === owner ? d.wins_opponent : d.wins_challenger };
+  };
+  const hireDetail = h => {
+    const hidden = blocked(h.owner, h.hirer), report = copy(h.report);
+    if (hidden && report) delete report.crew;
+    return { hire_id: h.id, pet_id: h.pet_id, name: h.resident.name, hirer: h.hirer, hirer_name: hidden ? '' : nameOf(h.hirer), report,
+      wages: h.wages, finished_at: h.finished_at ? iso(h.finished_at) : null };
+  };
+  // Checks the funds and holds the stake; the caller adds the duel only if this does not refuse.
+  function checkStake(owner, amount) {
+    if (!(amount > 0)) return;
+    const have = available(owner);
+    if (have === null) { if (strictFunds) stop('needs_opening'); return; }
+    if (have < amount) stop('insufficient_souls');
+  }
+  function stake(owner, d, amount) {
+    if (!(amount > 0)) return null;
+    const r = append(owner, 'stake', d.id, -amount, 0, duelDetail(owner, d));
+    const key = d.id + '|' + owner;
+    if (!holds.has(key)) holds.set(key, { duel_id: d.id, owner, amount, stake_receipt: r.id, released_at: null, released_to: null, release_receipt: null, created_at: now() });
+    return r;
+  }
+
   function settle(d, isVoid) {
     if (d.status !== 'open') return;
     for (const r of d.rounds) if (r.status === 'first' || r.status === 'second') r.status = 'void';
     const outcome = isVoid || !d.opponent_staked || !d.rounds.some(r => r.status === 'done') ? 'void'
       : d.wins_challenger > d.wins_opponent ? 'challenger' : d.wins_opponent > d.wins_challenger ? 'opponent' : 'tie';
+    const held = holdsOf(d), hc = held.filter(h => h.owner === d.challenger).reduce((n, h) => n + h.amount, 0);
+    const ho = held.filter(h => h.owner === d.opponent).reduce((n, h) => n + h.amount, 0);
     Object.assign(d, { status: 'settled', outcome, settled_at: now(), updated_at: now(),
-      pay_challenger: outcome === 'challenger' ? 2 * d.stake : outcome === 'opponent' ? 0 : d.stake,
-      pay_opponent: !d.opponent_staked ? 0 : outcome === 'opponent' ? 2 * d.stake : outcome === 'challenger' ? 0 : d.stake });
+      pay_challenger: outcome === 'challenger' ? hc + ho : outcome === 'opponent' ? 0 : hc,
+      pay_opponent: outcome === 'opponent' ? hc + ho : outcome === 'challenger' ? 0 : ho });
     if (outcome !== 'void') seriesRecord(d.challenger, d.opponent, outcome === 'challenger' ? 'a' : outcome === 'opponent' ? 'b' : 'tie');
   }
   function finishRound(d, r, score) {
@@ -116,8 +174,15 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       const last = d.rounds.at(-1);
       if (last.status === 'void' || (last.status === 'done' && last.second_at <= now() - 48 * HOUR)) settle(d, false);
     }
-    for (const [id, d] of duels) if (d.status === 'settled' && d.settled_at < now() - 60 * DAY && (d.challenger === uid || d.opponent === uid)) duels.delete(id);
-    for (const [id, h] of hires) if (h.created_at < now() - 60 * DAY && (h.owner === uid || h.hirer === uid)) hires.delete(id);
+    for (const [id, d] of duels) {
+      if (d.status === 'settled' && d.settled_at < now() - 60 * DAY && (d.challenger === uid || d.opponent === uid) && !holdsOf(d).some(h => !h.released_at)) {
+        duels.delete(id);
+        for (const h of holdsOf(d)) holds.delete(h.duel_id + '|' + h.owner);
+      }
+    }
+    for (const [id, h] of hires) {
+      if (h.created_at < now() - 60 * DAY && (h.owner === uid || h.hirer === uid) && h.status === 'back' && (h.collected_at || h.wages === 0)) hires.delete(id);
+    }
     for (let i = attempts.length - 1; i >= 0; i--) if (attempts[i].user === uid && attempts[i].at < now() - DAY) attempts.splice(i, 1);
   }
 
@@ -200,9 +265,11 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       const h = hires.get(p_hire);
       if (!h || h.owner !== user.id) stop('not_found');
       if (h.status !== 'back') stop('not_open');
-      if (h.collected_at) return { ok: true, wages: 0 };
+      const had = receiptOf(user.id, 'hire', h.id);
+      if (had || h.collected_at) return { ok: true, wages: 0, receipt: receiptJson(had) };
+      const r = append(user.id, 'hire', h.id, h.wages, h.wages, hireDetail(h));
       h.collected_at = now();
-      return { ok: true, wages: h.wages };
+      return { ok: true, wages: h.wages, receipt: receiptJson(r) };
     },
     coop_duel_create(user, { p_to, p_game, p_stake }) {
       if (!UUID.test(p_to || '')) return badType('uuid');
@@ -214,6 +281,7 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       tidy(user.id);
       const open = [...duels.values()].filter(d => d.status === 'open');
       if (open.filter(d => d.challenger === user.id && d.opponent === p_to).length >= 3 || open.filter(d => d.challenger === user.id || d.opponent === user.id).length >= 12) stop('too_many_open');
+      checkStake(user.id, p_stake);
       limit(user.id, 'duel', 10, DAY);
       const d = { id: uuid(), challenger: user.id, opponent: p_to, game: p_game, stake: p_stake, opponent_staked: false, status: 'open', outcome: null,
         wins_challenger: 0, wins_opponent: 0, pay_challenger: 0, pay_opponent: 0, claimed_challenger: false, claimed_opponent: false,
@@ -221,7 +289,8 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       d.rounds.push({ n: 1, first_player: user.id, seed: seed(), status: 'first', first_score: null, first_log: null, first_at: null,
         second_started_at: null, second_score: null, second_at: null, created_at: now() });
       duels.set(d.id, d);
-      return { ok: true, id: d.id, game: d.game, stake: d.stake, round: 1, seed: d.rounds[0].seed };
+      const r = stake(user.id, d, d.stake);
+      return { ok: true, id: d.id, game: d.game, stake: d.stake, round: 1, seed: d.rounds[0].seed, receipt: receiptJson(r) };
     },
     coop_duel_play(user, { p_duel }) {
       if (!UUID.test(p_duel || '')) return badType('uuid');
@@ -231,11 +300,13 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       if (d.status !== 'open') stop('not_open');
       if (!friendly(user.id, user.id === d.challenger ? d.opponent : d.challenger)) stop('not_friends');
       const r = latest(d);
-      if (r.status === 'first' && r.first_player === user.id) return { ok: true, round: r.n, seed: r.seed, role: 'first', game: d.game, stake: d.stake, ghost: null, against: '' };
+      if (r.status === 'first' && r.first_player === user.id) return { ok: true, round: r.n, seed: r.seed, role: 'first', game: d.game, stake: d.stake, ghost: null, against: '',
+        receipt: receiptJson(receiptOf(user.id, 'stake', d.id)) };
       if (r.status !== 'second' || r.first_player === user.id) stop('not_your_turn');
-      if (user.id === d.opponent) d.opponent_staked = true;
+      if (user.id === d.opponent && !d.opponent_staked) { checkStake(user.id, d.stake); stake(user.id, d, d.stake); d.opponent_staked = true; }
       if (!r.second_started_at) r.second_started_at = now();
-      return { ok: true, round: r.n, seed: r.seed, role: 'second', game: d.game, stake: d.stake, ghost: copy(r.first_log), against: nameOf(r.first_player) };
+      return { ok: true, round: r.n, seed: r.seed, role: 'second', game: d.game, stake: d.stake, ghost: copy(r.first_log), against: nameOf(r.first_player),
+        receipt: receiptJson(receiptOf(user.id, 'stake', d.id)) };
     },
     coop_duel_submit(user, { p_duel, p_round, p_score, p_log = null }) {
       if (!UUID.test(p_duel || '')) return badType('uuid');
@@ -306,16 +377,51 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       const d = duels.get(p_duel);
       if (!d || !(d.challenger === user.id || d.opponent === user.id)) stop('not_found');
       if (d.status !== 'settled') stop('not_open');
-      let owed;
-      if (user.id === d.challenger) { owed = d.claimed_challenger ? 0 : d.pay_challenger; d.claimed_challenger = true; }
-      else { owed = d.claimed_opponent ? 0 : d.pay_opponent; d.claimed_opponent = true; }
-      return { ok: true, souls: owed };
+      const had = receiptOf(user.id, 'duel', d.id);
+      if (had) return { ok: true, souls: 0, receipt: receiptJson(had) };
+      const won = d.outcome === (user.id === d.challenger ? 'challenger' : 'opponent');
+      const mine = holdsOf(d).filter(h => !h.released_at && (won || (h.owner === user.id && (d.outcome === 'void' || d.outcome === 'tie'))));
+      const owed = mine.reduce((n, h) => n + h.amount, 0), own = mine.filter(h => h.owner === user.id).reduce((n, h) => n + h.amount, 0);
+      let r = null;
+      if (owed > 0) {
+        r = append(user.id, 'duel', d.id, owed, owed - own, duelDetail(user.id, d));
+        for (const h of mine) Object.assign(h, { released_at: now(), released_to: user.id, release_receipt: r.id });
+      }
+      if (user.id === d.challenger) d.claimed_challenger = true; else d.claimed_opponent = true;
+      return { ok: true, souls: owed, receipt: receiptJson(r) };
+    },
+    coop_open(user, { p_souls, p_after }) {
+      if (p_souls !== null && p_souls !== undefined && !Number.isInteger(p_souls)) return badType('integer');
+      if (p_after !== null && p_after !== undefined && !Number.isInteger(p_after)) return badType('bigint');
+      if (p_souls === null || p_souls === undefined) stop('bad_balance');
+      if (p_after === null || p_after === undefined || p_after < 0) stop('bad_seq');
+      const w = walletOf(user.id);
+      let accepted = false;
+      if (w.opening === null) {
+        const seq = Math.min(p_after, w.last_seq);
+        Object.assign(w, { opening: Math.min(Math.max(p_souls, 0), 100000000), opening_seq: seq,
+          opening_base: receipts.filter(r => r.owner === user.id && r.seq <= seq).reduce((n, r) => n + r.delta, 0), opened_at: now() });
+        accepted = true;
+      }
+      return { ...walletJson(user.id), accepted };
+    },
+    coop_wallet(user) { return walletJson(user.id); },
+    coop_receipts(user, { p_after = 0 } = {}) {
+      if (p_after !== null && p_after !== undefined && !Number.isInteger(p_after)) return badType('bigint');
+      const after = Math.max(p_after || 0, 0);
+      const mine = receipts.filter(r => r.owner === user.id && r.seq > after).sort((a, b) => a.seq - b.seq);
+      return { ok: true, receipts: mine.slice(0, 100).map(receiptJson), has_more: mine.length > 100, last_seq: wallets.get(user.id)?.last_seq || 0 };
     },
     coop_records(user) {
       return [...records.values()].filter(r => r.user_id === user.id && areFriends(r.user_id, r.friend)).sort((a, b) => b.updated_at - a.updated_at)
         .map(({ user_id, updated_at, ...r }) => ({ ...r }));
     }
   };
+
+  function walletJson(owner) {
+    const w = wallets.get(owner);
+    return { ok: true, opening: w ? w.opening : null, opening_seq: w ? w.opening_seq : 0, balance: available(owner), last_seq: w ? w.last_seq : 0 };
+  }
 
   // Every function answers through json(), and a refusal becomes the same
   // P0001 error the database raises.
@@ -335,6 +441,9 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
     for (const [id, d] of duels) if (d.challenger === userId || d.opponent === userId) duels.delete(id);
     for (const [key, r] of records) if (r.user_id === userId || r.friend === userId) records.delete(key);
     for (let i = attempts.length - 1; i >= 0; i--) if (attempts[i].user === userId) attempts.splice(i, 1);
+    wallets.delete(userId);
+    for (let i = receipts.length - 1; i >= 0; i--) if (receipts[i].owner === userId) receipts.splice(i, 1);
+    for (const [key, h] of holds) if (h.owner === userId || !duels.has(h.duel_id)) holds.delete(key);
   }
   // Moves every co-op clock back, as if `ms` had passed.
   function age(ms) {
@@ -346,5 +455,7 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
     }
   }
 
-  return { RPC: wrapped, forget, age, listings, hires, duels, records, attempts, setDnd(userId, on = true) { if (on) dnd.add(userId); else dnd.delete(userId); } };
+  return { RPC: wrapped, forget, age, listings, hires, duels, records, attempts, wallets, receipts, holds,
+    setDnd(userId, on = true) { if (on) dnd.add(userId); else dnd.delete(userId); },
+    setStrictFunds(on = true) { strictFunds = !!on; } };
 }
