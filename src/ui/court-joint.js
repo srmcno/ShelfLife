@@ -58,6 +58,12 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
   const hearings = createHearings({ cloud, social });
   let view = null, note = '', confirm = null, busy = false;
   const records = new Map();
+  let recordUser = null;
+  function ownRecords() {
+    const user = hearings.userId();
+    if (recordUser !== user) { records.clear(); recordUser = user; }
+    return user;
+  }
   const active = () => hearings.active();
   const sheet = stage.sheet;
   const myName = () => (cloud.meta?.().socialName || '');
@@ -244,7 +250,7 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
     row?.querySelector('.btn-primary')?.focus({ preventScroll: true });
   }
   function sealed(ctx, ep, res) {
-    ctx.payload = { ruling: sealedRuling(ep, res), marks: ctx.marks.slice(0, MARK_LIMIT) };
+    ctx.payload = { ruling: sealedRuling(ep, res, S), marks: ctx.marks.slice(0, MARK_LIMIT) };
     send(ctx);
   }
   async function send(ctx) {
@@ -479,12 +485,21 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
   registerFriendsSection({
     id: 'bench-record', where: 'friend', order: 30,
     render(ctx, friend) {
-      if (!active() || !friend?.userId) return '';
+      const user = ownRecords();
+      if (!active() || !friend?.userId || ctx?.isCurrent?.() === false) return '';
       const kept = records.get(friend.userId);
-      if (!kept || (kept.error && Date.now() - kept.at > 60000)) {
-        records.set(friend.userId, { loading: true, at: Date.now() });
-        hearings.benchRecord(friend.userId).then(rec => { records.set(friend.userId, { rec, at: Date.now() }); ctx?.refresh?.(); })
-          .catch(() => { records.set(friend.userId, { error: true, at: Date.now() }); ctx?.refresh?.(); });
+      if (!kept || (!kept.loading && Date.now() - kept.at > 60000)) {
+        const request = { loading: true, rec: kept?.rec, at: Date.now() };
+        records.set(friend.userId, request);
+        const current = () => hearings.userId() === user && ctx?.isCurrent?.() !== false && records.get(friend.userId) === request;
+        const discard = () => { if (records.get(friend.userId) === request) records.delete(friend.userId); };
+        hearings.benchRecord(friend.userId).then(rec => {
+          if (!current()) { discard(); return; }
+          records.set(friend.userId, { rec, at: Date.now() }); ctx?.refresh?.();
+        }).catch(() => {
+          if (!current()) { discard(); return; }
+          records.set(friend.userId, { error: true, at: Date.now() }); ctx?.refresh?.();
+        });
       }
       const rec = records.get(friend.userId)?.rec;
       const recent = (rec?.recent || []).slice(0, 5);
@@ -495,7 +510,9 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
     onClick(action, el) { if (action === 'replay' && el?.dataset?.sxId) toCourt({ view: 'replay', id: el.dataset.sxId }); }
   });
 
-  hearings.subscribe(() => { if (stage.isOpen()) renderLobby(); });
+  // New rulings and inbox refreshes invalidate both the profile and lobby record.
+  hearings.subscribe(() => { records.clear(); ownRecords(); if (stage.isOpen()) renderLobby(); });
+  cloud.subscribe?.(() => { ownRecords(); });
   return {
     hearings, active, lobbyMarkup, refresh, route, onClick, onChange, studioMarkup, onLine, autoMark, sealingLine, sealed, replayEnd,
     stopped() { /* timers belong to the stage and stop with it */ }

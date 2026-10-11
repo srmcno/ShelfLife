@@ -127,8 +127,10 @@ export function rowHTML(item) {
     help: [b('block', 'Block', true), b('report', 'Report', true)],
     knock: [b('block', 'Block', true), b('report', 'Report', true)]
   }[item.kind] || [];
-  return '<li class="mx-row mx-row-' + esc(item.kind) + '" data-mx-item="' + id + '"><p><b>' + esc(item.title) + '</b> ' + esc(item.line) + '</p>' +
-    (buttons.length ? '<div class="fr-menu">' + buttons.join('') + '</div>' : '') + '</li>';
+  // The Postbox owns the surrounding list item. A nested <li> would make the
+  // browser move our buttons outside that item and lose the delegated route.
+  return '<div class="mx-row mx-row-' + esc(item.kind) + '" data-mx-item="' + id + '"><p><b>' + esc(item.title) + '</b> ' + esc(item.line) + '</p>' +
+    (buttons.length ? '<div class="fr-menu">' + buttons.join('') + '</div>' : '') + '</div>';
 }
 
 function confirmHTML(kind, friend) {
@@ -158,6 +160,7 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
   let syncing = null, view = null, viewToken = 0;
   const now = () => Date.now();
   const repaint = () => { refresh(); ghost.render(); };
+  const current = (user, ctx) => !!user && mx.userId() === user && mx.active() && ctx?.isCurrent?.() !== false;
 
   /* ---- keeping the shelf and the server in step ---- */
   async function flush() {
@@ -166,17 +169,20 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
     const items = outboxFor(state, uid);
     const acks = items.filter(o => o.op === 'ack');
     if (acks.length) {
-      try { await mx.ackHelps(acks.map(o => o.ref)); clearOutbox(state, acks); }
-      catch (error) { if (FINAL.has(mischiefCode(error))) clearOutbox(state, acks); else return; }
+      try { await mx.ackHelps(acks.map(o => o.ref)); if (!current(uid)) return; clearOutbox(state, acks); }
+      catch (error) { if (!current(uid)) return; if (FINAL.has(mischiefCode(error))) clearOutbox(state, acks); else return; }
     }
     for (const item of items.filter(o => o.op !== 'ack')) {
+      if (!current(uid)) return;
       try {
         if (item.op === 'resolve') await mx.resolveHex(item.ref, item);
         else if (item.op === 'decline') await mx.declineHex(item.ref);
         else if (item.op === 'shoo') await mx.shoo(item.ref, item.taps);
         else if (item.op === 'seen') await mx.seen(item.kind, item.ref);
+        if (!current(uid)) return;
         clearOutbox(state, [item]);
       } catch (error) {
+        if (!current(uid)) return;
         if (FINAL.has(mischiefCode(error))) clearOutbox(state, [item]);
         else return;
       }
@@ -189,20 +195,25 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
   }
   function sync() {
     if (!mx.active()) return Promise.resolve(null);
-    if (syncing) return syncing;
-    syncing = (async () => {
+    const user = mx.userId();
+    if (syncing?.user === user) return syncing.promise;
+    const request = { user };
+    request.promise = (async () => {
       await flush();
+      if (!current(user)) return null;
       const box = await mx.inbox();
-      if (!box || !mx.active()) return null;
-      const news = receiveInbox(state, box, mx.userId(), now());
+      if (!box || !current(user)) return null;
+      const news = receiveInbox(state, box, user, now());
       const added = settleMischief(state, now());
       await flush();
+      if (!current(user)) return null;
       save();
       announce(news, added);
       repaint();
       return box;
-    })().catch(() => null).finally(() => { syncing = null; });
-    return syncing;
+    })().catch(() => null).finally(() => { if (syncing === request) syncing = null; });
+    syncing = request;
+    return request.promise;
   }
   // A place in the tray opened up, or a hex expired: no network needed.
   function settle() {
@@ -218,6 +229,7 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
   /* ---- the views ---- */
   const friendOf = (ctx, userId) => { try { return ctx.friend(userId); } catch { return null; } };
   function show(ctx, v) {
+    if (ctx?.isCurrent?.() === false) return null;
     view = { id: v.id, friend: v.friend?.userId || '', token: ++viewToken };
     try { ctx.show({ id: v.id, kicker: v.kicker, title: v.title, html: v.html, back: v.back }); } catch (error) { console.error('[mischief]', error); }
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => paintGuests(v.guests || []));
@@ -244,7 +256,7 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
     const token = show(ctx, { ...base, html: helpViewHTML({ friend, loading: true }) });
     try {
       const [shelf] = await Promise.all([social.shelf(friend.userId), sync()]);
-      if (!still(token)) return;
+      if (!still(token) || ctx?.isCurrent?.() === false) return;
       const residents = shelf?.shelf?.residents || [];
       show(ctx, { ...base, html: helpViewHTML({ friend, residents, status: mx.cached()?.status }), guests: residents.filter(r => r.needs) });
     } catch (error) {
@@ -259,6 +271,7 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
     if (!c || now() - c.at > 60000) sync().then(() => { if (still(token)) show(ctx, knockView(friend)); });
   }
   function openConfirm(kind, friend, ctx, back) {
+    if (ctx?.isCurrent?.() === false) return;
     show(ctx, { id: 'mischief-confirm', friend, kicker: 'Mischief', title: (kind === 'block' ? 'Block ' : 'Report ') + who(friend), back: back || 'friend:' + friend.userId, html: confirmHTML(kind, friend) });
     view.kind = kind;
   }
@@ -274,13 +287,16 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
       const status = mx.cached()?.status, rebound = status?.rebounds.find(r => r.toUser === friend.userId);
       const pet = state.pets.find(p => p.id === culprit);
       busy(el, true); statusLine(el, 'Sending.');
+      const user = mx.userId();
       try {
         if (card === 'haunt') {
           await mx.sendHaunt({ to: friend.userId, resident: culprit });
+          if (!current(user, ctx)) return;
           show(ctx, { id: 'mischief-hex', friend, kicker: 'Mischief', title: 'Haunting sent', back: 'friend:' + friend.userId,
             html: '<div class="mx-view mx-sent"><p class="mx-lede">' + esc(pet?.name || 'Your resident') + '’s ghost is drifting over to ' + esc(who(friend)) + '’s shelf. It stays a day unless they shoo it. You will hear which.</p></div>' });
         } else {
           await mx.sendHex({ to: friend.userId, card, culprit, rebound: rebound ? rebound.id : null });
+          if (!current(user, ctx)) return;
           show(ctx, { id: 'mischief-hex', friend, kicker: 'Mischief', title: 'Hex sent', back: 'friend:' + friend.userId,
             html: '<div class="mx-view mx-sent"><p class="mx-sent-card">' + glyph(HEX_BY_ID[card].art) + '<b>' + esc(HEX_BY_ID[card].name) + '</b></p><p class="mx-lede">On its way to ' + esc(who(friend)) +
               '’s shelf, with ' + esc(pet?.name || 'your resident') + ' as the culprit. It waits up to two days. You will hear how it went.</p></div>' });
@@ -299,8 +315,10 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
       if (!friend || !HELP_NEEDS.includes(need) || !resident) return;
       const petName = el.closest('.mx-help-row')?.querySelector('b')?.textContent || 'them';
       busy(el, true); statusLine(el, 'On your way.');
+      const user = mx.userId();
       try {
         await mx.help({ to: friend.userId, resident, need });
+        if (!current(user, ctx)) return;
         const done = helped(state, { need, petName, friend: who(friend) });
         save(); refresh();
         show(ctx, { id: 'mischief-help', friend, kicker: 'Neighbourly', title: 'Helped at ' + who(friend) + '’s', back: 'friend:' + friend.userId,
@@ -315,8 +333,10 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
       const friend = friendOf(ctx, el.closest('.mx-view')?.dataset.mxFriend);
       if (!friend) return;
       busy(el, true); statusLine(el, 'Knock knock.');
+      const user = mx.userId();
       try {
         const knock = await mx.knock(friend.userId);
+        if (!current(user, ctx)) return;
         const out = takeKnock(state, friend, knock);
         settleMischief(state, now());
         save(); refresh();
@@ -330,15 +350,18 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
       if (action === 'cancel') { try { ctx.back(); } catch { /* nothing to go back to */ } return; }
       if (!friend.userId || !['block-yes', 'report-yes'].includes(action)) return;
       busy(el, true);
+      const user = mx.userId();
       try {
         if (action === 'block-yes') {
           await social.block(friend.userId);
+          if (!current(user, ctx)) return;
           dropFriend(state, friend.userId, now());
           save(); repaint();
           try { ctx.toast('Blocked. Their mischief went with them.'); ctx.refresh(); } catch { /* optional */ }
         } else {
           const reason = el.closest('.mx-view')?.querySelector('input[name="mxReason"]:checked')?.value || 'Something else';
           await social.report(friend.userId, 'Mischief: ' + reason);
+          if (!current(user, ctx)) return;
           try { ctx.toast('Reported. Block them too if you would rather not hear from them.'); } catch { /* optional */ }
         }
         try { ctx.back(); } catch { /* nothing to go back to */ }
@@ -387,14 +410,17 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
     title: (k.fromName || 'A friend') + ' knocked.', line: k.result === 'treat' ? 'They went home with a treat.' : 'They went home with a trick.' })) : []);
   const LISTS = { 'mischief-incoming': incomingItems, 'mischief-news': newsItems, 'mischief-helps': helpItems, 'mischief-doorstep': knockItems };
   async function postboxClick(source, action, itemId, ctx) {
+    const user = mx.userId();
+    if (!current(user, ctx)) return;
     const item = LISTS[source]().find(x => x.id === itemId);
     if (!item) return;
     const friend = (item.user && friendOf(ctx, item.user)) || { userId: item.user, name: item.name };
     if (action === 'play') { closeHub(); window.dispatchEvent(new CustomEvent('shelflife:mayhem', { detail: { open: 'emergency' } })); }
     else if (action === 'find') { closeHub(); document.getElementById('cabinetWrap')?.scrollIntoView({ block: 'center' }); }
-    else if (action === 'decline') { declineHex(state, item.ref, now()); save(); refresh(); await flush(); save(); safe(() => ctx.refresh()); safe(() => ctx.say('Returned to sender. They will be told it came back unopened.')); }
+    else if (action === 'decline') { declineHex(state, item.ref, now()); save(); refresh(); await flush(); if (!current(user, ctx)) return; save(); safe(() => ctx.refresh()); safe(() => ctx.say('Returned to sender. They will be told it came back unopened.')); }
     else if (action === 'seen') {
-      try { await mx.seen(item.haunt ? 'haunt' : 'hex', item.ref); } catch (error) { safe(() => ctx.say(mischiefText(error))); }
+      try { await mx.seen(item.haunt ? 'haunt' : 'hex', item.ref); } catch (error) { if (!current(user, ctx)) return; safe(() => ctx.say(mischiefText(error))); }
+      if (!current(user, ctx)) return;
       safe(() => ctx.refresh());
     }
     else if (action === 'rebound' && friend.userId) openHex(friend, ctx);
@@ -420,8 +446,14 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
       const bowl = el.closest('.mx-doorstep')?.querySelector('input[name="mxBowl"]:checked')?.value;
       if (!BOWL_BY_ID[bowl]) return;
       busy(el, true);
-      try { await mx.setBowl(bowl); statusLine(el, 'The bowl is out: ' + BOWL_BY_ID[bowl].name + '.'); safe(() => ctx.toast('The bowl is out.')); }
-      catch (error) { statusLine(el, mischiefText(error)); }
+      const user = mx.userId();
+      try {
+        await mx.setBowl(bowl);
+        if (!current(user, ctx)) return;
+        const text = 'The bowl is out: ' + BOWL_BY_ID[bowl].name + '.';
+        statusLine(el, text); safe(() => ctx.say(text)); safe(() => ctx.toast('The bowl is out.'));
+      }
+      catch (error) { if (!current(user, ctx)) return; statusLine(el, mischiefText(error)); safe(() => ctx.say(mischiefText(error))); }
       finally { busy(el, false); }
     } });
 
@@ -470,19 +502,23 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
         '<button class="btn btn-sm fr-warn" type="button" data-mx="report-yes">Send report</button><button class="btn btn-sm btn-ghost" type="button" data-mx="cancel">Cancel</button>';
       bar.querySelector('input')?.focus();
     } else if ((act === 'block-yes' || act === 'report-yes') && userId) {
+      const user = mx.userId();
       bar.querySelectorAll('button').forEach(b => { b.disabled = true; });
       try {
         if (act === 'block-yes') {
           await social.block(userId);
+          if (!current(user)) return;
           dropFriend(state, userId, now());
           save(); refresh(); reopen(); ghost.render();
           toast('Blocked. Their mischief went with them.');
         } else {
           await social.report(userId, 'Mischief: ' + (bar.querySelector('input[name="mxBarReason"]:checked')?.value || 'Something else'));
+          if (!current(user)) return;
           reopen();
           toast('Reported. A person reads every report.');
         }
       } catch (error) {
+        if (!current(user)) return;
         bar.querySelectorAll('button').forEach(b => { b.disabled = false; });
         toast(mischiefText(error));
       }

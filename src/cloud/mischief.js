@@ -171,7 +171,12 @@ export function createMischief({ cloud, social, now = Date.now } = {}) {
 
   async function call(name, args) {
     if (!signedIn()) throw refuse('signed_out', 401);
-    try { return await cloud.rpc(name, args); }
+    const who = uid();
+    try {
+      const reply = await cloud.rpc(name, args);
+      same(who);
+      return reply;
+    }
     catch (error) {
       const code = mischiefCode(error);
       throw refuse(code, error?.status || 0);
@@ -179,6 +184,7 @@ export function createMischief({ cloud, social, now = Date.now } = {}) {
   }
   const user = value => { const id = cleanUuid(value); if (!id) throw refuse('not_found'); return id; };
   const uid = () => (signedIn() ? cloud.userId() : null);
+  const same = who => { if (!who || uid() !== who) throw refuse('signed_out', 401); };
 
   // One read for everything. Concurrent callers share it; an old account's
   // reply never lands on a new one.
@@ -191,6 +197,9 @@ export function createMischief({ cloud, social, now = Date.now } = {}) {
       cache = readMischiefInbox(raw); cacheUser = who; cache.at = now();
       emit();
       return cache;
+    }).catch(error => {
+      if (uid() !== who) return null;
+      throw error;
     }).finally(() => { if (inflight === request) inflight = null; });
     inflight = request;
     return request.promise;
@@ -206,7 +215,9 @@ export function createMischief({ cloud, social, now = Date.now } = {}) {
     if (!HEX_BY_ID[card]) throw refuse('bad_card');
     if (!petId(culprit)) throw refuse('bad_culprit');
     const target = user(to), free = rebound ? user(rebound) : null;
+    const who = uid();
     await freshShelf();
+    same(who);
     const r = await call('send_hex', { p_to: target, p_card: card, p_culprit: culprit, p_rebound: free });
     patch(c => {
       if (free) c.status.rebounds = c.status.rebounds.filter(x => x.id !== free);
@@ -217,7 +228,9 @@ export function createMischief({ cloud, social, now = Date.now } = {}) {
   async function sendHaunt({ to, resident }) {
     if (!petId(resident)) throw refuse('bad_culprit');
     const target = user(to);
+    const who = uid();
     await freshShelf();
+    same(who);
     const r = await call('send_haunt', { p_to: target, p_resident: resident });
     patch(c => { c.status.hauntReady = false; });
     return { id: cleanUuid(r?.id), endsAt: time(r?.ends_at) };

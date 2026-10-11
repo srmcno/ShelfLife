@@ -12,6 +12,7 @@ import { addSouls } from './mayhem.js';
 import { localDayKey, petById } from '../state.js';
 import { residentSnapshot } from '../cloud/social.js';
 import { readCast, MAX_CAST_CHARS } from '../cloud/hearings.js';
+import { postedStars } from '../tester-state.js';
 
 /* The Joint Bench, as pure rules. Two friends hear the same hearing: the same
    case, the same version, the same cast and the same seed, so every line the
@@ -196,7 +197,7 @@ export function marksByLine(marks) {
 export const galleryLine = (r, rnd = Math.random) => (REACTIONS[r] ? pickOf(REACTIONS[r].gallery, rnd) : '');
 
 /* ---- the reveal ---- */
-export const sealedRuling = (ep, result) => ({ ruling: ep.ruling, truth: result.truth, stars: result.stars, ratings: result.ratings,
+export const sealedRuling = (ep, result, state) => ({ ruling: ep.ruling, truth: result.truth, stars: postedStars(state, result.stars), ratings: result.ratings,
   agree: Math.min(6, ep.agree ?? 0), dissent: Math.min(6 - Math.min(6, ep.agree ?? 0), ep.disagree ?? 0) });
 
 // How the bench did, by this edition's truth.

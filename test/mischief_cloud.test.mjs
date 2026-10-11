@@ -207,3 +207,66 @@ test('signed out, the client sends nothing and says why', async () => {
   await assert.rejects(ada.mx.knock(bea.id), refused('signed_out'));
   assert.equal(before === null || typeof before === 'object', true);
 });
+
+test('every late write belongs to the account that started it', async () => {
+  const writes = [
+    ['sendHex', mx => mx.sendHex({ to: U(3), card: HEX_IDS[0], culprit: 'qa0' }), { id: U(4) }],
+    ['sendHaunt', mx => mx.sendHaunt({ to: U(3), resident: 'qa0' }), { id: U(4) }],
+    ['help', mx => mx.help({ to: U(3), resident: 'qa0', need: 'food' }), { id: U(4), amount: 25 }],
+    ['knock', mx => mx.knock(U(3)), { id: U(4), result: 'treat', prize: 'souls', souls: 5 }],
+    ['setBowl', mx => mx.setBowl('apples'), { bowl: 'apples' }],
+    ['resolveHex', mx => mx.resolveHex(U(4), { choice: 0, outcome: 0 }), { ok: true }],
+    ['declineHex', mx => mx.declineHex(U(4)), { ok: true }],
+    ['shoo', mx => mx.shoo(U(4), 5), { ok: true }],
+    ['ackHelps', mx => mx.ackHelps([U(4)]), { count: 1 }],
+    ['seen', mx => mx.seen('hex', U(4)), { ok: true }]
+  ];
+  for (const [name, write, reply] of writes) {
+    let user = U(1), finish, started;
+    const begun = new Promise(resolve => { started = resolve; });
+    const cloud = { userId: () => user, rpc: async rpc => {
+      if (rpc === 'mischief_inbox') return { status: { helped: [], helps_given: 0 } };
+      started(); return new Promise(resolve => { finish = resolve; });
+    } };
+    const social = { signedIn: () => true, active: () => true, publish: async () => {} };
+    const mx = createMischief({ cloud, social, now });
+    await mx.inbox();
+    const pending = write(mx);
+    const rejected = assert.rejects(pending, refused('signed_out'), name);
+    await begun;
+    user = U(2);
+    await mx.inbox();
+    const before = structuredClone(mx.cached());
+    finish(reply);
+    await rejected;
+    assert.deepEqual(mx.cached(), before, name + ' cannot patch the next account');
+  }
+});
+
+test('switching accounts while publishing a culprit never sends from the replacement account', async () => {
+  for (const send of [mx => mx.sendHex({ to: U(3), card: HEX_IDS[0], culprit: 'qa0' }), mx => mx.sendHaunt({ to: U(3), resident: 'qa0' })]) {
+    let user = U(1), finish;
+    const calls = [];
+    const cloud = { userId: () => user, rpc: async name => { calls.push(name); return { id: U(4) }; } };
+    const social = { signedIn: () => true, active: () => true, publish: () => new Promise(resolve => { finish = resolve; }) };
+    const pending = send(createMischief({ cloud, social, now }));
+    const rejected = assert.rejects(pending, refused('signed_out'));
+    user = U(2); finish();
+    await rejected;
+    assert.deepEqual(calls, []);
+  }
+});
+
+test('a stale inbox remains a discarded read while the replacement account loads independently', async () => {
+  let user = U(1), finish;
+  const cloud = { userId: () => user, rpc: () => user === U(1)
+    ? new Promise(resolve => { finish = resolve; }) : Promise.resolve({ status: { helps_given: 2 } }) };
+  const social = { signedIn: () => true, active: () => true };
+  const mx = createMischief({ cloud, social, now });
+  const old = mx.inbox();
+  user = U(2);
+  await mx.inbox();
+  finish({ status: { helps_given: 1 } });
+  assert.equal(await old, null);
+  assert.equal(mx.cached().status.helpsGiven, 2);
+});

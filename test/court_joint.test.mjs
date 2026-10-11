@@ -33,6 +33,17 @@ const bea = () => shelf(['Gladys', 'Snag', 'Wanda'], [['damp'], ['theatrical'], 
 // Bea's shelf as Ada sees it on Friends.
 const beaShelf = () => readShelf(shelfSnapshot(bea())).residents;
 
+test('both judges seal zero tester stars without changing their local result', () => {
+  const ep = { ruling: 'both', agree: 5, disagree: 1 }, result = { truth: 'both', stars: 3, ratings: 88 };
+  for (const role of ['first', 'second']) {
+    const state = ada();
+    assert.equal(sealedRuling(ep, result, state).stars, 3, role);
+    state.tester = true;
+    assert.equal(sealedRuling(ep, result, state).stars, 0, role);
+    assert.equal(result.stars, 3, 'local earned stars are unchanged');
+  }
+});
+
 function servedHearing(seed = 1234, caseId = 'borrowed-coffin', side = 'p') {
   const A = ada(), residents = beaShelf();
   const twist = jointVersion(A, caseId, seed, NOW);

@@ -6,6 +6,7 @@ import { createHearings } from '../../src/cloud/hearings.js';
 import { COURT_BY_ID, docketCaseId, SUMMONS_SOULS } from '../../src/engine/court.js';
 import { effectiveCase, twistById, docketTwist } from '../../src/engine/court-twists.js';
 import { JOINT_BENCH_SOULS } from '../../src/engine/court-joint.js';
+import { COURT_CAST } from '../../src/content/court.js';
 
 // The Joint Bench with two simulated players against one fake server. The
 // page is Ada, then Bea, then Ada again, each with their own shelf and session
@@ -20,7 +21,7 @@ const test = base.extend({
     expect(errors, 'browser errors').toEqual([]);
   }, { auto: true }]
 });
-test.use({ serviceWorkers: 'block' });
+test.use({ serviceWorkers: 'block', actionTimeout: 15000 });
 test.describe.configure({ timeout: 300000 });
 
 const NOW = Date.UTC(2026, 9, 3, 17);
@@ -82,6 +83,20 @@ async function openCourt(page) {
   await expect(page.locator('#courtVeil')).toHaveClass(/open/);
   await expect(page.locator('#courtSheet .jc-bench')).toBeVisible();
 }
+async function openFriends(page) {
+  await page.locator('#tabMore').click();
+  await page.locator('#friendsBtn').click();
+  await expect(page.locator('#friendsSheet .fr-friend').first()).toBeVisible();
+}
+async function openProfile(page, name) {
+  await page.locator('#friendsSheet .fr-friend').filter({ hasText: name }).locator('[data-fr="profile"]').click();
+  await expect(page.locator('#friendsSheet h2')).toHaveText(name);
+}
+async function openPostbox(page) {
+  await page.locator('#friendsSheet [data-fr="postbox"]').click();
+  await expect(page.locator('#friendsSheet h2')).toHaveText('Postbox');
+}
+const mail = (page, id) => page.locator('#friendsSheet [data-fr-mail="joint-bench"][data-fr-item="' + id + '"]');
 // The cast as the studio shows it: names only (a guest's seat adds where it is from).
 const castOf = page => page.evaluate(() => {
   const sheet = document.getElementById('courtSheet');
@@ -141,6 +156,7 @@ async function tapThrough(page, selector = '.jc-reveal') {
   await expect(page.locator('#courtSheet ' + selector)).toBeVisible();
 }
 async function shoot(page, testInfo, name) {
+  const before = page.viewportSize();
   for (const [width, height] of [[360, 640], [375, 667], [390, 844]]) {
     await page.setViewportSize({ width, height });
     await page.locator('#courtSheet .sc-wrap').scrollIntoViewIfNeeded();
@@ -150,21 +166,21 @@ async function shoot(page, testInfo, name) {
     await page.screenshot({ path });
     await testInfo.attach(name + ' at ' + width + 'x' + height, { path, contentType: 'image/png' });
   }
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize(before);
 }
 
 test('serve papers and judge: a sealed ruling, the identical episode, the gallery, a full bench and the record', async ({ context }, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium', 'Two players are played once; phone widths are set explicitly');
   const errors = [];
   const { fake, ada, bea, here } = await world();
+  ada.shelf.tester = true; bea.shelf.tester = true;
   let adaHere = here(ada), beaHere = here(bea);
 
   // ---- Ada serves papers on Bea's Snag and judges first ----
   let page = await arrive(context, fake, adaHere, errors);
-  await openCourt(page);
-  await expect(page.locator('#courtSheet .jc-bench')).toContainText('Judge a case with a friend.');
-  await page.locator('#courtSheet [data-jc="serve"]').click();
-  await page.locator('#courtSheet [data-jc="friend"]').filter({ hasText: 'Bea' }).click();
+  await openFriends(page);
+  await openProfile(page, 'Bea');
+  await page.locator('#friendsSheet [data-fr-action="serve-sealed"]').click();
+  await expect(page.locator('#friendsVeil')).not.toHaveClass(/open/);
   await expect(page.locator('#courtSheet [data-jc-field="theirId"]')).toBeVisible();
   await page.locator('#courtSheet [data-jc-field="theirId"]').selectOption({ label: 'Snag' });
   await page.locator('#courtSheet [data-jc-field="mineId"]').selectOption({ label: 'Agnes' });
@@ -177,10 +193,18 @@ test('serve papers and judge: a sealed ruling, the identical episode, the galler
   expect(adaCast.jury).toEqual(expect.arrayContaining(['Lord Dampington III', 'Pip', 'Gladys', 'Wanda']));
   expect(adaCast.guests.some(t => t.endsWith('from Bea’s shelf')), 'Bea’s residents sit as guests on Ada’s side').toBe(true);
   expect(fake.social.hearings.rows.size, 'nothing is sent before the ruling').toBe(0);
+  let offlineSeal = true;
+  await page.route('**/rest/v1/rpc/open_hearing', route => offlineSeal ? route.abort('internetdisconnected') : fake.route(route));
   const adaSaid = await playEpisode(page, TRUTH, { react: ['laugh', 'gasp'] });
+  await expect(page.locator('#courtSheet [data-jc-seal]')).toContainText('Not sealed.');
+  expect(fake.social.hearings.rows.size).toBe(0);
+  offlineSeal = false;
+  await page.locator('#courtSheet [data-jc="reseal"]').click();
   await expect(page.locator('#courtSheet [data-jc-seal]')).toContainText('Sealed. Bea hears it next');
   await expect(page.locator('#courtSheet .sc-next')).toHaveCount(0);
   const [row] = [...fake.social.hearings.rows.values()];
+  expect(row.first_ruling.stars, 'tester judge sends zero stars').toBe(0);
+  await expect(page.locator('#courtSheet .sc-wrap-stars .on').first()).toBeVisible();
   expect([row.kind, row.case_id, row.twist, row.status, row.first_ruling.ruling, row.first_ruling.truth]).toEqual(['served', DOCKET, docketTwist(DAY, DOCKET), 'open', TRUTH, TRUTH]);
   // The two taps, then a gavel for every time Ada banged one in a scene.
   expect(row.first_marks.slice(0, 2).map(m => m.r)).toEqual(['laugh', 'gasp']);
@@ -193,11 +217,12 @@ test('serve papers and judge: a sealed ruling, the identical episode, the galler
   // ---- Bea hears the identical episode, with Ada as the gallery ----
   page = await arrive(context, fake, beaHere, errors);
   const beaBefore = await souls(page);
-  await openCourt(page);
-  const waiting = page.locator('#courtSheet .jc-row').filter({ hasText: 'Ada heard' });
+  await openFriends(page);
+  await openPostbox(page);
+  const waiting = mail(page, row.id);
   await expect(waiting).toContainText('Sealed. Your turn.');
-  await expect(waiting.locator('[data-jc="block"]')).toBeVisible();
-  await waiting.locator('[data-jc="hear"]').click();
+  await expect(waiting.locator('[data-sx="block"]')).toBeVisible();
+  await waiting.locator('[data-sx="hear"]').click();
   await expect(page.locator('#courtSheet .sc-stage')).toBeVisible();
   const beaCast = await castOf(page);
   expect({ ...beaCast, guests: [] }).toEqual({ ...adaCast, guests: [] });
@@ -208,6 +233,8 @@ test('serve papers and judge: a sealed ruling, the identical episode, the galler
   await expect.poll(() => page.locator('#courtSheet [data-sc-stage]').getAttribute('data-jc-heard'), 'every reaction of Ada’s played in the gallery').toBe(String(row.first_marks.length));
   await expect(page.locator('#courtSheet [data-jc-seal]')).toContainText('+' + SUMMONS_SOULS + ' for hearing Ada’s case. Both envelopes are in.');
   expect(fake.social.hearings.rows.get(row.id).status).toBe('revealed');
+  expect(fake.social.hearings.rows.get(row.id).second_ruling.stars, 'second tester judge also sends zero stars').toBe(0);
+  await expect(page.locator('#courtSheet .sc-wrap-stars .on').first()).toBeVisible();
   await page.locator('#courtSheet [data-jc="open-reveal"]').click();
   await tapThrough(page);
   await expect(page.locator('#courtSheet .jc-reveal')).toHaveAttribute('data-jc-outcome', 'full');
@@ -222,10 +249,6 @@ test('serve papers and judge: a sealed ruling, the identical episode, the galler
   page = await arrive(context, fake, adaHere, errors);
   const adaBefore = await souls(page);
   await openCourt(page);
-  await page.waitForTimeout(2000);
-  console.log('DEBUG', JSON.stringify(await page.evaluate(async () => { const m = await import('/src/cloud/index.js'); return { active: m.social.active(), uid: m.cloud.userId() }; })),
-    fake.calls().slice(-6).map(r => r.path + ' ' + r.status).join(' | '), JSON.stringify([...fake.social.hearings.rows.values()].map(h => [h.from_user, h.to_user, h.status, h.created_at, h.ruled_at])));
-  console.log('LOBBY', await page.locator('#courtSheet [data-jc-lobby]').innerHTML());
   await expect(page.locator('#courtSheet .jc-record').first()).toHaveText(/^You and Bea: 1 hearing, 1 full bench\. (Dead level|Level)/);
   const ready = page.locator('#courtSheet .jc-row.jc-due');
   await expect(ready).toContainText('The envelopes are in');
@@ -246,19 +269,13 @@ test('serve papers and judge: a sealed ruling, the identical episode, the galler
 });
 
 test('hear a case together: an invitation from Friends, witnesses from their shelf, and a divided bench', async ({ context }, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium', 'Two players are played once; phone widths are set explicitly');
   const errors = [];
   const { fake, ada, bea, here } = await world();
   const page = await arrive(context, fake, here(ada), errors);
-  // From a friend's profile: the hub renders registered actions as [data-fr-action];
-  // without the hub, the registered action is run the way the hub runs it.
-  await page.evaluate(async ({ id, name }) => {
-    const { friendActions } = await import('/src/ui/social-registry.js');
-    const friend = { userId: id, name };
-    const actions = friendActions(friend, {});
-    if (!actions.some(a => a.id === 'serve-sealed') || !actions.some(a => a.id === 'serve') || !actions.some(a => a.id === 'hear-together')) throw new Error('actions missing');
-    actions.find(a => a.id === 'hear-together').run(friend, {});
-  }, { id: bea.id, name: 'Bea' });
+  await openFriends(page);
+  await openProfile(page, 'Bea');
+  await expect(page.locator('#friendsSheet [data-fr-action="serve"]')).toBeVisible();
+  await page.locator('#friendsSheet [data-fr-action="hear-together"]').click();
   await expect(page.locator('#courtSheet.jc-invite')).toBeVisible();
   await expect(page.locator('#courtSheet [data-jc-field="caseId"]')).toHaveValue(DOCKET);
   await expect(page.locator('#courtSheet .jc-how').first()).toContainText('Bea hears the identical episode');
@@ -292,7 +309,6 @@ test('hear a case together: an invitation from Friends, witnesses from their she
 });
 
 test('the bench record on a friend’s profile and the postbox rows, through the registry', async ({ context }, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium', 'Checked once');
   const errors = [];
   const { fake, ada, bea, here } = await world();
   // Two earlier hearings: one waiting for Ada, one revealed.
@@ -304,41 +320,30 @@ test('the bench record on a friend’s profile and the postbox rows, through the
   await beaBench.rule(done.id, { ...sealed, ruling: TRUTH });
   const waiting = await beaBench.open({ to: ada.id, kind: 'invite', caseId: DOCKET, twist: docketTwist(DAY, DOCKET), seed: 6, cast, ruling: sealed });
   const page = await arrive(context, fake, here(ada), errors);
-  const out = await page.evaluate(async ({ friend }) => {
-    const reg = await import('/src/ui/social-registry.js');
-    const said = [];
-    const ctx = { say: text => said.push(text), refresh() {} };
-    const source = reg.postboxSources().find(s => s.id === 'joint-bench');
-    const items = await source.load(ctx);
-    const section = reg.friendsSections('friend').find(s => s.id === 'bench-record');
-    section.render(ctx, friend);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return { count: source.count(ctx), poll: source.poll, items: items.map(i => [i.id, i.line, source.render(i, ctx)]), section: section.render(ctx, friend), said };
-  }, { friend: { userId: bea.id, name: 'Bea' } });
-  expect(out.poll).toBe(true);
-  expect(out.count, 'a hearing to answer and a reveal to read').toBe(2);
-  const [, line, html] = out.items.find(i => i[0] === waiting.id);
-  expect(line).toBe('Bea heard ' + COURT_BY_ID[DOCKET].title + ' and ruled. Sealed. Your turn.');
-  expect(html).toContain('data-sx="hear" data-sx-id="' + waiting.id + '"');
-  for (const action of ['decline', 'block', 'report']) expect(html).toContain('data-sx="' + action + '"');
-  const [, ready, readyHtml] = out.items.find(i => i[0] === done.id);
-  expect(ready).toBe('The envelopes are in: ' + COURT_BY_ID[DOCKET].title + ', with Bea.');
-  expect(readyHtml).toContain('data-sx="reveal" data-sx-id="' + done.id + '"');
-  expect(out.section).toContain('You and Bea: 1 hearing, 0 full benches. Bea is ahead by one');
-  expect(out.section).toContain('data-sx="replay" data-sx-id="' + done.id + '"');
-  // Declining from the postbox, then replaying from the profile section.
-  await page.evaluate(async id => {
-    const reg = await import('/src/ui/social-registry.js');
-    await reg.postboxSources().find(s => s.id === 'joint-bench').onClick('decline', id, { say() {}, refresh() {} });
-  }, waiting.id);
-  expect(fake.social.hearings.rows.get(waiting.id).status).toBe('declined');
-  await page.evaluate(async id => {
-    const reg = await import('/src/ui/social-registry.js');
-    const el = document.createElement('button'); el.dataset.sxId = id;
-    reg.friendsSections('friend').find(s => s.id === 'bench-record').onClick('replay', el, {}, {});
-  }, done.id);
+  await openFriends(page);
+  await openProfile(page, 'Bea');
+  await expect(page.locator('#friendsSheet .jc-record')).toContainText('You and Bea: 1 hearing, 0 full benches. Bea is ahead by one');
+  await expect(page.locator('#friendsSheet [data-sx="replay"][data-sx-id="' + done.id + '"]')).toBeVisible();
+  await page.locator('#friendsSheet [data-fr="back"]').click();
+  await openPostbox(page);
+  await expect(mail(page, waiting.id)).toContainText('Bea heard ' + COURT_BY_ID[DOCKET].title + ' and ruled. Sealed. Your turn.');
+  for (const action of ['hear', 'decline', 'block', 'report']) await expect(mail(page, waiting.id).locator('[data-sx="' + action + '"]')).toBeVisible();
+  await expect(mail(page, done.id)).toContainText('The envelopes are in');
+  await expect(mail(page, done.id).locator('[data-sx="reveal"]')).toBeVisible();
+  await mail(page, waiting.id).locator('[data-sx="decline"]').click();
+  await expect.poll(() => fake.social.hearings.rows.get(waiting.id).status).toBe('declined');
+  // A later hearing must refresh the profile, even after its first successful read.
+  const next = await adaBench.open({ to: bea.id, kind: 'invite', caseId: DOCKET, twist: docketTwist(DAY, DOCKET), seed: 7, cast, ruling: sealed });
+  await beaBench.rule(next.id, { ...sealed, ruling: TRUTH });
+  await page.locator('#friendsSheet [data-fr="back"]').click();
+  await page.locator('#friendsSheet [data-fr="close"]').click();
+  await openFriends(page);
+  await openProfile(page, 'Bea');
+  await expect(page.locator('#friendsSheet .jc-record')).toContainText('You and Bea: 2 hearings');
+  await page.locator('#friendsSheet [data-sx="replay"][data-sx-id="' + done.id + '"]').click();
   await expect(page.locator('#courtSheet .jc-gallery-note')).toContainText('A replay. The gallery is Bea.');
-  await expect(page.locator('#courtSheet .sc-podium.p .sc-lectern span')).toHaveText('Susan');
+  await expect(page.locator('#courtSheet .sc-podium.p .sc-lectern span')).toHaveText(COURT_CAST[cast.p.id].name);
+  await expect(page.locator('#courtSheet .sc-podium.d .sc-lectern span')).toHaveText(COURT_CAST[cast.d.id].name);
   await page.close();
   expect(errors).toEqual([]);
 });
