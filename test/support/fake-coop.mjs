@@ -29,7 +29,8 @@ export function currencyId(owner, key) {
 }
 const canon = v => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, canon(v[k])])) : v;
 const UINT = v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 999999999;
-function checkSemantic(owner, id, detail, stop) {
+const LOCAL_DAY = /^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$/;
+function checkSemantic(owner, id, detail, delta, earned, stop) {
   const reward = detail?.reward;
   let key = null;
   if (reward === 'coven_chest') {
@@ -39,8 +40,14 @@ function checkSemantic(owner, id, detail, stop) {
     if (typeof detail.userId !== 'string' || !UUID.test(detail.userId)) stop('bad_op');
     key = 'coven_invite:' + detail.userId.toLowerCase();
   } else if (reward === 'joint_bench') {
-    if (typeof detail.hearing !== 'string' || !UUID.test(detail.hearing)) stop('bad_op');
+    if (typeof detail.hearing !== 'string' || !UUID.test(detail.hearing) || !LOCAL_DAY.test(detail.day) || typeof detail.paid !== 'boolean') stop('bad_op');
+    if (delta !== (detail.paid ? 25 : 0) || earned !== delta) stop('bad_op');
     key = 'joint_bench:' + detail.hearing.toLowerCase();
+  } else if (reward === 'mischief_shoo') {
+    if (typeof detail.haunt_id !== 'string' || !UUID.test(detail.haunt_id) || !LOCAL_DAY.test(detail.day) || typeof detail.paid !== 'boolean') stop('bad_op');
+    if (!Number.isInteger(detail.taps) || detail.taps < 5 || detail.taps > 99) stop('bad_op');
+    if (delta !== (detail.paid ? 15 : 0) || earned !== delta) stop('bad_op');
+    key = 'mischief_shoo:' + detail.haunt_id.toLowerCase();
   }
   if (key === null) return;
   if (id !== currencyId(owner, key)) stop('bad_op');
@@ -451,7 +458,7 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
         if (!Number.isInteger(item.earned) || item.earned < 0 || item.earned > 100000000) stop('bad_op');
         const detail = item.detail === undefined || item.detail === null ? null : item.detail;
         if (detail !== null && (typeof detail !== 'object' || Array.isArray(detail) || JSON.stringify(detail).length > 4096)) stop('bad_op');
-        checkSemantic(user.id, item.id, detail, stop);
+        checkSemantic(user.id, item.id, detail, item.delta, item.earned, stop);
         const had = receiptOf(user.id, 'game', item.id) || staged.find(x => x.id === item.id);
         if (had) {
           if (had.delta !== item.delta || had.earned !== item.earned || !same(had.detail ?? null, detail)) stop('bad_op');

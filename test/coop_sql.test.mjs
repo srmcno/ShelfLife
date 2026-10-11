@@ -772,10 +772,31 @@ test('a known reward has one canonical semantic id: derived from sha256, validat
   await rejects(adjust(L, [game(currencyId(L, 'coven_invite:' + A), 5, 5, invite)]), /bad_op/);
   await rejects(adjust(L, [game(currencyId(L, 'coven_invite:' + friend), 5, 5, { ...invite, userId: 'nope' })]), /bad_op/);
   const hearing = '24000000-0000-4000-8000-000000000001';
-  const joint = { reward: 'joint_bench', hearing, curio: null, frame: 'gilt', fame: 2, paid: true };
-  const jr = await adjust(L, [game(currencyId(L, 'joint_bench:' + hearing), 20, 20, joint)]);
+  const joint = { reward: 'joint_bench', hearing, day: '2026-10-9', curio: null, frame: 'gilt', fame: 2, paid: true };
+  const jr = await adjust(L, [game(currencyId(L, 'joint_bench:' + hearing), 25, 25, joint)]);
   assert.deepEqual(jr.receipts[0].detail, joint, 'the effects ride in the immutable detail');
-  await rejects(adjust(L, [game(currencyId(L, 'joint_bench:' + hearing), 20, 20, { ...joint, hearing: '24000000-0000-4000-8000-000000000002' })]), /bad_op/);
+  await rejects(adjust(L, [game(currencyId(L, 'joint_bench:' + hearing), 25, 25, { ...joint, hearing: '24000000-0000-4000-8000-000000000002' })]), /bad_op/);
+  await rejects(adjust(L, [game(currencyId(L, 'joint_bench:24000000-0000-4000-8000-000000000003'), 20, 20, { ...joint, hearing: '24000000-0000-4000-8000-000000000003' })]), /bad_op/, 'paid pays 25');
+  await rejects(adjust(L, [game(currencyId(L, 'joint_bench:24000000-0000-4000-8000-000000000003'), 25, 25, { ...joint, hearing: '24000000-0000-4000-8000-000000000003', paid: false })]), /bad_op/, 'unpaid pays 0');
+  const unpaid = await adjust(L, [game(currencyId(L, 'joint_bench:24000000-0000-4000-8000-000000000003'), 0, 0, { ...joint, hearing: '24000000-0000-4000-8000-000000000003', paid: false })]);
+  assert.deepEqual([unpaid.receipts[0].delta, unpaid.receipts[0].detail.paid], [0, false]);
+  // Shoo: keyed on the haunt, not the day, so a restored retry on a later day cannot mint twice.
+  const haunt = '26000000-0000-4000-8000-000000000001';
+  const shoo = { reward: 'mischief_shoo', haunt_id: haunt, day: '2026-10-9', paid: true, taps: 12 };
+  const sid = currencyId(L, 'mischief_shoo:' + haunt);
+  const sh = await adjust(L, [game(sid, 15, 15, shoo)]);
+  assert.deepEqual(sh.receipts[0].detail, shoo);
+  await rejects(adjust(L, [game(sid, 15, 15, { ...shoo, day: '2026-10-10' })]), /bad_op/, 'the original day stays');
+  assert.deepEqual((await adjust(L, [game(sid, 15, 15, shoo)])).receipts, sh.receipts);
+  await rejects(adjust(L, [game('26000000-0000-4000-8000-0000000000ff', 15, 15, shoo)]), /bad_op/, 'a random id for the same haunt');
+  for (const bad of [{ ...shoo, taps: 4 }, { ...shoo, taps: 100 }, { ...shoo, taps: 5.5 }, { ...shoo, paid: 'yes' }, { ...shoo, day: 'today' }, { ...shoo, haunt_id: 'nope' }]) {
+    await rejects(adjust(L, [game(sid, 15, 15, bad)]), /bad_op/, JSON.stringify(bad));
+  }
+  await rejects(adjust(L, [game(sid, 20, 20, shoo)]), /bad_op/);
+  const quiet = '26000000-0000-4000-8000-000000000002';
+  const q = await adjust(L, [game(currencyId(L, 'mischief_shoo:' + quiet), 0, 0, { ...shoo, haunt_id: quiet, paid: false, taps: 5 })]);
+  assert.equal(q.receipts[0].delta, 0);
+  assert.equal(currencyId(L, 'mischief_shoo:' + quiet.toUpperCase().toLowerCase()), q.receipts[0].source_id);
   await rejects(adjust(L, [game(currencyId(L, 'coven_chest:50:1'), 1, 1, { reward: 'coven_chest', week: 'x', tier: 1 })]), /bad_op/);
   await rejects(adjust(L, [game(currencyId(L, 'coven_chest:50:1'), 1, 1, { reward: 'coven_chest', week: 50, tier: 1, curio: 7 })]), /bad_op/);
   // Other details are kept as sent, with any reward name the client invents for itself.
@@ -808,4 +829,14 @@ test('the fake mirrors the game receipts: idempotent, atomic, semantic ids, debt
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[5], 5, 5, chest)] }), 'bad_op');
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(currencyId(A, 'coven_chest:42:1'), 5, 5, chest)] }).balance, -85);
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[6], 3, 3), game(OPS[6], 3, 3)] }).receipts.length, 2);
+  const haunt = '26000000-0000-4000-8000-000000000009';
+  const shoo = { reward: 'mischief_shoo', haunt_id: haunt, day: '2026-10-9', paid: true, taps: 12 };
+  const sid = currencyId(A, 'mischief_shoo:' + haunt);
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(sid, 15, 15, shoo)] }).receipts[0].detail.taps, 12);
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(sid, 15, 15, { ...shoo, day: '2026-10-10' })] }), 'bad_op');
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(sid, 0, 0, { ...shoo, paid: false })] }), 'bad_op');
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(sid, 15, 15, { ...shoo, taps: 4 })] }), 'bad_op');
+  const joint = { reward: 'joint_bench', hearing: haunt, day: '2026-10-9', paid: true };
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(currencyId(A, 'joint_bench:' + haunt), 20, 20, joint)] }), 'bad_op');
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(currencyId(A, 'joint_bench:' + haunt), 25, 25, joint)] }).receipts.length, 1);
 });
