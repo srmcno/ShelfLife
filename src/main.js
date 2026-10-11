@@ -16,6 +16,7 @@ import { initTesters } from './ui/testers.js';
 import './ui/coven.js';
 import './ui/kin.js';
 import { initMischief } from './ui/mischief.js';
+import './ui/coop.js'; // co-op: hired help and arcade duels, through the social registry
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';

@@ -8,6 +8,7 @@ import { renderPetSprite } from '../art/sprite.js';
 import { mountHouseholdScene } from '../art/household-scene.js';
 import { projectBoard, expeditionView, mountExpedition } from './expeditions.js';
 import { save } from '../state.js';
+import { pickHire, engageHire } from './coop-hire.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const button=(label,action,extra='')=>'<button class="btn" data-life="'+action+'" '+extra+'>'+label+'</button>';
 export function sceneHistoryMarkup(scenes,pets,filter=''){const cast=pets.filter(p=>scenes.some(s=>s.cast?.includes(p.id)));const visible=filter?scenes.filter(s=>s.cast?.includes(filter)):scenes;return '<h3>Household memories</h3><div class="life-links" aria-label="Filter memories by resident">'+button('Everyone','scene-filter','data-id="" aria-pressed="'+!filter+'"')+cast.map(p=>button(esc(p.name),'scene-filter','data-id="'+esc(p.id)+'" aria-pressed="'+(filter===p.id)+'"')).join('')+'</div><p>'+visible.length+' saved scene'+(visible.length===1?'':'s')+'</p><div class="scene-history">'+visible.map(s=>button(esc(s.title),'scene-select','data-id="'+s.id+'"')).join('')+'</div>'; }
@@ -129,7 +130,7 @@ export function initLife(state,refresh) {
   const {action,petId}=e.detail||{};
   if(action==='outing'){if(state.pets.some(p=>p.id===petId))leadId=petId;interlude=false;outing();}
  });
- document.addEventListener('change',e=>{if(['outingLead','outingCompanion','outingGear','outingDare'].includes(e.target.id)){const id=e.target.id;if(id==='outingLead')leadId=e.target.value;if(id==='outingCompanion')companionId=e.target.value;if(id==='outingGear')selectedGear=e.target.value;if(id==='outingDare')selectedDare=e.target.value;repaintOutingSetup(id);}});
+ document.addEventListener('change',e=>{if(['outingLead','outingCompanion','outingGear','outingDare','outingHire'].includes(e.target.id)){const id=e.target.id;if(id==='outingHire')pickHire(e.target.value);if(id==='outingLead')leadId=e.target.value;if(id==='outingCompanion')companionId=e.target.value;if(id==='outingGear')selectedGear=e.target.value;if(id==='outingDare')selectedDare=e.target.value;repaintOutingSetup(id);}});
  document.addEventListener('click',e=>{
   const locked=e.target.closest('[data-locked-folder]');
   if(locked){const target=document.querySelector('#welcomePanel:not([hidden])')?'#welcomePanel':'#acquaintPanel';window.dispatchEvent(new CustomEvent('shelflife:goto',{detail:{tab:'plots',target}}));return;}
@@ -157,7 +158,10 @@ export function initLife(state,refresh) {
    const line=card?.querySelector('.project-reaction');if(line)line.textContent=result.text+(result.fresh?' Daily care delivered.':' Today’s care already delivered. Play again whenever you like.');card?.querySelector('[data-life="use-project"]')?.focus({preventScroll:true});playStomp();return;
   }
   if(action==='route'){selectedRoute=b.dataset.id;repaintOutingSetup('',selectedRoute);return;}
-  if(action==='set-out'||action==='outing-practice'){const cast=[document.getElementById('outingLead').value,document.getElementById('outingCompanion').value];if(startOuting(state,selectedRoute,selectedGear,cast,{dare:selectedDare,mission:true,learning:true,practice:action==='outing-practice'})){save();interlude=false;outing();refresh();focusOutingProgress();}return;}
+  if(action==='set-out'||action==='outing-practice'){const cast=[document.getElementById('outingLead').value,document.getElementById('outingCompanion').value];
+   // Hired help is booked with the friend's shelf first (ui/coop-hire.js); a refusal stays on the plan.
+   const go=guest=>{if(startOuting(state,selectedRoute,selectedGear,cast,{dare:selectedDare,mission:true,learning:true,practice:action==='outing-practice',guest})){save();interlude=false;outing();refresh();focusOutingProgress();}};
+   if(action==='set-out')engageHire().then(go,()=>repaintOutingSetup());else go(null);return;}
   if(action==='outing-choice'){const result=chooseOuting(state,Number(b.dataset.choice));if(result){interlude=!result.complete;refresh();outing();focusOutingProgress();}return;}
   if(action==='outing-return'){if(returnFromMission(state)){interlude=false;save();refresh();outing();focusOutingProgress();}return;}
   if(action==='continue-outing'){interlude=false;outing();focusOutingProgress();return;}

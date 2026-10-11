@@ -14,6 +14,7 @@ import { createFakeCoven } from './fake-coven.mjs';
 import { createFakeKin } from './fake-kin.mjs';
 import { createFakeTrades } from './fake-trades.mjs';
 import { createFakeMischief } from './fake-mischief.mjs';
+import { createFakeCoop } from './fake-coop.mjs';
 
 export const FAKE_URL = 'https://fake.supabase.test';
 export const FAKE_KEY = 'fake-anon-key';
@@ -97,6 +98,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
     },
     delete_my_account(user) {
       users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); feedback.forget(user.id);
+      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); coop.forget(user.id);
       for (const [token, entry] of access) if (entry.userId === user.id) access.delete(token);
       for (const [token, entry] of refresh) if (entry.userId === user.id) refresh.delete(token);
       return { status: 204, body: '', headers: {} };
@@ -113,6 +115,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   Object.assign(RPC, (social.trades = createFakeTrades({ social, users, profiles, now, json, rest, uuid })).RPC);
   const mischief = createFakeMischief({ social, users, profiles, now, json, rest, uuid });
   Object.assign(RPC, social.RPC, mischief.RPC);
+  const coop = createFakeCoop({ profiles, now, json, rest, uuid, friendships: social.friendships, blocks: social.blocks }); Object.assign(RPC, coop.RPC);
   const TABLES = {
     ...social.TABLES,
     saves: user => [...saves].filter(([id]) => id === user.id).map(([id, r]) => ({ user_id: id, rev: r.rev, data: r.data, device_id: r.device_id, updated_at: r.updated_at })),
@@ -259,7 +262,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   }
 
   return {
-    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, feedback, kin, mischief,
+    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, feedback, kin, mischief, coop,
     fetch: fakeFetch, route, handle,
     setOffline(value = true) { offline = !!value; },
     failNext(count = 1, status = 500) { for (let i = 0; i < count; i++) failures.push(status); },

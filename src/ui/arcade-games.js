@@ -279,8 +279,9 @@ export function seanceView() {
         else lightCandle(-1, false);
       }
     },
-    press(A, pad) {
-      const g = A.g, at = performance.now() / 1000;
+    // A duel run passes its own clock (engine/duel.js) so the rhythm bonus replays exactly.
+    press(A, pad, at = performance.now() / 1000) {
+      const g = A.g;
       const r = seanceInput(g, pad, at);
       if (r.ignored) return null;
       const el = candles[pad];

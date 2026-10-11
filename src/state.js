@@ -15,6 +15,7 @@ import { normalizeCovenState } from './coven-state.js';
 import { normalizeKin } from './kin-state.js';
 import { normalizeTrades } from './trade-state.js';
 import { normalizeMischief } from './mischief-state.js';
+import { normalizeCoop } from './coop-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -405,6 +406,7 @@ export function normalizeState(raw) {
   s.arcade = normalizeArcade(s.arcade, s.pets);
   s.mischief = normalizeMischief(s.mischief, s, now); // friends' hexes, hauntings and helps
   s.arcade = normalizeArcade(s.arcade);
+  s.coop = normalizeCoop(s.coop); // co-op: hired help and duels (coop-state.js)
   s.courtroom = normalizeCourtroom(s.courtroom);
   normalizeRetention(s, now); // the Almanac, streak freezes, return chest, Legacy, collections, exchange and owned decor
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
