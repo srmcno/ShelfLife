@@ -10,6 +10,7 @@ import { blankCourtroom, normalizeCourtroom } from './court-state.js';
 import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.js';
 import { RESIDENT_TENURE } from './content/resident-life.js';
 import { blankRetention, normalizeRetention } from './almanac-state.js';
+import { blankFriendVisits, normalizeFriendVisits } from './visits-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -178,6 +179,7 @@ export function blankState() {
     notes: [], paperwork: blankPaperwork(), seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
+    friendVisits: blankFriendVisits(),
     gone: [], visits: [], ledger: defaultLedger(), roster: {}, rosterSeeded: false,
     formLog: [], noteCount: 0, lastGoneNote: 0, lastBackup: 0, backupSnooze: 0
   };
@@ -401,6 +403,7 @@ export function normalizeState(raw) {
   s.courtroom = normalizeCourtroom(s.courtroom);
   normalizeRetention(s, now); // the Almanac, streak freezes, return chest, Legacy, collections, exchange and owned decor
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
+  s.friendVisits = normalizeFriendVisits(s.friendVisits); // friends' residents staying here, and ours away
   return s;
 }
 
