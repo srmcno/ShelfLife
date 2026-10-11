@@ -3,6 +3,7 @@ const CACHE_VERSION = 'shelflife-v66';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./src/cloud/config.js",
+  "./src/cloud/deployment-config.js",
   "./src/cloud/client.js",
   "./src/cloud/sync.js",
   "./src/cloud/index.js",
