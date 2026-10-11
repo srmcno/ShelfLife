@@ -16,11 +16,11 @@
 <main>
   <a class="wordmark" href="./">Shelf<em>Life</em></a>
   <h1>Privacy</h1>
-  <p class="dated">Last changed 29 September 2026. This covers the game on the web and the Android app.</p>
+  <p class="dated">Last changed 11 October 2026. This covers the game on the web and the Android app.</p>
 
   <div class="card short">
     <p class="lede">Your household lives on your device. Nothing goes to a server unless you turn on cloud save.</p>
-    <p>No ads. No analytics. No third-party trackers. Nothing is sold, rented or swapped, including you.</p>
+    <p>No ads. No third-party analytics or trackers. Nothing is sold, rented or swapped, including you. The only things counted are listed below, and you can switch them off.</p>
   </div>
 
   <h2>What stays on your device</h2>
@@ -28,6 +28,10 @@
     local storage (under <code>shelflife.v4</code>); the Android app keeps it in its own storage. It does not
     leave the device unless you send it somewhere: a backup file, a postcard or cloud save. Backups and
     postcards go only where you send them.</p>
+  <p>Two small records sit beside the household, outside the save: the last 20 errors the game ran into
+    (what went wrong, in which file and when, never anything about your shelf) under
+    <code>shelflife.errors</code>, and any problem reports waiting to be sent under <code>shelflife.feedback</code>.
+    They stay on the device unless you send a report.</p>
   <p>Clearing the site's data, or uninstalling the app, removes it. If Android's own backup is switched on,
     your phone may include the app's storage in the backup it keeps in your Google account. That is between
     you and Google; we never see it.</p>
@@ -65,6 +69,27 @@
   </ul>
   <p>There are no public profiles and no chat. Strangers never see your name, your shelf or your residents;
     at most, your score is one of the numbers in the anonymous day's results.</p>
+  <h3>Problem reports you send</h3>
+  <p><strong>More → Report a problem</strong> sends what you write (up to 1000 characters), the kind of report
+    and, if you choose, what you were doing. The game shows you everything in the report before it goes. If
+    you leave <strong>Attach diagnostics</strong> ticked it also carries: the game's version, whether it is the
+    web game or the Android app, your browser's user agent, the screen size, the effects and Calm settings,
+    how many residents you have, how many days the shelf has existed, the save's size, which screen was
+    open, whether the device was online, whether cloud save was on (never your email) and the last 20 errors.
+    It never carries your save, your residents' names or drawings, or your email address.</p>
+  <p>A short <strong>“How is it going?”</strong> question appears at most three times (after your second day,
+    after your first Shelf Court hearing and after your seventh day). If you answer, the rating, anything you
+    add, the version and how long the shelf has existed are sent the same way.</p>
+  <p>Reports go only from a device signed in to cloud save, and are tied to that account so we can tell
+    reports apart. Signed out, a report waits on the device until you sign in, or you can copy it into an
+    email instead. Nobody can read reports through the game or the API; only the project owner can, in the
+    Supabase dashboard. They are deleted after a year, or with your account.</p>
+  <h3>Which days you play</h3>
+  <p>With cloud save on, the game records the dates on which you opened it: one line per day with your
+    account id and the date, nothing else (no times, no device, nothing about what you did). It tells us
+    how many testers come back after a day, a week and a month. It is on by default with cloud save, and
+    <strong>More → Help improve the game: count which days I play</strong> switches it off; switching it off
+    also deletes the days already recorded. Dates older than about 400 days are removed.</p>
   <h3>Who holds it</h3>
   <p>Cloud save runs on <a href="https://supabase.com" rel="noopener">Supabase</a>, which stores the data and
     sends the sign-in emails on our behalf, and handles them only to provide that service. The sign-in
@@ -73,7 +98,8 @@
   <h2>What we do not do</h2>
   <ul>
     <li>No advertising, and no advertising identifiers.</li>
-    <li>No analytics, crash reporting services or tracking pixels.</li>
+    <li>No analytics or crash reporting services and no tracking pixels. The only counting is the play days
+      above, which you can switch off, and the reports you choose to send.</li>
     <li>No third-party trackers or SDKs of any kind. The fonts ship with the game.</li>
     <li>No selling or sharing of data, for marketing or anything else.</li>
     <li>No location, contacts, photos, camera or microphone.</li>
@@ -95,7 +121,7 @@
   <p>Cloud data is kept while the account exists. You can delete it at any time, with or without the app:
     see <a href="delete-account.html">delete your account</a>. That removes the account, your email, the
     cloud save, the device id, your friend code and name, friend links, your shelf on show, summonses,
-    scores, blocks, and reports made by you or about you. Copies in the provider's routine backups expire
+    scores, blocks, reports made by you or about you, the problem reports you sent and your play days. Copies in the provider's routine backups expire
     on its normal schedule. The household on your device is left alone.</p>
   <p>To see the cloud save itself, choose <strong>More → Back up</strong>: the file holds the same data.</p>
 

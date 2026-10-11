@@ -8,6 +8,7 @@
 // code is 123456. Knobs: setOffline, failNext, hangNext, expireTokens,
 // revokeRefreshTokens and setRemote (another device writing a save).
 import { createFakeSocial } from './fake-social.mjs';
+import { createFakeFeedback } from './fake-feedback.mjs';
 
 export const FAKE_URL = 'https://fake.supabase.test';
 export const FAKE_KEY = 'fake-anon-key';
@@ -90,7 +91,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
       return json(200, { friend_code: p.friend_code, display_name: p.display_name });
     },
     delete_my_account(user) {
-      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id);
+      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); feedback.forget(user.id);
       for (const [token, entry] of access) if (entry.userId === user.id) access.delete(token);
       for (const [token, entry] of refresh) if (entry.userId === user.id) refresh.delete(token);
       return { status: 204, body: '', headers: {} };
@@ -99,6 +100,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const social = createFakeSocial({ users, profiles, now, json, rest, uuid,
     ensureProfile: user => RPC.ensure_profile(user, {}) });
   Object.assign(RPC, social.RPC);
+  const feedback = createFakeFeedback({ now, json, rest }); Object.assign(RPC, feedback.RPC);
   const TABLES = {
     ...social.TABLES,
     saves: user => [...saves].filter(([id]) => id === user.id).map(([id, r]) => ({ user_id: id, rev: r.rev, data: r.data, device_id: r.device_id, updated_at: r.updated_at })),
@@ -245,7 +247,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   }
 
   return {
-    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social,
+    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, feedback,
     fetch: fakeFetch, route, handle,
     setOffline(value = true) { offline = !!value; },
     failNext(count = 1, status = 500) { for (let i = 0; i < count; i++) failures.push(status); },

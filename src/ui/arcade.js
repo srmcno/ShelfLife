@@ -7,6 +7,7 @@ import { DAILY_SOULS } from '../content/daily.js';
 import { mayhemState } from '../mayhem-state.js';
 import { GAME_SOULS_PER_DAY } from '../engine/mayhem.js';
 import { localDayKey, save } from '../state.js';
+import { mayPostScore } from '../tester-state.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { createPuppet } from '../art/animator.js';
 import { escapadeView } from '../engine/escapades.js';
@@ -97,7 +98,8 @@ async function loadBoard(ch, score = 0, owner = arcadeSocial?.userId()) {
   if (!current()) return;
   const token = ++boardToken;
   const slot = () => current() && token === boardToken ? sheet.querySelector('[data-ar-board]') : null;
-  if (score > 0) {
+  // A tester save (src/ui/tester-panel.js) may have bent time: its scores stay home.
+  if (score > 0 && mayPostScore(S)) {
     try {
       await social.submitScore({ game: ch.game, day: ch.day, score, mod: ch.mod });
       if (current()) {

@@ -44,6 +44,7 @@
 <link rel="stylesheet" href="css/almanac.css">
 <link rel="stylesheet" href="css/fx.css">
 <link rel="stylesheet" href="css/guide.css">
+<link rel="stylesheet" href="css/testers.css">
 <link rel="stylesheet" href="css/polish.css">
 </head>
 <body data-tab="shelf">
@@ -420,6 +421,7 @@
   <div class="help-tabs" role="tablist" aria-label="Help sections">
     <button type="button" class="help-tab" role="tab" id="helpTabFirst" data-help-tab="first-day" aria-selected="true" aria-controls="helpPanelFirst">First day</button>
     <button type="button" class="help-tab" role="tab" id="helpTabGlossary" data-help-tab="glossary" aria-selected="false" aria-controls="helpPanelGlossary" tabindex="-1">Glossary</button>
+    <button type="button" class="help-tab" role="tab" id="helpTabTesters" data-help-tab="testers" aria-selected="false" aria-controls="helpPanelTesters" tabindex="-1">For testers</button>
   </div>
   <div role="tabpanel" id="helpPanelFirst" data-help-panel="first-day" aria-labelledby="helpTabFirst">
     <h3 class="help-heading">The first-day tour</h3>
@@ -442,6 +444,7 @@
     <p class="hint">Every number the game shows, in plain words.</p>
     <div id="helpGlossary"></div>
   </div>
+  <div role="tabpanel" id="helpPanelTesters" data-help-panel="testers" aria-labelledby="helpTabTesters" hidden><div id="helpTesters"></div></div>
   <p class="guide-footnote">Needs change while you are away, up to eighteen hours at a time, and only half as fast at night. They cannot die. You can take a break. Your shelf saves on this device; More → Back up keeps a copy you can restore elsewhere.</p>
   <p class="guide-footnote">Keyboard: Tab through controls, Enter or Space to activate, Escape to close a sheet. The game respects your device’s reduced-motion preference, and More has a Calm mode.</p>
 </div></div>
@@ -537,6 +540,10 @@
 </div></div>
 <!-- Friends: built by ui/friends.js, and only when cloud save is configured. -->
 <div class="veil" id="friendsVeil"><div class="sheet sheet-friends" id="friendsSheet"></div></div>
+<!-- Report a problem, What's new and the tester panel: built by src/ui/feedback.js, whats-new.js and tester-panel.js. -->
+<div class="veil" id="feedbackVeil"><div class="sheet sheet-feedback" id="feedbackSheet"></div></div>
+<div class="veil" id="whatsNewVeil"><div class="sheet sheet-whatsnew" id="whatsNewSheet"></div></div>
+<div class="veil" id="testerVeil"><div class="sheet sheet-tester" id="testerSheet"></div></div>
 <div class="veil" id="cardVeil"><div class="sheet sheet-card" id="cardSheet"></div></div>
 <div class="veil" id="postcardVeil">
   <div class="sheet sheet-postcard">

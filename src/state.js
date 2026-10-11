@@ -10,6 +10,7 @@ import { blankCourtroom, normalizeCourtroom } from './court-state.js';
 import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.js';
 import { RESIDENT_TENURE } from './content/resident-life.js';
 import { blankRetention, normalizeRetention } from './almanac-state.js';
+import { normalizeTesting } from './tester-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -401,6 +402,8 @@ export function normalizeState(raw) {
   s.courtroom = normalizeCourtroom(s.courtroom);
   normalizeRetention(s, now); // the Almanac, streak freezes, return chest, Legacy, collections, exchange and owned decor
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
+  s.tester = s.tester === true; // set for good by the tester panel (src/tester-state.js)
+  s.testing = normalizeTesting(s.testing); // What's new, check-ins and the play-day switch
   return s;
 }
 

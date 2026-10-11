@@ -56,5 +56,8 @@ const stepIds=list=>[...new Set((Array.isArray(list)?list:[]).filter(x=>typeof x
 export function normalizeGuide(raw) {
   if (!obj(raw)) return null;
   return {v:1,status:['on','skipped','done'].includes(raw.status)?raw.status:'on',at:number(raw.at,1e14),
-    seen:stepIds(raw.seen),done:stepIds(raw.done),finishedAt:number(raw.finishedAt,1e14),celebrated:raw.celebrated===true};
+    seen:stepIds(raw.seen),done:stepIds(raw.done),finishedAt:number(raw.finishedAt,1e14),celebrated:raw.celebrated===true,
+    // A replay from the tester panel counts only what happens after it began.
+    ...(obj(raw.replay)?{replay:{care:number(raw.replay.care,1e9),food:number(raw.replay.food,1e9),resolved:number(raw.replay.resolved,1e9),coffins:number(raw.replay.coffins,1e9),
+      omen:typeof raw.replay.omen==='string'?raw.replay.omen.slice(0,12):''}}:{})};
 }
