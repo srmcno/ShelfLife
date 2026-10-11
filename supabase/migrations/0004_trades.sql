@@ -13,7 +13,7 @@
 -- Refusals raise errcode P0001 with a short token as the message:
 --   not_friends, dnd, bad_trade, too_large, too_many_open, rate_limited,
 --   resident_limit, in_escrow, already_traded, too_soon, not_found, not_open,
---   expired, no_counter. src/cloud/trades.js turns tokens into copy.
+--   expired, no_counter, not_enough. src/cloud/trades.js turns tokens into copy.
 --
 -- An offer, as the client sends it:
 --   p_give: { curios: [{ id, n }], resident: <snapshot> | null }   what the sender hands over
@@ -27,7 +27,24 @@
 --
 -- Escrow. Proposing an offer is the sender's promise to hand over exactly
 -- what the offer holds; the client marks it as held, and the server keeps the
--- resident snapshot. Accepting is one transaction on a locked row: the
+-- resident snapshot.
+--
+-- Reservations. Curios live in the client's save, so whoever gives curios
+-- (an offer, a counter, or an acceptance that hands curios back) declares
+-- what the save holds of each one, as of the last ledger entry it applied:
+--   p_have: { seq: <ledger cursor>, curios: { id: copies owned } }
+-- With the account locked, the server takes off what the account has already
+-- promised in open offers (from any device) and what the ledger says left
+-- after that cursor, keeps the last copy in the cabinet, and refuses
+-- not_enough when what is left is short. Open offers are the reservation, so
+-- declining, cancelling, countering, expiry, blocking and unfriending release
+-- it with the offer itself.
+--
+-- The ledger. Every sealed trade writes one row per player to
+-- public.trade_ledger: what left and what arrived for that player, in a
+-- sequence of their own (1, 2, 3 ...). It is never pruned while the account
+-- exists. trade_ledger(p_after, p_limit) pages through it, so any device or
+-- any restored backup catches up from the cursor it saved, however old. Accepting is one transaction on a locked row: the
 -- receiver's half (a resident snapshot, for a swap) is written and the offer
 -- becomes 'accepted', or nothing happens. Each side then applies the trade
 -- once, by its id. Declining, cancelling, countering, blocking, unfriending
@@ -35,7 +52,8 @@
 --
 -- Housekeeping runs inside list_trades for the caller's own rows: closed
 -- offers that never happened go after 30 days, accepted trades lose their
--- snapshots after 90 days and go entirely after 400. For the SQL editor:
+-- snapshots after 90 days and go entirely after 400. The ledger keeps its
+-- own copy, so none of that loses a settlement. For the SQL editor:
 --   delete from public.trades where status not in ('open', 'accepted') and closed_at < now() - interval '30 days';
 
 -- ---------------------------------------------------------------------------
@@ -82,11 +100,41 @@ create table if not exists public.trade_books (
   constraint trade_books_size check (octet_length(wishlist::text) + octet_length(spares::text) < 8000)
 );
 
+-- The settlement ledger: one row per player per sealed trade, from that
+-- player's side. seq counts up from 1 per owner, written under the owner's
+-- account lock. Nothing deletes from it but the owner's account going.
+create table if not exists public.trade_ledger (
+  owner uuid not null references auth.users (id) on delete cascade,
+  seq bigint not null check (seq > 0),
+  trade_id uuid not null,
+  kind text not null check (kind in ('curio', 'resident')),
+  role text not null check (role in ('from', 'to')),
+  partner_name text not null default '',
+  curios_out jsonb not null default '[]'::jsonb,
+  curios_in jsonb not null default '[]'::jsonb,
+  resident_out jsonb,
+  resident_in jsonb,
+  settled_at timestamptz not null,
+  recorded_at timestamptz not null default now(),
+  primary key (owner, seq),
+  constraint trade_ledger_once unique (owner, trade_id),
+  constraint trade_ledger_size check (resident_in is null or octet_length(resident_in::text) < 150000)
+);
+
+-- Answers (accept, decline, cancel), for their rate limit.
+create table if not exists private.trade_answers (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  at timestamptz not null default now()
+);
+create index if not exists trade_answers_user on private.trade_answers (user_id, at);
+revoke all on table private.trade_answers from public, anon, authenticated;
+
 alter table public.trades enable row level security;
+alter table public.trade_ledger enable row level security;
 alter table public.trade_items enable row level security;
 alter table public.trade_books enable row level security;
 
-revoke all on table public.trades, public.trade_items, public.trade_books from public, anon, authenticated;
+revoke all on table public.trades, public.trade_items, public.trade_books, public.trade_ledger from public, anon, authenticated;
 
 -- Nothing is granted, so these only matter if a grant is ever added by hand.
 drop policy if exists "trades are for the two players in them" on public.trades;
@@ -96,6 +144,9 @@ drop policy if exists "trade items are for the two players in the trade" on publ
 create policy "trade items are for the two players in the trade" on public.trade_items
   for select to authenticated using (exists (
     select 1 from public.trades t where t.id = trade_items.trade_id and (select auth.uid()) in (t.from_user, t.to_user)));
+drop policy if exists "the trade ledger is for its owner" on public.trade_ledger;
+create policy "the trade ledger is for its owner" on public.trade_ledger
+  for select to authenticated using ((select auth.uid()) = owner);
 drop policy if exists "trade books are for their owner" on public.trade_books;
 create policy "trade books are for their owner" on public.trade_books
   for select to authenticated using ((select auth.uid()) = user_id);
@@ -103,6 +154,33 @@ create policy "trade books are for their owner" on public.trade_books
 -- ---------------------------------------------------------------------------
 -- Helpers (not callable from the API)
 -- ---------------------------------------------------------------------------
+
+-- Serialises one account's capped writes (count then insert), even before it
+-- has a profile row. The same helper, byte for byte, is in every migration
+-- that needs it, so each file loads on its own and the combined load agrees.
+create or replace function private.lock_account(p_user uuid)
+returns void
+language sql
+volatile
+set search_path = public
+as $$
+  select pg_advisory_xact_lock(hashtextextended('shelf-account:' || coalesce(p_user::text, ''), 0));
+$$;
+
+-- Two accounts, always in the same order, so two callers cannot deadlock.
+create or replace function private.lock_accounts(a uuid, b uuid)
+returns void
+language plpgsql
+volatile
+set search_path = public
+as $$
+begin
+  perform private.lock_account(least(a, b));
+  if a is distinct from b then perform private.lock_account(greatest(a, b)); end if;
+end;
+$$;
+revoke all on function private.lock_account(uuid) from public;
+revoke all on function private.lock_accounts(uuid, uuid) from public;
 
 create or replace function private.trade_blocked(a uuid, b uuid)
 returns boolean
@@ -199,7 +277,8 @@ begin
   end if;
   if exists (select 1 from public.trades t join public.trade_items i on i.trade_id = t.id
               where t.status = 'accepted' and i.kind = 'resident' and i.ref = p_ref
-                and ((t.from_user = p_user and i.side = 'from') or (t.to_user = p_user and i.side = 'to'))) then
+                and ((t.from_user = p_user and i.side = 'from') or (t.to_user = p_user and i.side = 'to')))
+     or exists (select 1 from public.trade_ledger l where l.owner = p_user and l.resident_out ->> 'id' = p_ref) then
     perform private.refuse('already_traded');
   end if;
   if p_ref ~ '^tr-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' and exists (
@@ -241,6 +320,112 @@ begin
 end;
 $$;
 
+-- Whether uid can give `p_items` ([{ id, n }]) on top of everything already
+-- promised. p_have is { seq, curios: { id: copies } }, what the client's save
+-- holds as of ledger entry `seq`. Taken off: curios in uid's open offers (any
+-- device; p_except leaves one offer out) and curios that left in ledger
+-- entries after `seq`, which that save has not applied yet. The last copy
+-- stays. The caller holds uid's account lock, so two calls cannot both spend
+-- the same copies.
+create or replace function private.trade_holdings_ok(uid uuid, p_have jsonb, p_items jsonb, p_except uuid default null)
+returns void
+language plpgsql
+set search_path = public
+as $$
+declare
+  item jsonb;
+  after bigint;
+  have int;
+  promised int;
+begin
+  if p_items is null or jsonb_array_length(p_items) = 0 then return; end if;
+  if p_have is null or jsonb_typeof(p_have) <> 'object' or jsonb_typeof(p_have -> 'curios') is distinct from 'object'
+     or jsonb_typeof(p_have -> 'seq') is distinct from 'number' or (p_have ->> 'seq') !~ '^[0-9]{1,15}$' then
+    perform private.refuse('bad_trade');
+  end if;
+  after := least((p_have ->> 'seq')::bigint, (select coalesce(max(seq), 0) from public.trade_ledger where owner = uid));
+  for item in select value from jsonb_array_elements(p_items) loop
+    if jsonb_typeof(p_have -> 'curios' -> (item ->> 'id')) is distinct from 'number'
+       or (p_have -> 'curios' ->> (item ->> 'id')) !~ '^[0-9]{1,4}$' then
+      perform private.refuse('bad_trade');
+    end if;
+    have := (p_have -> 'curios' ->> (item ->> 'id'))::int;
+    -- One statement, one snapshot: an offer sealed meanwhile is counted once,
+    -- as open or as settled, never neither.
+    select (select coalesce(sum(i.qty), 0) from public.trades t join public.trade_items i on i.trade_id = t.id
+             where t.from_user = uid and t.status = 'open' and t.expires_at > now() and t.id is distinct from p_except
+               and i.side = 'from' and i.kind = 'curio' and i.ref = item ->> 'id')
+         + (select coalesce(sum((c ->> 'n')::int), 0) from public.trade_ledger l, jsonb_array_elements(l.curios_out) c
+             where l.owner = uid and l.seq > after and c ->> 'id' = item ->> 'id')
+      into promised;
+    if have - 1 - promised < (item ->> 'n')::int then perform private.refuse('not_enough'); end if;
+  end loop;
+end;
+$$;
+
+-- Writes one player's side of a sealed trade to their ledger, once. The
+-- caller holds p_owner's account lock, so seq is the next one.
+create or replace function private.trade_ledger_write(p_owner uuid, t public.trades, p_role text)
+returns bigint
+language plpgsql
+set search_path = public
+as $$
+declare
+  mine text := p_role;
+  theirs text := case p_role when 'from' then 'to' else 'from' end;
+  next_seq bigint;
+  existing bigint;
+begin
+  select seq into existing from public.trade_ledger where owner = p_owner and trade_id = t.id;
+  if found then return existing; end if;
+  select coalesce(max(seq), 0) + 1 into next_seq from public.trade_ledger where owner = p_owner;
+  insert into public.trade_ledger (owner, seq, trade_id, kind, role, partner_name, curios_out, curios_in, resident_out, resident_in, settled_at)
+  values (p_owner, next_seq, t.id, t.kind, p_role,
+    coalesce((select display_name from public.profiles where user_id = case p_role when 'from' then t.to_user else t.from_user end), ''),
+    coalesce((select jsonb_agg(jsonb_build_object('id', i.ref, 'n', i.qty) order by i.id) from public.trade_items i
+               where i.trade_id = t.id and i.side = mine and i.kind = 'curio'), '[]'::jsonb),
+    coalesce((select jsonb_agg(jsonb_build_object('id', i.ref, 'n', i.qty) order by i.id) from public.trade_items i
+               where i.trade_id = t.id and i.side = theirs and i.kind = 'curio'), '[]'::jsonb),
+    (select jsonb_build_object('id', i.ref, 'name', coalesce(i.snapshot ->> 'name', '')) from public.trade_items i
+      where i.trade_id = t.id and i.side = mine and i.kind = 'resident' limit 1),
+    (select coalesce(i.snapshot, jsonb_build_object('id', i.ref, 'name', 'Someone')) || jsonb_build_object('id', i.ref) from public.trade_items i
+      where i.trade_id = t.id and i.side = theirs and i.kind = 'resident' limit 1),
+    coalesce(t.closed_at, now()));
+  return next_seq;
+end;
+$$;
+
+-- Both sides of a sealed trade. The caller holds both account locks.
+create or replace function private.trade_settle(p_id uuid)
+returns void
+language plpgsql
+set search_path = public
+as $$
+declare
+  t public.trades%rowtype;
+begin
+  select * into t from public.trades where id = p_id and status = 'accepted';
+  if not found then return; end if;
+  perform private.trade_ledger_write(t.from_user, t, 'from');
+  perform private.trade_ledger_write(t.to_user, t, 'to');
+end;
+$$;
+
+-- Accepts, declines and cancels: 100 a day per player, counted and written
+-- with the account locked.
+create or replace function private.trade_answer_tick(uid uuid)
+returns void
+language plpgsql
+set search_path = public
+as $$
+begin
+  perform private.lock_account(uid);
+  delete from private.trade_answers where user_id = uid and at < now() - interval '1 day';
+  if (select count(*) from private.trade_answers where user_id = uid) >= 100 then perform private.refuse('rate_limited'); end if;
+  insert into private.trade_answers (user_id) values (uid);
+end;
+$$;
+
 -- One trade as the client reads it. Drawn art is left out unless `full`, so a
 -- list of offers stays small; trade_payload fetches the rest.
 create or replace function private.trade_json(p_id uuid, p_full boolean)
@@ -266,7 +451,8 @@ as $$
 $$;
 
 -- Validates and stores a new offer from uid. Shared by propose and counter.
-create or replace function private.trade_insert(uid uuid, p_to uuid, p_give jsonb, p_want jsonb, p_line text, p_parent uuid, p_kind text)
+drop function if exists private.trade_insert(uuid, uuid, jsonb, jsonb, text, uuid, text);
+create or replace function private.trade_insert(uid uuid, p_to uuid, p_give jsonb, p_want jsonb, p_line text, p_parent uuid, p_kind text, p_have jsonb)
 returns uuid
 language plpgsql
 set search_path = public
@@ -307,8 +493,8 @@ begin
   end if;
   if p_kind is not null and p_kind <> v_kind then perform private.refuse('bad_trade'); end if;
 
-  -- One decision at a time per player (escrow, limits), and per pair (open offers).
-  perform 1 from public.profiles where user_id = uid for update;
+  -- One decision at a time per player (escrow, reservations, limits), and per pair (open offers).
+  perform private.lock_account(uid);
   perform 1 from public.friendships
    where least(requester, addressee) = least(uid, p_to) and greatest(requester, addressee) = greatest(uid, p_to)
    for update;
@@ -323,6 +509,7 @@ begin
     perform private.trade_resident_ok(uid, give_resident ->> 'id');
     if private.resident_trades(uid) >= 2 then perform private.refuse('resident_limit'); end if;
   end if;
+  perform private.trade_holdings_ok(uid, p_have, give_curios);
 
   insert into public.trades (from_user, to_user, kind, parent, line)
   values (uid, p_to, v_kind, p_parent, coalesce(p_line, ''))
@@ -382,7 +569,11 @@ revoke all on function private.trade_resident_ok(uuid, text, uuid) from public;
 revoke all on function private.resident_trades(uuid) from public;
 revoke all on function private.trade_resident(jsonb) from public;
 revoke all on function private.trade_json(uuid, boolean) from public;
-revoke all on function private.trade_insert(uuid, uuid, jsonb, jsonb, text, uuid, text) from public;
+revoke all on function private.trade_insert(uuid, uuid, jsonb, jsonb, text, uuid, text, jsonb) from public;
+revoke all on function private.trade_holdings_ok(uuid, jsonb, jsonb, uuid) from public;
+revoke all on function private.trade_ledger_write(uuid, public.trades, text) from public;
+revoke all on function private.trade_settle(uuid) from public;
+revoke all on function private.trade_answer_tick(uuid) from public;
 revoke all on function private.trades_on_block() from public;
 revoke all on function private.trades_on_unfriend() from public;
 
@@ -390,8 +581,10 @@ revoke all on function private.trades_on_unfriend() from public;
 -- Offers
 -- ---------------------------------------------------------------------------
 
--- Answers the new offer, as list_trades shows it.
-create or replace function public.propose_trade(p_to uuid, p_give jsonb, p_want jsonb, p_line text default '')
+-- Answers the new offer, as list_trades shows it. p_have declares the
+-- offered curios as the save holds them (see Reservations, above).
+drop function if exists public.propose_trade(uuid, jsonb, jsonb, text);
+create or replace function public.propose_trade(p_to uuid, p_give jsonb, p_want jsonb, p_line text default '', p_have jsonb default null)
 returns jsonb
 language plpgsql
 security definer
@@ -401,9 +594,11 @@ declare
   uid uuid := private.require_user();
   new_id uuid;
 begin
+  -- Every call that takes an account lock takes it before any row lock.
+  perform private.lock_account(uid);
   perform private.expire_trades(uid);
   -- Two statements, so trade_json (stable) reads the rows the insert wrote.
-  new_id := private.trade_insert(uid, p_to, p_give, p_want, p_line, null, null);
+  new_id := private.trade_insert(uid, p_to, p_give, p_want, p_line, null, null, p_have);
   return private.trade_json(new_id, false);
 end;
 $$;
@@ -411,7 +606,8 @@ $$;
 -- The receiver answers an offer with one of their own, once. The original
 -- closes as 'countered' (its escrow is released) and the counter is a new
 -- offer the other way, of the same kind, which cannot itself be countered.
-create or replace function public.counter_trade(p_id uuid, p_give jsonb, p_want jsonb, p_line text default '')
+drop function if exists public.counter_trade(uuid, jsonb, jsonb, text);
+create or replace function public.counter_trade(p_id uuid, p_give jsonb, p_want jsonb, p_line text default '', p_have jsonb default null)
 returns jsonb
 language plpgsql
 security definer
@@ -422,16 +618,16 @@ declare
   t public.trades%rowtype;
   new_id uuid;
 begin
+  -- Account locks first, then rows, as in accept_trade, so the two never deadlock.
+  perform private.lock_account(uid);
   perform private.expire_trades(uid);
-  -- The same lock order as accept_trade (player, then offer), so the two never deadlock.
-  perform 1 from public.profiles where user_id = uid for update;
   select * into t from public.trades where id = p_id and to_user = uid for update;
   if not found then perform private.refuse('not_found'); end if;
   if t.status = 'expired' then perform private.refuse('expired'); end if;
   if t.status <> 'open' then perform private.refuse('not_open'); end if;
   if t.parent is not null then perform private.refuse('no_counter'); end if;
   update public.trades set status = 'countered', closed_at = now() where id = t.id;
-  new_id := private.trade_insert(uid, t.from_user, p_give, p_want, p_line, t.id, t.kind);
+  new_id := private.trade_insert(uid, t.from_user, p_give, p_want, p_line, t.id, t.kind, p_have);
   return private.trade_json(new_id, false);
 end;
 $$;
@@ -439,8 +635,12 @@ $$;
 -- The atomic step. The row is locked, so of two accepts, or an accept and a
 -- cancel, exactly one wins and the other is refused with not_open. For a swap
 -- the receiver sends their resident's snapshot in p_give.resident; it must be
--- the one the offer asked for. Answers the whole trade, art included.
-create or replace function public.accept_trade(p_id uuid, p_give jsonb default '{}'::jsonb)
+-- the one the offer asked for. When the offer asks for curios, p_have declares
+-- them as the receiver's save holds them. Sealing writes both ledger rows in
+-- the same transaction. Answers the whole trade, art included, plus
+-- ledger_seq: the caller's ledger entry for it.
+drop function if exists public.accept_trade(uuid, jsonb);
+create or replace function public.accept_trade(p_id uuid, p_give jsonb default '{}'::jsonb, p_have jsonb default null)
 returns jsonb
 language plpgsql
 security definer
@@ -451,9 +651,16 @@ declare
   t public.trades%rowtype;
   wanted public.trade_items%rowtype;
   mine jsonb;
+  partner uuid;
+  my_seq bigint;
 begin
+  -- Both accounts, in a fixed order, before any row: reservations on either
+  -- side and both ledgers move together.
+  select from_user into partner from public.trades where id = p_id and to_user = uid;
+  if not found then perform private.refuse('not_found'); end if;
+  perform private.lock_accounts(uid, partner);
+  perform private.trade_answer_tick(uid);
   perform private.expire_trades(uid);
-  perform 1 from public.profiles where user_id = uid for update;
   select * into t from public.trades where id = p_id and to_user = uid for update;
   if not found then perform private.refuse('not_found'); end if;
   if t.status = 'expired' then perform private.refuse('expired'); end if;
@@ -470,11 +677,15 @@ begin
       update public.trade_items set snapshot = mine where id = wanted.id;
     end if;
   end if;
+  perform private.trade_holdings_ok(uid, p_have, coalesce((select jsonb_agg(jsonb_build_object('id', i.ref, 'n', i.qty) order by i.id)
+    from public.trade_items i where i.trade_id = t.id and i.side = 'to' and i.kind = 'curio'), '[]'::jsonb));
   update public.trades set status = 'accepted', closed_at = now() where id = t.id;
+  perform private.trade_settle(t.id);
+  select seq into my_seq from public.trade_ledger where owner = uid and trade_id = t.id;
   if to_regprocedure('private.bump_friendship(uuid,uuid,text)') is not null then
     execute 'select private.bump_friendship($1, $2, $3)' using t.from_user, t.to_user, 'trade';
   end if;
-  return private.trade_json(t.id, true);
+  return private.trade_json(t.id, true) || jsonb_build_object('ledger_seq', my_seq);
 end;
 $$;
 
@@ -488,6 +699,7 @@ declare
   uid uuid := private.require_user();
   t public.trades%rowtype;
 begin
+  perform private.trade_answer_tick(uid);
   perform private.expire_trades(uid);
   select * into t from public.trades where id = p_id and to_user = uid for update;
   if not found then perform private.refuse('not_found'); end if;
@@ -507,6 +719,7 @@ declare
   uid uuid := private.require_user();
   t public.trades%rowtype;
 begin
+  perform private.trade_answer_tick(uid);
   perform private.expire_trades(uid);
   select * into t from public.trades where id = p_id and from_user = uid for update;
   if not found then perform private.refuse('not_found'); end if;
@@ -570,6 +783,40 @@ begin
 end;
 $$;
 
+-- The caller's settled trades after a cursor, oldest first:
+--   { now, head, next, more, effects: [{ seq, trade_id, kind, role,
+--     partner_name, settled_at, curios_out, curios_in, resident_out,
+--     resident_in }] }
+-- curios_* are [{ id, n }] from the caller's side; resident_out is { id, name }
+-- of the caller's resident that left, resident_in the full snapshot of the one
+-- that arrived (art included). `head` is the newest seq, `next` the cursor to
+-- ask from next (the last seq here, or p_after when there is nothing), `more`
+-- whether anything is left after it. p_limit is 1 to 50.
+create or replace function public.trade_ledger(p_after bigint default 0, p_limit int default 25)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := private.require_user();
+  head bigint;
+  page jsonb;
+  last_seq bigint;
+begin
+  if p_after is null or p_after < 0 or p_limit is null or p_limit < 1 or p_limit > 50 then perform private.refuse('bad_trade'); end if;
+  select coalesce(max(seq), 0) into head from public.trade_ledger where owner = uid;
+  select coalesce(jsonb_agg(jsonb_build_object('seq', l.seq, 'trade_id', l.trade_id, 'kind', l.kind, 'role', l.role,
+           'partner_name', l.partner_name, 'settled_at', l.settled_at, 'curios_out', l.curios_out, 'curios_in', l.curios_in,
+           'resident_out', l.resident_out, 'resident_in', l.resident_in) order by l.seq), '[]'::jsonb), max(l.seq)
+    into page, last_seq
+    from (select * from public.trade_ledger where owner = uid and seq > p_after order by seq limit p_limit) l;
+  last_seq := coalesce(last_seq, least(p_after, head));
+  return jsonb_build_object('now', now(), 'head', head, 'next', last_seq, 'more', last_seq < head, 'effects', page);
+end;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- The trading book: a wishlist (12 curio ids at most) and spares
 -- ({ curio id: how many spare, 1 to 99 }, 60 entries at most).
@@ -599,7 +846,9 @@ begin
       perform private.refuse('bad_trade');
     end if;
   end loop;
-  -- Writing the same small row over and over is pointless: once every 5 seconds.
+  -- Writing the same small row over and over is pointless: once every 5 seconds,
+  -- with the account locked so a first write and a second cannot both get in.
+  perform private.lock_account(uid);
   select updated_at into last from public.trade_books where user_id = uid for update;
   if last is not null and last > now() - interval '5 seconds' then
     return jsonb_build_object('ok', true, 'skipped', true);
@@ -633,22 +882,41 @@ $$;
 -- Who may call what: signed-in players (anonymous ones included), nobody else.
 -- ---------------------------------------------------------------------------
 
-revoke all on function public.propose_trade(uuid, jsonb, jsonb, text) from public, anon, authenticated;
-revoke all on function public.counter_trade(uuid, jsonb, jsonb, text) from public, anon, authenticated;
-revoke all on function public.accept_trade(uuid, jsonb) from public, anon, authenticated;
+revoke all on function public.propose_trade(uuid, jsonb, jsonb, text, jsonb) from public, anon, authenticated;
+revoke all on function public.counter_trade(uuid, jsonb, jsonb, text, jsonb) from public, anon, authenticated;
+revoke all on function public.accept_trade(uuid, jsonb, jsonb) from public, anon, authenticated;
 revoke all on function public.decline_trade(uuid) from public, anon, authenticated;
 revoke all on function public.cancel_trade(uuid) from public, anon, authenticated;
 revoke all on function public.list_trades(uuid[]) from public, anon, authenticated;
 revoke all on function public.trade_payload(uuid) from public, anon, authenticated;
+revoke all on function public.trade_ledger(bigint, int) from public, anon, authenticated;
 revoke all on function public.publish_trade_book(jsonb, jsonb) from public, anon, authenticated;
 revoke all on function public.get_trade_book(uuid) from public, anon, authenticated;
 
-grant execute on function public.propose_trade(uuid, jsonb, jsonb, text) to authenticated;
-grant execute on function public.counter_trade(uuid, jsonb, jsonb, text) to authenticated;
-grant execute on function public.accept_trade(uuid, jsonb) to authenticated;
+grant execute on function public.propose_trade(uuid, jsonb, jsonb, text, jsonb) to authenticated;
+grant execute on function public.counter_trade(uuid, jsonb, jsonb, text, jsonb) to authenticated;
+grant execute on function public.accept_trade(uuid, jsonb, jsonb) to authenticated;
 grant execute on function public.decline_trade(uuid) to authenticated;
 grant execute on function public.cancel_trade(uuid) to authenticated;
 grant execute on function public.list_trades(uuid[]) to authenticated;
 grant execute on function public.trade_payload(uuid) to authenticated;
+grant execute on function public.trade_ledger(bigint, int) to authenticated;
 grant execute on function public.publish_trade_book(jsonb, jsonb) to authenticated;
 grant execute on function public.get_trade_book(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Trades sealed before the ledger existed go into it once, in the order they
+-- were sealed. A trade already there is skipped, so a second run adds nothing.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  r record;
+begin
+  for r in select t.id from public.trades t where t.status = 'accepted'
+             and (not exists (select 1 from public.trade_ledger l where l.owner = t.from_user and l.trade_id = t.id)
+               or not exists (select 1 from public.trade_ledger l where l.owner = t.to_user and l.trade_id = t.id))
+           order by t.closed_at, t.id loop
+    perform private.trade_settle(r.id);
+  end loop;
+end;
+$$;

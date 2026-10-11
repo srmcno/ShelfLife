@@ -52,7 +52,8 @@ const CAST = { v: 1, p: { kind: 'pet', id: 'a0', name: 'Mabel', owner: 'from' },
   jury: [{ kind: 'stock', id: 'j1', name: 'A Juror' }], witnesses: [] };
 const SEALED = { ruling: 'defendant', truth: 'plaintiff', stars: 2, ratings: 87, agree: 4, dissent: 1 };
 
-const tryTrade = () => attempt(call(A, 'public.propose_trade($1, $2::jsonb, $3::jsonb, $4)', [B, JSON.stringify({ curios: [{ id: 'moth-wing', n: 1 }] }), '{}', 'fair']));
+const tryTrade = () => attempt(call(A, 'public.propose_trade($1, $2::jsonb, $3::jsonb, $4, $5::jsonb)', [B, JSON.stringify({ curios: [{ id: 'moth-wing', n: 1 }] }), '{}', 'fair',
+  JSON.stringify({ seq: 0, curios: { 'moth-wing': 2 } })]));
 const tryBasket = () => attempt(call(A, 'public.kin_leave_basket($1, $2::jsonb, $3)', [B, JSON.stringify(resident('a0', 'Mabel')), 'b0']));
 const tryHearing = () => attempt(call(A, 'public.open_hearing($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)',
   [B, 'served', 'borrowed-coffin', '', 4242, JSON.stringify(CAST), JSON.stringify(SEALED), '[]']));

@@ -23,8 +23,8 @@ const BOOTSTRAP = `
   alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
   insert into auth.users (id) values ${[A, B, C, D, E, F, G, H].map(id => "('" + id + "')").join(', ')};
 `;
-const TABLES = ['trade_books', 'trade_items', 'trades'];
-const FUNCTIONS = ['accept_trade', 'cancel_trade', 'counter_trade', 'decline_trade', 'get_trade_book', 'list_trades', 'propose_trade', 'publish_trade_book', 'trade_payload'];
+const TABLES = ['trade_books', 'trade_items', 'trade_ledger', 'trades'];
+const FUNCTIONS = ['accept_trade', 'cancel_trade', 'counter_trade', 'decline_trade', 'get_trade_book', 'list_trades', 'propose_trade', 'publish_trade_book', 'trade_ledger', 'trade_payload'];
 
 let db;
 const code = {};
@@ -57,9 +57,15 @@ async function friends(x, y) {
 }
 const curios = (...list) => list.map(([id, n = 1]) => ({ id, n }));
 const resident = (id, name = 'Mabel', extra = {}) => ({ id, name, traits: ['damp'], stats: { cute: 5, menace: 5, damp: 5, mystique: 5 }, bio: 'Arrived without references.', art: { body: 'data:image/png;base64,AAAA', stamps: [] }, ...extra });
-const propose = (from, to, give, want = {}, line = 'fair') =>
-  call(from, 'public.propose_trade($1, $2::jsonb, $3::jsonb, $4)', [to, JSON.stringify(give), JSON.stringify(want), line]);
-const accept = (who, id, give = {}) => call(who, 'public.accept_trade($1, $2::jsonb)', [id, JSON.stringify(give)]);
+// What a save declares it holds: plenty of everything offered, with every
+// ledger entry applied, unless a test says otherwise.
+const plenty = (...sides) => ({ seq: 1e9, curios: Object.fromEntries(sides.flatMap(s => s?.curios || []).map(c => [c.id, 99])) });
+const propose = (from, to, give, want = {}, line = 'fair', have = plenty(give)) =>
+  call(from, 'public.propose_trade($1, $2::jsonb, $3::jsonb, $4, $5::jsonb)', [to, JSON.stringify(give), JSON.stringify(want), line, JSON.stringify(have)]);
+const counter = (who, id, give, want = {}, line = '', have = plenty(give)) =>
+  call(who, 'public.counter_trade($1, $2::jsonb, $3::jsonb, $4, $5::jsonb)', [id, JSON.stringify(give), JSON.stringify(want), line, JSON.stringify(have)]);
+const ALL = { seq: 1e9, curios: Object.fromEntries(['moth-wing', 'glass-eye', 'tiny-coffin', 'half-candle', 'button-eye', 'coffin-nail'].map(id => [id, 99])) };
+const accept = (who, id, give = {}, have = ALL) => call(who, 'public.accept_trade($1, $2::jsonb, $3::jsonb)', [id, JSON.stringify(give), JSON.stringify(have)]);
 const list = (who, ids = []) => call(who, 'public.list_trades($1::uuid[])', ['{' + ids.join(',') + '}']);
 const status = id => value('select status from public.trades where id = $1', [id]);
 const age = (id, interval) => db.query(`update public.trades set created_at = created_at - $2::interval, expires_at = expires_at - $2::interval,
@@ -86,7 +92,7 @@ test('the migration is idempotent, locked down, and does not need 0003', async (
       }
     }
   }
-  for (const fn of ['propose_trade(uuid,jsonb,jsonb,text)', 'accept_trade(uuid,jsonb)', 'list_trades(uuid[])', 'get_trade_book(uuid)']) {
+  for (const fn of ['propose_trade(uuid,jsonb,jsonb,text,jsonb)', 'accept_trade(uuid,jsonb,jsonb)', 'list_trades(uuid[])', 'get_trade_book(uuid)', 'trade_ledger(bigint,integer)']) {
     assert.equal(await value('select has_function_privilege($1, $2, $3)', ['anon', 'public.' + fn, 'execute']), false, 'anon cannot run ' + fn);
     assert.equal(await value('select has_function_privilege($1, $2, $3)', ['authenticated', 'public.' + fn, 'execute']), true, 'players can run ' + fn);
   }
@@ -128,7 +134,7 @@ test('offers are checked for shape: curio ids, at most three, one kind per trade
   ];
   for (const [give, want, why] of bad) {
     const g = typeof give === 'string' ? give : JSON.stringify(give);
-    await rejects(call(A, 'public.propose_trade($1, $2::jsonb, $3::jsonb, $4)', [B, g, JSON.stringify(want), '']), /bad_trade/, why);
+    await rejects(call(A, 'public.propose_trade($1, $2::jsonb, $3::jsonb, $4, $5::jsonb)', [B, g, JSON.stringify(want), '', JSON.stringify(ALL)]), /bad_trade/, why);
   }
   await rejects(propose(A, B, { curios: curios(['moth-wing']) }, {}, 'Not A Line'), /bad_trade/);
   await rejects(propose(A, B, { resident: resident('p1', 'Mabel', { art: { body: 'x'.repeat(150000) } }) }), /too_large/);
@@ -293,22 +299,21 @@ test('five open offers per pair, either direction, and twenty offers a day', asy
 
 test('counter once: the original closes, the counter goes the other way, and cannot be countered', async () => {
   const offer = await propose(B, A, { curios: curios(['half-candle']) }, { curios: curios(['moth-wing']) });
-  await rejects(call(B, 'public.counter_trade($1, $2::jsonb, $3::jsonb, $4)', [offer.id, '{"curios":[{"id":"moth-wing","n":1}]}', '{}', '']), /not_found/, 'the sender cannot counter their own offer');
-  await rejects(call(A, 'public.counter_trade($1, $2::jsonb, $3::jsonb, $4)', [offer.id, JSON.stringify({ resident: resident('ada-9') }), '{}', '']), /bad_trade/, 'a counter keeps the kind');
-  const counter = await call(A, 'public.counter_trade($1, $2::jsonb, $3::jsonb, $4)',
-    [offer.id, JSON.stringify({ curios: curios(['moth-wing']) }), JSON.stringify({ curios: curios(['half-candle'], ['glass-eye']) }), 'counter']);
-  assert.deepEqual([counter.from_user, counter.to_user, counter.parent, counter.status], [A, B, offer.id, 'open']);
+  await rejects(counter(B, offer.id, { curios: curios(['moth-wing']) }), /not_found/, 'the sender cannot counter their own offer');
+  await rejects(counter(A, offer.id, { resident: resident('ada-9') }), /bad_trade/, 'a counter keeps the kind');
+  const back = await counter(A, offer.id, { curios: curios(['moth-wing']) }, { curios: curios(['half-candle'], ['glass-eye']) }, 'counter');
+  assert.deepEqual([back.from_user, back.to_user, back.parent, back.status], [A, B, offer.id, 'open']);
   assert.equal(await status(offer.id), 'countered');
   await rejects(accept(A, offer.id), /not_open/);
-  await rejects(call(B, 'public.counter_trade($1, $2::jsonb, $3::jsonb, $4)', [counter.id, JSON.stringify({ curios: curios(['half-candle']) }), '{}', '']), /no_counter/);
-  assert.equal((await accept(B, counter.id)).status, 'accepted');
+  await rejects(counter(B, back.id, { curios: curios(['half-candle']) }), /no_counter/);
+  assert.equal((await accept(B, back.id)).status, 'accepted');
 });
 
 test('offers expire after seven days, and an expired one cannot be answered', async () => {
   const offer = await propose(C, B, { curios: curios(['button-eye']) });
   await age(offer.id, '7 days 1 minute');
   await rejects(accept(B, offer.id), /expired/);
-  await rejects(call(B, 'public.counter_trade($1, $2::jsonb, $3::jsonb, $4)', [offer.id, JSON.stringify({ curios: curios(['moth-wing']) }), '{}', '']), /expired/);
+  await rejects(counter(B, offer.id, { curios: curios(['moth-wing']) }), /expired/);
   await rejects(call(C, 'public.cancel_trade($1)', [offer.id]), /not_open/);
   const seen = (await list(C)).trades.find(t => t.id === offer.id);
   assert.equal(seen.status, 'expired', 'the sender learns of it and releases escrow');
