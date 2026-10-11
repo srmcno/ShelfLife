@@ -332,7 +332,9 @@ edit them there.
 
 With cloud save on, the game also records which days each player opens it (one row per day, nothing
 else) so the owner can see retention. **More → Help improve the game: count which days I play** switches
-it off, and switching it off deletes the days already counted. [privacy.html](privacy.html) says so.
+it off. Switching it off deletes the days already counted, including the days counted for coven invite
+rewards, and stops both until it is switched back on; while it is off, invite rewards cannot count that
+player's days. [privacy.html](privacy.html) says so.
 
 ### Reading feedback and retention in Supabase
 
@@ -363,24 +365,28 @@ select day, count(*) as players
 ```
 
 ```sql
--- Retention: D1, D7 and D30 by the week players started
--- (a player "starts" on their first counted day; a blank means too soon to tell)
-with firsts as (
-  select user_id, min(day) as first_day from public.play_days group by user_id
+-- Retention: D1, D7 and D30 by signup week. "Signup" is when the player's cloud
+-- account was created (auth.users.created_at), which is the first day the game
+-- could count them. Only players who leave the day count switched on are seen;
+-- a blank means too soon to tell.
+with signups as (
+  select u.id as user_id, (u.created_at at time zone 'utc')::date as signup_day
+    from auth.users u
+   where exists (select 1 from public.play_days p where p.user_id = u.id)
 ), marked as (
-  select f.first_day, date_trunc('week', f.first_day)::date as signup_week,
-         exists (select 1 from public.play_days p where p.user_id = f.user_id and p.day = f.first_day + 1) as d1,
-         exists (select 1 from public.play_days p where p.user_id = f.user_id and p.day = f.first_day + 7) as d7,
-         exists (select 1 from public.play_days p where p.user_id = f.user_id and p.day = f.first_day + 30) as d30
-    from firsts f
+  select s.signup_day, date_trunc('week', s.signup_day)::date as signup_week,
+         exists (select 1 from public.play_days p where p.user_id = s.user_id and p.day = s.signup_day + 1) as d1,
+         exists (select 1 from public.play_days p where p.user_id = s.user_id and p.day = s.signup_day + 7) as d7,
+         exists (select 1 from public.play_days p where p.user_id = s.user_id and p.day = s.signup_day + 30) as d30
+    from signups s
 )
 select signup_week, count(*) as players,
-       round(100.0 * count(*) filter (where d1 and first_day + 1 < current_date)
-         / nullif(count(*) filter (where first_day + 1 < current_date), 0)) as d1_pct,
-       round(100.0 * count(*) filter (where d7 and first_day + 7 < current_date)
-         / nullif(count(*) filter (where first_day + 7 < current_date), 0)) as d7_pct,
-       round(100.0 * count(*) filter (where d30 and first_day + 30 < current_date)
-         / nullif(count(*) filter (where first_day + 30 < current_date), 0)) as d30_pct
+       round(100.0 * count(*) filter (where d1 and signup_day + 1 < current_date)
+         / nullif(count(*) filter (where signup_day + 1 < current_date), 0)) as d1_pct,
+       round(100.0 * count(*) filter (where d7 and signup_day + 7 < current_date)
+         / nullif(count(*) filter (where signup_day + 7 < current_date), 0)) as d7_pct,
+       round(100.0 * count(*) filter (where d30 and signup_day + 30 < current_date)
+         / nullif(count(*) filter (where signup_day + 30 < current_date), 0)) as d30_pct
   from marked
  group by signup_week
  order by signup_week desc;

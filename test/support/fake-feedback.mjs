@@ -16,6 +16,7 @@ const cleanNote = (value, max) => String(value ?? '').replace(/\r/g, '').replace
 
 export function createFakeFeedback({ now, json, rest }) {
   const feedback = [], playDays = [];
+  const optouts = new Set(), forgetHooks = [];
   const refuse = token => rest(400, 'P0001', token);
   let serial = 0;
 
@@ -53,6 +54,7 @@ export function createFakeFeedback({ now, json, rest }) {
     mark_play_day(user, { p_day }) {
       const d = day(p_day);
       if (!d || Math.abs(gap(d, today())) > 1) return refuse('bad_day');
+      optouts.delete(user.id); // counting a day is the switch being on again
       const added = !playDays.some(p => p.user_id === user.id && p.day === d);
       if (added) playDays.push({ user_id: user.id, day: d });
       for (let i = playDays.length - 1; i >= 0; i--) if (playDays[i].user_id === user.id && gap(today(), playDays[i].day) > 400) playDays.splice(i, 1);
@@ -61,6 +63,9 @@ export function createFakeFeedback({ now, json, rest }) {
     forget_play_days(user) {
       let removed = 0;
       for (let i = playDays.length - 1; i >= 0; i--) if (playDays[i].user_id === user.id) { playDays.splice(i, 1); removed++; }
+      // The same switch covers coven active days (as 0006 now does), and stops both counting.
+      optouts.add(user.id);
+      for (const hook of forgetHooks) hook(user.id);
       return json(200, { ok: true, removed });
     }
   };
@@ -70,5 +75,5 @@ export function createFakeFeedback({ now, json, rest }) {
     for (const list of [feedback, playDays]) for (let i = list.length - 1; i >= 0; i--) if (list[i].user_id === userId) list.splice(i, 1);
   }
 
-  return { RPC, forget, feedback, playDays };
+  return { RPC, forget, feedback, playDays, optouts, onForgetPlayDays: hook => forgetHooks.push(hook) };
 }

@@ -113,3 +113,23 @@ test('no public table is open to direct reads or writes by players after all ten
     assert.equal(await value('select has_table_privilege($1, $2, $3)', ['anon', 'public.' + relname, 'select']), false, 'anon can read ' + relname);
   }
 });
+
+test('switching the day count off erases play days and coven active days, stops both, and switching on resumes', async () => {
+  const today = await value("select to_char(current_date, 'YYYY-MM-DD')");
+  await call(C, 'public.mark_play_day($1)', [today]);
+  await call(C, 'public.mark_active_day()');
+  assert.equal(Number(await value('select count(*) from public.play_days where user_id = $1', [C])), 1);
+  assert.equal(Number(await value('select count(*) from public.active_days where user_id = $1', [C])), 1);
+  const forgot = await call(C, 'public.forget_play_days()');
+  assert.equal(forgot.ok, true);
+  assert.equal(Number(await value('select count(*) from public.play_days where user_id = $1', [C])), 0);
+  assert.equal(Number(await value('select count(*) from public.active_days where user_id = $1', [C])), 0, 'coven active days are erased too');
+  const quiet = await call(C, 'public.mark_active_day()');
+  assert.equal(quiet.opted_out, true);
+  assert.equal(Number(await value('select count(*) from public.active_days where user_id = $1', [C])), 0, 'and not counted while switched off');
+  // The game calls mark_play_day only while the switch is on: that is switching it on.
+  await call(C, 'public.mark_play_day($1)', [today]);
+  await call(C, 'public.mark_active_day()');
+  assert.equal(Number(await value('select count(*) from public.active_days where user_id = $1', [C])), 1);
+  assert.equal(await value('select has_table_privilege($1, $2, $3)', ['authenticated', 'private.play_day_optouts', 'select']), false);
+});

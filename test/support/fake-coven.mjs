@@ -286,6 +286,10 @@ export function createFakeCoven({ users, profiles, social, now, json, rest, uuid
       return json(200, { ok: true });
     },
     mark_active_day(user) {
+      if (social.playDayOptouts?.has(user.id)) {
+        const days = [...activeDays].filter(k => k.startsWith(user.id + '|') && dayNo(k.split('|')[1]) > dayNo(today()) - 30).length;
+        return json(200, { ok: true, counted: false, opted_out: true, days });
+      }
       activeDays.add(user.id + '|' + today());
       const recent = [...activeDays].filter(k => k.startsWith(user.id + '|') && dayNo(k.split('|')[1]) > dayNo(today()) - 30).length;
       return json(200, { ok: true, days: recent });
@@ -349,6 +353,7 @@ export function createFakeCoven({ users, profiles, social, now, json, rest, uuid
   };
   // Test helpers: a played day for a player, as if they had opened the game then.
   api.addActiveDay = (userId, day) => activeDays.add(userId + '|' + day);
+  api.clearActiveDays = userId => { for (const k of [...activeDays]) if (k.startsWith(userId + '|')) activeDays.delete(k); };
   api.ageReferral = (invitee, days) => { const r = referrals.get(invitee); if (r) r.created_at = iso(now() - days * DAY); };
   Object.assign(api, { RPC, covens, members, invites, weeks, tallies, claims, notes, activeDays, referrals, actions, weekRow, weekOf, today });
   social.coven = api;

@@ -113,6 +113,9 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const feedback = createFakeFeedback({ now, json, rest }); Object.assign(RPC, feedback.RPC);
   social.hearings = attachFakeHearings({ RPC, social, profiles, now, json, rest, uuid });
   Object.assign(RPC, createFakeCoven({ users, profiles, social, now, json, rest, uuid }).RPC); // fake.social.coven
+  // One day-count switch for play days and coven active days, as in 0006 and 0008.
+  social.playDayOptouts = feedback.optouts;
+  feedback.onForgetPlayDays(userId => social.coven.clearActiveDays(userId));
   const kin = createFakeKin({ social, users, profiles, now, json, rest, uuid, rpc: { ...RPC } });
   Object.assign(RPC, kin.RPC);
   Object.assign(RPC, (social.trades = createFakeTrades({ social, users, profiles, now, json, rest, uuid })).RPC);

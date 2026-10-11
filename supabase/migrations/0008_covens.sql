@@ -941,6 +941,13 @@ declare
   uid uuid := private.require_user();
   today date := private.coven_today();
 begin
+  -- A player who switched the day count off (0006's private.play_day_optouts) is not counted here either.
+  if to_regclass('private.play_day_optouts') is not null then
+    if exists (select 1 from private.play_day_optouts where user_id = uid) then
+      return jsonb_build_object('ok', true, 'counted', false, 'opted_out', true,
+        'days', (select count(*)::int from public.active_days where user_id = uid and day > today - 30));
+    end if;
+  end if;
   insert into public.active_days (user_id, day) values (uid, today) on conflict do nothing;
   delete from public.active_days where user_id = uid and day < today - 60;
   return jsonb_build_object('ok', true, 'days', (select count(*)::int from public.active_days where user_id = uid and day > today - 30));

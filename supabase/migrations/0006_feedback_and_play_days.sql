@@ -66,6 +66,17 @@ create table if not exists public.play_days (
 );
 create index if not exists play_days_day on public.play_days (day);
 
+-- Players who switched the day count off. Their switch covers every day count
+-- the game keeps (play_days here, and active_days for coven invite rewards in
+-- 0008): forget_play_days erases both and records this, and mark_play_day (the
+-- game calls it only while the switch is on) clears it again.
+create table if not exists private.play_day_optouts (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  at timestamptz not null default now()
+);
+alter table private.play_day_optouts enable row level security;
+revoke all on table private.play_day_optouts from public, anon, authenticated;
+
 -- ---------------------------------------------------------------------------
 -- Row level security: on, with no policies and no grants. Nobody reads or
 -- writes these through the API; the functions below are the only way in.
@@ -191,6 +202,8 @@ declare
   added boolean;
 begin
   if abs(d - current_date) > 1 then perform private.refuse('bad_day'); end if;
+  -- Counting a day is the switch being on again.
+  delete from private.play_day_optouts where user_id = uid;
   insert into public.play_days (user_id, day) values (uid, d) on conflict do nothing;
   added := found;
   delete from public.play_days where user_id = uid and day < current_date - 400;
@@ -198,7 +211,8 @@ begin
 end;
 $$;
 
--- Switching the count off in More also forgets the days already counted.
+-- Switching the count off in More forgets the days already counted, here and
+-- for coven invite rewards, and stops both counting until it is switched on.
 create or replace function public.forget_play_days()
 returns jsonb
 language plpgsql
@@ -211,6 +225,12 @@ declare
 begin
   delete from public.play_days where user_id = uid;
   get diagnostics removed = row_count;
+  -- The same switch covers the days counted for coven invite rewards (0008), if that is installed.
+  if to_regclass('public.active_days') is not null then
+    execute 'delete from public.active_days where user_id = $1' using uid;
+  end if;
+  insert into private.play_day_optouts (user_id) values (uid)
+  on conflict (user_id) do update set at = now();
   return jsonb_build_object('ok', true, 'removed', removed);
 end;
 $$;
