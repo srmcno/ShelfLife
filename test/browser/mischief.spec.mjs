@@ -236,7 +236,9 @@ for (const result of ['trick', 'treat']) test('seasonal ' + result + ' uses the 
     expect(layout).toEqual({ overlaps: 0, contained: true }); await fits(page);
   };
   let disconnected = result === 'trick';
-  if (disconnected) await page.route('**/rest/v1/rpc/**', route => disconnected ? route.abort('internetdisconnected') : w.fake.route(route));
+  // Disconnect the whole labelled cloud, including household saves, while the
+  // locally served game remains reloadable without a service worker.
+  if (disconnected) await page.route(w.fake.url + '/**', route => disconnected ? route.abort('internetdisconnected') : w.fake.route(route));
   await assertVisitorSpace();
   for (let tap = 0; tap < 5; tap++) { await ghost.click(); if (tap < 4) await assertVisitorSpace(); }
   await expect.poll(async () => (await saved(page)).mischief?.haunt?.shooed).toBe(true);
