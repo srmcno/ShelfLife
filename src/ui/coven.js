@@ -14,11 +14,12 @@
 import { registerFriendAction, registerPostboxSource, registerFriendsSection, registerSocialView } from './social-registry.js';
 import { cloud, social } from '../cloud/index.js';
 import { createCovenClient, covenText } from '../cloud/coven.js';
+import { CloudError } from '../cloud/client.js';
 import { formatCode, cleanCode } from '../cloud/social.js';
 import { state as liveState, save } from '../state.js';
 import {
   syncCoven, setCoven, pendingReports, markReported, covenWeek, daysLeft, thresholds, tierReached, goalLine, counterWord, payChest, chestPaid,
-  wearFrame, payInvite, randomName, randomSigil, covenName, cleanSigil, memberColours, noteParts, noteText, hideNote, computeAwards, ceremonyScript,
+  wearFrame, payInvite, invitePaid, bindCovenRewards, randomName, randomSigil, covenName, cleanSigil, memberColours, noteParts, noteText, hideNote, computeAwards, ceremonyScript,
   recordCeremony, utcDay
 } from '../engine/coven.js';
 import { covenState } from '../coven-state.js';
@@ -36,9 +37,11 @@ import { celebrate, chime } from './retention-kit.js';
 import { timeAgo } from './cloud.js';
 import { PLAY_URL } from '../backup.js';
 import { isNative, shareText } from '../native.js';
+import { currencyRewardId } from '../engine/coop-money.js';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const coven = createCovenClient({ cloud, social });
+const rewardWallet = { reconcile: async owner => (await import('./coop.js')).reconcileCoopWallet(owner), operationId: currencyRewardId };
 const STATUS_FRESH = 60000, REPORT_GAP = 120000, VIEW = { main: 'coven', found: 'coven-found', pick: 'coven-invite-pick', board: 'coven-board',
   compose: 'coven-compose', ceremony: 'coven-ceremony', recruit: 'coven-recruit' };
 const S = () => liveState;
@@ -50,19 +53,45 @@ const lineOf = (list, seed = 0) => list[Math.abs(seed) % list.length];
 let status = null, statusAt = 0, statusError = '', loading = null;
 let board = null, boardError = '', referrals = null;
 let draft = null, pendingInvite = null, confirm = '', notice = '', busy = false, ceremony = null, composer = null, recruitDraft = '';
+// Backup restores replace the nested coven while keeping the exported shelf
+// object and account. Pending rewards belong to that original nested state.
+let accountOwner = me(), shelfOwner = covenState(S()), accountVersion = 0;
+const identity = (user, version) => !!user && me() === user && version === accountVersion && covenState(S()) === shelfOwner;
+const contextVersions = new WeakMap();
+function currentCtx(ctx) {
+  if (ctx?.isCurrent?.() === false) return false;
+  if (!ctx) return true;
+  if (!contextVersions.has(ctx)) contextVersions.set(ctx, accountVersion);
+  return contextVersions.get(ctx) === accountVersion;
+}
+async function owned(ctx, promise) {
+  const user = me(), version = accountVersion;
+  const value = await promise;
+  if (!identity(user, version) || !currentCtx(ctx)) throw new CloudError('The account changed.', { code: 'signed_out', status: 401 });
+  return value;
+}
+async function reconcileRewardWallet(ctx, owner) {
+  const purse = S().coop;
+  await owned(ctx, rewardWallet.reconcile(owner));
+  if (S().coop !== purse) throw new CloudError('The shelf changed.', { code: 'signed_out', status: 401 });
+}
 
 async function refreshStatus({ force = false } = {}) {
   if (!coven.active()) return null;
   if (!force && status && Date.now() - statusAt < STATUS_FRESH && status.user === me()) return status;
-  if (loading) return loading;
   const user = me();
-  loading = coven.status().then(s => {
-    if (me() !== user) return null;
+  const version = accountVersion;
+  if (loading?.user === user && loading.version === version) return loading.promise;
+  const request = { user, version };
+  request.promise = coven.status().then(s => {
+    if (!identity(user, version)) return null;
     status = { ...s, user }; statusAt = Date.now(); statusError = '';
-    if (setCoven(S(), s.coven?.id || '', Date.now())) save();
+    const membershipChanged = setCoven(S(), s.coven?.id || '', Date.now());
+    if (bindCovenRewards(S(), user) || membershipChanged) save();
     return status;
-  }).catch(error => { statusError = covenText(error); throw error; }).finally(() => { loading = null; });
-  return loading;
+  }).catch(error => { if (identity(user, version)) statusError = covenText(error); throw error; }).finally(() => { if (loading === request) loading = null; });
+  loading = request;
+  return request.promise;
 }
 const current = () => status && status.user === me() && coven.active() ? status : null;
 const myShare = s => s?.week?.shares.find(x => x.userId === me())?.amount || 0;
@@ -70,16 +99,21 @@ const myShare = s => s?.week?.shares.find(x => x.userId === me())?.amount || 0;
 /* ---------- counting and reporting ---------- */
 let reporting = null, lastReport = 0, syncTimer = null;
 export function reportNow({ force = false } = {}) {
-  if (!coven.active() || reporting) return reporting || Promise.resolve(false);
+  const user = me(), version = accountVersion;
+  if (!coven.active()) return Promise.resolve(false);
+  if (reporting?.user === user && reporting.version === version) return reporting.promise;
   const st = S();
   try { syncCoven(st); } catch { return Promise.resolve(false); }
   const reports = pendingReports(st);
   if (!reports.length || (!force && Date.now() - lastReport < REPORT_GAP)) return Promise.resolve(false);
   lastReport = Date.now();
-  reporting = (async () => {
+  const request = { user, version };
+  request.promise = (async () => {
     for (const r of reports) {
+      if (!identity(user, version)) return false;
       try {
         const res = await coven.contribute(r.day, r.counts);
+        if (!identity(user, version)) return false;
         markReported(st, r);
         const s = current();
         if (s?.week && res.week === s.week.no) {
@@ -88,16 +122,19 @@ export function reportNow({ force = false } = {}) {
           if (mine) mine.amount = res.mine; else if (res.mine) s.week.shares.push({ userId: me(), amount: res.mine });
         }
       } catch (error) {
+        if (!identity(user, version)) return false;
         // A day the server will not take (a clock far out) is let go; the counts are not lost, only that day's report.
         if (error.code === 'bad_day' || error.code === 'bad_counts') markReported(st, r);
         else if (error.code === 'no_coven') { setCoven(st, '', Date.now()); status = null; }
         else break;
       }
     }
+    if (!identity(user, version)) return false;
     save();
     return true;
-  })().finally(() => { reporting = null; });
-  return reporting;
+  })().finally(() => { if (reporting === request) reporting = null; });
+  reporting = request;
+  return request.promise;
 }
 function scheduleSync() {
   if (syncTimer) return;
@@ -109,10 +146,13 @@ function scheduleSync() {
 // One play day a day, for invite rewards. Remembered beside the session, never in the save.
 function markDay() {
   const uid = me();
-  if (!uid || !coven.active()) return;
+  const version = accountVersion;
+  if (!uid || !coven.active() || S().testing?.countDays === false) return;
   const key = uid + '|' + utcDay();
   if (cloud.meta().covenDay === key) return;
-  coven.markActiveDay().then(() => cloud.setMeta({ covenDay: key })).catch(() => { /* tomorrow, then */ });
+  coven.markActiveDay().then(result => {
+    if (identity(uid, version) && result.counted && S().testing?.countDays !== false) cloud.setMeta({ covenDay: key });
+  }).catch(() => { /* tomorrow, then */ });
 }
 async function wake() {
   if (!coven.active()) return;
@@ -220,7 +260,7 @@ function inviteRow(i) {
 function chestsReady(s) {
   if (!s?.coven || !s.week) return [];
   const out = [];
-  const weekly = (w, mine) => { if (!w || !(mine > 0)) return; for (let t = 1; t <= tierReached(w.progress, w.target); t++) if (!w.claimed.includes(t) && !chestPaid(S(), w.no, t)) out.push({ week: w.no, tier: t }); };
+  const weekly = (w, mine) => { if (!w || !(mine > 0)) return; for (let t = 1; t <= tierReached(w.progress, w.target); t++) if (!chestPaid(S(), w.no, t, me())) out.push({ week: w.no, tier: t }); };
   weekly(s.week, myShare(s));
   if (s.last) weekly(s.last, s.last.members.find(m => m.userId === me())?.counts[s.last.counter] || 0);
   return out;
@@ -229,9 +269,9 @@ const awardsWaiting = s => !!(s?.last && s.last.members.some(m => m.userId === m
 function chestHTML(s, w, mine) {
   const reached = tierReached(w.progress, w.target), marks = thresholds(w.target);
   return '<ul class="cv-chests">' + CHEST_TIERS.map((c, i) => {
-    const t = i + 1, opened = w.claimed.includes(t) || chestPaid(S(), w.no, t);
+    const t = i + 1, opened = chestPaid(S(), w.no, t, me());
     const state = opened ? 'opened' : reached >= t ? (mine > 0 ? 'ready' : 'closed') : 'locked';
-    const side = state === 'ready' ? '<button class="btn btn-sm btn-primary" type="button" data-sx="claim" data-week="' + w.no + '" data-tier="' + t + '">Open</button>'
+    const side = state === 'ready' ? '<button class="btn btn-sm btn-primary" type="button" data-sx="claim" data-week="' + w.no + '" data-tier="' + t + '">' + (w.claimed.includes(t) ? 'Collect on this shelf' : 'Open') + '</button>'
       : '<span class="cv-chest-state">' + (state === 'opened' ? 'Opened' : state === 'closed' ? 'For those who helped' : 'At ' + marks[i]) + '</span>';
     return '<li class="cv-chest ' + state + '"><div><b>' + esc(c.name) + '</b><small>' + esc(c.souls + ' souls' + (c.curio ? ' and a cupboard curio' : c.frame ? ' and a sigil frame' : '')) + '</small></div>' + side + '</li>';
   }).join('') + '</ul>';
@@ -397,7 +437,7 @@ function recruitHTML(ctx) {
     '<div class="fr-actions"><button class="btn btn-primary" type="button" data-sx="recruit-share"' + (code ? '' : ' disabled') + '>Share an invitation</button></div>' +
     '<p class="cv-small cv-quiet">The link opens Shelf Life with your code ready. Ten rewards at most, which is a lot of friends.</p></section>' +
     (r === null ? loadingState('Counting your recruits.') : (r.invited.length ? '<section><h3>Brought in so far</h3><ul class="cv-members">' + r.invited.map(x => {
-      const ready = x.friends && x.days >= INVITE_DAYS, paid = x.claimed && st.invite.paid.includes(x.userId);
+      const ready = x.friends && x.days >= INVITE_DAYS, paid = x.claimed && invitePaid(S(), x.userId, me());
       return '<li><span class="cv-dot"></span><div><b>' + esc(x.name || 'A new player') + '</b><small>' + esc(!x.friends ? 'Not friends yet: they add your code.' : paid ? 'Rewarded.' : Math.min(x.days, INVITE_DAYS) + ' of ' + INVITE_DAYS + ' days played.') + '</small></div>' +
         (ready && !paid ? '<button class="btn btn-sm btn-primary" type="button" data-sx="recruit-claim" data-user="' + esc(x.userId) + '">Collect</button>' : '') + '</li>';
     }).join('') + '</ul><p class="cv-small">' + esc(r.rewarded + ' of 10 rewards collected.') + '</p></section>' : '') +
@@ -407,7 +447,7 @@ function recruitHTML(ctx) {
     '<div class="fr-actions"><button class="btn btn-ghost" type="button" data-sx="back-home">Back</button></div>';
 }
 function invitedByHTML(x) {
-  const st = covenState(S()), ready = x.friends && x.days >= INVITE_DAYS, paid = x.claimed && st.invite.paid.includes(x.userId);
+  const st = covenState(S()), ready = x.friends && x.days >= INVITE_DAYS, paid = x.claimed && invitePaid(S(), x.userId, me());
   return '<section><h3>Who brought you</h3><ul class="cv-members"><li><span class="cv-dot"></span><div><b>' + esc(x.name || 'Your inviter') + '</b><small>' +
     esc(!x.friends ? 'Waiting for them to accept your friend request.' : paid ? 'Rewarded. The frames are in the Exchange, ready to wear.' : Math.min(x.days, INVITE_DAYS) + ' of ' + INVITE_DAYS + ' days played.') + '</small></div>' +
     (ready && !paid ? '<button class="btn btn-sm btn-primary" type="button" data-sx="recruit-claim" data-user="' + esc(x.userId) + '">Collect</button>' : '') + '</li></ul></section>';
@@ -425,45 +465,50 @@ const VIEWS = {
   [VIEW.recruit]: { kicker: 'Invite rewards', title: () => 'Invite a new player', html: recruitHTML }
 };
 function show(ctx, id, focus = null) {
+  if (!currentCtx(ctx)) return;
   lastCtx = ctx; open = id;
   const v = VIEWS[id];
   ctx.show({ id, kicker: v.kicker, title: v.title(), html: '<div class="cv-view" data-cv-view="' + id + '">' + v.html(ctx) + '</div>', back: 'main' });
-  if (focus) queueMicrotask(() => { const el = document.querySelector('[data-cv-view] ' + focus); if (el && !el.disabled) el.focus({ preventScroll: true }); });
+  if (focus) queueMicrotask(() => { if (!currentCtx(ctx)) return; const el = document.querySelector('[data-cv-view] ' + focus); if (el && !el.disabled) el.focus({ preventScroll: true }); });
 }
 // Repaint whatever is open: one of our views, or the home section through the sheet.
 function repaint(focus = null) {
-  if (!lastCtx) return;
+  if (!lastCtx || !currentCtx(lastCtx)) return;
   const viewEl = document.querySelector('[data-cv-view="' + open + '"]');
   if (open && viewEl) show(lastCtx, open, focus);
   else lastCtx.refresh?.();
 }
-function say(ctx, text) { notice = text; if (ctx?.say) ctx.say(text); }
-function toastOf(ctx, text) { (ctx?.toast || toast)(text); }
+function say(ctx, text) { if (!currentCtx(ctx)) return; notice = text; if (ctx?.say) ctx.say(text); }
+function toastOf(ctx, text) { if (currentCtx(ctx)) (ctx?.toast || toast)(text); }
 
 async function busyRun(ctx, work, focus) {
-  if (busy) return;
+  if (busy || !currentCtx(ctx)) return;
+  const user = me(), version = accountVersion;
   busy = true; notice = '';
   try { await work(); }
-  catch (error) { say(ctx, covenText(error)); }
-  finally { busy = false; repaint(focus); }
+  catch (error) { if (identity(user, version)) say(ctx, covenText(error)); }
+  finally { if (identity(user, version)) { busy = false; if (currentCtx(ctx)) repaint(focus); } }
 }
 
 /* ---------- opening things ---------- */
 async function openCoven(ctx, focus = null) {
   notice = notice || ''; confirm = '';
   show(ctx, VIEW.main, focus);
-  try { await refreshStatus(); } catch { /* shown below */ }
+  try { await owned(ctx, refreshStatus()); } catch { /* shown below */ }
+  if (!currentCtx(ctx)) return;
   reportNow({ force: true }).then(ok => { if (ok) refreshStatus({ force: true }).then(() => repaint(), () => {}); });
   loadBoard();
   show(ctx, VIEW.main, focus);
 }
 function loadBoard() {
+  const user = me(), version = accountVersion;
   return coven.board().then(list => {
+    if (!identity(user, version)) return [];
     board = list; boardError = '';
     const st = covenState(S()), latest = Math.max(0, ...list.map(n => n.id));
     if (latest > st.seenNote && (open === VIEW.board || open === VIEW.main)) { st.seenNote = latest; save(); }
     repaint();
-  }, error => { boardError = covenText(error); repaint(); });
+  }, error => { if (!identity(user, version)) return []; boardError = covenText(error); repaint(); });
 }
 function openFound(ctx, { restyle = false } = {}) {
   const s = current();
@@ -474,12 +519,13 @@ function openFound(ctx, { restyle = false } = {}) {
 async function openRecruit(ctx) {
   notice = ''; referrals = null;
   show(ctx, VIEW.recruit);
-  try { referrals = await coven.referrals(); } catch (error) { notice = covenText(error); referrals = { invitedBy: null, invited: [], rewarded: 0, canRegister: false }; }
+  try { referrals = await owned(ctx, coven.referrals()); } catch (error) { if (!currentCtx(ctx)) return; notice = covenText(error); referrals = { invitedBy: null, invited: [], rewarded: 0, canRegister: false }; }
   repaint();
 }
 
 /* ---------- clicks ---------- */
 async function handle(action, el, ctx) {
+  if (!currentCtx(ctx)) return;
   lastCtx = ctx;
   const data = el?.dataset || {};
   const s = current();
@@ -495,16 +541,16 @@ async function handle(action, el, ctx) {
     case 'reform': draft.name = { ...draft.name, form: (draft.name.form + 1) % NAME_FORMS.length }; return repaint('[data-sx="reform"]');
     case 'pick': draft.sigil = { ...draft.sigil, [data.key]: data.value }; return repaint('[data-sx="pick"][data-key="' + data.key + '"][data-value="' + data.value + '"]');
     case 'found-yes': return busyRun(ctx, async () => {
-      if (draft.restyle) { await coven.restyle(draft.name, draft.sigil); await refreshStatus({ force: true }); draft = null; notice = 'The coven has a new look. Nobody was consulted.'; open = VIEW.main; show(ctx, VIEW.main); return; }
-      await coven.found(draft.name, draft.sigil);
+      if (draft.restyle) { await owned(ctx, coven.restyle(draft.name, draft.sigil)); await owned(ctx, refreshStatus({ force: true })); draft = null; notice = 'The coven has a new look. Nobody was consulted.'; open = VIEW.main; show(ctx, VIEW.main); return; }
+      await owned(ctx, coven.found(draft.name, draft.sigil));
       const title = covenName(draft.name);
       draft = null;
-      await refreshStatus({ force: true });
+      await owned(ctx, refreshStatus({ force: true }));
       notice = lineOf(COVEN_LINES.founded, title.length).replace('{coven}', title);
       if (pendingInvite) {
         const f = pendingInvite; pendingInvite = null;
-        try { await coven.invite(f.userId); await refreshStatus({ force: true }); notice += ' ' + lineOf(COVEN_LINES.inviteSent).replace('{name}', f.name || 'Your friend'); }
-        catch (error) { notice += ' ' + covenText(error); }
+        try { await owned(ctx, coven.invite(f.userId)); await owned(ctx, refreshStatus({ force: true })); notice += ' ' + lineOf(COVEN_LINES.inviteSent).replace('{name}', f.name || 'Your friend'); }
+        catch (error) { if (!currentCtx(ctx)) throw error; notice += ' ' + covenText(error); }
       }
       toastOf(ctx, notice);
       board = []; open = VIEW.main;
@@ -512,22 +558,22 @@ async function handle(action, el, ctx) {
     }, '[data-sx="compose"]');
     case 'invite-pick': notice = ''; show(ctx, VIEW.pick); return;
     case 'invite': return busyRun(ctx, async () => {
-      await coven.invite(data.user);
-      await refreshStatus({ force: true });
+      await owned(ctx, coven.invite(data.user));
+      await owned(ctx, refreshStatus({ force: true }));
       const f = (ctx.friends?.() || []).find(x => x.userId === data.user);
       notice = lineOf(COVEN_LINES.inviteSent, Date.now()).replace('{name}', f?.name || 'Your friend');
     }, '[data-sx="coven-open"]');
-    case 'uninvite': return busyRun(ctx, async () => { await coven.cancelInvite(data.user); await refreshStatus({ force: true }); notice = 'Invitation withdrawn. The good paper goes back in the drawer.'; }, '[data-sx="invite-pick"]');
+    case 'uninvite': return busyRun(ctx, async () => { await owned(ctx, coven.cancelInvite(data.user)); await owned(ctx, refreshStatus({ force: true })); notice = 'Invitation withdrawn. The good paper goes back in the drawer.'; }, '[data-sx="invite-pick"]');
     case 'accept': case 'decline': return answerInvite(ctx, data.id || el?.dataset?.sxId, action === 'accept');
     case 'invite-block': confirm = 'block-invite:' + data.id; return repaint('[data-sx="invite-block-yes"]');
     case 'invite-block-yes': return busyRun(ctx, async () => {
-      await social.block(data.user);
-      try { await coven.respond(data.id, false); } catch { /* blocking already hid it */ }
-      confirm = ''; await refreshStatus({ force: true }); notice = 'Blocked. They will not find you again.';
+      await owned(ctx, social.block(data.user));
+      try { await owned(ctx, coven.respond(data.id, false)); } catch (error) { if (!currentCtx(ctx)) throw error; /* blocking already hid it */ }
+      confirm = ''; await owned(ctx, refreshStatus({ force: true })); notice = 'Blocked. They will not find you again.';
     });
     case 'invite-report': return busyRun(ctx, async () => {
       const i = s?.invites.find(x => x.id === data.id);
-      await social.report(data.user, 'Coven invitation: ' + (i ? name(i.coven) : 'unknown'));
+      await owned(ctx, social.report(data.user, 'Coven invitation: ' + (i ? name(i.coven) : 'unknown')));
       notice = 'Reported. Block them too if you would rather not hear from them.';
     });
     case 'claim': return claimChest(ctx, Number(data.week), Number(data.tier));
@@ -535,19 +581,19 @@ async function handle(action, el, ctx) {
       const f = data.frame || '';
       if (!wearFrame(S(), f)) return;
       save();
-      return busyRun(ctx, async () => { await coven.setFrame(f); await refreshStatus({ force: true }); notice = f ? SIGIL_FRAME_BY_ID[f].name + ' it is. The whole coven will see.' : 'No frame. Austere. Some will say brave.'; }, '[data-sx="frame"][data-frame="' + f + '"]');
+      return busyRun(ctx, async () => { await owned(ctx, coven.setFrame(f)); await owned(ctx, refreshStatus({ force: true })); notice = f ? SIGIL_FRAME_BY_ID[f].name + ' it is. The whole coven will see.' : 'No frame. Austere. Some will say brave.'; }, '[data-sx="frame"][data-frame="' + f + '"]');
     }
     case 'pass': case 'remove': confirm = action + ':' + data.user; return repaint('[data-sx="' + action + '-yes"]');
-    case 'pass-yes': return busyRun(ctx, async () => { await coven.passCandle(data.user); confirm = ''; await refreshStatus({ force: true }); notice = 'The candle has been passed. Mind the wax.'; });
-    case 'remove-yes': return busyRun(ctx, async () => { await coven.remove(data.user); confirm = ''; await refreshStatus({ force: true }); notice = 'Removed. Their mug stays.'; });
+    case 'pass-yes': return busyRun(ctx, async () => { await owned(ctx, coven.passCandle(data.user)); confirm = ''; await owned(ctx, refreshStatus({ force: true })); notice = 'The candle has been passed. Mind the wax.'; });
+    case 'remove-yes': return busyRun(ctx, async () => { await owned(ctx, coven.remove(data.user)); confirm = ''; await owned(ctx, refreshStatus({ force: true })); notice = 'Removed. Their mug stays.'; });
     case 'leave': confirm = 'leave'; return repaint('[data-sx="leave-yes"]');
     case 'leave-yes': return busyRun(ctx, async () => {
-      await reportNow({ force: true });
+      await owned(ctx, reportNow({ force: true }));
       const title = s?.coven ? name(s.coven) : 'the coven';
-      await coven.leave();
+      await owned(ctx, coven.leave());
       confirm = ''; board = null; composer = null;
       if (setCoven(S(), '', Date.now())) save();
-      await refreshStatus({ force: true });
+      await owned(ctx, refreshStatus({ force: true }));
       toastOf(ctx, lineOf(COVEN_LINES.left, title.length).replace('{coven}', title));
       open = ''; notice = '';
       ctx.back ? ctx.back() : ctx.refresh?.();
@@ -557,24 +603,24 @@ async function handle(action, el, ctx) {
     case 'post': return busyRun(ctx, async () => {
       const tiles = composer.tiles();
       if (!tiles.length) return;
-      const r = await coven.post(tiles);
+      const r = await owned(ctx, coven.post(tiles));
       composer.clear();
       covenState(S()).seenNote = Math.max(covenState(S()).seenNote, r.id); save();
       notice = 'Pinned. Somebody will read it, and then pretend they did not.';
-      open = VIEW.board; show(ctx, VIEW.board); await loadBoard();
+      open = VIEW.board; show(ctx, VIEW.board); await owned(ctx, loadBoard());
     }, '[data-sx="compose"]');
-    case 'note-down': return busyRun(ctx, async () => { await coven.unpost(Number(data.id)); notice = 'Taken down. The magnets go back on the fridge.'; await loadBoard(); });
+    case 'note-down': return busyRun(ctx, async () => { await owned(ctx, coven.unpost(Number(data.id))); notice = 'Taken down. The magnets go back on the fridge.'; await owned(ctx, loadBoard()); });
     case 'note-hide': if (hideNote(S(), Number(data.id))) save(); notice = 'Hidden from your board. Nobody else is told.'; return repaint('[data-sx="compose"]');
     case 'note-report': confirm = 'report:' + data.id; return repaint('[data-sx="note-report-yes"]');
     case 'note-report-yes': case 'note-block-yes': return busyRun(ctx, async () => {
       const n = (board || []).find(x => x.id === Number(data.id));
       const text = n ? noteText(noteParts(n.tiles, n.names)) : '';
-      await social.report(data.user, ('Notice board: ' + text).slice(0, 200));
+      await owned(ctx, social.report(data.user, ('Notice board: ' + text).slice(0, 200)));
       hideNote(S(), Number(data.id)); save();
-      if (action === 'note-block-yes') await social.block(data.user);
+      if (action === 'note-block-yes') await owned(ctx, social.block(data.user));
       confirm = '';
       notice = action === 'note-block-yes' ? 'Reported and blocked. Their notes are gone from your board.' : 'Reported. The note is hidden from your board.';
-      await loadBoard();
+      await owned(ctx, loadBoard());
     }, '[data-sx="compose"]');
     case 'ceremony': if (!startCeremony()) return; show(ctx, VIEW.ceremony, '[data-sx="ceremony-next"]'); return;
     case 'ceremony-next': if (!ceremony) return; ceremony.step++; if (ceremony.step >= ceremony.script.steps.length) finishCeremony(); return show(ctx, VIEW.ceremony, '[data-sx="ceremony-next"], [data-sx="coven-open"]');
@@ -585,19 +631,25 @@ async function handle(action, el, ctx) {
       recruitDraft = input?.value || '';
       return busyRun(ctx, async () => {
         const code = cleanCode(recruitDraft);
-        await coven.registerReferral(code);
-        try { await social.addFriend(code); } catch (error) { if (error.code !== 'already_friends' && error.code !== 'already_asked') throw error; }
+        try { await owned(ctx, coven.registerReferral(code)); }
+        catch (error) { if (error.code !== 'not_found') throw error; say(ctx, 'Nobody has that code. Check it and try again.'); return; }
+        try { await owned(ctx, social.addFriend(code)); } catch (error) { if (error.code !== 'already_friends' && error.code !== 'already_asked') throw error; }
         covenState(S()).invite.code = ''; save(); recruitDraft = '';
-        referrals = await coven.referrals();
+        referrals = await owned(ctx, coven.referrals());
         notice = 'Noted, and a friend request is on its way. Play on three different days and you both get the frames.';
       }, '[data-sx="back-home"]');
     }
     case 'recruit-claim': return busyRun(ctx, async () => {
-      const r = await coven.claimReferral(data.user);
+      const owner = me();
+      await reconcileRewardWallet(ctx, owner);
+      const operation = await owned(ctx, rewardWallet.operationId(owner, 'coven_invite:' + data.user));
+      const r = await owned(ctx, coven.claimReferral(data.user));
       if (!r.ok) return;
-      const paid = payInvite(S(), data.user);
+      const paid = payInvite(S(), data.user, owner, operation);
       save();
-      referrals = await coven.referrals();
+      ctx.renderAll?.();
+      await reconcileRewardWallet(ctx, owner);
+      referrals = await owned(ctx, coven.referrals());
       notice = !paid ? 'Already collected.' : paid.frames.length ? 'A matching pair of portrait frames. Wear them in the Collector’s Exchange, on any resident’s card.' : '+' + paid.souls + ' souls. You already own the frames.';
       if (paid) { celebrate('chest'); chime('curio'); toastOf(ctx, notice); }
     });
@@ -606,8 +658,8 @@ async function handle(action, el, ctx) {
 async function answerInvite(ctx, inviteId, accept) {
   return busyRun(ctx, async () => {
     const s = current(), i = s?.invites.find(x => x.id === inviteId);
-    const r = await coven.respond(inviteId, accept);
-    await refreshStatus({ force: true });
+    const r = await owned(ctx, coven.respond(inviteId, accept));
+    await owned(ctx, refreshStatus({ force: true }));
     if (accept && r.status === 'joined') {
       const title = i ? name(i.coven) : 'the coven';
       notice = lineOf(COVEN_LINES.joined, title.length).replace('{coven}', title);
@@ -619,12 +671,17 @@ async function answerInvite(ctx, inviteId, accept) {
 }
 async function claimChest(ctx, week, tier) {
   return busyRun(ctx, async () => {
-    await reportNow({ force: true });
-    const r = await coven.claim(week, tier);
+    const owner = me();
+    await owned(ctx, reportNow({ force: true }));
+    await reconcileRewardWallet(ctx, owner);
+    const operation = await owned(ctx, rewardWallet.operationId(owner, 'coven_chest:' + week + ':' + tier));
+    const r = await owned(ctx, coven.claim(week, tier));
     if (!r.ok) return;
-    const paid = payChest(S(), week, tier);
+    const paid = payChest(S(), week, tier, owner, operation);
     save();
-    await refreshStatus({ force: true });
+    ctx.renderAll?.();
+    await reconcileRewardWallet(ctx, owner);
+    await owned(ctx, refreshStatus({ force: true }));
     if (!paid) { notice = 'Already opened on this shelf.'; return; }
     const bits = [paid.souls + paid.extra + ' souls', paid.curio && paid.curio.name + ' for the cupboard', paid.frame && paid.frame.name + ', a sigil frame'].filter(Boolean);
     notice = paid.name + ': ' + bits.join(', ') + '.';
@@ -662,17 +719,17 @@ registerFriendAction({
   },
   async run(friend, ctx) {
     lastCtx = ctx;
-    try { await refreshStatus(); } catch (error) { ctx.say?.(covenText(error)); return; }
+    try { await owned(ctx, refreshStatus()); } catch (error) { say(ctx, covenText(error)); return; }
     const s = current();
     if (!s?.coven) { pendingInvite = friend; draft = null; return openFound(ctx); }
     const why = inviteBlocker(s, friend);
-    if (why) { ctx.say?.(why + '.'); return; }
+    if (why) { say(ctx, why + '.'); return; }
     try {
-      await coven.invite(friend.userId);
-      await refreshStatus({ force: true });
+      await owned(ctx, coven.invite(friend.userId));
+      await owned(ctx, refreshStatus({ force: true }));
       const line = lineOf(COVEN_LINES.inviteSent, Date.now()).replace('{name}', friend.name || 'Your friend');
-      ctx.say?.(line); ctx.refresh?.();
-    } catch (error) { ctx.say?.(covenText(error)); }
+      say(ctx, line); if (currentCtx(ctx)) ctx.refresh?.();
+    } catch (error) { say(ctx, covenText(error)); }
   }
 });
 
@@ -712,27 +769,49 @@ registerPostboxSource({
 registerPostboxSource({
   id: 'coven-rewards', order: 44, label: 'Invite rewards',
   count() { return readyRewards().length; },
-  async load() { referrals = await coven.referrals(); return readyRewards().map(x => ({ id: x.userId, at: Date.now(), title: 'Invite reward ready', line: (x.name || 'Your recruit') + ' has played three days.' })); },
+  async load(ctx) { referrals = await owned(ctx, coven.referrals()); return readyRewards().map(x => ({ id: x.userId, at: Date.now(), title: 'Invite reward ready', line: (x.name || 'Your recruit') + ' has played three days.' })); },
   render(item) { return '<div class="cv-mail"><p><b>Invite reward ready.</b> ' + esc(item.line) + '</p><div class="fr-actions"><button class="btn btn-sm btn-primary" type="button" data-sx="recruit-claim" data-sx-id="' + esc(item.id) + '" data-user="' + esc(item.id) + '">Collect</button></div></div>'; },
   onClick(action, itemId, ctx) { return handle('recruit-claim', { dataset: { user: itemId } }, ctx); }
 });
 function readyRewards() {
   if (!referrals || !coven.active()) return [];
-  const paid = covenState(S()).invite.paid;
-  return [referrals.invitedBy, ...referrals.invited].filter(x => x && x.friends && x.days >= INVITE_DAYS && !(x.claimed && paid.includes(x.userId)));
+  return [referrals.invitedBy, ...referrals.invited].filter(x => x && x.friends && x.days >= INVITE_DAYS && !(x.claimed && invitePaid(S(), x.userId, me())));
 }
 
 /* ---------- the quiet work ---------- */
 if (typeof window !== 'undefined') {
   readInviteLink();
   // Store.set in state.js announces every save; that is the moment the counters may have moved.
-  window.addEventListener('shelflife:storage', scheduleSync);
+  let countDays = S().testing?.countDays !== false;
+  window.addEventListener('shelflife:storage', () => {
+    accountChanged();
+    const next = S().testing?.countDays !== false;
+    if (next !== countDays) {
+      countDays = next;
+      cloud.setMeta({ covenDay: undefined });
+      if (next) markDay();
+    }
+    scheduleSync();
+  });
   document.addEventListener('visibilitychange', () => { if (document.hidden) reportNow({ force: true }); else wake(); });
   window.addEventListener('online', wake);
-  social.subscribe(() => { if (status && status.user !== me()) { status = null; board = null; referrals = null; composer = null; } });
+  const accountChanged = () => {
+    const user = me(), shelf = covenState(S());
+    if (accountOwner === user && shelfOwner === shelf) return;
+    accountOwner = user; shelfOwner = shelf; accountVersion++;
+    status = null; statusAt = 0; statusError = ''; loading = null;
+    board = null; boardError = ''; referrals = null; composer = null; ceremony = null;
+    draft = null; pendingInvite = null; confirm = ''; notice = ''; busy = false; recruitDraft = '';
+    reporting = null; lastReport = 0; lastCtx = null; open = '';
+    const membershipChanged = setCoven(S(), '', Date.now());
+    if (bindCovenRewards(S(), user) || membershipChanged) save();
+  };
+  social.subscribe(accountChanged);
+  cloud.subscribe(accountChanged);
+  window.addEventListener('shelflife:state-replaced', accountChanged);
   setInterval(() => { if (!document.hidden) reportNow(); }, 60000);
   setTimeout(wake, 4000);
 }
 
 // For tests: the module's private view of the world.
-export const covenDebug = { current, refreshStatus, reportNow, handle, chestsReady, awardsWaiting, reset() { status = null; board = null; referrals = null; composer = null; ceremony = null; notice = ''; confirm = ''; } };
+export const covenDebug = { current, refreshStatus, reportNow, handle, chestsReady, awardsWaiting, rewardWallet, reset() { status = null; board = null; referrals = null; composer = null; ceremony = null; notice = ''; confirm = ''; } };

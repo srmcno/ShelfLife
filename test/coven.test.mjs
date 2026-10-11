@@ -9,10 +9,11 @@ import { PORTRAIT_BY_ID } from '../src/content/collections.js';
 import { blankCoven, normalizeCovenState, covenState } from '../src/coven-state.js';
 import {
   utcDay, covenWeek, weekStart, daysLeft, thresholds, tierReached, goalLine, syncCoven, setCoven, pendingReports, markReported,
-  payChest, chestPaid, wearFrame, payInvite, randomName, randomSigil, covenName, cleanSigil, memberColours, noteParts, noteText, hideNote,
+  payChest, chestPaid, bindCovenRewards, invitePaid, wearFrame, payInvite, randomName, randomSigil, covenName, cleanSigil, memberColours, noteParts, noteText, hideNote,
   computeAwards, ceremonyScript, recordCeremony
 } from '../src/engine/coven.js';
 import { normalizeState, localDayKey } from '../src/state.js';
+import { currencyRewardId, captureCoopMoney, applyCoopReward, readCoopRewardDetail } from '../src/engine/coop-money.js';
 import { householdFixture } from './household-fixtures.mjs';
 
 const NODASH = /[–—]/;
@@ -326,4 +327,75 @@ test('hiding a note is local, bounded and once', () => {
   assert.equal(hideNote(s, -1), false);
   for (let i = 10; i < 80; i++) hideNote(s, i);
   assert.equal(covenState(s).hidden.length, 40);
+});
+
+
+test('chest and referral payment marks belong to the account that earned them', () => {
+  const A = '00000000-0000-4000-8000-000000000001', B = '00000000-0000-4000-8000-000000000002', friend = '00000000-0000-4000-8000-000000000003';
+  const s = shelf();
+  assert.ok(payChest(s, 2963, 1, A));
+  assert.equal(payChest(s, 2963, 1, A), null);
+  assert.ok(payChest(s, 2963, 1, B), 'the second account has its own eligible chest');
+  assert.equal(payChest(s, 2963, 1, B), null);
+  assert.equal(payChest(s, 2963, 1, A), null, 'switching back retains the first receipt');
+  assert.ok(payInvite(s, friend, A));
+  assert.ok(payInvite(s, friend, B), 'a shared friend is not a shared referral receipt');
+  assert.equal(payInvite(s, friend, A), null);
+  assert.equal(payInvite(s, friend, B), null);
+});
+
+
+test('prototype unowned marks are retained without guessing an account, and financial history outlives the display cache', () => {
+  const A = '00000000-0000-4000-8000-000000000001';
+  const s = shelf(); s.coven = blankCoven(); s.coven.claimed = ['2963:1']; s.coven.invite.paid = [C1];
+  bindCovenRewards(s, A);
+  assert.deepEqual(s.coven.unownedRewards, { claimed: ['2963:1'], paid: [C1] });
+  assert.equal(chestPaid(s, 2963, 1, A), false); assert.equal(invitePaid(s, C1, A), false);
+  for (let week = 2963; week < 2995; week++) payChest(s, week, 1, A);
+  assert.equal(s.coven.claimed.length, 24);
+  const restored = normalizeState(s);
+  assert.equal(restored.coven.rewards[A].claimed.length, 32);
+  const prototype = normalizeCovenState({ claimed: Array.from({ length: 40 }, (_, i) => (2900 + i) + ':1') });
+  assert.equal(prototype.claimed.length, 24); assert.equal(prototype.unownedRewards.claimed.length, 40);
+  assert.equal(chestPaid(restored, 2963, 1, A), true);
+  assert.equal(payChest(restored, 2963, 1, A), null, 'an old tier cannot become payable when it leaves the display');
+});
+
+
+test('semantic chest and referral receipts preserve money once and replay their owned effects after restore', async () => {
+  const A = '00000000-0000-4000-8000-000000000001', friend = C1;
+  const s = shelf(), before = structuredClone(s), operation = await currencyRewardId(A, 'coven_chest:2963:2');
+  const chest = payChest(s, 2963, 2, A, operation), total = s.mayhem.souls;
+  assert.ok(chest.curio);
+  assert.equal(captureCoopMoney(s, A), null, 'the award is not also recorded as a random save delta');
+  const receipt = s.coop.money.pending.find(p => p.id === operation);
+  assert.deepEqual([receipt.delta, receipt.earned, receipt.detail.curio], [70, 70, chest.curio.id]);
+  const restored = normalizeState(s);
+  restored.coven.claimed = []; restored.coven.rewards[A].claimed = [];
+  assert.equal(payChest(restored, 2963, 2, A, operation), null, 'a retained money identity repairs the mark without another award');
+  assert.equal(restored.mayhem.souls, total); assert.equal(restored.coop.money.pending.length, 1);
+  const purse = before.mayhem.souls;
+  applyCoopReward(before, A, receipt.detail); applyCoopReward(before, A, receipt.detail);
+  assert.equal(before.mayhem.souls, purse, 'receipt effects do not add wallet money');
+  assert.equal(chestPaid(before, 2963, 2, A), true); assert.equal(before.coven.curios[chest.curio.id], 1);
+  assert.equal(chestPaid(before, 2963, 2, C2), false);
+  const inviteOperation = await currencyRewardId(A, 'coven_invite:' + friend);
+  const invite = payInvite(s, friend, A, inviteOperation);
+  assert.deepEqual(invite.frames, INVITE_FRAMES);
+  const inviteReceipt = s.coop.money.pending.find(p => p.id === inviteOperation);
+  assert.equal(inviteReceipt.delta, 0, 'cosmetic-only rewards still have a semantic receipt');
+  applyCoopReward(before, A, inviteReceipt.detail);
+  assert.equal(invitePaid(before, friend, A), true);
+  assert.deepEqual(before.exchange.portraits.slice(-2), INVITE_FRAMES);
+  assert.equal(readCoopRewardDetail({ reward: 'coven_chest', week: 2963, tier: 1, curio: chest.curio.id }), null);
+});
+
+
+test('invalid semantic payout identities and hostile receipt parts are refused before mutation', () => {
+  const A = '00000000-0000-4000-8000-000000000001', s = shelf(), before = structuredClone(s);
+  assert.throws(() => payChest(s, 2963, 1, A, 'invalid'), /Invalid coven reward/);
+  assert.throws(() => payInvite(s, C1, A, 'invalid'), /Invalid coven reward/);
+  assert.deepEqual(s, before);
+  assert.equal(readCoopRewardDetail({ reward: 'coven_chest', week: 2963, tier: 2, curio: '__proto__' }), null);
+  assert.equal(readCoopRewardDetail({ reward: 'coven_chest', week: 2963, tier: 3, frame: 'constructor' }), null);
 });

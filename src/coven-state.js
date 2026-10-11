@@ -10,6 +10,8 @@ import { COUNTERS, COVEN_CURIO_BY_ID, SIGIL_FRAME_BY_ID, AWARD_BY_ID, DAILY_CAPS
      prev                   yesterday's totals, if they were not all sent
      covenId                the coven this shelf counts for, or '' for none
      claimed                chests already paid here, as "week:tier"
+     rewardOwner, rewards    active account and permanent owned payment marks
+     unownedRewards          prototype marks retained without an inferred owner
      curios, frames, frame  the coven cupboard and the sigil frame worn
      trophies               this player's own Shelfies, newest first
      seenAwards, seenNote   what has been read, for the postbox
@@ -17,8 +19,10 @@ import { COUNTERS, COVEN_CURIO_BY_ID, SIGIL_FRAME_BY_ID, AWARD_BY_ID, DAILY_CAPS
      invite                 a pending invitation code from a shared link, and
                             the referral rewards already paid
 
-   Small, bounded, rebuilt from blank, so an older save loads unchanged and a
-   hand-edited one cannot break anything. Unknown fields are dropped. */
+   Activity displays are bounded and rebuilt from blank. Account reward marks
+   persist beyond those displays, so an older backup cannot make a receipt
+   payable twice. Unowned prototype marks are retained without assigning them
+   to an account. Unknown fields are dropped. */
 const object = value => !!value && typeof value === 'object' && !Array.isArray(value);
 const int = (value, max = 1e9) => Number.isFinite(value) ? Math.max(0, Math.min(max, Math.floor(value))) : 0;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -28,12 +32,14 @@ const CODE = /^[A-HJKMNP-Z2-9]{8}$/;
 export const SEEN_KEYS = ['care', 'resolved', 'coffins', 'outings', 'episodes', 'arcade', 'curios'];
 export const FLAG_KEYS = ['omen', 'chores', 'docket', 'daily'];
 export const TROPHY_MAX = 12, CLAIMED_MAX = 24, HIDDEN_MAX = 40, PAID_MAX = 12;
+const claimedMarks = raw => [...new Set((Array.isArray(raw) ? raw : []).filter(c => typeof c === 'string' && /^\d{1,7}:[1-3]$/.test(c)))];
+const paidMarks = raw => [...new Set((Array.isArray(raw) ? raw : []).filter(id => typeof id === 'string' && UUID.test(id)))];
 
 export function blankCoven() {
   return {
     v: 1, init: 0, seen: Object.fromEntries(SEEN_KEYS.map(k => [k, 0])), flagDay: '', flags: {},
     day: '', tally: {}, sent: {}, prev: null, covenId: '',
-    claimed: [], curios: {}, frames: [], frame: '', trophies: [], seenAwards: 0, seenNote: 0, hidden: [],
+    claimed: [], rewardOwner: '', rewards: {}, unownedRewards: { claimed: [], paid: [] }, curios: {}, frames: [], frame: '', trophies: [], seenAwards: 0, seenNote: 0, hidden: [],
     invite: { code: '', paid: [] }
   };
 }
@@ -58,7 +64,12 @@ export function normalizeCovenState(raw) {
     out.prev = { day: raw.prev.day, tally: counts(raw.prev.tally) };
   }
   out.covenId = typeof raw.covenId === 'string' && UUID.test(raw.covenId) ? raw.covenId : '';
-  out.claimed = [...new Set((Array.isArray(raw.claimed) ? raw.claimed : []).filter(c => typeof c === 'string' && /^\d{1,7}:[1-3]$/.test(c)))].slice(-CLAIMED_MAX);
+  out.claimed = claimedMarks(raw.claimed).slice(-CLAIMED_MAX);
+  out.rewardOwner = typeof raw.rewardOwner === 'string' && UUID.test(raw.rewardOwner) ? raw.rewardOwner : '';
+  if (object(raw.rewards)) for (const [owner, marks] of Object.entries(raw.rewards).filter(([owner, marks]) => UUID.test(owner) && object(marks))) {
+    out.rewards[owner] = { claimed: claimedMarks(marks.claimed), paid: paidMarks(marks.paid) };
+  }
+  if (object(raw.unownedRewards)) out.unownedRewards = { claimed: claimedMarks(raw.unownedRewards.claimed), paid: paidMarks(raw.unownedRewards.paid) };
   if (object(raw.curios)) for (const [id, n] of Object.entries(raw.curios)) if (Object.hasOwn(COVEN_CURIO_BY_ID, id) && Number.isFinite(n) && n > 0) out.curios[id] = int(n, 999);
   out.frames = [...new Set((Array.isArray(raw.frames) ? raw.frames : []).filter(id => typeof id === 'string' && Object.hasOwn(SIGIL_FRAME_BY_ID, id)))];
   out.frame = out.frames.includes(raw.frame) ? raw.frame : '';
@@ -71,7 +82,14 @@ export function normalizeCovenState(raw) {
   out.hidden = [...new Set((Array.isArray(raw.hidden) ? raw.hidden : []).filter(id => Number.isSafeInteger(id) && id > 0))].slice(-HIDDEN_MAX);
   if (object(raw.invite)) {
     out.invite.code = typeof raw.invite.code === 'string' && CODE.test(raw.invite.code) ? raw.invite.code : '';
-    out.invite.paid = [...new Set((Array.isArray(raw.invite.paid) ? raw.invite.paid : []).filter(id => typeof id === 'string' && UUID.test(id)))].slice(-PAID_MAX);
+    out.invite.paid = paidMarks(raw.invite.paid).slice(-PAID_MAX);
+  }
+  if (out.rewardOwner) {
+    const history = out.rewards[out.rewardOwner];
+    out.rewards[out.rewardOwner] = { claimed: [...new Set([...(history?.claimed || []), ...claimedMarks(raw.claimed)])], paid: [...new Set([...(history?.paid || []), ...paidMarks(raw.invite?.paid)])] };
+  } else {
+    out.unownedRewards.claimed = [...new Set([...out.unownedRewards.claimed, ...claimedMarks(raw.claimed)])];
+    out.unownedRewards.paid = [...new Set([...out.unownedRewards.paid, ...paidMarks(raw.invite?.paid)])];
   }
   return out;
 }

@@ -9,6 +9,7 @@ import { exchangeState } from '../almanac-state.js';
 import { readCounters } from './almanac.js';
 import { addSouls } from './mayhem.js';
 import { localDayKey } from '../state.js';
+import { bindCoopMoney, hasCoopReward, recordCoopReward, registerCoopReward } from './coop-money.js';
 
 /* ================= COVENS: THE RULES THAT RUN ON THIS SHELF =================
    The server owns the coven (members, the week's goal, progress, who may claim
@@ -113,8 +114,36 @@ export function markReported(state, report) {
 }
 
 /* ---------- the chest ---------- */
+const REWARD_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export const chestKey = (week, tier) => week + ':' + tier;
-export const chestPaid = (state, week, tier) => covenState(state).claimed.includes(chestKey(week, tier));
+export function bindCovenRewards(state, owner) {
+  if (!REWARD_UUID.test(owner || '')) return false;
+  const c = covenState(state);
+  if (c.rewardOwner === owner) return false;
+  c.rewards ||= {};
+  if (c.rewardOwner) {
+    const old = c.rewards[c.rewardOwner] || { claimed: [], paid: [] };
+    c.rewards[c.rewardOwner] = { claimed: [...new Set([...old.claimed, ...c.claimed])], paid: [...new Set([...old.paid, ...c.invite.paid])] };
+  } else {
+    // Prototype saves did not record who was paid. Retain that history without
+    // guessing its owner; authenticated server receipts determine eligibility.
+    const old = c.unownedRewards || { claimed: [], paid: [] };
+    c.unownedRewards = { claimed: [...new Set([...old.claimed, ...c.claimed])], paid: [...new Set([...old.paid, ...c.invite.paid])] };
+  }
+  c.rewardOwner = owner;
+  c.rewards[owner] ||= { claimed: [], paid: [] };
+  c.claimed = c.rewards[owner].claimed.slice(-CLAIMED_MAX);
+  c.invite.paid = c.rewards[owner].paid.slice(-PAID_MAX);
+  return true;
+}
+export function chestPaid(state, week, tier, owner = '') {
+  const c = covenState(state), marks = owner ? c.rewards?.[owner]?.claimed || [] : c.claimed;
+  return marks.includes(chestKey(week, tier));
+}
+export function invitePaid(state, userId, owner = '') {
+  const c = covenState(state);
+  return (owner ? c.rewards?.[owner]?.paid || [] : c.invite.paid).includes(userId);
+}
 // The next curio or frame the shelf does not own, starting from one picked by
 // the week, so the coven's members tend to collect them in different orders.
 function nextUnowned(list, owned, week) {
@@ -122,10 +151,19 @@ function nextUnowned(list, owned, week) {
   return null;
 }
 // Pays one tier into this save, once. The server has already said yes.
-export function payChest(state, week, tier) {
+export function payChest(state, week, tier, owner = '', operation = '') {
+  if (!Number.isInteger(week) || week < 0 || week >= 1e7 || !Number.isInteger(tier) || owner && !REWARD_UUID.test(owner)) return null;
+  if (operation && (!REWARD_UUID.test(operation) || !owner)) throw new Error('Invalid coven reward operation');
+  if (owner) bindCovenRewards(state, owner);
   const c = covenState(state), def = CHEST_TIERS[tier - 1], key = chestKey(week, tier);
-  if (!def || c.claimed.includes(key)) return null;
+  if (!def || chestPaid(state, week, tier, owner)) return null;
+  if (operation && hasCoopReward(state, owner, operation)) {
+    c.claimed = [...c.claimed, key].slice(-CLAIMED_MAX); c.rewards[owner].claimed.push(key);
+    return null;
+  }
+  if (operation) bindCoopMoney(state, owner);
   c.claimed = [...c.claimed, key].slice(-CLAIMED_MAX);
+  if (owner) c.rewards[owner].claimed.push(key);
   const out = { week, tier, name: def.name, souls: def.souls, curio: null, frame: null, extra: 0, rankUp: null };
   const giveCurio = () => {
     const id = nextUnowned(COVEN_CURIOS, x => c.curios[x] > 0, week);
@@ -140,6 +178,8 @@ export function payChest(state, week, tier) {
     else if (!giveCurio()) out.extra += DUPLICATE_SOULS;
   }
   out.rankUp = addSouls(state, out.souls + out.extra);
+  if (operation) recordCoopReward(state, { id: operation, owner, delta: out.souls + out.extra, earned: out.souls + out.extra,
+    detail: { reward: 'coven_chest', week, tier, curio: out.curio?.id || null, frame: out.frame?.id || null } });
   return out;
 }
 export function wearFrame(state, id) {
@@ -152,14 +192,61 @@ export function wearFrame(state, id) {
 /* ---------- invite rewards ----------
    The pair of portrait frames, once. Every later reward (the server allows
    ten as an inviter and one as a new player) pays souls instead. */
-export function payInvite(state, userId) {
+export function payInvite(state, userId, owner = '', operation = '') {
+  if (!REWARD_UUID.test(userId || '') || owner && !REWARD_UUID.test(owner)) return null;
+  if (operation && (!REWARD_UUID.test(operation) || !owner)) throw new Error('Invalid coven reward operation');
+  if (owner) bindCovenRewards(state, owner);
   const c = covenState(state);
-  if (typeof userId !== 'string' || c.invite.paid.includes(userId)) return null;
+  if (typeof userId !== 'string' || invitePaid(state, userId, owner)) return null;
+  if (operation && hasCoopReward(state, owner, operation)) {
+    c.invite.paid = [...c.invite.paid, userId].slice(-PAID_MAX); c.rewards[owner].paid.push(userId);
+    return null;
+  }
+  if (operation) bindCoopMoney(state, owner);
   c.invite.paid = [...c.invite.paid, userId].slice(-PAID_MAX);
+  if (owner) c.rewards[owner].paid.push(userId);
   const ex = exchangeState(state), fresh = INVITE_FRAMES.filter(id => !ex.portraits.includes(id));
-  if (fresh.length) { ex.portraits = [...ex.portraits, ...fresh]; return { frames: fresh, souls: 0, rankUp: null }; }
-  return { frames: [], souls: INVITE_REPEAT_SOULS, rankUp: addSouls(state, INVITE_REPEAT_SOULS) };
+  const out = fresh.length ? { frames: fresh, souls: 0, rankUp: null } : { frames: [], souls: INVITE_REPEAT_SOULS, rankUp: addSouls(state, INVITE_REPEAT_SOULS) };
+  if (fresh.length) ex.portraits = [...ex.portraits, ...fresh];
+  if (operation) recordCoopReward(state, { id: operation, owner, delta: out.souls, earned: out.souls,
+    detail: { reward: 'coven_invite', userId: userId, frames: fresh } });
+  return out;
 }
+
+// Currency receipts restore the associated paid mark and cosmetic effects.
+// The wallet owns money; these handlers must never add souls a second time.
+registerCoopReward('coven_chest', {
+  normalize(raw) {
+    if (!Number.isInteger(raw.week) || raw.week < 0 || raw.week >= 1e7 || !CHEST_TIERS[raw.tier - 1] || !Number.isInteger(raw.tier)) return null;
+    const curio = raw.curio ?? null, frame = raw.frame ?? null;
+    if (curio !== null && (typeof curio !== 'string' || !Object.hasOwn(COVEN_CURIO_BY_ID, curio))
+      || frame !== null && (typeof frame !== 'string' || !Object.hasOwn(SIGIL_FRAME_BY_ID, frame))) return null;
+    if (raw.tier === 1 && (curio || frame) || raw.tier === 2 && frame || curio && frame) return null;
+    return { week: raw.week, tier: raw.tier, curio, frame };
+  },
+  apply(state, owner, detail) {
+    bindCovenRewards(state, owner);
+    const c = covenState(state), key = chestKey(detail.week, detail.tier);
+    if (!c.rewards[owner].claimed.includes(key)) c.rewards[owner].claimed.push(key);
+    if (!c.claimed.includes(key)) c.claimed = [...c.claimed, key].slice(-CLAIMED_MAX);
+    if (detail.curio) c.curios[detail.curio] = Math.max(1, c.curios[detail.curio] || 0);
+    if (detail.frame && !c.frames.includes(detail.frame)) c.frames.push(detail.frame);
+  }
+});
+registerCoopReward('coven_invite', {
+  normalize(raw) {
+    if (typeof raw.userId !== 'string' || !REWARD_UUID.test(raw.userId)
+      || !Array.isArray(raw.frames) || raw.frames.length > 2 || raw.frames.some(frame => !INVITE_FRAMES.includes(frame))) return null;
+    return { userId: raw.userId, frames: [...new Set(raw.frames)] };
+  },
+  apply(state, owner, detail) {
+    bindCovenRewards(state, owner);
+    const c = covenState(state), ex = exchangeState(state);
+    if (!c.rewards[owner].paid.includes(detail.userId)) c.rewards[owner].paid.push(detail.userId);
+    if (!c.invite.paid.includes(detail.userId)) c.invite.paid = [...c.invite.paid, detail.userId].slice(-PAID_MAX);
+    ex.portraits = [...new Set([...ex.portraits, ...detail.frames])];
+  }
+});
 
 /* ---------- names and sigils ---------- */
 const pickFrom = (list, rnd) => list[Math.floor(rnd() * list.length) % list.length];

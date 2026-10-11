@@ -143,7 +143,12 @@ export function createCovenClient({ cloud, social, now = Date.now } = {}) {
 
   async function call(name, args = {}) {
     if (!social?.signedIn?.() || !active()) throw refuse('signed_out', 401);
-    try { return await cloud.rpc(name, args); }
+    const user = cloud.userId();
+    try {
+      const reply = await cloud.rpc(name, args);
+      if (!user || cloud.userId() !== user || !social.signedIn()) throw refuse('signed_out', 401);
+      return reply;
+    }
     catch (error) { const code = covenCode(error); throw refuse(code, error?.status || 0, code === 'offline', error); }
   }
   const user = value => { const u = cleanUuid(value); if (!u) throw refuse('not_found'); return u; };
@@ -158,6 +163,9 @@ export function createCovenClient({ cloud, social, now = Date.now } = {}) {
       if (cloud.userId() !== uid) return readStatus(null);
       cache = readStatus(raw); cacheUser = uid; emit();
       return cache;
+    }).catch(error => {
+      if (cloud.userId() !== uid) return readStatus(null);
+      throw error;
     }).finally(() => { if (request === r) request = null; });
     request = r;
     return r.promise;
@@ -206,7 +214,7 @@ export function createCovenClient({ cloud, social, now = Date.now } = {}) {
     return forget(true);
   }
 
-  async function markActiveDay() { const r = await call('mark_active_day'); return { days: int(r?.days, 60) }; }
+  async function markActiveDay() { const r = await call('mark_active_day'); return { days: int(r?.days, 60), counted: r?.counted !== false }; }
   async function registerReferral(code) {
     const c = cleanCode(code);
     if (!c) throw refuse('not_found');

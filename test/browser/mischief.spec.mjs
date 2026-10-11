@@ -22,6 +22,15 @@ async function world({ knock = null } = {}) {
   };
   const ada = await socialPlayer(fake, 'Ada', shelf(['Agnes', 'Grubbs', 'Pip']), { now });
   const bea = await socialPlayer(fake, 'Bea', shelf(['Gladys', 'Snag', 'Wanda']), { now });
+  if (knock === 'trick') {
+    // A completely occupied shelf must keep its resident and furniture controls
+    // available while the visitor has a separate, clickable space.
+    bea.shelf.slots.forEach((id, slot) => {
+      if (id) return;
+      const prop = { id: 'guest-fixture-' + slot, kind: 'bowl' };
+      bea.shelf.props.push(prop); bea.shelf.slots[slot] = prop.id;
+    });
+  }
   bea.shelf.pets[1].needs = { food: 20, fuss: 90, clean: 90 };
   bea.shelf.returns = { seenAt: NOW - 20 * 3600000, claimedDay: '', claimed: 0, serial: 0, pending: null };
   await ada.social.addFriend(bea.code); await bea.social.respond(ada.id, true);
@@ -182,7 +191,7 @@ for (const result of ['trick', 'treat']) test('seasonal ' + result + ' uses the 
   await page.locator('input[name="mxBowl"][value="apples"]').locator('..').click();
   await page.locator('.mx-doorstep [data-sx="bowl"]').click();
   await expect(page.locator('#friendsSheet .fr-status')).toContainText('The bowl is out');
-  await leave(page);
+  const beaKept = await leave(page);
   page = await arrive(context, w, w.ada, errors);
   await friends(page); await profile(page, 'Bea');
   await page.locator('[data-fr-action="mischief-knock"]').click();
@@ -203,7 +212,7 @@ for (const result of ['trick', 'treat']) test('seasonal ' + result + ' uses the 
   await page.locator('.mx-view [data-sx="send"]').click();
   await expect(page.locator('#friendsSheet h2')).toHaveText('Haunting sent');
   const adaKept = await leave(page);
-  page = await arrive(context, w, w.bea, errors);
+  page = await arrive(context, w, w.bea, errors, beaKept);
   await friends(page); await postbox(page);
   await expect(mail(page, 'doorstep')).toContainText('Ada knocked');
   await expect(mail(page, 'incoming')).toContainText('Pip’s ghost');
@@ -212,8 +221,22 @@ for (const result of ['trick', 'treat']) test('seasonal ' + result + ' uses the 
   const before = (await saved(page)).mayhem.souls;
   const ghost = page.locator('.mx-ghost');
   await expect(ghost).toHaveAttribute('aria-label', /Pip.*Ada/);
+  await ghost.scrollIntoViewIfNeeded();
   await capture(page, testInfo, 'visiting-ghost');
-  for (let tap = 0; tap < 5; tap++) await ghost.click();
+  const assertVisitorSpace = async () => {
+    const layout = await page.evaluate(() => {
+      const ghost = document.querySelector('.mx-ghost').getBoundingClientRect();
+      const overlaps = [...document.querySelectorAll('#cabinet .piece')].filter(el => {
+        const piece = el.getBoundingClientRect();
+        return ghost.left < piece.right && ghost.right > piece.left && ghost.top < piece.bottom && ghost.bottom > piece.top;
+      });
+      const host = document.querySelector('.mx-haunt').getBoundingClientRect();
+      return { overlaps: overlaps.length, contained: ghost.left >= host.left && ghost.right <= host.right && ghost.top >= host.top && ghost.bottom <= host.bottom };
+    });
+    expect(layout).toEqual({ overlaps: 0, contained: true }); await fits(page);
+  };
+  await assertVisitorSpace();
+  for (let tap = 0; tap < 5; tap++) { await ghost.click(); if (tap < 4) await assertVisitorSpace(); }
   await expect.poll(async () => (await saved(page)).mischief?.haunt?.shooed).toBe(true);
   await expect.poll(async () => (await saved(page)).mayhem.souls).toBeGreaterThan(before);
   const paid = (await saved(page)).mayhem.souls;

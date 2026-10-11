@@ -26,6 +26,33 @@ async function world(names = ['Ada', 'Bea', 'Cat'], clock = { t: NOW }) {
 const NAME = { a: 'damp', b: 'sisterhood', form: 0 }, SIGIL = { shape: 'shield', symbol: 'spoon', colour: 'bruise' };
 const rejects = (promise, code) => assert.rejects(promise, e => e.code === code);
 
+test('play-day refusal is preserved so the device cannot cache a day while opted out', async () => {
+  const cloud = { userId: () => '00000000-0000-4000-8000-000000000001', rpc: async () => ({ ok: true, counted: false, opted_out: true, days: 0 }) };
+  const c = createCovenClient({ cloud, social: { signedIn: () => true, active: () => true } });
+  assert.deepEqual(await c.markActiveDay(), { days: 0, counted: false });
+});
+
+test('late coven writes cannot return claim rewards or mutate a replacement account', async () => {
+  const first = '00000000-0000-4000-8000-000000000001', second = '00000000-0000-4000-8000-000000000002';
+  const writes = [
+    c => c.found(NAME, SIGIL), c => c.leave(), c => c.invite(second), c => c.cancelInvite(second),
+    c => c.respond(second, true), c => c.passCandle(second), c => c.remove(second), c => c.setFrame('ivy'),
+    c => c.contribute('2026-10-14', { coffin: 1 }), c => c.claim(2963, 1), c => c.post(['the', 'drawer']),
+    c => c.unpost(1), c => c.markActiveDay(), c => c.registerReferral('ABCDEFGH'), c => c.claimReferral(second)
+  ];
+  for (const write of writes) {
+    let uid = first, finish;
+    const cloud = { userId: () => uid, rpc: () => new Promise(resolve => { finish = resolve; }) };
+    const social = { signedIn: () => true, active: () => true };
+    const c = createCovenClient({ cloud, social });
+    const pending = write(c);
+    const rejection = rejects(pending, 'signed_out');
+    uid = second;
+    finish({ ok: true, fresh: true, id: second });
+    await rejection;
+  }
+});
+
 test('nothing is sent before the player opens Friends, and offline is said plainly', async () => {
   const fake = createFakeSupabase({ now: () => NOW });
   const p = await socialPlayer(fake, '', { pets: [] }, { social: false, now: () => NOW });

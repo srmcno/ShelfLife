@@ -96,8 +96,9 @@
   border:1px solid color-mix(in srgb,var(--mint) 35%,transparent);font-size:14px;line-height:1.45}
 
 /* ---------------- a ghost on the shelf ---------------- */
-.mx-haunt{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden;border-radius:14px}
-.mx-ghost{position:absolute;left:62%;top:10%;width:84px;min-height:96px;padding:0;border:0;background:none;color:inherit;cursor:pointer;
+.mx-haunt{position:relative;height:260px;margin:14px 0;pointer-events:none;overflow:hidden;border-radius:14px;
+  border:1px solid rgba(190,215,255,.18);background:radial-gradient(ellipse at center,rgba(190,215,255,.09),transparent 70%)}
+.mx-ghost{position:absolute;left:calc(50% - 42px);top:90px;width:84px;min-height:96px;padding:0;border:0;background:none;color:inherit;cursor:pointer;
   pointer-events:auto;touch-action:manipulation;animation:mx-drift 34s ease-in-out infinite alternate;-webkit-tap-highlight-color:transparent}
 .mx-ghost-body{display:block;width:84px;height:92px;opacity:.58;filter:grayscale(.65) brightness(1.35) drop-shadow(0 0 12px rgba(190,215,255,.75));
   animation:mx-bob 4.5s ease-in-out infinite}
@@ -112,14 +113,13 @@
 .mx-ghost:focus-visible{outline:2px solid var(--mint);outline-offset:4px;border-radius:12px}
 .mx-dodging .mx-ghost{animation:none;transition:left .22s ease-out,top .22s ease-out}
 .mx-shooed .mx-ghost{animation:mx-flee .65s ease-in forwards}
-@keyframes mx-drift{0%{transform:translate(0,0)}25%{transform:translate(-95%,30%)}50%{transform:translate(-210%,8%)}75%{transform:translate(-330%,44%)}100%{transform:translate(-420%,16%)}}
+@keyframes mx-drift{0%{transform:translate(-18px,0)}50%{transform:translate(0,6px)}100%{transform:translate(18px,0)}}
 @keyframes mx-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes mx-flee{to{opacity:0;transform:translate(40px,-60px) scale(.6)}}
 @media (max-width:520px){
-  .mx-ghost{width:68px;min-height:80px}
+  .mx-ghost{left:calc(50% - 34px);width:68px;min-height:80px}
   .mx-ghost-body{width:68px;height:74px}
   .mx-ghost-body .sprite{--pet-h:70px}
-  @keyframes mx-drift{0%{transform:translate(0,0)}50%{transform:translate(-200%,24%)}100%{transform:translate(-330%,6%)}}
 }
 /* Still, for reduced motion, Light effects and Calm mode: it waits in the corner and jumps when shooed. */
 @media (prefers-reduced-motion:reduce){

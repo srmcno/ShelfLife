@@ -3,8 +3,9 @@
 // start shooing; tap it five times in twelve seconds while it dodges and it
 // goes home, and the shelf is paid for the trouble (once).
 //
-// It sits in #cabinetWrap, over the shelf, and only the ghost itself takes
-// taps. It stops drifting for reduced motion, Light effects and Calm mode
+// It has its own visitor space below the cabinet, so even a full shelf keeps
+// every resident and furniture control accessible. Only the ghost takes taps.
+// It stops drifting for reduced motion, Light effects and Calm mode
 // (css/mischief.css); the game still works, the ghost just jumps.
 import { activeHaunt, hauntLine, shooHaunt, shooMissLine, fromLabel, SHOO_TAPS, SHOO_WINDOW_MS } from '../engine/mischief.js';
 import { renderPetSprite } from '../art/sprite.js';
@@ -27,8 +28,16 @@ export function initGhost({ state, onShoo = () => {}, rnd = Math.random }) {
     bubble.textContent = text;
     el.classList.add('mx-saying');
     if (live) live.textContent = text;
+    placeBubble();
     clearTimeout(hushTimer);
     hushTimer = setTimeout(() => el?.classList.remove('mx-saying'), ms);
+  }
+  function placeBubble() {
+    if (!el) return;
+    const ghost = el.querySelector('.mx-ghost'), bubble = el.querySelector('.mx-ghost-bubble');
+    const half = bubble.offsetWidth / 2;
+    const centre = Math.min(el.clientWidth - half - 10, Math.max(half + 10, ghost.offsetLeft + ghost.offsetWidth / 2));
+    bubble.style.left = centre - ghost.offsetLeft + 'px';
   }
   function chatter() {
     clearTimeout(sayTimer);
@@ -42,8 +51,11 @@ export function initGhost({ state, onShoo = () => {}, rnd = Math.random }) {
   function dodge() {
     if (!el) return;
     const ghost = el.querySelector('.mx-ghost');
-    ghost.style.left = (4 + rnd() * 72).toFixed(1) + '%';
-    ghost.style.top = (4 + rnd() * 62).toFixed(1) + '%';
+    const across = Math.max(0, el.clientWidth - ghost.offsetWidth - 20);
+    const down = Math.max(0, el.clientHeight - ghost.offsetHeight - 100);
+    ghost.style.left = (10 + rnd() * across).toFixed(1) + 'px';
+    ghost.style.top = (90 + rnd() * down).toFixed(1) + 'px';
+    placeBubble();
   }
   function endGame() {
     clearInterval(dodgeTimer); dodgeTimer = null; game = null;
@@ -80,6 +92,7 @@ export function initGhost({ state, onShoo = () => {}, rnd = Math.random }) {
   function build(h) {
     el = document.createElement('div');
     el.className = 'mx-haunt';
+    el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'Visiting ghost');
     el.dataset.mxHaunt = h.ref;
     el.innerHTML = '<button class="mx-ghost" type="button"><span class="mx-ghost-body" aria-hidden="true"></span><span class="mx-ghost-from" aria-hidden="true"></span>' +
       '<span class="mx-ghost-bubble" aria-hidden="true"></span></button><p class="sr-only mx-ghost-live" role="status" aria-live="polite"></p>';
@@ -99,7 +112,8 @@ export function initGhost({ state, onShoo = () => {}, rnd = Math.random }) {
     if (!host) return;
     build(h);
     ref = h.ref; said = 0;
-    host.appendChild(el);
+    const stage = host.closest('.stage');
+    if (stage) stage.after(el); else host.after(el);
     chatter();
   }
   return { render, remove, isShowing: () => !!el };
