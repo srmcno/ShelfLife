@@ -197,3 +197,21 @@ test('Co-op: big real earnings land without a cap, and a spend racing stakes can
   assert.equal(staked, 1, JSON.stringify(refusals(results)));
   assert.equal(balance, 30 - 5 - 25 + 9000000 - 9000000);
 });
+
+test('Co-op: two devices race paid Joint Bench rewards for different hearings the same day and exactly three are paid', opts, async () => {
+  const U = USERS[8];
+  await profile(U, 'Yan');
+  await db.as(U, `select public.coop_open(0, 0);`);
+  const op = n => {
+    const h = `29000000-0000-4000-8000-00000000000${n}`;
+    return `{"id":"@@${n}","delta":25,"earned":25,"detail":{"reward":"joint_bench","hearing":"${h}","day":"2026-12-1","paid":true}}`;
+  };
+  const ids = [];
+  for (let n = 1; n <= 6; n++) ids.push(await db.admin(`select private.currency_id('${U}', 'joint_bench:29000000-0000-4000-8000-00000000000${n}');`));
+  const calls = [1, 2, 3, 4, 5, 6].map(n => [U, `select public.coop_adjust('[${op(n).replace('@@' + n, ids[n - 1])}]'::jsonb);`]);
+  const results = await db.race(calls);
+  assert.equal(ok(results), 6, JSON.stringify(refusals(results)));
+  assert.equal(await db.admin(`select count(*) from public.coop_receipts where owner = '${U}' and (detail ->> 'paid') = 'true';`), '3');
+  assert.equal(await db.admin(`select coalesce(sum(delta), 0) from public.coop_receipts where owner = '${U}';`), '75');
+  assert.equal(await db.admin(`select count(*) from private.coop_receipt_requests where owner = '${U}';`), '6');
+});
