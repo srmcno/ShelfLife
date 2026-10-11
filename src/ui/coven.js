@@ -487,7 +487,7 @@ async function busyRun(ctx, work, focus) {
   const user = me(), version = accountVersion;
   busy = true; notice = '';
   try { await work(); }
-  catch (error) { if (identity(user, version)) say(ctx, ['save_unavailable', 'reward_legacy'].includes(error.code) ? coopText(error) : covenText(error)); }
+  catch (error) { if (identity(user, version)) say(ctx, error.code === 'save_unavailable' ? 'Your device could not save the reward. Free some storage and try again.' : error.code === 'reward_legacy' ? coopText(error) : covenText(error)); }
   finally { if (identity(user, version)) { busy = false; if (currentCtx(ctx)) repaint(focus); } }
 }
 
@@ -724,7 +724,7 @@ registerFriendAction({
   },
   async run(friend, ctx) {
     lastCtx = ctx;
-    try { await owned(ctx, refreshStatus()); } catch (error) { say(ctx, ['save_unavailable', 'reward_legacy'].includes(error.code) ? coopText(error) : covenText(error)); return; }
+    try { await owned(ctx, refreshStatus()); } catch (error) { say(ctx, error.code === 'save_unavailable' ? 'Your device could not save the reward. Free some storage and try again.' : error.code === 'reward_legacy' ? coopText(error) : covenText(error)); return; }
     const s = current();
     if (!s?.coven) { pendingInvite = friend; draft = null; return openFound(ctx); }
     const why = inviteBlocker(s, friend);
@@ -734,7 +734,7 @@ registerFriendAction({
       await owned(ctx, refreshStatus({ force: true }));
       const line = lineOf(COVEN_LINES.inviteSent, Date.now()).replace('{name}', friend.name || 'Your friend');
       say(ctx, line); if (currentCtx(ctx)) ctx.refresh?.();
-    } catch (error) { say(ctx, ['save_unavailable', 'reward_legacy'].includes(error.code) ? coopText(error) : covenText(error)); }
+    } catch (error) { say(ctx, error.code === 'save_unavailable' ? 'Your device could not save the reward. Free some storage and try again.' : error.code === 'reward_legacy' ? coopText(error) : covenText(error)); }
   }
 });
 

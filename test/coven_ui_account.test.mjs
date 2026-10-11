@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { cloud, social } from '../src/cloud/index.js';
-import { state, normalizeState } from '../src/state.js';
+import { state, normalizeState, Store } from '../src/state.js';
 import { householdFixture } from './household-fixtures.mjs';
 
 const UID = '00000000-0000-4000-8000-000000000001', CID = '00000000-0000-4000-8000-000000000002';
@@ -42,4 +42,18 @@ test('an in-place backup restore with the same UID invalidates a delayed Coven c
   assert.equal(state, originalRoot); assert.notEqual(state.coven, originalCoven);
   finish({ ok: true, fresh: true, week: 2963, tier: 1 }); await pending;
   assert.equal(state.mayhem.souls, 777); assert.deepEqual(state.coven.claimed, []);
+
+  // A saved proposal is the payment boundary. Failure preserves the purse and
+  // owned marks, shows reward-specific recovery copy, and sends no award RPC.
+  await covenDebug.refreshStatus({ force: true });
+  t.mock.method(coven, 'claim', async () => ({ ok: true, fresh: true, week: 2963, tier: 1 }));
+  t.mock.method(Store, 'set', () => false);
+  let reconciles = 0; const messages = [];
+  t.mock.method(covenDebug.rewardWallet, 'reconcile', async () => { reconciles++; });
+  await covenDebug.handle('claim', { dataset: { week: '2963', tier: '1' } }, { isCurrent: () => true, say: text => messages.push(text), refresh() {} });
+  assert.equal(reconciles, 1, 'only the read before claiming ran; unsaved proposal was never uploaded');
+  assert.equal(state.mayhem.souls, 777); assert.deepEqual(state.coven.claimed, []);
+  assert.match(messages[0], /could not save the reward.*Free some storage/);
+  assert.doesNotMatch(messages[0], /wager/);
+  assert.equal(state.coop.money.pending.find(op => op.detail?.reward === 'coven_chest')?.preApplied, false);
 });

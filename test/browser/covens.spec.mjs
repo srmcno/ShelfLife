@@ -333,7 +333,7 @@ test('device storage failure refuses a chest award and allows a saved retry afte
     Storage.prototype.setItem = function(key, value) { if (key === 'shelflife.v4') throw new DOMException('Test storage quota', 'QuotaExceededError'); return original.call(this, key, value); };
   });
   await page.locator('[data-sx="claim"][data-tier="1"]').click();
-  await expect(page.locator('.cv-notice')).toContainText('Free some storage');
+  await expect(page.locator('.cv-notice')).toContainText('could not save the reward. Free some storage');
   expect((await saved(page)).mayhem.souls).toBe(before);
   expect(w.fake.coop.receipts.filter(r => r.owner === w.ada.id && r.detail?.reward === 'coven_chest')).toHaveLength(0);
   await page.reload(); await friends(page); await main(page);
