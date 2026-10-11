@@ -7,7 +7,7 @@ import { writeLetter, replyOptions, walk, letterPools, caseTitle, LETTER_MAX, RE
 import { OPENINGS, MIDDLES, SIGNOFFS, TRAIT_PS, GENERAL_PS, REPLIES, TRAIT_REPLIES, REPLY_SIGNOFFS, BIRTH_OPENINGS, BIRTH_FEATURES, BIRTH_INHERITANCES, HISTORY_LABELS } from '../src/content/kin.js';
 import { TRAIT_BY_ID } from '../src/content/traits.js';
 
-const NODASH = /[–—]/;
+const NODASH = /[\u2013\u2014]/;
 const STRAIGHT = /['"]/;
 const MOODS = ['content', 'fine', 'annoyed', 'furious'];
 const writer = (traits = ['spiteful', 'litigious'], mood = 'fine') => ({ id: 'w', name: 'Grubbs', traits, mood });

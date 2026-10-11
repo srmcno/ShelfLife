@@ -112,11 +112,20 @@ const list = (rows, read, max) => {
   const seen = new Set();
   return (Array.isArray(rows) ? rows.slice(0, max) : []).map(read).filter(x => x && !seen.has(x.id || x.userId) && seen.add(x.id || x.userId));
 };
+// A birth receipt is a born basket the caller has yet to take in, or has taken in before.
+const readBirth = (raw, me) => { const b = readBasket(raw, me); return b && b.status === 'born' ? b : null; };
+export const BIRTHS_PER_MAIL = 3;
+export const RECEIPTS_PER_FETCH = 4;
 export function readKinMail(raw, me) {
   const r = record(raw) ? raw : {};
+  const baskets = list(r.baskets, b => readBasket(b, me), 12);
+  // A server from before receipts has no `births`: its uncollected outgoing births ride in `baskets`.
+  const births = Array.isArray(r.births) ? list(r.births, b => readBirth(b, me), 12)
+    : baskets.filter(b => b.status === 'born' && b.direction === 'out' && !b.collected);
   return {
     now: time(r.now), week: weekOf(r.week),
-    baskets: list(r.baskets, b => readBasket(b, me), 12),
+    baskets: baskets.filter(b => b.status !== 'born'),
+    births: births.filter(b => !b.collected), birthsMore: r.births_more === true,
     pals: list(r.pals, readPal, 60),
     letters: list(r.letters, readLetter, 30),
     friends: list(r.friends, readKinFriend, 200)
@@ -160,7 +169,27 @@ export function createKin({ cloud }) {
     return { status: r.status === 'born' ? 'born' : 'declined', seed: seedOf(r.seed), nameRoll: Number.isInteger(r.name_roll) ? r.name_roll : 0, answeredAt: time(r.answered_at) };
   }
   const withdraw = async id => { ok(await call('kin_withdraw_basket', { p_id: uuid(id) })); return true; };
-  const collect = async id => { ok(await call('kin_collect', { p_id: uuid(id) })); return true; };
+  // Claims a birth receipt once the foundling is saved on this device. Idempotent; the receipt stays on the server.
+  const collect = async id => { const r = ok(await call('kin_collect', { p_id: uuid(id) })); return { id: uuid(id), claimedAt: time(r.claimed_at) }; };
+  // One page of the index of every birth the caller has ever had, oldest first: [{ id, claimed, bornAt }] and a cursor or null.
+  async function recover(after = null, limit = 200) {
+    const r = ok(await call('kin_recover', { p_after_born: after?.bornAt || null, p_after_id: after ? uuid(after.id) : null, p_limit: limit }));
+    const seen = new Set();
+    const items = (Array.isArray(r.items) ? r.items.slice(0, 500) : []).map(i => record(i) ? { id: cleanUuid(i.id), claimed: i.claimed === true, bornAt: typeof i.born_at === 'string' ? i.born_at : '' } : null)
+      .filter(i => i && i.id && !seen.has(i.id) && seen.add(i.id));
+    const id = record(r.next) ? cleanUuid(r.next.id) : '';
+    return { items, next: id && typeof r.next.born_at === 'string' ? { id, bornAt: r.next.born_at } : null };
+  }
+  // The whole birth for each id, four to a call; ids that are not ours come back missing, not as an error.
+  async function receipts(ids) {
+    const want = [...new Set((Array.isArray(ids) ? ids : []).map(cleanUuid).filter(Boolean))];
+    const me = cloud?.userId?.(), got = [];
+    for (let i = 0; i < want.length; i += RECEIPTS_PER_FETCH) {
+      const r = ok(await call('kin_receipts_get', { p_ids: want.slice(i, i + RECEIPTS_PER_FETCH) }));
+      for (const raw of Array.isArray(r.items) ? r.items.slice(0, RECEIPTS_PER_FETCH) : []) { const b = readBirth(raw, me); if (b && want.includes(b.id) && !got.some(x => x.id === b.id)) got.push(b); }
+    }
+    return got;
+  }
   async function introduce({ to, mine, theirs }) {
     if (!petId(mine) || !petId(theirs)) throw refuse('not_found');
     const r = ok(await call('kin_introduce', { p_friend: uuid(to), p_mine: mine, p_theirs: theirs }));
@@ -174,5 +203,5 @@ export function createKin({ cloud }) {
   }
   const read = async letterId => { const r = await call('kin_read', { p_id: uuid(letterId) }); return r?.ok === true; };
 
-  return { signedIn, userId: () => signedIn() ? cloud.userId() : null, mail, leaveBasket, answerBasket, withdraw, collect, introduce, end, reply, read };
+  return { signedIn, userId: () => signedIn() ? cloud.userId() : null, mail, leaveBasket, answerBasket, withdraw, collect, recover, receipts, introduce, end, reply, read };
 }
