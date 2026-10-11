@@ -532,7 +532,7 @@ test('the documents are the only multi-line forms, and they stay inside the leng
     const rows = d.split('\n');
     assert.ok(rows.length >= 4 && rows.length <= 8, `a document has ${rows.length} lines: ${rows[0]}`);
     assert.ok(d.length <= 280, `document over budget (${d.length}): ${rows[0]}`);
-    assert.match(rows[0], /^[A-Z0-9 —,{}\w-]+$/, `a document must open on a typed header: ${rows[0]}`);
+    assert.match(rows[0], /^[A-Z0-9 :,{}\w-]+$/, `a document must open on a typed header: ${rows[0]}`);
     assert.equal(rows[0], rows[0].replace(/[a-z]+(?![^{]*\})/g, ''), `a document header must be typed in caps: ${rows[0]}`);
   });
   COPY.LIST_NOTES.concat(COPY.PET_LIST_NOTES).forEach(l => {

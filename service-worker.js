@@ -103,6 +103,7 @@ const SHELL = [
   "./src/ui/stars.js",
   "./src/ui/calm.js",
   "./css/guide.css",
+  "./css/polish.css",
   "./src/engine/resident-memory.js",
   "./src/content/resident-life.js",
   "./src/content/pair-sagas.js",

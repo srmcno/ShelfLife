@@ -40,6 +40,12 @@
   /* geometry */
   --shell:1180px; --r:10px; --r-lg:16px;
   --topbar-h:58px; --tabbar-h:64px;
+  /* the scale: new rules use these, and css/polish.css moves the drifters onto them */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-sheet:20px; --radius-pill:999px;
+  --text-xs:11px; --text-sm:12.5px; --text-md:14px; --text-body:15px; --text-lg:18px; --text-xl:22px; --text-display:26px;
+  --shadow-1:0 1px 0 rgba(0,0,0,.32),0 8px 18px -12px rgba(0,0,0,.7); --shadow-2:0 14px 30px -16px #000; --shadow-3:0 40px 100px -30px #000;
+  --dur-press:.06s; --dur-quick:.14s; --dur-spring:.34s; --dur-sheet:.42s;
   /* Safe areas. The Android app's SystemBars plugin writes --safe-area-inset-*
      because older WebViews report env() wrongly edge to edge; browsers never
      set them, so the web keeps using env() exactly as before. */

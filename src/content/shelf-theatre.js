@@ -38,7 +38,7 @@ export const SHELF_SCENES = [
       variant('musicbox:duet', 'dance', 'Two parts, neither correct', 'pair', '{a} and {b} sang different verses at once. The music box kept its own counsel.',
         line(0, 'You take the high part.'), line(1, 'I am four inches tall.'), line(0, 'Ambition, then.')),
       variant('musicbox:encore', 'dance', 'The unsolicited encore', 'pair', '{a} took a bow. {b} mistook it for the beginning and started again.',
-        line(0, 'Thank you. That concludes our performance.'), line(1, 'One, two, three—'), line(0, 'We appear to have been renewed.')),
+        line(0, 'Thank you. That concludes our performance.'), line(1, 'One, two, three…'), line(0, 'We appear to have been renewed.')),
       variant('musicbox:tempo', 'dance', 'A disagreement in waltz time', 'pair', '{a} counted the beat. {b} counted the complaints. Both reached three.',
         line(0, 'Try to follow me.'), line(1, 'I am following a better tune.'), line(0, 'It had better end at the same time.')),
       variant('musicbox:audition', 'dance', 'The audition', 'pair', '{a} and {b} auditioned for the music box. It offered them the lid.',
