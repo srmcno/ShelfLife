@@ -215,3 +215,24 @@ test('Co-op: two devices race paid Joint Bench rewards for different hearings th
   assert.equal(await db.admin(`select coalesce(sum(delta), 0) from public.coop_receipts where owner = '${U}';`), '75');
   assert.equal(await db.admin(`select count(*) from private.coop_receipt_requests where owner = '${U}';`), '6');
 });
+
+test('Co-op: concurrent ghost proposals pay twice per local day and retry unpaid receipts unchanged', opts, async () => {
+  const U = USERS[15];
+  await db.as(U, 'select public.coop_open(0, 0);');
+  const proposals = [];
+  for (let n = 1; n <= 6; n++) {
+    const haunt = '39000000-0000-4000-8000-' + String(n).padStart(12, '0');
+    const source = await db.admin(`select private.currency_id('${U}', 'mischief_shoo:${haunt}');`);
+    proposals.push({ id: source, delta: 15, earned: 15, detail: { reward: 'mischief_shoo', haunt_id: haunt, day: '2026-0-3', paid: true, taps: 5 } });
+  }
+  const sql = proposal => `select public.coop_adjust('${JSON.stringify([proposal])}'::jsonb);`;
+  const results = await db.race(proposals.map(proposal => [U, sql(proposal)]));
+  assert.equal(ok(results), 6, JSON.stringify(refusals(results)));
+  assert.equal(await db.admin(`select count(*) from public.coop_receipts where owner = '${U}' and detail ->> 'paid' = 'true';`), '2');
+  assert.equal(await db.admin(`select sum(delta) from public.coop_receipts where owner = '${U}';`), '30');
+  const index = results.findIndex(result => result.value.receipts[0].delta === 0);
+  const retry = await db.as(U, sql(proposals[index]));
+  assert.deepEqual(retry.value.receipts[0], results[index].value.receipts[0]);
+  const changed = { ...proposals[index], delta: 0, earned: 0, detail: { ...proposals[index].detail, paid: false } };
+  assert.equal((await db.as(U, sql(changed))).ok, false, 'canonical receipt is not an alternative request');
+});

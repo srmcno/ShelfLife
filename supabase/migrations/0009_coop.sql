@@ -1404,7 +1404,7 @@ as $$
 $$;
 
 -- What a game receipt was asked to be, when the server settled it differently
--- (a Joint Bench reward past the daily limit). Never exposed to players.
+-- (a Joint Bench or ghost reward past the daily limit). Never exposed to players.
 create table if not exists private.coop_receipt_requests (
   receipt_id uuid primary key references public.coop_receipts (id) on delete cascade,
   owner uuid not null references auth.users (id) on delete cascade,
@@ -1427,9 +1427,12 @@ revoke all on table private.coop_receipt_requests from public, anon, authenticat
 -- zero (offline debt); only atomic stakes need funds. Needs coop_open first.
 -- Answers { ok, receipts: [one per op, in order], balance, last_seq }. The
 -- client skips only receipts matching an operation it already applied; a
--- receipt it never applied (an older backup, a second device) it replays.
+-- typed reward receipt it never applied, it replays with its business effects.
+-- Unmatched generic game receipts require the corresponding complete cloud
+-- household copy: money alone does not restore purchases or reward markers.
 --
--- Joint Bench rewards are paid at most 3 times per detail.day: past that the
+-- Joint Bench rewards are paid at most 3 times and ghost shoo rewards twice per
+-- detail.day: past that the
 -- receipt is canonical unpaid (paid false, delta 0, earned 0) and the original
 -- request is kept privately, so the same proposal retried answers the same
 -- receipt and an altered one is bad_op.
@@ -1561,13 +1564,13 @@ begin
         perform private.refuse('bad_op');
       end if;
     else
-      -- At most 3 paid Joint Bench rewards per local day. The 4th and later are
-      -- recorded as unpaid (delta 0, paid false), so the award is still canonical.
-      if v_detail ->> 'reward' = 'joint_bench' and (v_detail ->> 'paid')::boolean then
+      -- Local-day limits belong to the account, including concurrent devices.
+      -- Excess events retain an unpaid receipt and their original request.
+      if v_reward in ('joint_bench', 'mischief_shoo') and (v_detail ->> 'paid')::boolean then
         select count(*) into v_paid from public.coop_receipts r
-         where r.owner = uid and r.kind = 'game' and r.detail ->> 'reward' = 'joint_bench'
+         where r.owner = uid and r.kind = 'game' and r.detail ->> 'reward' = v_reward
            and r.detail ->> 'day' = v_detail ->> 'day' and r.detail ->> 'paid' = 'true';
-        if v_paid >= 3 then
+        if v_paid >= (case when v_reward = 'joint_bench' then 3 else 2 end) then
           v_detail := jsonb_set(v_detail, '{paid}', 'false'::jsonb);
           v_delta := 0;
           v_earned := 0;

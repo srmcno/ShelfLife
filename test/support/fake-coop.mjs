@@ -472,10 +472,10 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       const out = staged.map(x => {
         if (x.same) return receiptOf(user.id, 'game', x.id);
         let { delta, earned, detail } = x;
-        // At most 3 paid Joint Bench rewards a local day: the rest are canonical unpaid.
-        if (detail?.reward === 'joint_bench' && detail.paid === true) {
-          const paid = receipts.filter(r => r.owner === user.id && r.kind === 'game' && r.detail?.reward === 'joint_bench' && r.detail.day === detail.day && r.detail.paid === true).length;
-          if (paid >= 3) { detail = { ...detail, paid: false }; delta = 0; earned = 0; }
+        if (['joint_bench', 'mischief_shoo'].includes(detail?.reward) && detail.paid === true) {
+          const paid = receipts.filter(r => r.owner === user.id && r.kind === 'game' && r.detail?.reward === detail.reward && r.detail.day === detail.day && r.detail.paid === true).length;
+          const limit = detail.reward === 'joint_bench' ? 3 : 2;
+          if (paid >= limit) { detail = { ...detail, paid: false }; delta = 0; earned = 0; }
         }
         const r = append(user.id, 'game', x.id, delta, earned, detail);
         requests.set(r.id, x.req);

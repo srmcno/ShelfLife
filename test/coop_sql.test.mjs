@@ -832,6 +832,22 @@ test('Joint Bench pays at most three times a local day: the rest are canonical u
   assert.equal(await value(`select has_table_privilege('authenticated', 'private.coop_receipt_requests', 'select')`), false);
 });
 
+test('Ghost shoo pays twice per local day and preserves the original request for an unpaid receipt retry', async () => {
+  await call(M, 'public.coop_open($1, $2)', [0, 0]);
+  const before = (await call(M, 'public.coop_wallet()', [])).balance;
+  const shoo = (n, day = '2026-0-3', paid = true) => {
+    const haunt = '37000000-0000-4000-8000-' + String(n).padStart(12, '0');
+    return game(currencyId(M, 'mischief_shoo:' + haunt), paid ? 15 : 0, paid ? 15 : 0,
+      { reward: 'mischief_shoo', haunt_id: haunt, day, paid, taps: 5 });
+  };
+  const result = await adjust(M, [shoo(1), shoo(2), shoo(3)]);
+  assert.deepEqual(result.receipts.map(r => [r.delta, r.earned, r.detail.paid]), [[15, 15, true], [15, 15, true], [0, 0, false]]);
+  assert.equal(result.balance, before + 30);
+  assert.deepEqual((await adjust(M, [shoo(3)])).receipts[0], result.receipts[2], 'lost-response retry returns the canonical unpaid receipt');
+  await rejects(adjust(M, [shoo(3, '2026-0-3', false)]), /bad_op/);
+  assert.equal((await adjust(M, [shoo(4, '2026-0-4')])).receipts[0].delta, 15, 'a new local day has its own allowance');
+});
+
 test('the fake mirrors the game receipts: idempotent, atomic, semantic ids, debt blocks stakes', async () => {
   const { createFakeCoop } = await import('./support/fake-coop.mjs');
   let n = 0;
@@ -864,6 +880,14 @@ test('the fake mirrors the game receipts: idempotent, atomic, semantic ids, debt
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(sid, 15, 15, { ...shoo, day: '2026-10-10' })] }), 'bad_op');
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(sid, 0, 0, { ...shoo, paid: false })] }), 'bad_op');
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(sid, 15, 15, { ...shoo, taps: 4 })] }), 'bad_op');
+  const ghostOps = [1, 2, 3].map(n => {
+    const h = '38000000-0000-4000-8000-' + String(n).padStart(12, '0');
+    return game(currencyId(A, 'mischief_shoo:' + h), 15, 15, { reward: 'mischief_shoo', haunt_id: h, day: '2026-0-3', paid: true, taps: 5 });
+  });
+  const ghosts = rpc(A, 'coop_adjust', { p_ops: ghostOps }).receipts;
+  assert.deepEqual(ghosts.map(r => [r.delta, r.detail.paid]), [[15, true], [15, true], [0, false]]);
+  assert.deepEqual(rpc(A, 'coop_adjust', { p_ops: [ghostOps[2]] }).receipts[0], ghosts[2]);
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [{ ...ghostOps[2], delta: 0, earned: 0, detail: { ...ghostOps[2].detail, paid: false } }] }), 'bad_op');
   for (const n of [1, 2, 3, 4]) {
     const h = '28000000-0000-4000-8000-00000000000' + n;
     const r = rpc(A, 'coop_adjust', { p_ops: [game(currencyId(A, 'joint_bench:' + h), 25, 25, { reward: 'joint_bench', hearing: h, day: '2026-11-3', paid: true })] });
