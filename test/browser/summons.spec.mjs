@@ -4,6 +4,7 @@ import { createFakeSupabase } from '../support/fake-supabase.mjs';
 import { socialPlayer } from '../support/social-world.mjs';
 import { dailyChallenge } from '../../src/engine/daily.js';
 import { SUMMONS_SOULS, VERDICT_SOULS } from '../../src/engine/court.js';
+import { firstStackDrop } from './support/stack.mjs';
 
 // Two players, one browser context: the page is Ada, then Bea, then Ada
 // again, each with their own shelf and session, against one fake server.
@@ -73,13 +74,11 @@ async function noOverflow(page, width = 320) {
   expect(wide, 'nothing overflows at ' + width).toBe(false);
   await page.setViewportSize({ width: 1440, height: 900 });
 }
-// Coffin Stack to the end with the space bar. Under "Slim coffins" the first
-// coffin only overlaps after a moment, so the first drop waits for it; a run
-// that still scores nothing is played again.
+// Coffin Stack to the end with the space bar. Begin separately and land the
+// first coffin before trying to finish the run, under any daily modifier.
 async function stackRun(page, { tries = 3 } = {}) {
   for (let attempt = 0; ; attempt++) {
-    await expect(page.locator('#arcadeSheet [data-ar-field]')).toBeVisible();
-    await page.waitForTimeout(400);
+    await firstStackDrop(page);
     for (let i = 0; i < 80 && !(await page.locator('#arcadeSheet .ar-over').count()); i++) { await page.keyboard.press('Space'); await page.waitForTimeout(170); }
     await expect(page.locator('#arcadeSheet .ar-over')).toBeVisible();
     const score = Number(await page.locator('#arcadeSheet .ar-final b').textContent());

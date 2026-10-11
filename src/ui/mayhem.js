@@ -19,7 +19,7 @@ import { playAchievement, playPowerUp, playStar, playStomp, playFeud, playUnlock
 import { save } from '../state.js';
 import { toast } from './toast.js';
 import { nudgesAvailable, enableNudges, nudgePromptDue, notePrompted } from '../notify.js';
-import { syncRetention, almanacTileHTML } from './almanac.js';
+import { almanacTileHTML } from './almanac.js';
 import { returnCardHTML } from './returns.js';
 import { cabinetExtrasHTML, cabinetFrameClass } from './collections.js';
 import { chapterAt, chapterHook } from '../engine/almanac.js';
@@ -151,7 +151,6 @@ function renderBadges(state) {
 export function renderMayhem(state) {
   if (!state) return;
   S = state;
-  syncRetention(state);   // the Almanac, the return chest and the long-game achievements read what the game already counts
   renderBadges(state);
   renderHud(state);
   renderAlert(state);

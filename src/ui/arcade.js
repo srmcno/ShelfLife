@@ -231,7 +231,8 @@ function startRun(daily = false) {
   run.raf = requestAnimationFrame(frame);
 }
 
-/* The 3, 2, 1. Any tap or key ends it early and counts as the first move. */
+/* The 3, 2, 1. Input ends it early; Coffin Stack waits for a separate drop
+   so the first coffin has time to move over the base. */
 function showReady(step) {
   const field = run.field;
   let el = field.querySelector('.ar-count');
@@ -463,7 +464,7 @@ function press(pad) {
 }
 function dropCoffin() {
   if (!inRun() || run.paused || run.id !== 'stack') return;
-  beginPlay();
+  if (run.phase === 'ready') { beginPlay(); return; }
   run.view.drop(run.A);
 }
 function tapGrave(i) {

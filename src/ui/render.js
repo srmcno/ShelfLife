@@ -26,6 +26,7 @@ import { renderTheatreControls } from './shelf-theatre.js';
 import { createArrivalInvitation } from './arrival.js';
 import { renderMayhem } from './mayhem.js';
 import { renderNextStep } from './nextstep.js';
+import { syncRetention } from './almanac.js';
 
 const cabinet = document.getElementById('cabinet');
 const notesEl = document.getElementById('notes');
@@ -49,6 +50,8 @@ export function renderAll(state) {
   return withStories(state, () => {
     syncEffects(state);
     advanceStories(state);
+    // Settle counter-based rewards before any card or counter reads them.
+    syncRetention(state);
     renderStatus(state);
     renderShelf(state);
     renderAftermath(state);
