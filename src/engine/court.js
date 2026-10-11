@@ -381,9 +381,11 @@ export function episodeRule(ep, ruling, rnd = Math.random) {
   const chance = correct ? 0.5 + ep.respect / 200 : 0.12 + ep.respect / 500;
   const { votes, notes, absent } = voteJury(ep, ruling, chance, rnd);
   const agree = votes.filter(Boolean).length;
+  // A juror marked absent slept through it: it neither agrees nor disagrees.
+  const disagree = votes.filter((vote, i) => !vote && !absent.includes(i)).length;
   if (agree >= 5) nudge(ep, { ratings: 5 });
   const stars = (correct ? 1 : 0) + (ep.ratings >= 70 ? 1 : 0) + (agree >= 5 ? 1 : 0);
-  ep.agree = agree; ep.stars = stars;
+  ep.agree = agree; ep.disagree = disagree; ep.stars = stars;
   const voice = (list, agrees) => {
     const who = ep.jury.filter((_, i) => votes[i] === agrees && !absent.includes(i));
     if (!who.length) return null;
@@ -393,11 +395,11 @@ export function episodeRule(ep, ruling, rnd = Math.random) {
   const juryLines = [voice(JURY_AGREE, true), voice(JURY_DISAGREE, false)].filter(Boolean);
   for (const note of notes.slice(0, 2)) juryLines.push({ s: 'jury', t: note.text, who: null });
   const slept = absent.length ? ' ' + (absent.length === 1 ? 'One juror' : absent.length + ' jurors') + ' slept through it.' : '';
-  juryLines.push({ s: 'jury', t: agree === ep.jury.length ? pick(JURY_ALL_AGREE, rnd) : agree === 0 ? pick(JURY_ALL_DISAGREE, rnd) : 'The jury agrees, ' + agree + ' to ' + (ep.jury.length - agree) + '.' + slept, who: null });
+  juryLines.push({ s: 'jury', t: agree === ep.jury.length ? pick(JURY_ALL_AGREE, rnd) : agree === 0 && !absent.length ? pick(JURY_ALL_DISAGREE, rnd) : 'The jury agrees, ' + agree + ' to ' + disagree + '.' + slept, who: null });
   const losers = ruling === 'plaintiff' ? ['d'] : ruling === 'defendant' ? ['p'] : ['p', 'd'];
   const hallway = [{ s: 'announcer', t: pick(HALLWAY_IN, rnd) }, ...losers.map(side => ({ s: side, t: fill(ep, oneOf(k.hallway[side], rnd)), who: null }))];
   const out = {
-    correct, truth: k.truth, votes, absent, voteNotes: notes, agree, stars, losers, winner: losers.length === 1 ? (losers[0] === 'p' ? 'd' : 'p') : null,
+    correct, truth: k.truth, votes, absent, voteNotes: notes, agree, disagree, stars, losers, winner: losers.length === 1 ? (losers[0] === 'p' ? 'd' : 'p') : null,
     ruling: lines(ep, take(k.rulings[ruling], rnd)),
     jury: juryLines,
     audience: { s: 'audience', t: pick(AUDIENCE_REACTIONS[Math.min(3, Math.floor(ep.ratings / 25))], rnd), who: null },
@@ -412,6 +414,9 @@ export function episodeRule(ep, ruling, rnd = Math.random) {
   ])];
   return out;
 }
+
+// The jurors who were awake and voted against the ruling.
+export const dissent = ep => (Number.isFinite(ep.disagree) ? ep.disagree : ep.jury.length - (ep.agree ?? 0));
 
 // Settle the episode once: souls, trust for whoever you rightly sided with,
 // a grudge for whoever you wrongly ruled against, a scene for the household's
@@ -477,7 +482,7 @@ export function courtFinish(state, ep, now = Date.now()) {
     recordScene(state, 'court', 'Shelf Court: ' + k.title, ep.p.name + ' v. ' + ep.d.name + '. ' + verdict + (correct ? ' Justice, allegedly, was served.' : ' The jury is still talking about it.'),
       cast.map(r => r.id), now, { key: 'court', branch: loser ? 'convicted' : 'witness' });
   }
-  return { correct, stars, agree, ratings: ep.ratings, souls, docket, trust, grudge, firstAir, truth: k.truth, aired: Object.keys(c.best).length, total: COURT_CASES.length,
+  return { correct, stars, agree, disagree: dissent(ep), ratings: ep.ratings, souls, docket, trust, grudge, firstAir, truth: k.truth, aired: Object.keys(c.best).length, total: COURT_CASES.length,
     version, promotion, career: { stars: c.stars, rank: rankIndexFor(c.stars) }, flawless: c.flawless };
 }
 
@@ -507,7 +512,7 @@ function guestFinish(state, ep, now) {
     if (!Object.hasOwn(c.versions, k.id)) c.versions[k.id] = k.id in c.best ? { [BASE]: c.best[k.id] } : {};
     if (!Object.hasOwn(c.versions[k.id], ep.twist || BASE)) c.versions[k.id][ep.twist || BASE] = 0;
   }
-  return { correct, stars, agree: ep.agree ?? 0, ratings: ep.ratings, souls, docket: null, trust: null, grudge: null, firstAir: false,
+  return { correct, stars, agree: ep.agree ?? 0, disagree: dissent(ep), ratings: ep.ratings, souls, docket: null, trust: null, grudge: null, firstAir: false,
     truth: k.truth, aired: Object.keys(c.best).length, total: COURT_CASES.length, guest: true, version: null, promotion: null };
 }
 
