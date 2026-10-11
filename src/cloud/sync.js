@@ -146,8 +146,9 @@ export function createSync({
     const e = problem instanceof CloudError ? problem : new CloudError(String(problem?.message || problem), { code: 'unexpected' });
     if (!cloud.signedIn()) { stopTimer(); return setStatus('off', e.code === 'session_expired' ? { code: e.code, message: e.message } : null); }
     const code = e.code === '23514' ? 'too_large' : e.code;
-    setStatus(e.offline ? 'offline' : 'error', { code, message: e.message, status: e.status });
-    if (code !== 'too_large' && code !== 'corrupt_remote') retryLater();
+    setStatus(code === 'cloud_copy_required' && pending?.kind === 'conflict' ? 'conflict' : e.offline ? 'offline' : 'error', { code, message: e.message, status: e.status });
+    if (code === 'cloud_copy_required') stopTimer();
+    else if (code !== 'too_large' && code !== 'corrupt_remote') retryLater();
   }
   function stopTimer() { if (timer) timers.clearTimeout(timer); timer = null; firstWaitAt = 0; }
   function retryLater() {
@@ -180,9 +181,11 @@ export function createSync({
   }
 
   // ---- explicit recovery and financial household provenance ----
-  async function readCopyChoice(uid, remote = null) {
+  async function readCopyChoice(uid, remote = null, origin = null) {
+    const domain = origin?.coop;
     remote ||= await cloud.rpc('pull_save');
     if (!cloud.signedIn() || cloud.userId() !== uid) throw new CloudError('Your account changed.', { code: 'session_changed' });
+    if (origin && (getState() !== origin || getState().coop !== domain)) throw new CloudError('Your shelf changed.', { code: 'session_changed' });
     if (!remote?.data) throw new CloudError('Sync the original device first; no complete cloud household was found.', { code: 'missing_remote' });
     const normalized = normalize(remote.data), rev = Number(remote.rev);
     if (!normalized || !Number.isSafeInteger(rev) || rev < 1) return refuse(rev || 0);
@@ -207,7 +210,7 @@ export function createSync({
       const remote = await cloud.rpc('pull_save');
       if (!current()) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
       if (remote?.data?.coop?.money?.openings?.[uid]) {
-        await readCopyChoice(uid, remote);
+        await readCopyChoice(uid, remote, origin);
         throw new CloudError('Open Cloud save and use this account’s complete household before using Co-op.', { code: 'cloud_copy_required' });
       }
       return;
@@ -220,7 +223,7 @@ export function createSync({
       for (const receipt of page.receipts) if (receipt.seq !== ++next) throw new CloudError('A financial receipt was missing.', { code: 'bad_reply' });
       try { assertCoopGameOwnership(snapshot, uid, page.receipts); }
       catch (error) {
-        if (error.code === 'cloud_copy_required') { await readCopyChoice(uid); throw new CloudError(error.message, { code: error.code }); }
+        if (error.code === 'cloud_copy_required') { await readCopyChoice(uid, null, origin); throw new CloudError(error.message, { code: error.code }); }
         throw error;
       }
       if (!page.more) {
@@ -258,6 +261,14 @@ export function createSync({
       if (!cloud.signedIn() || cloud.userId() !== uid || getState() !== origin || getState().coop !== domain) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
     } catch (e) {
       if (wasDirty || force) cloud.setMeta({ dirty: true });
+      // The trusted save boundary also checks provenance under its account
+      // lock. Another device may invalidate our read-only preflight before
+      // this write, so its refusal must lead to the same explicit recovery.
+      if (e.code === 'P0001' && e.message === 'cloud_copy_required') {
+        if (!cloud.signedIn() || cloud.userId() !== uid || getState() !== origin || getState().coop !== domain) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
+        await readCopyChoice(uid, null, origin);
+        throw new CloudError('Open Cloud save and choose this account’s complete household before continuing.', { code: 'cloud_copy_required' });
+      }
       throw e;
     }
     if (result?.ok === true && Number.isFinite(Number(result.rev))) {

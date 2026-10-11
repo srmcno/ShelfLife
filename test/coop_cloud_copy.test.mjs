@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeState } from '../src/state.js';
 import { bindCoopMoney, captureCoopMoney, assertCoopOpening } from '../src/engine/coop-money.js';
 import { addSouls } from '../src/engine/mayhem.js';
-import { createCloud } from '../src/cloud/client.js';
+import { createCloud, CloudError } from '../src/cloud/client.js';
 import { createSync, SAFETY_KEY, saveHash } from '../src/cloud/sync.js';
 import { createCoop } from '../src/cloud/coop.js';
 import { createFakeSupabase } from './support/fake-supabase.mjs';
@@ -27,7 +27,7 @@ async function setup(local, effect = s => addSouls(s, 20)) {
   const events = new EventTarget(), callbacks = new Map(); let timerId = 0;
   const timers = { setTimeout(fn, ms) { const id = ++timerId; callbacks.set(id, { fn, ms }); return id; }, clearTimeout: id => callbacks.delete(id) };
   const sync = createSync({ cloud, storage: saved, getState: () => local, applyRemote(next) { local = next; return true; }, events, timers });
-  return { fake, player, server, owned, cloud, sync, saved, events, async runScheduled() { const next = [...callbacks].sort((a, b) => a[1].ms - b[1].ms)[0]; assert.ok(next); callbacks.delete(next[0]); next[1].fn(); for (let i = 0; i < 30; i++) await new Promise(resolve => setImmediate(resolve)); }, replaceLocal(next) { local = next; }, get local() { return local; } };
+  return { fake, player, server, owned, cloud, sync, saved, events, scheduledCount: () => callbacks.size, async runScheduled() { const next = [...callbacks].sort((a, b) => a[1].ms - b[1].ms)[0]; assert.ok(next); callbacks.delete(next[0]); next[1].fn(); for (let i = 0; i < 30; i++) await new Promise(resolve => setImmediate(resolve)); }, replaceLocal(next) { local = next; }, get local() { return local; } };
 }
 
 test('a new populated device must choose its existing cloud household before using that account wallet', async () => {
@@ -117,6 +117,27 @@ for (const change of ['account', 'household']) test('a delayed missing-opening p
   assert.equal(d.fake.saves.get(d.player.id).data.mayhem.souls, 120);
   assert.equal(d.sync.info().conflict, null, 'an old account/household never creates a new recovery card');
   assert.equal(d.local.mayhem.souls, change === 'account' ? 0 : 90);
+});
+
+test('a trusted push refusal after preflight opens read-only recovery and does not retry the blocked upload', async t => {
+  const d = await setup(household(0));
+  await d.sync.check(); await d.sync.resolve('cloud');
+  d.sync.start(); t.after(() => d.sync.stop()); await d.sync.check();
+  const rpc = d.cloud.rpc.bind(d.cloud), writes = d.fake.calls('push_save').length;
+  let refused = 0;
+  d.cloud.rpc = (name, ...args) => {
+    if (name === 'push_save') { refused++; throw new CloudError('cloud_copy_required', { code: 'P0001', status: 400 }); }
+    return rpc(name, ...args);
+  };
+  d.sync.markDirty();
+  const result = await d.sync.push({ force: true });
+  assert.equal(result.status, 'conflict'); assert.equal(result.error.code, 'cloud_copy_required');
+  assert.ok(result.conflict); assert.equal(refused, 1); assert.equal(d.scheduledCount(), 0);
+  assert.equal(d.fake.calls('push_save').length, writes);
+  assert.equal(d.fake.saves.get(d.player.id).data.mayhem.souls, 120);
+  assert.equal(d.local.mayhem.souls, 120); assert.equal(d.local.coop.money.pending.length, 1);
+  d.cloud.rpc = rpc; await d.sync.resolve('cloud');
+  assert.equal(d.local.mayhem.souls, 120);
 });
 
 
