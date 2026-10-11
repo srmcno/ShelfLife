@@ -17,6 +17,7 @@ test('a broken registrant cannot break the sheet', () => {
   try {
     registerFriendAction({ id: 'boom', label: 'Boom', available() { throw new Error('x'); }, run() {} });
     registerPostboxSource({ id: 'bad', load: async () => [], count() { throw new Error('y'); } });
+    registerPostboxSource({ id: 'bad-result', load: async () => [], count: () => Symbol('not a count') });
     registerPostboxSource({ id: 'good', load: async () => [], count: () => 2 });
     assert.deepEqual(friendActions({}, {}), []);
     assert.equal(postboxCount({}), 2);
@@ -32,4 +33,12 @@ test('registering the same id twice replaces it', () => {
   registerFriendsSection({ id: 's', where: 'friend', render: () => 'x' });
   assert.equal(friendsSections('friend').length, 1);
   assert.equal(friendsSections('home').length, 0);
+});
+
+test('postbox badges count only finite nonnegative whole items', () => {
+  resetSocialRegistry();
+  for (const [id, count] of Object.entries({ negative: -2, infinite: Infinity, invalid: NaN, partial: 2.7, string: '3' })) {
+    registerPostboxSource({ id, count: () => count, load: async () => [] });
+  }
+  assert.equal(postboxCount({}), 5);
 });

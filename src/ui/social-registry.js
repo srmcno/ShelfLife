@@ -21,6 +21,8 @@
 //     toast(text),             a game toast
 //     save(),                  persist the game state
 //     renderAll(),             repaint the whole game (after state changes)
+//     isCurrent(),             false after sign-out/account replacement; check after awaiting
+//                              before mutating cached state or completing a network action
 //   }
 
 const actions = [];
@@ -49,7 +51,9 @@ export function friendActions(friend, ctx) {
    { id, order, label,
      count(ctx) -> number                     how many need the player (drives the badge), synchronous, from cache
      load(ctx) -> Promise<item[]>             fetch fresh; items are { id, at (ms), title, line, html? }
-     render(item, ctx) -> html               one row; buttons carry data-sx="<action>" data-sx-id="<item.id>"
+     render(item, ctx) -> html               trusted renderer, responsible for escaping server text;
+                                            raw item.html is ignored by the default/failure fallback
+                                            buttons carry data-sx="<action>" data-sx-id="<item.id>"
      onClick(action, itemId, ctx) -> Promise  handle a button in a row
      poll?: true                              include in the 30 second inbox check } */
 export function registerPostboxSource(source) {
@@ -58,7 +62,10 @@ export function registerPostboxSource(source) {
 }
 export function postboxSources() { return sources.slice(); }
 export function postboxCount(ctx) {
-  return sources.reduce((n, s) => n + (Number(guard(() => (s.count ? s.count(ctx) : 0), 0)) || 0), 0);
+  return sources.reduce((n, s) => {
+    const count = guard(() => Number(s.count ? s.count(ctx) : 0), 0);
+    return n + (Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0);
+  }, 0);
 }
 
 /* A section on the Friends home view or a friend's profile.

@@ -17,6 +17,9 @@ import { COURT_BY_ID, docketToday, summonsReward } from '../engine/court.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { save } from '../state.js';
 import { timeAgo } from './cloud.js';
+import { toast } from './toast.js';
+import { INBOX_CHECK_MS } from '../cloud/inbox.js';
+import { friendActions, friendsSections, postboxSources, postboxCount, socialView, renderSafely } from './social-registry.js';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const MOOD_LINES = { content: 'Content. Suspiciously so.', fine: 'Fine, it says.', annoyed: 'Annoyed at someone.', furious: 'Furious. Do not knock.' };
@@ -111,6 +114,10 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   let me = { code: '', name: '' }, friends = [], loaded = false, waiting = 0;
   let visiting = null, serving = null, title = ['Friends', ''], drafts = {}, verdicts = [];
   let sent = [], sentNext = null, sentLoaded = false, sentLoading = false, sentError = '', sentRetryOlder = false, sentUser = cloud.userId(), sentToken = 0, accountEpoch = 0, justServed = false;
+  let extensionView = null, paused = false;
+  const mailSources = new Map();
+  let renderedExtensionView = null, extensionFocus = null;
+  const buttonStates = new WeakMap();
   // Built once: the head stays a direct child of the sheet (it sticks on
   // phones) and the status line stays put, so screen readers hear each change.
   sheet.innerHTML = '<div class="sheet-head"><div><span class="eyebrow" data-fr-kicker></span><h2 data-fr-title tabindex="-1">Friends</h2></div><button class="btn btn-ghost btn-sm" type="button" data-fr="close">Close</button></div>' +
@@ -119,6 +126,84 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   const isOpen = () => veil.classList.contains('open');
   const accepted = () => friends.filter(f => f.status === 'accepted');
   const byId = id => friends.find(f => f.userId === id) || null;
+
+  // Each callback gets an account-bound context. A late plugin reply must not
+  // reopen an old view, save into a replacement shelf or use its new session.
+  function context() {
+    const epoch = accountEpoch, user = cloud.userId();
+    const isCurrent = () => !!user && epoch === accountEpoch && user === cloud.userId() && social.active();
+    const requireCurrent = () => { if (!isCurrent()) throw new Error('Social account changed.'); };
+    const bound = client => new Proxy(client, { get(target, key) {
+      const value = target[key];
+      return typeof value === 'function' ? (...args) => { requireCurrent(); return value.apply(target, args); } : value;
+    } });
+    return {
+      get state() { requireCurrent(); return state; }, social: bound(social), cloud: bound(cloud), me: { ...me, userId: user }, isCurrent,
+      friends: () => isCurrent() ? accepted() : [], friend: id => isCurrent() ? accepted().find(f => f.userId === id) || null : null,
+      show: next => { if (!isCurrent() || !isOpen() || !next?.id) return; extensionView = { ...next, back: next.back || 'main' }; view = 'extension'; message = ''; render(); },
+      back: () => { if (isCurrent()) extensionBack(); }, refresh: () => { if (isCurrent()) render(); },
+      say: text => { if (isCurrent()) { message = String(text ?? ''); if (isOpen()) status.textContent = message; } },
+      toast: text => { if (isCurrent()) toast(text); }, save: () => isCurrent() ? save() : false,
+      renderAll: () => { if (isCurrent()) onRefresh(); }
+    };
+  }
+  function extensionBack() {
+    const back = extensionView?.back || 'main'; extensionView = null; message = '';
+    if (back.startsWith('friend:')) { const friend = accepted().find(f => f.userId === back.slice(7)); if (friend) { visit(friend); return; } }
+    view = back === 'postbox' ? 'postbox' : 'main'; render();
+  }
+  function sectionsMarkup(where, friend) {
+    const ctx = context();
+    return friendsSections(where).map(section => '<div data-sx-section="' + esc(section.id) + '">' +
+      renderSafely(() => section.render(ctx, friend), '<p class="hint">This Friends section is unavailable.</p>') + '</div>').join('');
+  }
+  function actionsMarkup(friend) {
+    return friendActions(friend, context()).map(action => {
+      const reason = typeof action.state === 'string' ? action.state : navigator.onLine === false ? 'Go online to use this action.' : '';
+      return '<div><button class="btn" type="button" data-fr="extension-action" data-action="' + esc(action.id) + '" data-user="' + esc(friend.userId) + '"' +
+        (reason ? ' disabled aria-describedby="frAction-' + esc(action.id) + '"' : '') + '>' + esc(action.label || action.id) + '</button>' +
+        (reason ? '<p class="hint" id="frAction-' + esc(action.id) + '">' + esc(reason) + '</p>' : '') + '</div>';
+    }).join('');
+  }
+  function postboxMarkup() {
+    title = ['Postbox', 'Friends'];
+    const ctx = context(), sources = postboxSources(), rows = [];
+    const notices = sources.map(source => {
+      const cached = mailSources.get(source.id);
+      for (const item of cached?.items || []) rows.push({ source, item });
+      return cached?.error ? '<p role="status">Could not load ' + esc(source.label || source.id) + '. ' + esc(cached.error) + '</p>' : cached?.loading ? loadingState('Checking ' + (source.label || source.id) + '.') : '';
+    }).join('');
+    rows.sort((a, b) => (Number(b.item.at) || 0) - (Number(a.item.at) || 0));
+    const fallback = item => '<h3>' + esc(item.title || 'Mail from a friend') + '</h3><p>' + esc(item.line || '') + '</p>';
+    return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to friends</button><button class="btn" type="button" data-fr="postbox-refresh">Refresh postbox</button></div>' + notices +
+      (rows.length ? '<ul class="fr-list">' + rows.map(({ source, item }) => '<li data-sx-source="' + esc(source.id) + '">' +
+        renderSafely(() => source.render ? source.render(item, ctx) : fallback(item), fallback(item)) + '</li>').join('') + '</ul>'
+        : !notices ? '<p class="fr-empty">No mail waiting.</p>' : '');
+  }
+  async function loadSources({ poll = false } = {}) {
+    if (!social.active() || navigator.onLine === false || (poll && (paused || document.hidden))) return;
+    const ctx = context();
+    await Promise.all(postboxSources().filter(source => !poll || source.poll).map(async source => {
+      if (mailSources.get(source.id)?.loading) return;
+      const cached = { items: mailSources.get(source.id)?.items || [], loading: true, error: '' };
+      mailSources.set(source.id, cached);
+      try {
+        const items = await source.load(ctx);
+        if (!ctx.isCurrent() || mailSources.get(source.id) !== cached) return;
+        if (!Array.isArray(items)) throw new Error('Invalid postbox response.');
+        cached.items = items.filter(item => item && typeof item === 'object' && item.id != null);
+      } catch (error) { if (ctx.isCurrent() && mailSources.get(source.id) === cached) cached.error = socialText(error); }
+      finally {
+        if (ctx.isCurrent() && mailSources.get(source.id) === cached) { cached.loading = false; if (isOpen() && view === 'postbox') render(); else syncTray(); }
+      }
+    }));
+  }
+  function runExtension(work) {
+    if (navigator.onLine === false) { message = 'Go online to use this action.'; render(); return; }
+    if (!social.active()) return;
+    const ctx = context();
+    act(() => work(ctx));
+  }
 
   function sentMarkup() {
     const rows = sent.map(c => {
@@ -158,6 +243,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     sentUser = user; sentToken++; sent = []; sentNext = null; sentLoaded = sentLoading = false; sentError = ''; justServed = false;
     accountEpoch++; busy = false;
     friends = []; loaded = false; waiting = 0; verdicts = []; me = { code: '', name: '' }; drafts = {}; message = '';
+    extensionView = null; mailSources.clear();
     return true;
   }
   async function loadSent({ older = false } = {}) {
@@ -180,7 +266,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   }
 
   function syncTray() {
-    const signedIn = social.signedIn(), count = signedIn ? social.inboxCount() : 0;
+    const signedIn = social.signedIn(), count = signedIn ? social.inboxCount() + (social.active() ? postboxCount(context()) : 0) : 0;
     $('friendsBtnSub').textContent = !signedIn ? 'Needs cloud save first' : count ? count + ' waiting for you' : 'Shelves, papers and scores';
     const badge = $('friendsBadge');
     badge.hidden = !count;
@@ -202,6 +288,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       (verdicts.length ? '<section aria-labelledby="frVerdictsTitle"><h3 id="frVerdictsTitle">Verdicts</h3><ul class="fr-verdicts">' + verdicts.map(v => '<li>' + esc(verdictLine(v)) + '</li>').join('') + '</ul></section>' : '') +
       (waiting ? '<p class="fr-inbox"><b>' + waiting + (waiting === 1 ? ' set of papers waits' : ' sets of papers wait') + ' for you in Shelf Court.</b> <button class="btn btn-sm" type="button" data-fr="court">Open Shelf Court</button></p>' : '') +
       sentMarkup() +
+      (postboxSources().length ? '<p class="fr-inbox"><button class="btn" type="button" data-fr="postbox">Open Postbox</button></p>' : '') + sectionsMarkup('home') +
       (incoming.length ? '<section aria-labelledby="frRequestsTitle"><h3 id="frRequestsTitle">Requests</h3><ul class="fr-list">' + incoming.map(f => requestRow(f, { confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul></section>' : '') +
       '<section aria-labelledby="frListTitle"><h3 id="frListTitle">Friends' + (list.length ? ' <small>' + list.length + '</small>' : '') + '</h3>' +
       (list.length ? '<ul class="fr-list">' + list.map(f => friendRow(f, { menu: menuFor === f.userId, confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul>'
@@ -213,6 +300,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     const facts = s ? [RANKS[s.rank]?.title, s.curios + (s.curios === 1 ? ' curio' : ' curios'), v.updatedAt ? 'Updated ' + timeAgo(v.updatedAt) : ''].filter(Boolean).join(' · ') : '';
     title = [friendName(f) + '’s shelf', 'Visiting · look, do not touch'];
     return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to friends</button>' + (justServed ? '<button class="btn" type="button" data-fr="sent-view">View my cases</button>' : '') + '</div>' +
+      '<div class="fr-actions">' + actionsMarkup(f) + '</div>' + sectionsMarkup('friend', f) +
       (v.loading ? loadingState('Wiping their doormat.')
         : !s || !s.residents.length ? emptyState({ kind: 'friends', compact: true, line: 'Nothing on show yet. Their shelf appears here once they open Friends.', lineClass: 'fr-empty' })
         : '<p class="fr-facts">' + esc(facts) + '</p><div class="fr-shelf">' + s.residents.map(residentCard).join('') + '</div>');
@@ -236,21 +324,36 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   function render(focus = null) {
     if (!isOpen()) { syncTray(); return; }
     const active = document.activeElement, key = focus || (active && body.contains(active) ? focusKey(active) : null);
-    body.innerHTML = view === 'shelf' ? shelfMarkup() : view === 'serve' ? serveMarkup() : mainMarkup();
+    const retainExtension = view === 'extension' && extensionView === renderedExtensionView;
+    if (view === 'extension') title = [extensionView.title || 'Friends', extensionView.kicker || ''];
+    // Keep live form controls during busy/error redraws. Calling ctx.show()
+    // creates a new view object and deliberately starts with fresh controls.
+    if (!retainExtension) {
+      body.innerHTML = view === 'shelf' ? shelfMarkup() : view === 'serve' ? serveMarkup() : view === 'postbox' ? postboxMarkup() : view === 'extension' ?
+        '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="extension-back">Back</button></div>' + (extensionView.html || '') : mainMarkup();
+      renderedExtensionView = view === 'extension' ? extensionView : null;
+      extensionFocus = null;
+    }
+    if (busy && view === 'extension' && !extensionFocus && body.contains(active)) extensionFocus = active;
     sheet.querySelector('[data-fr-title]').textContent = title[0];
     sheet.querySelector('[data-fr-kicker]').textContent = title[1];
     if (status.textContent !== message) status.textContent = message;
     if (view === 'shelf' && visiting?.shelf) for (const r of visiting.shelf.residents) body.querySelector('[data-res-art="' + CSS.escape(r.id) + '"]')?.appendChild(guestSprite(r));
     if (view === 'serve') body.querySelector('[data-serve-art]')?.appendChild(guestSprite(serving.resident));
-    body.querySelectorAll('button').forEach(b => { if (busy) b.disabled = true; });
-    const target = key && sheet.querySelector(key);
+    body.querySelectorAll('button').forEach(b => {
+      if (busy) { if (!buttonStates.has(b)) buttonStates.set(b, b.disabled); b.disabled = true; }
+      else if (buttonStates.has(b)) { b.disabled = buttonStates.get(b); buttonStates.delete(b); }
+    });
+    const target = !busy && retainExtension && body.contains(extensionFocus) ? extensionFocus : key && sheet.querySelector(key);
     if (target && !target.disabled) target.focus({ preventScroll: true });
     else if (key) sheet.querySelector('h2')?.focus({ preventScroll: true });
+    if (!busy) extensionFocus = null;
     syncTray();
   }
   function focusKey(el) {
     if (el.id) return '#' + CSS.escape(el.id);
     if (el.dataset.fr) return '[data-fr="' + el.dataset.fr + '"]' + (el.dataset.user ? '[data-user="' + CSS.escape(el.dataset.user) + '"]' : '') + (el.dataset.res ? '[data-res="' + CSS.escape(el.dataset.res) + '"]' : '');
+    if (el.dataset.sx) return '[data-sx="' + CSS.escape(el.dataset.sx) + '"]' + (el.dataset.sxId ? '[data-sx-id="' + CSS.escape(el.dataset.sxId) + '"]' : '');
     return null;
   }
 
@@ -277,6 +380,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     if (!social.signedIn()) { openCloud(); return; }
     scopeSent();
     social.optIn();
+    loadSources();
     view = 'main'; message = ''; menuFor = ''; confirm = null; visiting = serving = null; verdicts = [];
     veil.classList.add('open');
     render();
@@ -293,7 +397,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     // Friends see the shelf as it is now. Quietly: a failure here changes nothing.
     social.publish({ force: true }).catch(() => {});
   }
-  function close() { veil.classList.remove('open'); view = 'main'; visiting = serving = null; menuFor = ''; confirm = null; drafts = {}; syncTray(); }
+  function close() { veil.classList.remove('open'); view = 'main'; visiting = serving = extensionView = null; menuFor = ''; confirm = null; drafts = {}; syncTray(); }
 
   async function visit(friend, { serve = false } = {}) {
     view = 'shelf'; visiting = { friend, shelf: null, loading: true, updatedAt: 0 }; menuFor = ''; confirm = null; message = '';
@@ -319,6 +423,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   veil.addEventListener('click', e => { if (e.target === veil) close(); });
   sheet.addEventListener('submit', e => {
     e.preventDefault();
+    if (view === 'extension') { const handler = socialView(extensionView.id)?.onSubmit; if (typeof handler === 'function') runExtension(ctx => handler(e.target, ctx)); return; }
     const form = e.target.dataset.frForm;
     if (form === 'add') {
       const input = $('frAdd');
@@ -351,11 +456,36 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     }
   });
   sheet.addEventListener('click', e => {
+    const extension = e.target.closest('[data-sx]');
+    if (extension) {
+      if (extension.disabled || busy) return;
+      const action = extension.dataset.sx, sectionId = extension.closest('[data-sx-section]')?.dataset.sxSection, sourceId = extension.closest('[data-sx-source]')?.dataset.sxSource;
+      if (sectionId) {
+        const friend = view === 'shelf' ? visiting?.friend : undefined;
+        const handler = friendsSections(friend ? 'friend' : 'home').find(section => section.id === sectionId)?.onClick;
+        if (typeof handler === 'function') runExtension(ctx => handler(action, extension, ctx, friend));
+      } else if (sourceId) {
+        const handler = postboxSources().find(source => source.id === sourceId)?.onClick;
+        if (typeof handler === 'function') runExtension(ctx => handler(action, extension.dataset.sxId, ctx));
+      } else if (view === 'extension') {
+        const handler = socialView(extensionView.id)?.onClick;
+        if (typeof handler === 'function') runExtension(ctx => handler(action, extension, ctx));
+      }
+      return;
+    }
     const b = e.target.closest('[data-fr]');
     if (!b || b.disabled) return;
     const act_ = b.dataset.fr, user = b.dataset.user, friend = user ? byId(user) : null;
     switch (act_) {
       case 'close': close(); break;
+      case 'extension-back': extensionBack(); break;
+      case 'extension-action': {
+        const action = friend && friendActions(friend, context()).find(a => a.id === b.dataset.action);
+        if (action?.state === true && friend.status === 'accepted') runExtension(ctx => action.run(friend, ctx));
+        break;
+      }
+      case 'postbox': view = 'postbox'; message = ''; render(); loadSources(); break;
+      case 'postbox-refresh': loadSources(); break;
       case 'copy': copy(); break;
       case 'share': shareCode(); break;
       case 'court': close(); window.dispatchEvent(new CustomEvent('shelflife:court')); break;
@@ -407,6 +537,16 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   });
   cloud.subscribe(() => { if (scopeSent() && isOpen()) close(); });
   sync.subscribe(() => { syncTray(); if (isOpen() && !social.signedIn()) close(); });
+  // Independent sources share Court's foreground cadence, without routing or
+  // acknowledging built-in Court mail through a plugin.
+  setInterval(() => loadSources({ poll: true }), INBOX_CHECK_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) loadSources({ poll: true }); });
+  window.addEventListener('shelflife:pause', () => { paused = true; });
+  window.addEventListener('shelflife:resume', () => { paused = false; loadSources({ poll: true }); });
+  window.addEventListener('online', () => { loadSources({ poll: true }); if (isOpen()) render(); });
+  window.addEventListener('offline', () => { if (isOpen()) render(); });
+  window.addEventListener('pageshow', () => loadSources({ poll: true }));
+  loadSources({ poll: true });
   syncTray();
   return { open, close, refresh: render };
 }
