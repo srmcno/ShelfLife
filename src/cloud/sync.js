@@ -180,8 +180,8 @@ export function createSync({
   }
 
   // ---- explicit recovery and financial household provenance ----
-  async function readCopyChoice(uid) {
-    const remote = await cloud.rpc('pull_save');
+  async function readCopyChoice(uid, remote = null) {
+    remote ||= await cloud.rpc('pull_save');
     if (!cloud.signedIn() || cloud.userId() !== uid) throw new CloudError('Your account changed.', { code: 'session_changed' });
     if (!remote?.data) throw new CloudError('Sync the original device first; no complete cloud household was found.', { code: 'missing_remote' });
     const normalized = normalize(remote.data), rev = Number(remote.rev);
@@ -196,10 +196,22 @@ export function createSync({
     if (!cloud.signedIn()) return Promise.resolve(info());
     return exclusive(() => readCopyChoice(cloud.userId())).catch(fail).then(info);
   }
-  async function financialPreflight(uid, snapshot, origin) {
-    if (!snapshot.coop?.money?.openings?.[uid]) return;
+  async function financialPreflight(uid, snapshot, origin, { chosenLocal = false } = {}) {
     const domain = origin.coop;
     const current = () => cloud.signedIn() && cloud.userId() === uid && getState() === origin && getState().coop === domain;
+    if (!snapshot.coop?.money?.openings?.[uid]) {
+      // An imported pre-opening backup has lost its financial provenance.
+      // Read the complete account copy before allowing even a current-CAS
+      // upload to replace it. Never-used Co-op accounts need no Co-op RPC.
+      if (chosenLocal) return;
+      const remote = await cloud.rpc('pull_save');
+      if (!current()) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
+      if (remote?.data?.coop?.money?.openings?.[uid]) {
+        await readCopyChoice(uid, remote);
+        throw new CloudError('Open Cloud save and use this account’s complete household before using Co-op.', { code: 'cloud_copy_required' });
+      }
+      return;
+    }
     let after = snapshot.coop.ledger?.[uid]?.seq || 0;
     for (;;) {
       const page = readCoopReceipts(await cloud.rpc('coop_receipts', { p_after: after }), uid);
@@ -221,7 +233,7 @@ export function createSync({
   }
 
   // ---- pushing ----
-  async function pushNow({ base, force = false, keepalive = false, requireDirty = false, depth = 0 } = {}) {
+  async function pushNow({ base, force = false, keepalive = false, requireDirty = false, depth = 0, chosenLocal = false } = {}) {
     if (!cloud.signedIn() || pending) return settle();
     stopTimer();
     const m = cloud.meta(), uid = cloud.userId();
@@ -239,7 +251,7 @@ export function createSync({
     lastPushAt = now();
     let result;
     try {
-      await financialPreflight(uid, snapshot, origin);
+      await financialPreflight(uid, snapshot, origin, { chosenLocal });
       if (!cloud.signedIn() || cloud.userId() !== uid || getState() !== origin || getState().coop !== domain) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
       result = await cloud.rpc('push_save', { p_base_rev: rev, p_data: snapshot, p_device: deviceId() },
         { keepalive: keepalive && text.length < KEEPALIVE_LIMIT });
@@ -374,7 +386,7 @@ export function createSync({
       // rather than asking the question again.
       cloud.setMeta({ syncUser: uid, baseRev: p.rev, lastPushHash: '', dirty: true });
       needsCheck = false;
-      await pushNow({ base: p.rev, force: true });
+      await pushNow({ base: p.rev, force: true, chosenLocal: true });
     }).catch(fail).then(info);
   }
 

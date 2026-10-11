@@ -27,7 +27,7 @@ async function setup(local, effect = s => addSouls(s, 20)) {
   const events = new EventTarget(), callbacks = new Map(); let timerId = 0;
   const timers = { setTimeout(fn, ms) { const id = ++timerId; callbacks.set(id, { fn, ms }); return id; }, clearTimeout: id => callbacks.delete(id) };
   const sync = createSync({ cloud, storage: saved, getState: () => local, applyRemote(next) { local = next; return true; }, events, timers });
-  return { fake, player, server, owned, sync, saved, events, async runScheduled() { const next = [...callbacks].sort((a, b) => a[1].ms - b[1].ms)[0]; assert.ok(next); callbacks.delete(next[0]); next[1].fn(); for (let i = 0; i < 30; i++) await new Promise(resolve => setImmediate(resolve)); }, replaceLocal(next) { local = next; }, get local() { return local; } };
+  return { fake, player, server, owned, cloud, sync, saved, events, async runScheduled() { const next = [...callbacks].sort((a, b) => a[1].ms - b[1].ms)[0]; assert.ok(next); callbacks.delete(next[0]); next[1].fn(); for (let i = 0; i < 30; i++) await new Promise(resolve => setImmediate(resolve)); }, replaceLocal(next) { local = next; }, get local() { return local; } };
 }
 
 test('a new populated device must choose its existing cloud household before using that account wallet', async () => {
@@ -73,6 +73,50 @@ test('keeping a matching household preserves its genuine unsynced earnings but b
   assert.doesNotThrow(() => assertCoopOpening(d.local, d.player.id, wallet, { conflict: !!d.sync.info().conflict }));
   assert.equal(d.local.mayhem.souls, 160); assert.ok(d.local.coop.money.pending.some(p => p.id === op.id));
   assert.equal(captureCoopMoney(d.local, d.player.id), null);
+});
+
+test('a genuinely pre-opening import cannot overwrite its current owned cloud household through autosave or Sync now', async t => {
+  const d = await setup(household(0, 'Before Co-op'));
+  await d.sync.check(); await d.sync.resolve('cloud');
+  d.sync.start(); t.after(() => d.sync.stop()); await d.sync.check();
+  const writes = d.fake.calls('push_save').length;
+  for (const automatic of [true, false]) {
+    d.replaceLocal(household(0, 'Before Co-op')); d.sync.markDirty();
+    assert.equal(d.local.coop.money.openings[d.player.id], undefined);
+    if (automatic) {
+      d.events.dispatchEvent(new Event('shelflife:storage')); await d.runScheduled();
+    } else await d.sync.syncNow();
+    assert.ok(d.sync.info().conflict, 'missing local provenance requires an explicit copy choice');
+    assert.equal(d.fake.calls('push_save').length, writes);
+    assert.equal(d.fake.saves.get(d.player.id).data.mayhem.souls, 120);
+    assert.equal(d.local.mayhem.souls, 0, 'reading the opening does not adopt the server purse');
+    await d.sync.resolve('cloud');
+    assert.equal(d.local.mayhem.souls, 120);
+    assert.ok(d.local.coop.money.openings[d.player.id]);
+    assert.equal(JSON.parse(d.saved.getItem(SAFETY_KEY)).mayhem.souls, 0);
+  }
+});
+
+for (const change of ['account', 'household']) test('a delayed missing-opening provenance read cannot overwrite a replacement ' + change, async () => {
+  const d = await setup(household(0));
+  await d.sync.check(); await d.sync.resolve('cloud');
+  d.replaceLocal(household(0)); d.sync.markDirty();
+  const rpc = d.cloud.rpc.bind(d.cloud), writes = d.fake.calls('push_save').length;
+  let release, entered;
+  const waiting = new Promise(resolve => { entered = resolve; });
+  d.cloud.rpc = async (name, ...args) => {
+    const result = await rpc(name, ...args);
+    if (name === 'pull_save') { entered(); await new Promise(resolve => { release = resolve; }); }
+    return result;
+  };
+  const attempt = d.sync.push({ force: true }); await waiting;
+  if (change === 'account') { await d.cloud.signOut(); await d.cloud.signInAnonymously(); }
+  else d.replaceLocal(household(90, 'New import'));
+  release(); await attempt;
+  assert.equal(d.fake.calls('push_save').length, writes);
+  assert.equal(d.fake.saves.get(d.player.id).data.mayhem.souls, 120);
+  assert.equal(d.sync.info().conflict, null, 'an old account/household never creates a new recovery card');
+  assert.equal(d.local.mayhem.souls, change === 'account' ? 0 : 90);
 });
 
 
