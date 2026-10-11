@@ -161,7 +161,8 @@ export function residentSummary(state, pet, now = Date.now()) {
   if (close) lines.push('Closest to ' + close.o.name + '. They will be told gently, by someone else.');
   const foe = others.filter(x => x.fights >= 2).sort((a, b) => b.fights - a.fights)[0];
   if (foe && foe !== close) lines.push('Never resolved things with ' + foe.o.name + '. Neither intends to.');
-  for (const m of residentMemories(state, pet, now).slice(0, 2)) lines.push(m.text);
+  // In its own words: the memories the card shows, kept as it said them.
+  for (const m of residentMemories(state, pet, now).slice(0, 2)) lines.push('“' + m.text + '”');
   return lines.slice(0, 6).map(l => l.slice(0, 240));
 }
 function portraitFor(state, pet, snapshot, trade, partner, now) {

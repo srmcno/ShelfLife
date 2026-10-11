@@ -6,7 +6,7 @@
 .tr-view h3,.tr-section h3,.tr-portraits h3{margin:0 0 8px;font:700 16px/1.3 var(--body);color:var(--ink)}
 .tr-view h3 small,.tr-section h3 small,.tr-portraits h3 small{margin-left:6px;font-weight:600;font-size:13px;color:var(--ink-3)}
 .tr-section h4{margin:12px 0 6px;font:700 13px/1.3 var(--body);color:var(--ink-2);letter-spacing:.02em}
-.tr-part{min-width:0}
+.tr-part,.tr-view section,.tr-section section{min-width:0;margin:0}
 .tr-hint,.tr-empty{margin:0;color:var(--ink-2);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
 .tr-empty{padding:10px 12px;border:1px dashed var(--hair-lit);border-radius:var(--r)}
 .tr-note{margin:0;padding:10px 12px;border:1px solid var(--hair-lit);border-radius:var(--r);color:var(--ink);font-size:14px;line-height:1.45;overflow-wrap:anywhere}
@@ -72,7 +72,7 @@ button.tr-res{cursor:pointer}
 .tr-bill-firm{margin:8px 0 0;font:400 17px/1.3 var(--hand);color:#5A3B33}
 .tr-bill-parties{margin:8px 0 12px;font-size:14px;line-height:1.45}
 .tr-bill-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px}
-.tr-bill-cols section{min-width:0;padding:10px;border:1px dashed rgba(70,40,30,.4);border-radius:4px;background:rgba(255,250,240,.35)}
+.tr-bill-cols section{margin:0;min-width:0;padding:10px;border:1px dashed rgba(70,40,30,.4);border-radius:4px;background:rgba(255,250,240,.35)}
 .tr-bill-cols h4{margin:0 0 8px;font:700 12px/1.3 var(--body);letter-spacing:.1em;text-transform:uppercase;color:#6B4B3E;overflow-wrap:anywhere}
 .tr-items{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .tr-item{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:10px}
@@ -90,7 +90,7 @@ button.tr-res{cursor:pointer}
 .tr-bill-terms{margin:12px 0 0;font-size:12.5px;line-height:1.5;color:#4A3029}
 .tr-bill-sign{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
 .tr-bill-sign span{padding-top:4px;border-top:1px solid rgba(70,40,30,.55);font:400 19px/1.1 var(--hand);color:#2B1A20;overflow-wrap:anywhere;min-width:0}
-.tr-stamp{position:absolute;right:10px;top:46%;padding:6px 14px;border:3px double currentColor;border-radius:6px;color:#A32C3C;
+.tr-stamp{position:absolute;right:12px;top:58px;padding:6px 14px;border:3px double currentColor;border-radius:6px;color:#A32C3C;
   font:400 clamp(22px,8vw,30px)/1 var(--display);letter-spacing:.14em;text-transform:uppercase;transform:rotate(-14deg);opacity:.82;
   mix-blend-mode:multiply;pointer-events:none;animation:tr-stamp .5s cubic-bezier(.2,1.4,.4,1) both}
 .tr-bill.is-declined .tr-stamp,.tr-bill.is-cancelled .tr-stamp,.tr-bill.is-expired .tr-stamp,.tr-bill.is-countered .tr-stamp{color:#5A4A44}
@@ -108,6 +108,7 @@ body[data-effects="light"] .tr-stamp{animation:none}
 /* The postbox and profile sections */
 .tr-mail{display:grid;gap:8px;min-width:0}
 .tr-mail p{margin:0;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.tr-mail p>b:first-child{display:block;margin-bottom:2px}
 .tr-mail-quote{padding-left:10px;border-left:2px solid var(--hair-lit);color:var(--ink-2);font-style:italic}
 .tr-mail .tr-actions .btn{flex:1 1 120px;min-height:44px}
 .tr-section{min-width:0;padding:14px;border:1px solid var(--hair-lit);border-radius:var(--r-lg);background:var(--glass)}
@@ -161,7 +162,7 @@ details.tr-part summary small{font-weight:600;font-size:13px;color:var(--ink-3)}
 .tr-frame ul{margin:2px 0 0;padding-left:16px;font-size:13px;line-height:1.45;color:var(--ink-2)}
 @media (max-width:380px){
   .tr-frame{grid-template-columns:1fr;justify-items:start}
-  .tr-pick{grid-template-columns:36px minmax(0,1fr);row-gap:6px}
-  .tr-pick .tr-curio-art{width:36px;height:36px}
-  .tr-pick .tr-step{grid-column:1/-1;justify-self:end}
+  .tr-pick{grid-template-columns:32px minmax(0,1fr) auto;gap:8px;padding:8px}
+  .tr-pick .tr-curio-art{width:32px;height:32px;padding:3px}
+  .tr-step output{min-width:20px}
 }

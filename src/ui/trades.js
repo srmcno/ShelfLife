@@ -68,6 +68,7 @@ function itemList(side, { local = false } = {}) {
     esc(side.resident.traits?.length ? traitLine(side.resident.traits) : 'A resident') + '</small></span></li>');
   return rows.length ? '<ul class="tr-items">' + rows.join('') + '</ul>' : '<p class="tr-nothing">Nothing. A gift, and so recorded.</p>';
 }
+const handsOver = name => name === 'You' ? 'You hand over' : name + ' hands over';
 const billNumber = id => id ? 'No. ' + id.replace(/-/g, '').slice(0, 4).toUpperCase() + '·' + id.replace(/-/g, '').slice(-4).toUpperCase() : 'No. pending';
 
 /* The bill of sale. model: { id, fromName, toName, give, want, line, expiresAt, status, localGive, localWant } */
@@ -81,8 +82,8 @@ function billMarkup(m, { lines = null } = {}) {
     '<header class="tr-bill-head"><span class="tr-bill-kicker">Bill of sale</span><span class="tr-bill-no">' + esc(billNumber(m.id)) + '</span></header>' +
     '<p class="tr-bill-firm">Drawn up by the shelf’s undertaker, who was not asked.</p>' +
     '<p class="tr-bill-parties">Between <b>' + esc(m.fromName) + '</b>, of one shelf, and <b>' + esc(m.toName) + '</b>, of another.</p>' +
-    '<div class="tr-bill-cols"><section><h4>' + esc(m.fromName) + ' hands over</h4>' + itemList(m.give, { local: m.localGive }) + '</section>' +
-    '<section><h4>' + esc(m.toName) + ' hands over</h4>' + itemList(m.want, { local: m.localWant }) + '</section></div>' +
+    '<div class="tr-bill-cols"><section><h4>' + esc(handsOver(m.fromName)) + '</h4>' + itemList(m.give, { local: m.localGive }) + '</section>' +
+    '<section><h4>' + esc(handsOver(m.toName)) + '</h4>' + itemList(m.want, { local: m.localWant }) + '</section></div>' +
     (quote ? '<blockquote class="tr-bill-line">“' + esc(quote) + '”<cite>' + esc(m.fromName) + '</cite></blockquote>' : '') +
     (lines?.last ? '<p class="tr-bill-words"><span>Last words on leaving</span>' + esc(lines.last) + '</p>' : '') +
     (lines?.first ? '<p class="tr-bill-words"><span>First words on arriving</span>' + esc(lines.first) + '</p>' : '') +
@@ -157,7 +158,7 @@ function composeMarkup() {
   if (d.mode === 'curio') {
     const giveIds = Object.keys(mine).sort((a, b) => Number(theirWish.includes(b)) - Number(theirWish.includes(a)) || curioName(a).localeCompare(curioName(b)));
     body += '<section class="tr-part"><h3>You give <small>' + total(d.give) + ' of ' + CURIOS_PER_SIDE + '</small></h3>' +
-      (giveIds.length ? '<ul class="tr-picks">' + giveIds.map(id => curioPickRow('tr-give', id, d.give[id] || 0, Math.min(mine[id], CURIOS_PER_SIDE), theirWish.includes(id) ? [['want', 'On ' + possessive(who) + ' wishlist']] : [])).join('') + '</ul>'
+      (giveIds.length ? '<ul class="tr-picks">' + giveIds.map(id => curioPickRow('tr-give', id, d.give[id] || 0, Math.min(mine[id], CURIOS_PER_SIDE), theirWish.includes(id) ? [['want', 'On their wishlist']] : [])).join('') + '</ul>'
         : '<p class="tr-empty">You have no spares. A curio you own twice turns up here; the first copy never leaves the cabinet.</p>') + '</section>';
     const theirs = book?.book?.spares || {};
     const wantIds = Object.keys(theirs).sort((a, b) => Number(wishMine.includes(b)) - Number(wishMine.includes(a)) || curioName(a).localeCompare(curioName(b)));
