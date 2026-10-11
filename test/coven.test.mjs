@@ -405,7 +405,7 @@ test('invalid semantic payout identities and hostile receipt parts are refused b
 test('Coven proposals preserve the shelf until the first server gift settles, even if another device proposed a different gift', async () => {
   const owner = '00000000-0000-4000-8000-000000000001', s = shelf(), week = 2963;
   bindCovenRewards(s, owner); bindCoopMoney(s, owner);
-  const first = planChest(s, week, 2, owner), before = structuredClone(s);
+  const before = structuredClone(s), first = planChest(s, week, 2, owner);
   assert.deepEqual(s, before);
   s.coven.curios[first.detail.curio] = 1;
   const next = planChest(s, week, 2, owner); assert.notEqual(next.detail.curio, first.detail.curio);
@@ -435,6 +435,6 @@ test('a fully stocked shelf accepts the first canonical curio instead of its pro
   applyCoopReceipts(s, owner, [{ id: '00000000-0000-4000-8000-000000000098', sourceId: operation, owner, kind: 'game', ...first, seq: 1 }]);
   assert.equal(s.mayhem.souls, cash + first.delta); assert.equal(s.coven.curios[first.detail.curio], 1);
   assert.equal(planChest(s, week, 2, owner), null);
-  const invite = planInvite(s, '00000000-0000-4000-8000-000000000002', owner), before = structuredClone(s);
+  const before = structuredClone(s), invite = planInvite(s, '00000000-0000-4000-8000-000000000002', owner);
   assert.equal(invite.delta, 0); assert.deepEqual(s, before);
 });
