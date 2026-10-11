@@ -413,6 +413,7 @@ test('play-day metadata cannot overwrite queued feedback after a storage read fa
   await cloud.signInAnonymously(); let writes = 0;
   storage.getItem = () => { throw new Error('storage inaccessible'); };
   storage.setItem = () => { writes++; };
-  feedback.resumePlayDays(); await feedback.markPlayDay(); await feedback.forgetPlayDays();
+  await assert.rejects(feedback.resumePlayDays(), error => error.code === 'storage_failed');
+  await feedback.markPlayDay(); await feedback.forgetPlayDays();
   assert.equal(writes, 0); assert.equal(storage.items.get(FEEDBACK_KEY), previous);
 });

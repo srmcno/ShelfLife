@@ -68,6 +68,7 @@ export function cleanReport(raw) {
 export function createFeedback({ cloud, storage = defaultStorage(), now = Date.now } = {}) {
   const listeners = new Set();
   let flushing = null;
+  const forgetting = new Map(), resuming = new Map(), consentWork = new Map(), consentEpochs = new Map();
 
   function meta(required = false) {
     try {
@@ -85,7 +86,7 @@ export function createFeedback({ cloud, storage = defaultStorage(), now = Date.n
     try { storage.setItem(FEEDBACK_KEY, JSON.stringify(next)); } catch { if (required) throw storageError(); }
     return next;
   }
-  const emit = () => listeners.forEach(fn => { try { fn({ queued: queued().length }); } catch { /* the UI's problem */ } });
+  const emit = (change = {}) => listeners.forEach(fn => { try { fn({ queued: queued().length, ...change }); } catch { /* the UI's problem */ } });
 
   const configured = () => !!cloud?.configured;
   const signedIn = () => configured() && cloud.signedIn();
@@ -156,37 +157,99 @@ export function createFeedback({ cloud, storage = defaultStorage(), now = Date.n
   }
 
   // ---- play days ----
-  // At most one call per local day per account. Resolves to true when counted.
-  async function markPlayDay({ allowed = true, dayKey = localDayKey(now()) } = {}) {
-    if (!allowed || !signedIn()) return false;
-    const user = cloud.userId(), day = isoDay(dayKey);
+  // Passive startup never opts in: only the explicit switch may resume.
+  async function markPlayDay({ allowed = true, dayKey = localDayKey(now()), current = () => true } = {}) {
+    if (!allowed || !signedIn() || !current()) return false;
+    const user = cloud.userId(), day = isoDay(dayKey), epoch = consentEpochs.get(user) || 0;
     if (!day) return false;
     const last = meta().playDay;
     if (record(last) && last.user === user && last.day === day) return false;
     try {
-      await cloud.rpc('mark_play_day', { p_day: day });
-      if (cloud.userId() === user) setMeta({ playDay: { user, day } });
-      return true;
+      const result = await cloud.rpc('mark_play_day', { p_day: day });
+      if (!current() || cloud.userId() !== user || (consentEpochs.get(user) || 0) !== epoch || result?.ok !== true) return false;
+      if (result.opted_out === true) { emit({ optedOut: user }); return false; }
+      if (typeof result.counted !== 'boolean') return false;
+      setMeta({ playDay: { user, day } });
+      return result.counted;
     } catch { return false; }
   }
-  // Called when the player switches counting off. Remembered and retried if it cannot go now.
-  async function forgetPlayDays() {
+  // The legacy single-owner `forget` and new per-owner queue are read together.
+  // Privacy requests have no cap or expiry; each can run only in its own session.
+  function pendingForgets(raw = meta()) {
+    return [...new Set([raw.forget, ...(Array.isArray(raw.forgetUsers) ? raw.forgetUsers : [])].filter(user => typeof user === 'string' && user))];
+  }
+  function rememberForget(user) {
+    const owners = pendingForgets(meta(true));
+    if (!owners.includes(user)) owners.push(user);
+    setMeta({ forget: owners[0], forgetUsers: owners, playDay: undefined }, true);
+  }
+  function clearForget(user, required = false) {
+    const owners = pendingForgets(meta(true)).filter(owner => owner !== user);
+    setMeta({ forget: owners[0], forgetUsers: owners.length ? owners : undefined, playDay: undefined }, required);
+  }
+  function nextConsentEpoch(user) {
+    const epoch = (consentEpochs.get(user) || 0) + 1;
+    consentEpochs.set(user, epoch);
+    return epoch;
+  }
+  // Serialize off/on effects for each owner. An unrelated account never waits
+  // for or cancels another owner's operation, and stale explicit opt-ins do not run.
+  function serializeConsent(user, work) {
+    const previous = consentWork.get(user);
+    const result = previous ? previous.catch(() => {}).then(work) : work();
+    const pending = Promise.resolve(result).finally(() => { if (consentWork.get(user) === pending) consentWork.delete(user); });
+    consentWork.set(user, pending);
+    return pending;
+  }
+  function forgetPlayDays({ current = () => true } = {}) {
+    if (!signedIn() || !current()) return Promise.resolve(false);
+    const user = cloud.userId();
+    if (forgetting.has(user) && !resuming.has(user)) return forgetting.get(user);
+    const epoch = nextConsentEpoch(user);
+    let storageFailure = null;
+    try { rememberForget(user); } catch (error) { storageFailure = error; }
+    const live = () => current() && cloud.userId() === user && consentEpochs.get(user) === epoch;
+    const work = serializeConsent(user, async () => {
+      if (!live()) return false;
+      try {
+        const result = await cloud.rpc('forget_play_days', {});
+        if (!live() || result?.ok !== true) return false;
+        // An acknowledged off is already durable on the server. A stuck local
+        // copy is safe to retry, and a later explicit on must clear it durably.
+        try { clearForget(user); } catch { /* never overwrite unreadable reports */ }
+        return true;
+      } catch (error) {
+        if (storageFailure) throw storageFailure;
+        return false;
+      }
+    });
+    const pending = work.finally(() => { if (forgetting.get(user) === pending) forgetting.delete(user); });
+    forgetting.set(user, pending);
+    return pending;
+  }
+  async function retryForget() {
     if (!signedIn()) return false;
     const user = cloud.userId();
-    setMeta({ forget: user, playDay: undefined });
-    try {
-      await cloud.rpc('forget_play_days', {});
-      if (meta().forget === user) setMeta({ forget: undefined });
-      return true;
-    } catch { return false; }
-  }
-  // A forget that could not reach the server earlier, for this account.
-  async function retryForget() {
-    if (!signedIn() || meta().forget !== cloud.userId()) return false;
+    if (resuming.has(user) || !pendingForgets().includes(user)) return false;
     return forgetPlayDays();
   }
-  // Switched back on: forget nothing, and count today again.
-  function resumePlayDays() { setMeta({ forget: undefined, playDay: undefined }); }
+  function resumePlayDays({ current = () => true } = {}) {
+    const user = cloud?.userId?.(), epoch = nextConsentEpoch(user);
+    const requireCurrent = () => {
+      if (!signedIn() || cloud.userId() !== user || consentEpochs.get(user) !== epoch || !current()) throw new CloudError('This counting request is no longer current. Sign in and try again.', { code: 'signed_out' });
+    };
+    const work = serializeConsent(user, async () => {
+      requireCurrent();
+      const result = await cloud.rpc('resume_play_days', {});
+      requireCurrent();
+      if (result?.ok !== true || result.opted_out !== false) throw new CloudError('Counting could not be turned on.', { code: 'unexpected' });
+      clearForget(user, true);
+      return true;
+    });
+    const pending = work.finally(() => { if (resuming.get(user) === pending) resuming.delete(user); });
+    resuming.set(user, pending);
+    return pending;
+  }
 
   return {
     configured, signedIn, submit, flush, queued, drop, markPlayDay, forgetPlayDays, retryForget, resumePlayDays, meta,

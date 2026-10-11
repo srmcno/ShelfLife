@@ -278,9 +278,15 @@ registerSocialView('pb-invite', {
     const petId = form.querySelector('input[name="pbPet"]:checked')?.value, days = Number(form.querySelector('input[name="pbDays"]:checked')?.value);
     const pet = ctx.state.pets.find(p => p.id === petId), friend = ctx.friend(currentFriend);
     if (!pet || !friend || ![1, 2, 3].includes(days)) return;
+    const shelf = ctx.state, pets = shelf.pets, client = ctx.postbox;
+    const sameShelf = () => ctx.current() && ctx.state === shelf && shelf.pets === pets && ctx.postbox === client;
     await ctx.act(async current => {
-      await ctx.postbox.sendVisit({ to: friend.userId, pet, days });
-      if (!current()) return;
+      await client.sendVisit({ to: friend.userId, pet, days });
+      if (!current() || !sameShelf()) return;
+      // Settle the acknowledged visit into the save and repaint the away tag
+      // before leaving the form. A restored shelf must not absorb an old send.
+      await ctx.reloadMail({ current: sameShelf });
+      if (!current() || !sameShelf()) return;
       ctx.back();
       ctx.say(pet.name + ' has packed for ' + friendName(friend) + '’s. They have 48 hours to answer the door.');
     });

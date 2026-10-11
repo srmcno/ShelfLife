@@ -165,9 +165,9 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   const levelOf = userId => friendLevel(postbox?.state().levels.find(l => l.userId === userId)?.total || 0);
 
   /* ---- the ctx every registered feature gets ---- */
-  function epochCtx() {
+  function epochCtx(fence = () => true) {
     const epoch = accountEpoch, user = cloud.userId();
-    const current = () => !!user && epoch === accountEpoch && user === cloud.userId() && social.active();
+    const current = () => !!user && epoch === accountEpoch && user === cloud.userId() && social.active() && fence();
     const requireCurrent = () => { if (!current()) throw new CloudError('This Friends session has ended.', { code: 'signed_out' }); };
     // A callback may retain its context across awaits. Do not let it use a new
     // account's clients or game state when the original session has ended.
@@ -204,7 +204,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
       visitShelf: (friend, options) => { if (current()) return visit(friend, options); },
       online,
       level: userId => { requireCurrent(); return levelOf(userId); },
-      reloadMail: () => { if (current()) return loadMail(); }
+      reloadMail: options => { if (current()) return loadMail(options); }
     };
     return local;
   }
@@ -567,8 +567,8 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     } catch { /* portraits are a nicety */ }
   }
   // Every source, fresh. A source that fails keeps what it had.
-  async function loadMail({ quiet = false } = {}) {
-    const local = epochCtx();
+  async function loadMail({ quiet = false, current = () => true } = {}) {
+    const local = epochCtx(current);
     mailLoading = true;
     if (!quiet && view === 'postbox') render();
     const sources = postboxSources();

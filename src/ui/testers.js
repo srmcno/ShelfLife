@@ -23,7 +23,7 @@ const TAPS = 7, TAP_GAP_MS = 2500;
 
 export const promptsAllowed = () => globalThis.navigator?.webdriver !== true || globalThis.SHELFLIFE_PROMPTS === true;
 
-let S = null, save = () => {}, feedback = null, cloud = null;
+let S = null, save = () => {}, feedback = null, cloud = null, consentAction = null;
 
 /* ---------------- More ---------------- */
 
@@ -66,21 +66,44 @@ function syncTray() {
   days.hidden = !feedback.configured();
   const on = testingState(S).countDays !== false;
   days.setAttribute('aria-pressed', String(on));
+  const busy = !!consentAction?.current();
+  days.disabled = busy; days.setAttribute('aria-busy', String(busy));
   $('playDaysSub').textContent = 'Count which days I play: ' + (on ? 'on' : 'off') + (feedback.signedIn() ? '' : ' (only with cloud save)');
 }
 
 async function togglePlayDays() {
-  const t = testingState(S);
-  t.countDays = t.countDays === false;
-  save();
+  if (consentAction?.current()) return;
+  const shelf = S, t = testingState(S), user = cloud.userId();
+  const currentShelf = () => S === shelf && testingState(S) === t && cloud.userId() === user;
+  const action = { current: () => consentAction === action && currentShelf() };
+  consentAction = action;
+  const on = t.countDays === false;
+  // Turning off is immediate and durable locally. Turning on waits for an
+  // authenticated acknowledgement; failure leaves off and requires a new click.
+  if (!on) { t.countDays = false; save(); }
   syncTray();
-  if (t.countDays) {
-    feedback.resumePlayDays();
-    markPlayDay();
-    toast('Counting the days you play. Just the dates; nothing else.');
-  } else {
-    const done = await feedback.forgetPlayDays();
-    toast(done || !feedback.signedIn() ? 'Not counting any more. The days already counted are forgotten.' : 'Not counting any more. The days already counted are forgotten as soon as you are back online.');
+  try {
+    if (on) {
+      await feedback.resumePlayDays({ current: action.current });
+      if (!action.current()) return;
+      t.countDays = true; save(); syncTray();
+      markPlayDay();
+      toast('Counting the days you play. Just the dates; nothing else.');
+    } else {
+      const done = await feedback.forgetPlayDays({ current: action.current });
+      if (action.current()) toast(done ? 'Not counting any more. The days already counted are forgotten.'
+        : !feedback.signedIn() ? 'Not counting any more on this device. Nothing is sent while you are signed out.'
+        : 'Not counting any more. The days already counted are forgotten as soon as you are back online.');
+    }
+  } catch (error) {
+    if (action.current()) {
+      const reason = error?.code === 'signed_out' ? 'Sign in to cloud save and try again.'
+        : error?.code === 'storage_failed' ? 'This device could not save the change. Try again.'
+        : error?.code === 'offline' ? 'Go online and try again.' : 'The cloud did not accept the change. Try again.';
+      toast('Counting stays off. ' + reason);
+    }
+  } finally {
+    if (consentAction === action) { consentAction = null; syncTray(); }
   }
 }
 
@@ -113,7 +136,9 @@ function helpPanel() {
 /* ---------------- the network side ---------------- */
 
 function markPlayDay() {
-  return feedback.markPlayDay({ allowed: testingState(S).countDays !== false && !clockOffset() && !fakeOffline() });
+  const shelf = S, t = testingState(S), user = cloud.userId();
+  return feedback.markPlayDay({ allowed: t.countDays !== false && !clockOffset() && !fakeOffline(),
+    current: () => S === shelf && testingState(S) === t && cloud.userId() === user });
 }
 function catchUp() {
   if (!feedback.signedIn() || fakeOffline()) return;
@@ -134,7 +159,10 @@ export function initTesters({ state, cloud: c, save: s, refresh = () => {}, feed
   initWhatsNew();
   initTesterPanel({ state, save, refresh });
   syncTray();
-  feedback.subscribe(syncTray);
+  feedback.subscribe(change => {
+    if (change.optedOut && change.optedOut === cloud.userId()) { testingState(S).countDays = false; save(); }
+    syncTray();
+  });
   cloud?.subscribe?.(change => { if (change?.type === 'session') { syncTray(); catchUp(); } });
   window.addEventListener('online', catchUp);
   document.addEventListener('visibilitychange', () => {

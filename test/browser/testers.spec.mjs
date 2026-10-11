@@ -384,7 +384,12 @@ test('a save marked by the tester panel can earn a real daily score without post
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: 'stack' } })));
   await page.locator('[data-ar="challenge"]').click(); await firstStackDrop(page);
   await expect.poll(async () => Number(await page.locator('[data-ar-score]').textContent())).toBeGreaterThan(0);
-  await page.locator('#arcadeSheet [data-ar="close"]').click();
+  for (let i = 0; i < 80 && !(await page.locator('#arcadeSheet .ar-over').count()); i++) {
+    await page.keyboard.press('Space'); await page.waitForTimeout(170);
+  }
+  await expect(page.locator('#arcadeSheet .ar-over')).toBeVisible();
+  expect(Number(await page.locator('#arcadeSheet .ar-final b').textContent())).toBeGreaterThan(0);
+  await page.locator('#arcadeSheet').getByRole('button', { name: 'Back to the shelf', exact: true }).click();
   await expect(page.locator('#arcadeVeil')).toBeHidden();
   expect((await saved(page)).arcade.daily.best).toBeGreaterThan(0);
   expect(fake.calls('submit_score')).toHaveLength(0);
@@ -415,4 +420,57 @@ test('play-day opt-out clears referral days and blocks recounting until the play
   expect(resumed).toMatchObject({ ok: true, counted: true, days: 1 });
   expect(activeDays()).toHaveLength(1);
   expect((await saved(page)).testing.countDays).toBe(true);
+});
+
+test('a failed explicit play-day opt-in stays off through reload, then succeeds on a fresh click', async ({ page }) => {
+  const { fake } = await signedIn(page, { snapshot: household(s => { s.testing.countDays = false; }) });
+  await page.evaluate(async () => { const { cloud } = await import('/src/cloud/index.js'); await cloud.rpc('forget_play_days', {}); });
+  await page.locator('#tabMore').click();
+  await page.evaluate(async () => { const { setFakeOffline } = await import('/src/ui/tester-panel.js'); setFakeOffline(true); });
+  await page.locator('#playDaysBtn').click();
+  await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#playDaysBtn')).toBeEnabled();
+  expect((await saved(page)).testing.countDays).toBe(false);
+  await page.reload(); await expect(page.locator('#cabinet .piece.pet')).toHaveCount(3);
+  await page.locator('#tabMore').click(); await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'false');
+  expect(fake.calls('resume_play_days')).toHaveLength(0);
+  expect(fake.feedback.playDays).toHaveLength(0);
+  await page.locator('#playDaysBtn').click();
+  await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => fake.feedback.playDays.length).toBe(1);
+  expect(fake.calls('resume_play_days')).toHaveLength(1);
+});
+
+for (const replacement of ['account', 'shelf']) test(`delayed play-day opt-in cannot change a replacement ${replacement}`, async ({ page }) => {
+  const { fake } = await signedIn(page, { snapshot: household(s => { s.testing.countDays = false; }) });
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  let started = false;
+  await page.route(fake.url + '/rest/v1/rpc/resume_play_days', async route => { started = true; await gate; await fake.route(route); });
+  await page.locator('#tabMore').click(); await page.locator('#playDaysBtn').click();
+  await expect.poll(() => started).toBe(true);
+  await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'false');
+  if (replacement === 'account') await page.evaluate(async () => {
+    const { cloud } = await import('/src/cloud/index.js'); await cloud.signOut(); await cloud.signInAnonymously();
+  });
+  else await page.evaluate(async () => {
+    // A restored shelf replaces this object in the shared live state.
+    const { state } = await import('/src/state.js'); state.testing = { ...state.testing, countDays: false };
+  });
+  release();
+  await expect(page.locator('#playDaysBtn')).toBeEnabled();
+  await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'false');
+  expect((await saved(page)).testing.countDays).toBe(false);
+  expect(fake.feedback.playDays).toHaveLength(0);
+});
+
+test('a stale device with counting locally on adopts the account opt-out without resuming', async ({ page }) => {
+  const fake = createFakeSupabase();
+  const player = await socialPlayer(fake, '', { pets: [] }, { social: false });
+  await player.cloud.rpc('forget_play_days', {});
+  await open(page, { fake, meta: { session: player.session } });
+  await expect.poll(async () => (await saved(page)).testing.countDays).toBe(false);
+  await page.locator('#tabMore').click(); await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'false');
+  expect(fake.calls('resume_play_days')).toHaveLength(0);
+  expect(fake.feedback.playDays).toHaveLength(0);
 });
