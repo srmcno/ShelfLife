@@ -1,6 +1,7 @@
 import { EMERGENCIES, CURIOS, CHORES, OMENS, RANKS } from './content/mayhem.js';
 import { SEASONAL_CURIOS } from './content/seasons.js';
 import { ALMANAC_CURIOS } from './content/almanac.js';
+import { normalizeExternalEntry } from './mischief-state.js';
 
 /* Save data for the mayhem loop (engine/mayhem.js). Everything here is bounded
    and validated so a hand-edited or older backup can never break the shelf. */
@@ -39,10 +40,12 @@ export function normalizeMayhem(raw, state = {}, now = Date.now()) {
   out.rank = Math.floor(finite(raw.rank, 0, 0, RANKS.length - 1));
   out.serial = Math.floor(finite(raw.serial, 0, 0, 1e9));
   out.nextAt = finite(raw.nextAt, 0, 0, now + 7 * 86400000);
+  // A card from outside the house (a friend's hex) carries `ext`; mischief-state.js checks it and drops it once expired.
   out.queue = (Array.isArray(raw.queue) ? raw.queue : []).filter(item => object(item)
-    && EMERGENCY_IDS.has(item.id) && petIds.has(item.a) && (item.b == null || (petIds.has(item.b) && item.b !== item.a)))
+    && (item.ext ? true : EMERGENCY_IDS.has(item.id)) && petIds.has(item.a) && (item.b == null || (petIds.has(item.b) && item.b !== item.a)))
     .slice(0, QUEUE_MAX)
-    .map(item => ({ uid: Math.floor(finite(item.uid, 0, 0, 1e9)), id: item.id, a: item.a, ...(item.b ? { b: item.b } : {}), at: finite(item.at, now, 0, now) }));
+    .map(item => item.ext ? normalizeExternalEntry(item, now) : ({ uid: Math.floor(finite(item.uid, 0, 0, 1e9)), id: item.id, a: item.a, ...(item.b ? { b: item.b } : {}), at: finite(item.at, now, 0, now) }))
+    .filter(Boolean);
   out.recent = (Array.isArray(raw.recent) ? raw.recent : []).filter(id => EMERGENCY_IDS.has(id)).slice(0, 24);
   if (object(raw.curios)) {
     for (const [id, count] of Object.entries(raw.curios)) {

@@ -132,9 +132,13 @@ export function readResident(raw, { art = true } = {}) {
   if (!record(raw) || !petId(raw.id)) return null;
   return {
     id: raw.id, name: cleanText(raw.name, 22) || 'Someone', traits: cleanTraits(raw.traits),
-    mood: MOODS.includes(raw.mood) ? raw.mood : 'fine', bond: count(raw.bond, 25), art: art ? cleanArt(raw.art) : null
+    mood: MOODS.includes(raw.mood) ? raw.mood : 'fine', bond: count(raw.bond, 25), art: art ? cleanArt(raw.art) : null,
+    needs: readNeeds(raw.needs)
   };
 }
+// Needs as their owner last published them (neighbourly help reads them), or null.
+const readNeeds = n => record(n) && ['food', 'fuss', 'clean'].every(k => Number.isFinite(n[k]))
+  ? { food: count(n.food, 100), fuss: count(n.fuss, 100), clean: count(n.clean, 100) } : null;
 
 export function readShelf(raw) {
   if (!record(raw)) return null;
@@ -246,8 +250,11 @@ export function residentSnapshot(pet, { image = true } = {}) {
     if (bounds) out.bounds = bounds;
   }
   const needs = record(pet?.needs) && ['food', 'fuss', 'clean'].every(k => Number.isFinite(pet.needs[k]));
-  return { id: String(pet.id), name: cleanText(pet.name, 22) || 'Someone', traits: cleanTraits(pet.traits),
+  const snap = { id: String(pet.id), name: cleanText(pet.name, 22) || 'Someone', traits: cleanTraits(pet.traits),
     mood: needs ? moodOf(pet) : 'fine', bond: count(pet.bond, 25), art: out };
+  // Rounded to tens, so the shelf is not republished for every point a need drifts.
+  if (needs) snap.needs = { food: Math.round(pet.needs.food / 10) * 10, fuss: Math.round(pet.needs.fuss / 10) * 10, clean: Math.round(pet.needs.clean / 10) * 10 };
+  return snap;
 }
 
 // Every resident's name, traits and mood; drawings while they fit, first

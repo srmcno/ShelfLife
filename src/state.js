@@ -14,6 +14,7 @@ import { normalizeTesting } from './tester-state.js';
 import { normalizeCovenState } from './coven-state.js';
 import { normalizeKin } from './kin-state.js';
 import { normalizeTrades } from './trade-state.js';
+import { normalizeMischief } from './mischief-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -402,6 +403,8 @@ export function normalizeState(raw) {
   delete s.rug; // The retired play rug kept trick journals here; earned discoveries stay in life.
   s.mayhem = normalizeMayhem(s.mayhem, s, now);
   s.arcade = normalizeArcade(s.arcade, s.pets);
+  s.mischief = normalizeMischief(s.mischief, s, now); // friends' hexes, hauntings and helps
+  s.arcade = normalizeArcade(s.arcade);
   s.courtroom = normalizeCourtroom(s.courtroom);
   normalizeRetention(s, now); // the Almanac, streak freezes, return chest, Legacy, collections, exchange and owned decor
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);

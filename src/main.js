@@ -15,6 +15,7 @@ import { initSocialInbox } from './ui/social-inbox.js';
 import { initTesters } from './ui/testers.js';
 import './ui/coven.js';
 import './ui/kin.js';
+import { initMischief } from './ui/mischief.js';
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
@@ -294,6 +295,7 @@ const CLOUD_ARRIVALS = {
 cloudUI = initCloudUI({ cloud, sync, getState: () => state, onChange: () => syncBackupBanner() });
 initFriends({ state, cloud, sync, social, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
 initTrades({ state, cloud, social, save, renderAll: () => renderAll(state), toast });
+initMischief({ state, cloud, social, refresh: () => renderAll(state) });
 connectCloud({
   applyRemote: (next, { reason } = {}) => {
     applyRestoredState(next);

@@ -22,6 +22,7 @@ import { petById, propById, pick, addNote, save, clamp } from '../state.js';
 import { SHELF_SCENES } from '../content/shelf-theatre.js';
 import { lampIsOn, toggleLamp, sceneAvailability, availableShelfScenes } from '../engine/shelf-theatre.js';
 import { kinCardHTML } from './kin-card.js';
+import { helpLineFor } from '../engine/mischief.js';
 
 const cardVeil = document.getElementById('cardVeil');
 const cardSheet = document.getElementById('cardSheet');
@@ -154,6 +155,8 @@ export function openCard(state, id, keepScroll) {
     const storyMoment = ourAdventure && !ourAdventure.careDone && ourAdventure.episode.care.need === need;
     return '<button class="btn care-' + need + (storyMoment ? ' escapade-care-action' : '') + '" data-care="' + need + '"' + (preview.gain <= .01 && !storyMoment ? ' disabled' : '') + '>' + careNames[need] + '<small>' + (storyMoment && preview.gain <= .01 ? 'A moment together' : '+' + Math.round(preview.gain) + ' · ' + (preview.useful ? 'trust care' : asleep ? 'sleepy' : 'top-up')) + '</small></button>';
   }).join('') + '</div>';
+  const helpedLine = helpLineFor(state, pet); // a friend's help while you were out (engine/mischief.js)
+  if (helpedLine) html += '<p class="care-helped">' + escapeHtml(helpedLine) + '</p>';
   html += '<p class="care-explainer">' + (pet.bond >= 25 ? 'Bond is full. The attachment is permanent.' : (3 - (pet.cared % 3)) + ' useful care actions until +1 bond. Care below 72 counts.') + (asleep ? ' Asleep: care has half effect.' : '') + '</p>';
   html += '<button class="play-invite" id="playPet"><span><b>Play together</b><small>Feeding Frenzy, Coffin Stack, the Séance or Grave Whack</small></span><span aria-hidden="true">↗</span></button>';
   html += '<details class="care-record" id="careRecord"><summary id="careRecordSummary">Care & games together</summary><p>Fed ' + (pet.careLog?.food || 0) + ' · Fussed ' + (pet.careLog?.fuss || 0) + ' · Cleaned ' + (pet.careLog?.clean || 0) + '</p><p>Arcade runs together: ' + (pet.arcadeRuns || 0) + ' · Court appearances: ' + (pet.courtCases || 0) + '.</p></details>';

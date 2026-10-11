@@ -1,4 +1,4 @@
-import { pendingReturn, claimReturn, chestLine } from '../engine/returns.js';
+import { pendingReturn, claimReturn, chestLine, awayExtraLines } from '../engine/returns.js';
 import { checkAchievements } from '../engine/achievements.js';
 import { glyph } from '../art/mayhem-glyphs.js';
 import { save } from '../state.js';
@@ -18,7 +18,7 @@ export function returnCardHTML(state) {
   const [headline, ...rest] = p.lines.slice(0, 4);
   return '<section class="mh-tile alm-return" aria-label="While you were away"><span class="mh-tile-kicker">While you were away' + (p.days ? ' · ' + plural(p.days, 'day') : '') + '</span>' +
     '<p class="alm-return-head">' + esc(headline) + '</p>' +
-    '<ul class="alm-return-lines">' + rest.map(line => '<li>' + esc(line) + '</li>').join('') + '</ul>' +
+    '<ul class="alm-return-lines">' + [...rest, ...awayExtraLines(state, p)].map(line => '<li>' + esc(line) + '</li>').join('') + '</ul>' +
     '<div class="alm-return-chest"><span class="alm-chest-art" aria-hidden="true">' + glyph('box') + '</span><p>' + esc(chestLine(p)) + '</p>' +
     '<button class="btn btn-primary" type="button" data-ret="claim">Open the chest</button></div></section>';
 }
