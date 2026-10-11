@@ -49,7 +49,7 @@ test('two claims of one refund at once write one receipt and both answer it', op
   assert.equal((await sql(A, 'select public.coop_wallet();')).balance, 100, 'the stake came back once');
 });
 
-test('a winner claiming on two devices at once gets one receipt; the loser racing them gets nothing', opts, async () => {
+test('a winner claiming on two devices at once gets one receipt; the loser racing them gets one zero receipt', opts, async () => {
   await friends(C, D);
   await open(C, 50); await open(D, 50);
   const made = await create(C, D, 20);
@@ -65,7 +65,10 @@ test('a winner claiming on two devices at once gets one receipt; the loser racin
   const won = results.filter((_, i) => i % 2 === 0).map(r => r.value.receipt);
   assert.deepEqual(won[0], won[1]);
   assert.deepEqual([won[0].delta, won[0].earned, won[0].owner], [40, 20, C]);
-  assert.ok(results.filter((_, i) => i % 2 === 1).every(r => r.value.receipt === null && r.value.souls === 0));
+  const lost = results.filter((_, i) => i % 2 === 1).map(r => r.value.receipt);
+  assert.deepEqual(lost[0], lost[1]);
+  assert.deepEqual([lost[0].delta, lost[0].earned, lost[0].owner, lost[0].kind], [0, 0, D, 'duel']);
+  assert.equal(await count(`select count(*) from public.coop_receipts where source_id = '${made.id}' and kind = 'duel';`), 2, 'one receipt per player');
   assert.equal(await count(`select sum(delta) from public.coop_receipts where source_id = '${made.id}';`), 0, 'the pot pays out exactly what went in');
 });
 

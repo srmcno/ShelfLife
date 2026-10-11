@@ -202,7 +202,7 @@ create table if not exists public.coop_receipts (
   id uuid primary key default gen_random_uuid(),
   owner uuid not null references auth.users (id) on delete cascade,
   seq bigint not null check (seq > 0),
-  kind text not null check (kind in ('stake', 'duel', 'hire')),
+  kind text not null,
   source_id uuid not null,
   delta int not null,
   earned int not null default 0 check (earned >= 0),
@@ -214,10 +214,22 @@ alter table public.coop_receipts add column if not exists detail jsonb;
 -- A stake is negative and earns nothing; a duel payout is positive and earns
 -- at most itself; wages earn all of themselves and may be 0 (the day's cap
 -- was spent), so every collected report has a receipt.
+-- 'adjust' mirrors souls the player earned or spent elsewhere in the game (the
+-- souls are one shared purse), so the server's balance stays honest; it never
+-- moves souls on a device, and its source_id is the client's operation id.
+alter table public.coop_receipts drop constraint if exists coop_receipts_kind;
+alter table public.coop_receipts add constraint coop_receipts_kind check (kind in ('stake', 'duel', 'hire', 'adjust'));
+-- A stake is negative and earns nothing; a duel settlement is zero or positive
+-- and earns at most itself (a loser's or a stakeless duel's is 0, so every
+-- settlement leaves a receipt); wages earn all of themselves and may be 0 (the
+-- day's cap was spent), so every collected report has a receipt; an adjustment
+-- is signed, bounded, and earns nothing.
 alter table public.coop_receipts drop constraint if exists coop_receipts_sign;
-alter table public.coop_receipts add constraint coop_receipts_sign check (delta between -25 and 50 and (
-  (kind = 'stake' and delta < 0 and earned = 0) or (kind = 'duel' and delta > 0 and earned <= delta)
-  or (kind = 'hire' and delta >= 0 and earned = delta)));
+alter table public.coop_receipts add constraint coop_receipts_sign check (
+  (kind = 'stake' and delta between -25 and -1 and earned = 0)
+  or (kind = 'duel' and delta between 0 and 50 and earned between 0 and delta)
+  or (kind = 'hire' and delta between 0 and 50 and earned = delta)
+  or (kind = 'adjust' and delta between -1000000 and 2000 and earned = 0));
 alter table public.coop_receipts drop constraint if exists coop_receipts_detail_size;
 alter table public.coop_receipts add constraint coop_receipts_detail_size
   check (detail is null or octet_length(detail::text) < 4000);
@@ -1320,8 +1332,10 @@ begin
     from public.coop_holds h
    where h.duel_id = p_duel and h.released_at is null
      and (won or (h.owner = uid and d.outcome in ('void', 'tie')));
+  -- Every settlement leaves a receipt, a zero one for a loser or a duel with
+  -- nothing staked, so the history replays from the ledger after the duel rows prune.
+  rc := private.coop_append(uid, 'duel', p_duel, owed, case when owed > 0 then owed - own else 0 end, private.coop_duel_detail(uid, p_duel));
   if owed > 0 then
-    rc := private.coop_append(uid, 'duel', p_duel, owed, owed - own, private.coop_duel_detail(uid, p_duel));
     update public.coop_holds h set released_at = now(), released_to = uid, release_receipt = rc.id
      where h.duel_id = p_duel and h.released_at is null
        and (won or (h.owner = uid and d.outcome in ('void', 'tie')));
@@ -1385,6 +1399,70 @@ security definer
 set search_path = public
 as $$
   select private.coop_wallet_json(private.require_user());
+$$;
+
+-- Mirrors souls the player earned or spent elsewhere in the game, so the
+-- balance a stake is checked against follows the one shared purse. p_ops is
+-- [{ op uuid, delta int, reason text }], at most 50, applied together or not at
+-- all. Each op is idempotent by (account, op): a repeat answers the receipt
+-- already written, and the same op with a different delta is refused bad_op.
+-- A spend (negative) is never capped and may take the balance below zero (debt
+-- from offline play): that only blocks new stakes. Earnings are capped at 2000
+-- an op and 6000 a UTC day, the one control on what the server cannot see.
+-- Answers { ok, receipts: [one per op, in order], balance, last_seq }. The
+-- client does NOT apply these receipts to its souls: they mirror what it
+-- already did. Needs coop_open first (needs_opening).
+create or replace function public.coop_adjust(p_ops jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := private.require_user();
+  item jsonb;
+  v_op uuid;
+  v_delta int;
+  v_reason text;
+  rc public.coop_receipts%rowtype;
+  out jsonb := '[]'::jsonb;
+  today_in bigint;
+begin
+  if p_ops is null or jsonb_typeof(p_ops) <> 'array' or jsonb_array_length(p_ops) not between 1 and 50 then
+    perform private.refuse('bad_op');
+  end if;
+  perform private.lock_account(uid);
+  if not exists (select 1 from public.coop_wallets where owner = uid and opening is not null) then
+    perform private.refuse('needs_opening');
+  end if;
+  select coalesce(sum(delta), 0) into today_in from public.coop_receipts
+   where owner = uid and kind = 'adjust' and delta > 0 and created_at >= date_trunc('day', now() at time zone 'utc') at time zone 'utc';
+  for item in select value from jsonb_array_elements(p_ops) loop
+    if jsonb_typeof(item) <> 'object' or jsonb_typeof(item -> 'op') is distinct from 'string'
+       or (item ->> 'op') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+       or jsonb_typeof(item -> 'delta') is distinct from 'number' or (item ->> 'delta') !~ '^-?[0-9]{1,7}$' then
+      perform private.refuse('bad_op');
+    end if;
+    v_op := (item ->> 'op')::uuid;
+    v_delta := (item ->> 'delta')::int;
+    v_reason := lower(coalesce(item ->> 'reason', ''));
+    if v_reason !~ '^[a-z0-9-]{0,24}$' then v_reason := ''; end if;
+    if v_delta = 0 or v_delta < -1000000 or v_delta > 2000 then perform private.refuse('bad_op'); end if;
+    select * into rc from public.coop_receipts where owner = uid and kind = 'adjust' and source_id = v_op;
+    if found then
+      if rc.delta <> v_delta then perform private.refuse('bad_op'); end if;
+    else
+      if v_delta > 0 then
+        today_in := today_in + v_delta;
+        if today_in > 6000 then perform private.refuse('cap_reached'); end if;
+      end if;
+      rc := private.coop_append(uid, 'adjust', v_op, v_delta, 0, jsonb_build_object('reason', v_reason));
+    end if;
+    out := out || jsonb_build_array(private.coop_receipt_json(rc));
+  end loop;
+  return jsonb_build_object('ok', true, 'receipts', out, 'balance', private.coop_available(uid),
+    'last_seq', coalesce((select last_seq from public.coop_wallets where owner = uid), 0));
+end;
 $$;
 
 -- The caller's receipts with seq > p_after, oldest first, 100 at a time:
@@ -1464,7 +1542,9 @@ grant execute on function public.coop_records() to authenticated;
 revoke all on function public.coop_open(int, bigint) from public, anon, authenticated;
 revoke all on function public.coop_wallet() from public, anon, authenticated;
 revoke all on function public.coop_receipts(bigint) from public, anon, authenticated;
+revoke all on function public.coop_adjust(jsonb) from public, anon, authenticated;
 
 grant execute on function public.coop_open(int, bigint) to authenticated;
 grant execute on function public.coop_wallet() to authenticated;
 grant execute on function public.coop_receipts(bigint) to authenticated;
+grant execute on function public.coop_adjust(jsonb) to authenticated;

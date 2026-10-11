@@ -382,11 +382,9 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       const won = d.outcome === (user.id === d.challenger ? 'challenger' : 'opponent');
       const mine = holdsOf(d).filter(h => !h.released_at && (won || (h.owner === user.id && (d.outcome === 'void' || d.outcome === 'tie'))));
       const owed = mine.reduce((n, h) => n + h.amount, 0), own = mine.filter(h => h.owner === user.id).reduce((n, h) => n + h.amount, 0);
-      let r = null;
-      if (owed > 0) {
-        r = append(user.id, 'duel', d.id, owed, owed - own, duelDetail(user.id, d));
-        for (const h of mine) Object.assign(h, { released_at: now(), released_to: user.id, release_receipt: r.id });
-      }
+      // Every settlement leaves a receipt, a zero one when nothing is owed.
+      const r = append(user.id, 'duel', d.id, owed, owed > 0 ? owed - own : 0, duelDetail(user.id, d));
+      if (owed > 0) for (const h of mine) Object.assign(h, { released_at: now(), released_to: user.id, release_receipt: r.id });
       if (user.id === d.challenger) d.claimed_challenger = true; else d.claimed_opponent = true;
       return { ok: true, souls: owed, receipt: receiptJson(r) };
     },
@@ -406,6 +404,26 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       return { ...walletJson(user.id), accepted };
     },
     coop_wallet(user) { return walletJson(user.id); },
+    // Mirrors souls earned or spent elsewhere (one shared purse). Idempotent per op; a spend may leave debt.
+    coop_adjust(user, { p_ops }) {
+      if (!Array.isArray(p_ops) || p_ops.length < 1 || p_ops.length > 50) stop('bad_op');
+      const w = walletOf(user.id);
+      if (w.opening === null) stop('needs_opening');
+      const day = new Date(now()).toISOString().slice(0, 10);
+      let today = receipts.filter(r => r.owner === user.id && r.kind === 'adjust' && r.delta > 0 && new Date(r.created_at).toISOString().slice(0, 10) === day)
+        .reduce((n, r) => n + r.delta, 0);
+      const staged = [];
+      for (const item of p_ops) {
+        if (!item || typeof item !== 'object' || !UUID.test(item.op || '') || !Number.isInteger(item.delta) || Math.abs(item.delta) > 9999999) stop('bad_op');
+        if (item.delta === 0 || item.delta < -1000000 || item.delta > 2000) stop('bad_op');
+        const had = receiptOf(user.id, 'adjust', item.op) || staged.find(x => x.op === item.op)?.had;
+        if (had) { if (had.delta !== item.delta) stop('bad_op'); staged.push({ op: item.op, had }); continue; }
+        if (item.delta > 0) { today += item.delta; if (today > 6000) stop('cap_reached'); }
+        staged.push({ op: item.op, delta: item.delta, reason: /^[a-z0-9-]{0,24}$/.test(String(item.reason || '').toLowerCase()) ? String(item.reason || '').toLowerCase() : '' });
+      }
+      const out = staged.map(x => x.had || append(user.id, 'adjust', x.op, x.delta, 0, { reason: x.reason }));
+      return { ok: true, receipts: out.map(receiptJson), balance: available(user.id), last_seq: w.last_seq };
+    },
     coop_receipts(user, { p_after = 0 } = {}) {
       if (p_after !== null && p_after !== undefined && !Number.isInteger(p_after)) return badType('bigint');
       const after = Math.max(p_after || 0, 0);

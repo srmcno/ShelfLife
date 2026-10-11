@@ -136,3 +136,29 @@ test('the day-count switch serialises with passive marks: after a switch-off not
   // However the marks were ordered against the switch-off, once it stands nothing remains counted.
   assert.equal(out, '1|0|0');
 });
+
+// ---------------------------------------------------------------------------
+// Co-op shared purse: the same operation from many connections lands once, and
+// earnings stay under the daily cap however the calls interleave.
+// ---------------------------------------------------------------------------
+test('Co-op: one adjustment sent from eight connections at once is one receipt', opts, async () => {
+  const U = USERS[15];
+  await profile(U, 'Uma');
+  await db.as(U, `select public.coop_open(50, 0);`);
+  const op = '40000000-0000-4000-8000-000000000001';
+  const results = await db.race(Array.from({ length: 8 }, () => [U, `select public.coop_adjust('[{"op":"${op}","delta":120,"reason":"income"}]'::jsonb);`]));
+  assert.equal(ok(results), 8, JSON.stringify(refusals(results)));
+  assert.equal(await db.admin(`select count(*) from public.coop_receipts where owner = '${U}' and kind = 'adjust';`), '1');
+});
+
+test('Co-op: earnings race to the daily cap and no further', opts, async () => {
+  const U = USERS[11];
+  await profile(U, 'Val');
+  await db.as(U, `select public.coop_open(0, 0);`);
+  const calls = Array.from({ length: 5 }, (_, i) =>
+    [U, `select public.coop_adjust('[{"op":"4000000${i}-0000-4000-8000-0000000000aa","delta":2000,"reason":"income"}]'::jsonb);`]);
+  const results = await db.race(calls);
+  assert.equal(ok(results), 3, JSON.stringify(refusals(results)));
+  assert.ok(refusals(results).every(e => /cap_reached/.test(e)), JSON.stringify(refusals(results)));
+  assert.equal(await db.admin(`select coalesce(sum(delta), 0) from public.coop_receipts where owner = '${U}' and kind = 'adjust';`), '6000');
+});
