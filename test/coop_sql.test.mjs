@@ -648,7 +648,23 @@ test('the fake in test/support/fake-coop.mjs keeps the same ledger: one receipt 
 
 const OPS = Array.from({ length: 12 }, (_, i) => '20000000-0000-4000-8000-0000000000' + String(10 + i));
 const game = (id, delta, earned, detail) => detail === undefined ? { id, delta, earned } : { id, delta, earned, detail };
-const adjust = (who, ops) => call(who, 'public.coop_adjust($1::jsonb)', [JSON.stringify(ops)]);
+// Labelled financial-only household fixture: SQL tests model journal effects,
+// while client/browser tests verify the actual purchased items and paid flags.
+async function checkpoint(who, ops) {
+  const w = await call(who, 'public.coop_wallet()');
+  if (w.opening === null) return;
+  const remote = await call(who, 'public.pull_save()');
+  const data = { fixture: 'already-applied SQL journal', coop: {
+    ledger: { [who]: { seq: w.last_seq } }, money: {
+      openings: { [who]: { souls: w.opening, after: w.opening_seq } },
+      pending: (Array.isArray(ops) ? ops : []).map(op => ({ ...op, owner: who }))
+    } } };
+  await call(who, 'public.push_save($1,$2::jsonb)', [remote?.rev || 0, JSON.stringify(data)]);
+}
+const adjust = async (who, ops) => {
+  await checkpoint(who, ops);
+  return call(who, 'public.coop_adjust($1::jsonb)', [JSON.stringify(ops)]);
+};
 const { currencyId } = await import('./support/fake-coop.mjs');
 
 test('an adjustment needs an opening, is idempotent per id and payload, and a bad batch changes nothing', async () => {
@@ -852,11 +868,20 @@ test('Ghost shoo pays twice per local day and preserves the original request for
 test('the fake mirrors the game receipts: idempotent, atomic, semantic ids, debt blocks stakes', async () => {
   const { createFakeCoop } = await import('./support/fake-coop.mjs');
   let n = 0;
-  const fake = createFakeCoop({ profiles: new Map([[A, { display_name: 'Ada' }], [B, { display_name: 'Bea' }]]), now: () => Date.parse('2026-10-11T12:00:00Z'),
+  const saves = new Map();
+  const fake = createFakeCoop({ saves, profiles: new Map([[A, { display_name: 'Ada' }], [B, { display_name: 'Bea' }]]), now: () => Date.parse('2026-10-11T12:00:00Z'),
     json: (status, body) => ({ status, body }), rest: (status, code, message) => ({ status, body: { code, message } }),
     uuid: () => '00000000-0000-4000-8000-' + String(++n).padStart(12, '0'),
     friendships: [{ requester: A, addressee: B, status: 'accepted' }], blocks: [] });
-  const rpc = (who, name, args) => { const r = fake.RPC[name]({ id: who }, args); return r.status === 200 ? r.body : r.body?.message ?? r; };
+  const rpc = (who, name, args) => {
+    if (name === 'coop_adjust' && fake.wallets.get(who)?.opening !== null && fake.wallets.has(who)) {
+      const w = fake.wallets.get(who);
+      saves.set(who, { data: { fixture: 'already-applied SQL fake journal', coop: { ledger: { [who]: { seq: w.last_seq } }, money: {
+        openings: { [who]: { souls: w.opening, after: w.opening_seq } }, pending: args.p_ops.map(op => ({ ...op, owner: who }))
+      } } } });
+    }
+    const r = fake.RPC[name]({ id: who }, args); return r.status === 200 ? r.body : r.body?.message ?? r;
+  };
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[0], 1, 1)] }), 'needs_opening');
   rpc(A, 'coop_open', { p_souls: 10, p_after: 0 });
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[0], 100, 100, { reason: 'income' })] }).balance, 110);

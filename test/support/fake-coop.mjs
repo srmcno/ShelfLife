@@ -62,7 +62,7 @@ const clean = (value, max) => String(value ?? '').replace(/[\u0000-\u001f\u007f-
 const int = (value, lo, hi) => Number.isInteger(value) && value >= lo && value <= hi ? value : null;
 const copy = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 
-export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, blocks }) {
+export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, blocks, saves = new Map() }) {
   const listings = new Map(), hires = new Map(), duels = new Map(), records = new Map(), attempts = [], dnd = new Set();
   const wallets = new Map(), receipts = [], holds = new Map();
   let strictFunds = true;
@@ -130,6 +130,19 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
   };
   const available = owner => { const w = wallets.get(owner); return w && w.opening !== null ? w.opening + (w.total - w.opening_base) : null; };
   const receiptOf = (owner, kind, source) => receipts.find(r => r.owner === owner && r.kind === kind && r.source_id === source) || null;
+  const typedReward = detail => ['coven_chest', 'coven_invite', 'joint_bench', 'mischief_shoo'].includes(detail?.reward);
+  const savedOp = (data, owner, id, delta, earned, detail) => Array.isArray(data?.coop?.money?.pending)
+    && data.coop.money.pending.some(op => op.owner === owner && op.id === id && op.delta === delta && op.earned === earned
+      && (op.preApplied === undefined || op.preApplied === true)
+      && JSON.stringify(canon(op.detail ?? null)) === JSON.stringify(canon(detail ?? null)));
+  function saveError(owner, data) {
+    const w = wallets.get(owner);
+    if (!w || w.opening === null) return null;
+    const opening = data?.coop?.money?.openings?.[owner], after = data?.coop?.ledger?.[owner]?.seq ?? 0;
+    if (!opening || opening.souls !== w.opening || opening.after !== w.opening_seq || !Number.isSafeInteger(after) || after < 0 || after > w.last_seq) return 'cloud_copy_required';
+    return receipts.some(r => r.owner === owner && r.kind === 'game' && r.seq > after && !typedReward(r.detail)
+      && !savedOp(data, owner, r.source_id, r.delta, r.earned, r.detail)) ? 'cloud_copy_required' : null;
+  }
   const receiptJson = r => r ? { id: r.id, owner: r.owner, seq: r.seq, kind: r.kind, source_id: r.source_id, delta: r.delta, earned: r.earned,
     created_at: iso(r.created_at), detail: copy(r.detail) } : null;
   function append(owner, kind, source, delta, earned, detail) {
@@ -467,6 +480,11 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
           staged.push({ id: item.id, same: true, req });
           continue;
         }
+        if (!typedReward(detail)) {
+          const household = saves.get(user.id)?.data;
+          if (!savedOp(household, user.id, item.id, item.delta, item.earned, detail)) stop('household_sync_required');
+          const error = saveError(user.id, household); if (error) stop(error);
+        }
         staged.push({ id: item.id, delta: item.delta, earned: item.earned, detail, req });
       }
       const out = staged.map(x => {
@@ -532,7 +550,7 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
     }
   }
 
-  return { RPC: wrapped, forget, age, listings, hires, duels, records, attempts, wallets, receipts, holds,
+  return { RPC: wrapped, forget, age, listings, hires, duels, records, attempts, wallets, receipts, holds, saveError,
     setDnd(userId, on = true) { if (on) dnd.add(userId); else dnd.delete(userId); },
     setStrictFunds(on = true) { strictFunds = !!on; } };
 }

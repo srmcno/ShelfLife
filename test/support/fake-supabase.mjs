@@ -78,6 +78,8 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
       const row = saves.get(user.id), base = Number(p_base_rev);
       const conflict = () => json(200, { ok: false, conflict: true, rev: row ? row.rev : 0, updated_at: row?.updated_at || null, device: row?.device_id || null });
       if (row ? row.rev !== base : base !== 0) return conflict();
+      const financialError = coop.saveError(user.id, p_data);
+      if (financialError) return rest(400, 'P0001', financialError);
       const next = { rev: (row?.rev || 0) + 1, data: JSON.parse(JSON.stringify(p_data)), device_id: String(p_device || '').slice(0, 100), updated_at: new Date(now()).toISOString() };
       saves.set(user.id, next);
       return json(200, { ok: true, rev: next.rev, updated_at: next.updated_at });
@@ -122,7 +124,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   // Each feature wraps block_user and friends removal on top of the ones before it.
   const mischief = createFakeMischief({ social, users, profiles, now, json, rest, uuid, rpc: RPC });
   Object.assign(RPC, mischief.RPC);
-  const coop = createFakeCoop({ profiles, now, json, rest, uuid, friendships: social.friendships, blocks: social.blocks }); Object.assign(RPC, coop.RPC);
+  const coop = createFakeCoop({ profiles, now, json, rest, uuid, friendships: social.friendships, blocks: social.blocks, saves }); Object.assign(RPC, coop.RPC);
   const TABLES = {
     ...social.TABLES,
     saves: user => [...saves].filter(([id]) => id === user.id).map(([id, r]) => ({ user_id: id, rev: r.rev, data: r.data, device_id: r.device_id, updated_at: r.updated_at })),

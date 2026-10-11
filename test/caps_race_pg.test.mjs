@@ -23,6 +23,17 @@ const refusals = results => results.filter(r => !r.ok).map(r => r.error);
 const friends = (x, y) => db.admin(`insert into public.friendships (requester, addressee, status, created_at)
   values ('${x}', '${y}', 'accepted', now() - interval '30 days') on conflict do nothing;`);
 const profile = (who, name) => db.as(who, `select public.ensure_profile('${name}');`);
+// Explicit financial-only checkpoints for raw SQL journal fixtures.
+async function checkpoint(who, ops) {
+  const w = (await db.as(who, 'select public.coop_wallet();')).value;
+  const remote = (await db.as(who, 'select public.pull_save();')).value;
+  const data = { fixture: 'already-applied race journal', coop: { ledger: { [who]: { seq: w.last_seq } }, money: {
+    openings: { [who]: { souls: w.opening, after: w.opening_seq } }, pending: ops.map(op => ({ ...op, owner: who }))
+  } } };
+  const result = await db.as(who, `select public.push_save(${remote?.rev || 0}, '${JSON.stringify(data)}'::jsonb);`);
+  assert.ok(result.ok && result.value.ok, JSON.stringify(result));
+}
+
 const resident = (rid, name) => ({ id: rid, name, traits: ['damp'], mood: 'fine', bond: 3, art: { creature: { body: 'pear', palette: 'mint', parts: {} } } });
 const shelf = (who, residents) => db.as(who, `select public.publish_shelf('${JSON.stringify({ v: 1, name: '', rank: 0, curios: 0, residents }).replace(/'/g, "''")}'::jsonb);`);
 
@@ -147,6 +158,7 @@ test('Co-op: one game receipt sent from eight connections at once is one receipt
   await profile(U, 'Uma');
   await db.as(U, `select public.coop_open(50, 0);`);
   const op = '40000000-0000-4000-8000-000000000001';
+  await checkpoint(U, [{ id: op, delta: 0, earned: 120, detail: { reason: 'income' } }]);
   const results = await db.race(Array.from({ length: 8 }, () => [U, `select public.coop_adjust('[{"id":"${op}","delta":0,"earned":120,"detail":{"reason":"income"}}]'::jsonb);`]));
   assert.equal(ok(results), 8, JSON.stringify(refusals(results)));
   assert.equal(await db.admin(`select count(*) from public.coop_receipts where owner = '${U}' and kind = 'game';`), '1');
@@ -158,9 +170,10 @@ test('Co-op: a changed payload racing the original lands exactly one version, th
   await profile(U, 'Val');
   await db.as(U, `select public.coop_open(0, 0);`);
   const op = '41000000-0000-4000-8000-000000000001';
+  await checkpoint(U, [{ id: op, delta: 10, earned: 10 }]);
   const calls = [10, 20, 10, 20].map(d => [U, `select public.coop_adjust('[{"id":"${op}","delta":${d},"earned":${d}}]'::jsonb);`]);
   const results = await db.race(calls);
-  assert.ok(refusals(results).every(e => /bad_op/.test(e)), JSON.stringify(refusals(results)));
+  assert.ok(refusals(results).every(e => /bad_op|household_sync_required/.test(e)), JSON.stringify(refusals(results)));
   assert.equal(await db.admin(`select count(*) from public.coop_receipts where owner = '${U}' and kind = 'game';`), '1');
   const won = Number(await db.admin(`select delta from public.coop_receipts where owner = '${U}' and kind = 'game';`));
   assert.equal(ok(results), results.filter((_, i) => [10, 20, 10, 20][i] === won).length);
@@ -185,9 +198,12 @@ test('Co-op: big real earnings land without a cap, and a spend racing stakes can
   await profile(U, 'Xan');
   for (const t of targets) await friends(U, t);
   await db.as(U, `select public.coop_open(30, 0);`);
+  await checkpoint(U, [{ id: '43000000-0000-4000-8000-000000000001', delta: 9000000, earned: 9000000 }]);
   const big = await db.as(U, `select public.coop_adjust('[{"id":"43000000-0000-4000-8000-000000000001","delta":9000000,"earned":9000000}]'::jsonb);`);
   assert.equal(big.value.balance, 9000030, JSON.stringify(big));
+  await checkpoint(U, [{ id: '43000000-0000-4000-8000-000000000002', delta: -9000000, earned: 0 }]);
   await db.as(U, `select public.coop_adjust('[{"id":"43000000-0000-4000-8000-000000000002","delta":-9000000,"earned":0}]'::jsonb);`);
+  await checkpoint(U, [{ id: '43000000-0000-4000-8000-000000000003', delta: -5, earned: 0 }]);
   const calls = targets.map(t => [U, `select public.coop_duel_create('${t}', 'stack', 25);`]);
   calls.push([U, `select public.coop_adjust('[{"id":"43000000-0000-4000-8000-000000000003","delta":-5,"earned":0}]'::jsonb);`]);
   const results = await db.race(calls);

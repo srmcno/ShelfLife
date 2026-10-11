@@ -1463,6 +1463,55 @@ as $f$
     'hex')::uuid;
 $f$;
 
+-- Generic deltas need their complete, already-applied household. Known typed
+-- rewards instead carry the business effects needed for canonical replay.
+create or replace function private.coop_typed_reward(p_detail jsonb)
+returns boolean language sql immutable set search_path = public as $$
+  select coalesce(p_detail ->> 'reward' in ('coven_chest', 'coven_invite', 'joint_bench', 'mischief_shoo'), false);
+$$;
+
+create or replace function private.coop_saved_op(p_data jsonb, p_owner uuid, p_id uuid, p_delta int, p_earned int, p_detail jsonb)
+returns boolean language sql immutable set search_path = public as $$
+  select exists (select 1 from jsonb_array_elements(case when jsonb_typeof(p_data #> '{coop,money,pending}') = 'array'
+    then p_data #> '{coop,money,pending}' else '[]'::jsonb end) op
+    where op ->> 'owner' = p_owner::text and op ->> 'id' = p_id::text
+      and op -> 'delta' = to_jsonb(p_delta) and op -> 'earned' = to_jsonb(p_earned)
+      and (op -> 'preApplied' is null or op -> 'preApplied' = 'true'::jsonb)
+      and coalesce(nullif(op -> 'detail', 'null'::jsonb), 'null'::jsonb) = coalesce(p_detail, 'null'::jsonb));
+$$;
+
+-- Called by push_save while account and save row are locked. Even an old
+-- client may not erase the only complete source of a confirmed game delta.
+create or replace function private.financial_save_ok(p_owner uuid, p_data jsonb)
+returns void language plpgsql set search_path = public as $$
+declare
+  w public.coop_wallets%rowtype;
+  after bigint;
+  r public.coop_receipts%rowtype;
+begin
+  select * into w from public.coop_wallets where owner = p_owner;
+  if not found or w.opening is null then return; end if;
+  if p_data #> array['coop','money','openings',p_owner::text,'souls'] is distinct from to_jsonb(w.opening)
+     or p_data #> array['coop','money','openings',p_owner::text,'after'] is distinct from to_jsonb(w.opening_seq) then
+    perform private.refuse('cloud_copy_required');
+  end if;
+  if coalesce(p_data #>> array['coop','ledger',p_owner::text,'seq'], '0') !~ '^[0-9]{1,16}$' then
+    perform private.refuse('cloud_copy_required');
+  end if;
+  after := coalesce(p_data #>> array['coop','ledger',p_owner::text,'seq'], '0')::bigint;
+  if after > w.last_seq then perform private.refuse('cloud_copy_required'); end if;
+  for r in select * from public.coop_receipts where owner = p_owner and kind = 'game' and seq > after loop
+    if not private.coop_typed_reward(r.detail)
+       and not private.coop_saved_op(p_data, p_owner, r.source_id, r.delta, r.earned, r.detail) then
+      perform private.refuse('cloud_copy_required');
+    end if;
+  end loop;
+end;
+$$;
+revoke all on function private.coop_typed_reward(jsonb) from public;
+revoke all on function private.coop_saved_op(jsonb, uuid, uuid, int, int, jsonb) from public;
+revoke all on function private.financial_save_ok(uuid, jsonb) from public;
+
 create or replace function public.coop_adjust(p_ops jsonb)
 returns jsonb
 language plpgsql
@@ -1481,6 +1530,7 @@ declare
   rc public.coop_receipts%rowtype;
   v_req jsonb;
   v_paid bigint;
+  household jsonb;
   out jsonb := '[]'::jsonb;
 begin
   if p_ops is null or jsonb_typeof(p_ops) <> 'array' or jsonb_array_length(p_ops) not between 1 and 100 then
@@ -1564,6 +1614,16 @@ begin
         perform private.refuse('bad_op');
       end if;
     else
+      if not private.coop_typed_reward(v_detail) then
+        -- Same account/save lock order as push_save. Its checkpoint can have
+        -- been replaced since the client's acknowledgement, so inspect the
+        -- current row before committing money, in this transaction.
+        select data into household from public.saves where user_id = uid for update;
+        if not found or not private.coop_saved_op(household, uid, v_id, v_delta::int, v_earned::int, v_detail) then
+          perform private.refuse('household_sync_required');
+        end if;
+        perform private.financial_save_ok(uid, household);
+      end if;
       -- Local-day limits belong to the account, including concurrent devices.
       -- Excess events retain an unpaid receipt and their original request.
       if v_reward in ('joint_bench', 'mischief_shoo') and (v_detail ->> 'paid')::boolean then
