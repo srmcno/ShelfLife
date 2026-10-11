@@ -8,6 +8,7 @@ import { cloud, sync, social, connectCloud } from './cloud/index.js';
 import { initCloudUI } from './ui/cloud.js';
 import { initFriends } from './ui/friends.js';
 import { initSocialInbox } from './ui/social-inbox.js';
+import './ui/coven.js';
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
