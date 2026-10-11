@@ -18,7 +18,7 @@ export const hexHand = (userId, day) => HEX_IDS.map(card => ({ card, k: md5(user
   .sort((a, b) => (a.k < b.k ? -1 : a.k > b.k ? 1 : 0)).slice(0, 3).map(x => x.card);
 const ODDS = Object.fromEntries(BOWLS.map(b => [b.id, [b.treat, b.curio, b.lo, b.hi]]));
 
-export function createFakeMischief({ social, users, profiles, now, json, rest, uuid }) {
+export function createFakeMischief({ social, users, profiles, now, json, rest, uuid, rpc = null }) {
   const hexes = new Map(), hauntings = new Map(), helps = new Map(), knocks = new Map(), doorsteps = new Map();
   const dnd = new Set(), bumps = [];
   const refuse = token => rest(400, 'P0001', token);
@@ -240,7 +240,7 @@ export function createFakeMischief({ social, users, profiles, now, json, rest, u
   };
 
   // A block takes everything between the two with it, as the trigger does.
-  const block = social.RPC.block_user;
+  const block = (rpc || social.RPC).block_user;
   RPC.block_user = (user, args) => {
     const out = block(user, args);
     if (out.status === 200) forgetPair(user.id, args.p_user);

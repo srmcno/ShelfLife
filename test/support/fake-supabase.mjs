@@ -112,8 +112,9 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const kin = createFakeKin({ social, users, profiles, now, json, rest, uuid, rpc: { ...RPC } });
   Object.assign(RPC, kin.RPC);
   Object.assign(RPC, (social.trades = createFakeTrades({ social, users, profiles, now, json, rest, uuid })).RPC);
-  const mischief = createFakeMischief({ social, users, profiles, now, json, rest, uuid });
-  Object.assign(RPC, social.RPC, mischief.RPC);
+  // Each feature wraps block_user and friends removal on top of the ones before it.
+  const mischief = createFakeMischief({ social, users, profiles, now, json, rest, uuid, rpc: RPC });
+  Object.assign(RPC, mischief.RPC);
   const coop = createFakeCoop({ profiles, now, json, rest, uuid, friendships: social.friendships, blocks: social.blocks }); Object.assign(RPC, coop.RPC);
   const TABLES = {
     ...social.TABLES,
