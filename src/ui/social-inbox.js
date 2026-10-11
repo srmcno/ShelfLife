@@ -18,7 +18,7 @@ export function initSocialInbox({ cloud, social, postbox = null }) {
   // The 30 second check also asks every postbox source that wants to be polled.
   const poll = () => {
     const ctx = socialContext();
-    if (!ctx) return null;
+    if (!ctx || navigator.onLine === false) return null;
     return Promise.allSettled(postboxSources().filter(s => s.poll).map(s => s.load(ctx)));
   };
   const monitor = createInboxMonitor({ cloud, social, visible: () => !paused && !document.hidden, poll,

@@ -150,7 +150,9 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   let visiting = null, serving = null, profile = null, custom = null, title = ['Friends', ''], drafts = {};
   let mail = new Map(), mailLoading = false, mailLoaded = false, mailShown = MAIL_PAGE, mailSafety = '', strips = new Map(), shelves = new Map();
   let sent = [], sentNext = null, sentLoaded = false, sentLoading = false, sentError = '', sentRetryOlder = false, sentUser = cloud.userId(), sentToken = 0, accountEpoch = 0, justServed = false;
-  const sprites = new Map();
+  const sprites = new Map(), buttonStates = new WeakMap();
+  let renderedCustom = null, customFocus = null;
+  let mailErrors = new Map();
   // Built once: the head stays a direct child of the sheet (it sticks on
   // phones) and the status line stays put, so screen readers hear each change.
   sheet.innerHTML = '<div class="sheet-head"><div><span class="eyebrow" data-fr-kicker></span><h2 data-fr-title tabindex="-1">Friends</h2></div><button class="btn btn-ghost btn-sm" type="button" data-fr="close">Close</button></div>' +
@@ -163,38 +165,71 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   const levelOf = userId => friendLevel(postbox?.state().levels.find(l => l.userId === userId)?.total || 0);
 
   /* ---- the ctx every registered feature gets ---- */
-  function makeCtx(current = () => true) {
-    const ctx = {
-      state, social, cloud, postbox,
-      get me() { return { userId: social.userId(), code: me.code, name: me.name }; },
-      friends: () => accepted(),
-      friend: id => accepted().find(f => f.userId === id) || null,
+  function epochCtx() {
+    const epoch = accountEpoch, user = cloud.userId();
+    const current = () => !!user && epoch === accountEpoch && user === cloud.userId() && social.active();
+    const requireCurrent = () => { if (!current()) throw new CloudError('This Friends session has ended.', { code: 'signed_out' }); };
+    // A callback may retain its context across awaits. Do not let it use a new
+    // account's clients or game state when the original session has ended.
+    const bound = client => client && new Proxy(client, { get(target, key) {
+      const value = Reflect.get(target, key);
+      return typeof value === 'function' ? (...args) => {
+        requireCurrent();
+        const result = value.apply(target, args);
+        return result?.then ? Promise.resolve(result).then(data => { requireCurrent(); return data; }) : result;
+      } : value;
+    } });
+    const local = {
+      get state() { requireCurrent(); return state; },
+      social: bound(social), cloud: bound(cloud), postbox: bound(postbox),
+      get me() { requireCurrent(); return { userId: user, code: me.code, name: me.name }; },
+      friends: () => current() ? accepted() : [],
+      friend: id => current() ? accepted().find(f => f.userId === id) || null : null,
       show(v) {
-        if (!v?.id) return;
+        if (!current() || !v?.id) return;
         custom = { back: 'main', ...v }; view = 'custom'; message = v.message || '';
         render(v.focus || '[data-fr="custom-back"]');
       },
-      back: () => goBack(custom?.back || 'main'),
-      refresh: () => render(),
-      say(text) { message = String(text || ''); render(); },
-      toast, save, renderAll: onRefresh,
-      act: (work, focus) => act(work, focus),
+      back: () => { if (current()) goBack(custom?.back || 'main'); },
+      refresh: () => { if (current()) render(); },
+      say(text) { if (current()) { message = String(text || ''); render(); } },
+      toast: (...args) => { if (current()) toast(...args); },
+      save: () => { if (current()) save(); },
+      renderAll: () => { if (current()) onRefresh(); },
+      act: (work, focus) => current() ? act(() => work(current), focus) : Promise.resolve(),
       current, isCurrent: current,
-      openFriend: userId => { const f = ctx.friend(userId); if (f) openProfile(f); },
-      openPostbox: () => openPostbox(),
-      close: () => close(),
-      visitShelf: (friend, options) => visit(friend, options),
+      openFriend: userId => { const f = local.friend(userId); if (f) openProfile(f); },
+      openPostbox: () => { if (current()) return openPostbox(); },
+      close: () => { if (current()) close(); },
+      visitShelf: (friend, options) => { if (current()) return visit(friend, options); },
       online,
-      level: levelOf,
-      reloadMail: () => loadMail()
+      level: userId => { requireCurrent(); return levelOf(userId); },
+      reloadMail: () => { if (current()) return loadMail(); }
     };
-    return ctx;
+    return local;
   }
-  const ctx = makeCtx();
+  let ctx = epochCtx();
   setSocialContext(ctx);
-  function epochCtx() {
-    const epoch = accountEpoch, user = cloud.userId();
-    return makeCtx(() => epoch === accountEpoch && user === cloud.userId());
+
+  // Existing features use ctx.act themselves; simple hooks may return a promise
+  // directly. Give both one busy/error boundary without nesting ctx.act calls.
+  function runExtension(work) {
+    if (busy) return;
+    const local = epochCtx();
+    if (!local.current()) return;
+    if (!online()) { message = 'Go online to use this Friends action.'; render(); return; }
+    // Hooks may disable their own submit button immediately. Capture the
+    // pre-action state before they do so, rather than locking Retry disabled.
+    const buttons = [...body.querySelectorAll('button')];
+    buttons.forEach(b => { if (!buttonStates.has(b)) buttonStates.set(b, b.disabled); });
+    try {
+      const pending = work(local);
+      if (pending?.then) {
+        if (!busy) return act(() => pending);
+        return Promise.resolve(pending).catch(error => { if (local.current()) { message = errorText(error); render(); } });
+      }
+    } catch (error) { if (local.current()) { message = errorText(error); render(); } }
+    finally { if (!busy) buttons.forEach(b => buttonStates.delete(b)); }
   }
 
   function goBack(where) {
@@ -242,8 +277,9 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     if (user === sentUser) return false;
     sentUser = user; sentToken++; sent = []; sentNext = null; sentLoaded = sentLoading = false; sentError = ''; justServed = false;
     accountEpoch++; busy = false;
+    ctx = epochCtx(); setSocialContext(ctx);
     friends = []; loaded = false; me = { code: '', name: '' }; drafts = {}; message = '';
-    mail = new Map(); mailLoaded = false; mailLoading = false; strips = new Map(); shelves = new Map(); sprites.clear(); profile = null;
+    mail = new Map(); mailLoaded = false; mailLoading = false; strips = new Map(); shelves = new Map(); sprites.clear(); profile = custom = null; mailErrors = new Map();
     return true;
   }
   async function loadSent({ older = false } = {}) {
@@ -267,7 +303,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
 
   /* ---- the tray badge counts everything in the postbox ---- */
   function syncTray() {
-    const signedIn = social.signedIn(), count = signedIn ? postboxCount(ctx) : 0;
+    const signedIn = social.signedIn(), count = signedIn && social.active() ? postboxCount(ctx) : 0;
     $('friendsBtnSub').textContent = !signedIn ? 'Needs cloud save first' : count ? count + ' waiting for you' : 'Shelves, papers and scores';
     const badge = $('friendsBadge');
     badge.hidden = !count;
@@ -278,7 +314,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   /* ---- sections and actions from the registry ---- */
   function sectionsMarkup(where, friend = null) {
     return friendsSections(where).map(s => {
-      const html = renderSafely(() => s.render(ctx, friend), '');
+      const html = renderSafely(() => s.render(ctx, friend), '<p class="hint">This Friends section is unavailable.</p>');
       return html ? '<section class="fr-section" data-fr-section="' + esc(s.id) + '">' + html + '</section>' : '';
     }).join('');
   }
@@ -286,7 +322,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     const list = friendActions(friend, ctx);
     if (!list.length) return '';
     return '<div class="fr-big-actions" role="group" aria-label="Things to do with ' + esc(friendName(friend)) + '">' + list.map(a => {
-      const why = typeof a.state === 'string' ? a.state : '';
+      const why = !online() ? 'Go online to use this Friends action.' : typeof a.state === 'string' ? a.state : '';
       const reason = why ? ' aria-describedby="frWhy-' + esc(a.id) + '"' : '';
       return '<div class="fr-big"><button class="btn' + (a.primary ? ' btn-primary' : '') + '" type="button" data-fr-action="' + esc(a.id) + '" data-user="' + esc(friend.userId) + '"' + (why ? ' disabled' : '') + reason + '>' +
         (a.icon ? '<span class="fr-big-icon" aria-hidden="true">' + a.icon + '</span>' : '') + '<span>' + esc(a.label) + '</span></button>' +
@@ -432,7 +468,9 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
           (confirm?.userId === from.userId ? confirmBox(confirm.kind, from) : '') : '') + '</li>';
     }).join('');
     return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to friends</button>' +
+      '<button class="btn" type="button" data-fr="postbox-refresh">Refresh</button>' +
       '<button class="btn" type="button" data-fr="clear-read"' + (read ? '' : ' disabled') + '>Clear read' + (read ? ' (' + read + ')' : '') + '</button></div>' +
+      [...mailErrors].map(([id, line]) => '<p class="hint" role="status">Could not load ' + esc(postboxSources().find(s => s.id === id)?.label || id) + '. ' + esc(line) + '</p>').join('') +
       (mailLoading && !items.length ? loadingState('Shaking the postbox.') : !items.length
         ? emptyState({ kind: 'friends', compact: true, line: 'Empty. Not even a bill. Friends’ visitors, treats, waves and papers land here.', lineClass: 'fr-empty' })
         : '<ul class="pb-list" aria-label="Postbox, newest first">' + rows + '</ul>' +
@@ -451,14 +489,21 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   function render(focus = null) {
     if (!isOpen()) { syncTray(); return; }
     const active = document.activeElement, key = focus || (active && body.contains(active) ? focusKey(active) : null);
-    body.innerHTML = view === 'shelf' && visiting ? shelfMarkup() : view === 'serve' ? serveMarkup() : view === 'friend' && profile ? profileMarkup()
+    const retained = view === 'custom' && custom === renderedCustom;
+    if (busy && view === 'custom' && !customFocus && body.contains(active)) customFocus = active;
+    if (!retained) body.innerHTML = view === 'shelf' && visiting ? shelfMarkup() : view === 'serve' ? serveMarkup() : view === 'friend' && profile ? profileMarkup()
       : view === 'postbox' ? mailMarkup() : view === 'custom' && custom ? customMarkup() : mainMarkup();
+    if (!retained) { renderedCustom = view === 'custom' ? custom : null; customFocus = null; }
     sheet.querySelector('[data-fr-title]').textContent = title[0];
     sheet.querySelector('[data-fr-kicker]').textContent = title[1];
     if (status.textContent !== message) status.textContent = message;
-    paintSprites();
-    body.querySelectorAll('button').forEach(b => { if (busy) b.disabled = true; });
-    const target = key && sheet.querySelector(key);
+    if (!retained) paintSprites();
+    body.querySelectorAll('button').forEach(b => {
+      if (busy) { if (!buttonStates.has(b)) buttonStates.set(b, b.disabled); b.disabled = true; }
+      else if (buttonStates.has(b)) { b.disabled = buttonStates.get(b); buttonStates.delete(b); }
+    });
+    const target = !busy && retained && body.contains(customFocus) ? customFocus : key && sheet.querySelector(key);
+    if (!busy) customFocus = null;
     if (target && !target.disabled) target.focus({ preventScroll: true });
     else if (key) sheet.querySelector('h2')?.focus({ preventScroll: true });
     syncTray();
@@ -526,9 +571,14 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     const local = epochCtx();
     mailLoading = true;
     if (!quiet && view === 'postbox') render();
-    const results = await Promise.allSettled(postboxSources().map(async source => [source.id, await source.load(local)]));
+    const sources = postboxSources();
+    const results = await Promise.allSettled(sources.map(async source => [source.id, await source.load(local)]));
     if (!local.current()) return;
-    for (const r of results) if (r.status === 'fulfilled' && Array.isArray(r.value[1])) mail.set(r.value[0], r.value[1].filter(i => i && i.id).slice(0, 50));
+    results.forEach((r, i) => {
+      const id = sources[i].id;
+      if (r.status === 'fulfilled' && Array.isArray(r.value[1])) { mail.set(id, r.value[1].filter(item => item && item.id).slice(0, 50)); mailErrors.delete(id); }
+      else mailErrors.set(id, errorText(r.status === 'rejected' ? r.reason : new Error('Invalid mail response')));
+    });
     mailLoading = false; mailLoaded = true;
     render();
   }
@@ -559,9 +609,10 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     if (!isOpen()) { await open(); if (!isOpen()) return; }
     view = 'postbox'; custom = null; confirm = null; mailSafety = ''; mailShown = MAIL_PAGE; message = '';
     render('[data-fr="back"]');
+    const local = epochCtx();
     await loadMail();
-    if (view !== 'postbox') return;
-    for (const source of postboxSources()) if (source.seen) Promise.resolve().then(() => source.seen(ctx)).then(() => syncTray(), () => {});
+    if (!local.current() || view !== 'postbox') return;
+    for (const source of postboxSources()) if (source.seen) Promise.resolve().then(() => { if (local.current()) return source.seen(local); }).then(() => { if (local.current()) syncTray(); }, () => {});
   }
   async function openProfile(friend, { reload: fetch = true } = {}) {
     view = 'friend'; custom = null; confirm = null; message = '';
@@ -620,7 +671,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     const form = e.target.dataset.frForm;
     if (view === 'custom' && custom && e.target.closest('[data-fr-view]')) {
       const owner = socialView(custom.id);
-      if (owner?.onSubmit) Promise.resolve().then(() => owner.onSubmit(e.target, ctx)).catch(error => { message = errorText(error); render(); });
+      if (owner?.onSubmit) runExtension(local => owner.onSubmit(e.target, local));
       return;
     }
     if (form === 'add') {
@@ -659,7 +710,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     const action = e.target.closest('[data-fr-action]');
     if (action && !action.disabled) {
       const friend = byId(action.dataset.user), a = friend && friendActions(friend, ctx).find(x => x.id === action.dataset.frAction);
-      if (a && a.state === true) Promise.resolve().then(() => a.run(friend, ctx)).catch(error => { message = errorText(error); render(); });
+      if (a && a.state === true) runExtension(local => a.run(friend, local));
       return;
     }
     const b = e.target.closest('[data-fr]');
@@ -671,6 +722,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
       case 'share': shareCode(); break;
       case 'court': close(); window.dispatchEvent(new CustomEvent('shelflife:court')); break;
       case 'postbox': openPostbox(); break;
+      case 'postbox-refresh': loadMail(); break;
       case 'show-all': { showAll = true; const next = accepted()[HOME_FRIENDS]; render(next ? '[data-fr="profile"][data-user="' + CSS.escape(next.userId) + '"]' : null); break; }
       case 'profile': if (friend) openProfile(friend); break;
       case 'resident': if (profile) { profile.resident = profile.resident === b.dataset.res ? '' : b.dataset.res; render('[data-fr="resident"][data-res="' + CSS.escape(b.dataset.res) + '"]'); } break;
@@ -689,7 +741,8 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
       case 'mail-safety': mailSafety = mailSafety === b.dataset.key ? '' : b.dataset.key; confirm = null; render('[data-fr="mail-safety"][data-key="' + CSS.escape(b.dataset.key) + '"]'); break;
       case 'mail-more': mailShown += MAIL_PAGE; render('[data-fr="mail-more"]'); break;
       case 'clear-read': act(async current => {
-        for (const source of postboxSources()) if (source.clear) await source.clear(ctx);
+        const local = epochCtx();
+        for (const source of postboxSources()) if (source.clear && local.current()) await source.clear(local);
         if (!current()) return;
         await loadMail({ quiet: true });
         if (current()) message = 'Read post cleared. The rest is still glaring at you.';
@@ -722,16 +775,15 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   // A [data-sx] button belongs to a postbox row, a section or a custom view.
   function routeSx(el) {
     const action = el.dataset.sx, row = el.closest('[data-fr-mail]'), section = el.closest('[data-fr-section]'), owned = el.closest('[data-fr-view]');
-    const fail = error => { message = errorText(error); render(); };
     if (row) {
       const source = postboxSources().find(s => s.id === row.dataset.frMail);
-      if (source?.onClick) Promise.resolve().then(() => source.onClick(action, el.dataset.sxId || row.dataset.frItem, ctx)).catch(fail);
+      if (source?.onClick) runExtension(local => source.onClick(action, el.dataset.sxId || row.dataset.frItem, local));
     } else if (section) {
       const s = [...friendsSections('home'), ...friendsSections('friend')].find(x => x.id === section.dataset.frSection);
-      if (s?.onClick) Promise.resolve().then(() => s.onClick(action, el, ctx, profile?.friend || null)).catch(fail);
+      if (s?.onClick) runExtension(local => s.onClick(action, el, local, profile?.friend || null));
     } else if (owned && custom) {
       const owner = socialView(custom.id);
-      if (owner?.onClick) Promise.resolve().then(() => owner.onClick(action, el, ctx)).catch(fail);
+      if (owner?.onClick) runExtension(local => owner.onClick(action, el, local));
     }
   }
 
@@ -760,7 +812,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   cloud.subscribe(() => { if (scopeSent() && isOpen()) close(); });
   sync.subscribe(() => { syncTray(); if (isOpen() && !social.signedIn()) close(); });
   syncTray();
-  return { open, close, refresh: render, openPostbox, ctx };
+  return { open, close, refresh: render, openPostbox, get ctx() { return ctx; } };
 }
 
 const POSTBOX_ICON = '<svg viewBox="0 0 40 40"><path d="M9 34V18a11 11 0 0 1 22 0v16Z" fill="currentColor" opacity=".18" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 20h12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M20 34v4" stroke="currentColor" stroke-width="2"/><path d="M27 10h7v5h-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';

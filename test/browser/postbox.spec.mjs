@@ -21,9 +21,6 @@ const test = base.extend({
 });
 test.use({ serviceWorkers: 'block' });
 test.describe.configure({ timeout: 240000 });
-test.beforeEach(({}, testInfo) => {
-  test.skip(testInfo.project.name === 'mobile-webkit', 'The social layer is checked in Chromium, at desktop and phone widths');
-});
 
 const DAY = 86400000;
 const read = (page, key) => page.evaluate(k => JSON.parse(localStorage.getItem(k)), key);

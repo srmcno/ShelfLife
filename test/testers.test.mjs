@@ -367,3 +367,52 @@ test('replaying the first-day tour starts at step one and counts only what happe
   assert.equal(advanceGuide(reloaded, now), null);
   assert.equal(replayGuide(blankState(), now), null, 'no tour without a resident');
 });
+
+
+for (const signedIn of [false, true]) test(`feedback never claims a report is queued after a storage write fails (${signedIn ? 'signed in, offline' : 'signed out'})`, async () => {
+  const { fake, cloud, feedback, storage } = await world();
+  if (signedIn) { await cloud.signInAnonymously(); fake.setOffline(true); }
+  storage.setItem = () => { throw new Error('storage full'); };
+  await assert.rejects(feedback.submit(report()), error => error.code === 'storage_failed');
+  assert.deepEqual(feedback.queued(), []);
+  assert.match(feedbackText({ code: 'storage_failed' }), /could not keep/);
+});
+
+test('feedback read failure does not overwrite previous reports with an empty queue', async () => {
+  const { feedback, storage } = await world();
+  await feedback.submit(report()); const previous = storage.items.get(FEEDBACK_KEY);
+  let writes = 0;
+  storage.getItem = () => { throw new Error('storage inaccessible'); };
+  storage.setItem = () => { writes++; };
+  await assert.rejects(feedback.submit(report()), error => error.code === 'storage_failed');
+  assert.equal(writes, 0); assert.equal(storage.items.get(FEEDBACK_KEY), previous);
+});
+
+test('a server-acknowledged report remains sent when its queued copy cannot be removed', async () => {
+  const { feedback, storage, cloud, fake } = await world();
+  const draft = report(); await feedback.submit(draft); await cloud.signInAnonymously();
+  const write = storage.setItem; storage.setItem = () => { throw new Error('storage full'); };
+  assert.equal(await feedback.submit(draft), 'sent'); assert.equal(feedback.queued().length, 1);
+  assert.deepEqual(await feedback.flush(), { sent: 1, left: 1 });
+  storage.setItem = write;
+  assert.deepEqual(await feedback.flush(), { sent: 1, left: 0 });
+  assert.equal(fake.feedback.feedback.length, 1, 'retries file the same client id once');
+});
+
+test('unavailable default local storage cannot claim durable feedback storage', async () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('storage denied'); } });
+  try { await assert.rejects(createFeedback().submit(report()), error => error.code === 'storage_failed'); }
+  finally { if (original) Object.defineProperty(globalThis, 'localStorage', original); else delete globalThis.localStorage; }
+});
+
+
+test('play-day metadata cannot overwrite queued feedback after a storage read fails', async () => {
+  const { feedback, storage, cloud } = await world();
+  await feedback.submit(report()); const previous = storage.items.get(FEEDBACK_KEY);
+  await cloud.signInAnonymously(); let writes = 0;
+  storage.getItem = () => { throw new Error('storage inaccessible'); };
+  storage.setItem = () => { writes++; };
+  feedback.resumePlayDays(); await feedback.markPlayDay(); await feedback.forgetPlayDays();
+  assert.equal(writes, 0); assert.equal(storage.items.get(FEEDBACK_KEY), previous);
+});

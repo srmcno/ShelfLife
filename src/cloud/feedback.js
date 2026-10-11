@@ -28,10 +28,12 @@ export const FEEDBACK_TEXT = {
   refused: 'The server would not take that report. Copy it instead and send it by email.',
   offline: 'No connection. The report is kept on this device and goes when you are back online.',
   signed_out: 'Kept on this device. It goes when you sign in to cloud save.',
+  storage_failed: 'This device could not keep the report. Your draft is still here. Copy it or try again.',
   unexpected: 'The cloud did not answer properly. The report is kept on this device for another try.'
 };
 export function feedbackCode(error) {
   if (!error) return 'unexpected';
+  if (error.code === 'storage_failed') return 'storage_failed';
   if (PERMANENT.has(error.code) || (error.code === 'P0001' && PERMANENT.has(error.message))) return error.code === 'P0001' ? error.message : error.code;
   const code = socialCode(error);
   return code === 'bad_score' ? 'refused' : code;
@@ -41,13 +43,10 @@ export function feedbackText(error) {
   return FEEDBACK_TEXT[PERMANENT.has(code) ? (code === 'too_large' ? 'too_large' : 'refused') : code] || FEEDBACK_TEXT.unexpected;
 }
 
-function memoryStorage() {
-  const items = new Map();
-  return { getItem: k => items.get(k) ?? null, setItem: (k, v) => { items.set(k, String(v)); }, removeItem: k => { items.delete(k); } };
-}
 function defaultStorage() {
-  try { return globalThis.localStorage || memoryStorage(); } catch { return memoryStorage(); }
+  try { return globalThis.localStorage || null; } catch { return null; }
 }
+const storageError = () => new CloudError(FEEDBACK_TEXT.storage_failed, { code: 'storage_failed' });
 const record = value => !!value && typeof value === 'object' && !Array.isArray(value);
 
 // A queued report as the server will want it, or null if it is not one.
@@ -70,34 +69,40 @@ export function createFeedback({ cloud, storage = defaultStorage(), now = Date.n
   const listeners = new Set();
   let flushing = null;
 
-  function meta() {
+  function meta(required = false) {
     try {
       const value = JSON.parse(storage.getItem(FEEDBACK_KEY) || '{}');
       return record(value) ? value : {};
-    } catch { return {}; }
+    } catch { if (required) throw storageError(); return {}; }
   }
-  function setMeta(patch) {
-    const next = { ...meta(), ...patch };
+  function setMeta(patch, required = false) {
+    let previous;
+    // Even best-effort play-day metadata must not overwrite a queue we could
+    // not read. Reports and counters share this one storage record.
+    try { previous = meta(true); } catch (error) { if (required) throw error; return null; }
+    const next = { ...previous, ...patch };
     Object.keys(next).forEach(key => { if (next[key] === undefined) delete next[key]; });
-    try { storage.setItem(FEEDBACK_KEY, JSON.stringify(next)); } catch { /* a full disk keeps nothing; the UI offers Copy report */ }
+    try { storage.setItem(FEEDBACK_KEY, JSON.stringify(next)); } catch { if (required) throw storageError(); }
     return next;
   }
   const emit = () => listeners.forEach(fn => { try { fn({ queued: queued().length }); } catch { /* the UI's problem */ } });
 
   const configured = () => !!cloud?.configured;
   const signedIn = () => configured() && cloud.signedIn();
-  function queued() {
-    const seen = new Set();
-    return (Array.isArray(meta().queue) ? meta().queue : []).map(cleanReport).filter(r => r && !seen.has(r.client_id) && seen.add(r.client_id)).slice(-MAX_QUEUE);
+  function queued(required = false) {
+    const seen = new Set(), queue = meta(required).queue;
+    return (Array.isArray(queue) ? queue : []).map(cleanReport).filter(r => r && !seen.has(r.client_id) && seen.add(r.client_id)).slice(-MAX_QUEUE);
   }
   function keep(report) {
-    const list = queued().filter(r => r.client_id !== report.client_id);
+    const list = queued(true).filter(r => r.client_id !== report.client_id);
     list.push(report);
-    setMeta({ queue: list.slice(-MAX_QUEUE) });
+    setMeta({ queue: list.slice(-MAX_QUEUE) }, true);
     emit();
   }
   function drop(id) {
-    setMeta({ queue: queued().filter(r => r.client_id !== id) });
+    const queue = queued(true);
+    if (!queue.some(r => r.client_id === id)) return;
+    setMeta({ queue: queue.filter(r => r.client_id !== id) }, true);
     emit();
   }
 
@@ -111,17 +116,21 @@ export function createFeedback({ cloud, storage = defaultStorage(), now = Date.n
   }
 
   // 'sent' or 'queued'. Throws (with .code) only for a refusal a retry cannot fix
-  // or the daily limit; anything that might work later is queued instead.
+  // or the daily limit, and when this device cannot persist a queued report.
   async function submit(raw) {
     const report = cleanReport(raw);
     if (!report) throw new CloudError(FEEDBACK_TEXT.refused, { code: 'bad_feedback' });
     if (!signedIn()) { keep(report); return 'queued'; }
-    try { await send(report); drop(report.client_id); return 'sent'; }
+    try { await send(report); }
     catch (error) {
       const code = feedbackCode(error);
       if (code === 'offline' || code === 'unexpected' || code === 'signed_out') { keep(report); return 'queued'; }
       throw Object.assign(new CloudError(feedbackText(error), { code, status: error?.status || 0 }), { report });
     }
+    // The server has acknowledged this id. A stuck queued copy is safe to retry
+    // idempotently, and does not make the acknowledged submission fail.
+    try { drop(report.client_id); } catch (error) { if (error.code !== 'storage_failed') throw error; }
+    return 'sent';
   }
 
   // Sends what is waiting, oldest first. Stops at the first thing that says "not now".
@@ -131,10 +140,13 @@ export function createFeedback({ cloud, storage = defaultStorage(), now = Date.n
       let sent = 0;
       if (!signedIn()) return { sent, left: queued().length };
       for (const report of queued()) {
-        try { await send(report); drop(report.client_id); sent++; }
+        try { await send(report); sent++; drop(report.client_id); }
         catch (error) {
           const code = feedbackCode(error);
-          if (PERMANENT.has(code)) { drop(report.client_id); continue; }
+          if (PERMANENT.has(code)) {
+            try { drop(report.client_id); } catch { break; }
+            continue;
+          }
           break;
         }
       }

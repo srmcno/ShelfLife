@@ -36,7 +36,7 @@ async function setup(page) {
     registry.registerFriendAction({ id: 'fake-hidden', label: 'Fake hidden', available: () => false, run() {} });
     registry.registerFriendAction({ id: 'fake-open', label: 'Fake open view', run: (f, ctx) => ctx.show({ id: 'fake-view', title: 'Fake view for ' + f.name, kicker: 'Fake plugin', html: '<button data-sx="delay">Fake delayed action</button><button data-sx="missing">Fake unhandled action</button><form id="fakeForm"><label>Fake message<input name="message"></label><button>Fake submit</button></form>', back: 'friend:' + f.userId }) });
     registry.registerSocialView('fake-view', { onClick: async (action, _, ctx) => {
-      if (action === 'delay') { await new Promise(resolve => plugin.pending.push(resolve)); ctx.say('OLD fake action'); ctx.show({ id: 'fake-view', title: 'OLD fake view', html: '<p>Old account</p>' }); ctx.state.fakeOldWrite = true; ctx.save(); }
+      if (action === 'delay') { await new Promise(resolve => plugin.pending.push(resolve)); ctx.say('OLD fake action'); ctx.show({ id: 'fake-view', title: 'OLD fake view', html: '<p>Old account</p>' }); plugin.blockedClients = await Promise.allSettled([Promise.resolve().then(() => ctx.cloud.rpc('mark_play_day', { p_day: '2026-10-12' })), Promise.resolve().then(() => ctx.postbox.setDnd(true))]); ctx.state.fakeOldWrite = true; ctx.save(); }
     }, onSubmit: (form, ctx) => { ctx.state.fakeSocialMessage = new FormData(form).get('message'); ctx.save(); ctx.renderAll(); ctx.say('Fake message saved'); } });
     registry.registerPostboxSource({ id: 'fake-mail', label: 'Fake mail', poll: true, count: () => plugin.count,
       load: async ctx => { plugin.loads.push(ctx.me.userId); if (plugin.delayed) await new Promise(resolve => plugin.pending.push(resolve)); if (plugin.fail) throw Error('Fake source unavailable'); return [{ id: 'old', at: 1, title: 'Fake older mail', line: 'For ' + ctx.me.userId }, { id: 'new', at: 2, title: 'Fake newer mail', line: 'For ' + ctx.me.userId }]; },
@@ -46,7 +46,7 @@ async function setup(page) {
   return { fake, ada, bea };
 }
 async function openFriends(page) { await page.locator('#tabMore').click(); await page.locator('#friendsBtn').click(); await expect(page.locator('#frAdd')).toBeVisible(); }
-async function visit(page, bea) { await page.locator('[data-fr="menu"][data-user="' + bea.id + '"]').click(); await page.locator('[data-fr="visit"][data-user="' + bea.id + '"]').click(); }
+async function visit(page, bea) { await page.locator('[data-fr="profile"][data-user="' + bea.id + '"]').click(); }
 
 test('registered fake actions, sections, views and mail affect the actual Friends UI', async ({ page }) => {
   const { ada, bea } = await setup(page); await openFriends(page);
@@ -63,10 +63,10 @@ test('registered fake actions, sections, views and mail affect the actual Friend
   await page.locator('#fakeForm input').fill('A saved fake message'); await page.getByRole('button', { name: 'Fake submit' }).click();
   await expect(page.locator('.fr-status')).toHaveText('Fake message saved');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.v4')).fakeSocialMessage)).toBe('A saved fake message');
-  await page.locator('[data-fr="extension-back"]').click(); await expect(page.locator('#friendsSheet h2')).toHaveText('Bea’s shelf');
+  await page.locator('[data-fr="custom-back"]').click(); await expect(page.locator('#friendsSheet h2')).toHaveText('Bea');
   await page.locator('[data-fr="back"]').click(); await page.locator('[data-fr="postbox"]').click();
-  await expect(page.locator('[data-sx-source="fake-mail"]')).toHaveCount(2);
-  expect(await page.locator('[data-sx-source="fake-mail"] h3').allTextContents()).toEqual(['Fake newer mail', 'Fake older mail']);
+  await expect(page.locator('[data-fr-mail="fake-mail"]')).toHaveCount(2);
+  expect(await page.locator('[data-fr-mail="fake-mail"] b').allTextContents()).toEqual(['Fake newer mail', 'Fake older mail']);
   await page.getByRole('button', { name: 'Fake mail action' }).click(); await expect(page.locator('.fr-status')).toHaveText('Fake mail handled');
   expect(await page.evaluate(() => fakeSocialPlugin.clicks)).toEqual(['button']);
 });
@@ -83,7 +83,10 @@ test('custom form errors preserve values and focus for retry, while a fresh view
     registry.registerSocialView('fake-retry', { onSubmit: async (form, ctx) => {
       const values = Object.fromEntries(new FormData(form));
       values.choice = new FormData(form).getAll('choice'); plugin.formAttempts.push(values);
-      await new Promise(resolve => plugin.pending.push(resolve));
+      const button = form.querySelector('#fakeRetrySubmit');
+      button.disabled = true;
+      try { await new Promise(resolve => plugin.pending.push(resolve)); }
+      finally { button.disabled = false; }
       if (plugin.formFail) throw Error('Deliberately failed fake form');
       ctx.state.fakeRetryValues = values; ctx.save(); ctx.renderAll(); ctx.say('Fake retry saved');
     }, onClick: (_, __, ctx) => show(ctx) });
@@ -125,7 +128,7 @@ test('registered mail polls only in the foreground and shows recoverable source 
   await page.evaluate(() => { fakeSocialPlugin.fail = true; window.dispatchEvent(new CustomEvent('shelflife:resume')); });
   await page.locator('[data-fr="postbox"]').click(); await expect(page.locator('#friendsSheet')).toContainText('Could not load Fake mail');
   await page.evaluate(() => { fakeSocialPlugin.fail = false; }); await page.locator('[data-fr="postbox-refresh"]').click();
-  await expect(page.locator('[data-sx-source="fake-mail"]')).toHaveCount(2);
+  await expect(page.locator('[data-fr-mail="fake-mail"]')).toHaveCount(2);
   await expect(page.locator('#friendsSheet')).not.toContainText('Could not load Fake mail');
   await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { configurable: true, value: false }));
   const offline = await loads(); await page.clock.fastForward(30001); expect(await loads()).toBe(offline);
@@ -152,7 +155,8 @@ test('delayed fake mail and custom view callbacks cannot paint or save into a re
   await expect(page.locator('#friendsSheet h2')).toHaveText('Friends');
   await expect(page.locator('.fr-status')).not.toContainText('OLD');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.v4')).fakeOldWrite)).toBeUndefined();
-  await page.locator('[data-fr="postbox"]').click(); await expect(page.locator('[data-sx-source="fake-mail"]')).toHaveCount(2);
+  expect(await page.evaluate(() => fakeSocialPlugin.blockedClients.map(r => [r.status, r.reason?.code]))).toEqual([['rejected', 'signed_out'], ['rejected', 'signed_out']]);
+  await page.locator('[data-fr="postbox"]').click(); await expect(page.locator('[data-fr-mail="fake-mail"]')).toHaveCount(2);
   await expect(page.locator('#friendsSheet')).toContainText('For ' + replacement); await expect(page.locator('#friendsSheet')).not.toContainText('For ' + ada.id);
 });
 
@@ -168,15 +172,15 @@ test('broken fake renderers and missing custom handlers leave the Friends sheet 
     registry.registerFriendAction({ id: 'fake-error', label: 'Fake failing action', run: async () => { throw Error('Deliberately failed fake action'); } });
   });
   await openFriends(page); await expect(page.locator('#friendsSheet')).toContainText('This Friends section is unavailable.');
-  await page.locator('[data-fr="postbox"]').click(); await expect(page.locator('[data-sx-source="fake-fallback"]')).toContainText('<b>Fake text</b>');
-  await expect(page.locator('[data-sx-source="fake-fallback"] img')).toHaveCount(0);
-  await expect(page.locator('[data-sx-source="fake-raw"] img')).toHaveCount(0);
+  await page.locator('[data-fr="postbox"]').click(); await expect(page.locator('[data-fr-mail="fake-fallback"]')).toContainText('<b>Fake text</b>');
+  await expect(page.locator('[data-fr-mail="fake-fallback"] img')).toHaveCount(0);
+  await expect(page.locator('[data-fr-mail="fake-raw"] img')).toHaveCount(0);
   expect(await page.evaluate(() => globalThis.fakeMarkupExecuted)).toBeUndefined();
   await page.locator('[data-fr="back"]').click(); await visit(page, bea);
   await page.getByRole('button', { name: 'Fake failing action' }).click(); await expect(page.locator('.fr-status')).not.toBeEmpty();
   await page.getByRole('button', { name: 'Fake missing owner' }).click(); await page.getByRole('button', { name: 'Fake unknown click' }).click();
   await page.getByRole('button', { name: 'Fake unknown submit' }).click(); await expect(page.locator('#friendsSheet h2')).toHaveText('Fake unregistered view');
-  await page.locator('[data-fr="extension-back"]').click(); await expect(page.locator('#frAdd')).toBeVisible();
+  await page.locator('[data-fr="custom-back"]').click(); await expect(page.locator('#frAdd')).toBeVisible();
   await page.evaluate(async () => { const registry = await import('/src/ui/social-registry.js'); registry.resetSocialRegistry(); registry.registerPostboxSource({ id: 'fake-empty', load: async () => [] }); });
-  await page.locator('[data-fr="postbox"]').click(); await expect(page.locator('#friendsSheet')).toContainText('No mail waiting.');
+  await page.locator('[data-fr="postbox"]').click(); await expect(page.locator('#friendsSheet')).toContainText('Empty. Not even a bill.');
 });

@@ -3,6 +3,8 @@ import { householdFixture } from '../household-fixtures.mjs';
 import { createFakeSupabase } from '../support/fake-supabase.mjs';
 import { socialPlayer } from '../support/social-world.mjs';
 import { VERSION } from '../../src/version.js';
+import { dailyChallenge } from '../../src/engine/daily.js';
+import { firstStackDrop } from './support/stack.mjs';
 
 // Tools for testers: Report a problem (signed in, and queued while signed
 // out), the broken-shelf notice, What's new, the check-in card and the tester
@@ -71,7 +73,6 @@ async function fits(page) {
 }
 
 test.describe('with the fake cloud', () => {
-  test.beforeEach(({}, testInfo) => test.skip(testInfo.project.name !== 'desktop-chromium', 'The network paths are checked once; layouts below run on phones'));
 
   test('a signed-in player sees exactly what will be sent, then sends it in one go', async ({ page }) => {
     const { fake } = await signedIn(page);
@@ -101,7 +102,7 @@ test.describe('with the fake cloud', () => {
     expect(row).toMatchObject({ kind: 'bug', body: 'The raisin funeral never ended. It is day three.', doing: 'court', app_version: VERSION, platform: 'web' });
     expect(row.client_id).toBe(raw.client_id);
     expect(row.diagnostics).toEqual(raw.diagnostics);
-    expect(row.diagnostics.errors.map(e => e.message)).toEqual(['Uncaught Error: ' + DELIBERATE]);
+    expect(row.diagnostics.errors.map(e => e.message)).toEqual([expect.stringContaining(DELIBERATE)]);
     expect(row.diagnostics).toMatchObject({ residents: 3, cloud: 'guest', online: true, calm: false, tester: false });
     expect(JSON.stringify(row)).not.toContain('Agnes');
     await page.locator('[data-fb-finish]').click();
@@ -111,8 +112,10 @@ test.describe('with the fake cloud', () => {
     await expect(page.locator('#fbBody')).toHaveValue('');
   });
 
-  test('signed out, a report waits on the device, can be copied, and goes when the player signs in', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  test('signed out, a report waits on the device, can be copied, and goes when the player signs in', async ({ page, context }, testInfo) => {
+    // Playwright WebKit exposes clipboard-read but not clipboard-write. The
+    // real Copy click supplies the user gesture needed for writing there.
+    await context.grantPermissions(testInfo.project.name === 'mobile-webkit' ? ['clipboard-read'] : ['clipboard-read', 'clipboard-write']);
     const fake = createFakeSupabase();
     await open(page, { fake });
     await openReport(page);
@@ -179,7 +182,6 @@ test.describe('with the fake cloud', () => {
 });
 
 test('the broken-shelf notice appears once a session and opens the report with the error', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium', 'Checked once');
   await open(page, { prompts: true });
   await page.evaluate(msg => setTimeout(() => { throw new Error(msg); }), DELIBERATE);
   const notice = page.locator('#brokeNotice');
@@ -196,7 +198,6 @@ test('the broken-shelf notice appears once a session and opens the report with t
 });
 
 test('What’s new shows once after an update, never again, and never on a brand-new install', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name === 'mobile-webkit', 'Chromium only');
   await open(page, { prompts: true, snapshot: household(s => { delete s.testing; }) });
   const veil = page.locator('#whatsNewVeil');
   await expect(veil).toBeVisible({ timeout: 10_000 });
@@ -218,14 +219,12 @@ test('What’s new shows once after an update, never again, and never on a brand
 });
 
 test('a brand-new install is not told what is new', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium', 'Checked once');
   await open(page, { prompts: true, snapshot: null });
   await page.waitForTimeout(2500);
   await expect(page.locator('#whatsNewVeil')).toBeHidden();
 });
 
 test('seven taps on the version line open the tester panel, and its tools mark the save', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name === 'mobile-webkit', 'Chromium only');
   await open(page);
   await page.locator('#tabMore').click();
   const line = page.locator('#versionLine');
@@ -264,7 +263,6 @@ test('seven taps on the version line open the tester panel, and its tools mark t
 });
 
 test('?tester=1 opens the panel, and the clock moves a day on and back', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium', 'Checked once');
   await open(page, { path: '/?tester=1' });
   await expect(page.locator('#testerVeil')).toBeVisible();
   await expect(page.locator('#testerSheet .tp-clock')).toContainText('Clock: real time');
@@ -282,7 +280,7 @@ test('?tester=1 opens the panel, and the clock moves a day on and back', async (
 });
 
 test('the report sheet, the panel and help fit a small phone', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile-chromium', 'Phone widths');
+  test.skip(!testInfo.project.name.startsWith('mobile-'), 'This case checks small-phone layouts');
   await page.setViewportSize({ width: 320, height: 640 });
   await open(page, { fake: createFakeSupabase() });
   await openReport(page);
@@ -304,4 +302,117 @@ test('the report sheet, the panel and help fit a small phone', async ({ page }, 
   await fits(page);
   await page.locator('#helpTesters [data-tn-report]').click();
   await expect(page.locator('#feedbackVeil')).toBeVisible();
+});
+
+
+test('feedback storage failure preserves the review, Copy and retry, then persists the queued report', async ({ page }) => {
+  const fake = createFakeSupabase(); await open(page, { fake }); await openReport(page);
+  const text = 'Keep this report when device storage fails.';
+  await write(page, { body: text });
+  await page.evaluate(() => {
+    const setItem = Storage.prototype.setItem;
+    globalThis.feedbackStorageBlocked = true;
+    Storage.prototype.setItem = function(key, value) {
+      if (key === 'shelflife.feedback' && globalThis.feedbackStorageBlocked) throw new DOMException('Deliberate feedback storage fault', 'QuotaExceededError');
+      return setItem.call(this, key, value);
+    };
+    // The clipboard is deliberately mocked; exercise the production Copy handler.
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async value => { globalThis.copiedFeedback = value; } } });
+  });
+  await page.locator('[data-fb-send]').click();
+  await expect(page.locator('#fbStatus')).toContainText('could not keep the report');
+  await expect(page.locator('[data-fb-step="done"]')).toHaveCount(0);
+  await expect(page.locator('[data-fb-send]')).toBeEnabled();
+  await page.locator('[data-fb-copy]').click();
+  expect(await page.evaluate(() => copiedFeedback)).toContain(text);
+  await page.locator('[data-fb-back]').click(); await expect(page.locator('#fbBody')).toHaveValue(text);
+  await page.locator('[data-fb-review]').click();
+  await page.evaluate(() => { feedbackStorageBlocked = false; });
+  await page.locator('[data-fb-send]').click(); await expect(page.locator('.fb-done')).toContainText('Kept on this device');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.feedback')).queue[0].body)).toBe(text);
+  await page.reload(); await expect(page.locator('#cabinet .piece.pet')).toHaveCount(3);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.feedback')).queue[0].body)).toBe(text);
+  expect(fake.feedback.feedback).toHaveLength(0);
+});
+
+test('feedback sends a signed-in report across desktop and mobile browsers', async ({ page }) => {
+  const { fake } = await signedIn(page); await openReport(page);
+  await write(page, { body: 'Mobile feedback sends the reviewed report.' });
+  await page.locator('[data-fb-send]').click(); await expect(page.locator('.fb-done')).toContainText('Sent');
+  expect(fake.feedback.feedback).toHaveLength(1);
+  expect(fake.feedback.feedback[0].body).toBe('Mobile feedback sends the reviewed report.');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.feedback') || '{}').queue || [])).toEqual([]);
+});
+
+
+test('an unsigned report survives reload and goes once when cloud save is enabled', async ({ page }) => {
+  const fake = createFakeSupabase(); await open(page, { fake }); await openReport(page);
+  await write(page, { body: 'This queued report must survive reload and sign-in.', doing: '' });
+  await page.locator('[data-fb-send]').click(); await expect(page.locator('.fb-done')).toContainText('Kept on this device');
+  const clientId = await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.feedback')).queue[0].client_id);
+  expect(fake.calls('submit_feedback')).toHaveLength(0);
+  await page.reload(); await expect(page.locator('#cabinet .piece.pet')).toHaveCount(3);
+  await page.locator('#tabMore').click(); await expect(page.locator('#feedbackBtnSub')).toHaveText('One report waiting to send');
+  await page.locator('#cloudBtn').click(); await page.locator('#cloudEnable').click();
+  await expect.poll(() => fake.feedback.feedback.length).toBe(1);
+  expect(fake.feedback.feedback[0]).toMatchObject({ client_id: clientId, body: 'This queued report must survive reload and sign-in.' });
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.feedback')).queue.length)).toBe(0);
+  await page.reload(); await expect(page.locator('#cabinet .piece.pet')).toHaveCount(3);
+  expect(fake.feedback.feedback).toHaveLength(1);
+});
+
+function chicagoDay(time) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(new Date(time)).map(p => [p.type, p.value]));
+  return parts.year + '-' + (Number(parts.month) - 1) + '-' + Number(parts.day);
+}
+
+test('a save marked by the tester panel can earn a real daily score without posting to competition', async ({ page }) => {
+  const now = [0, 1, 2, 3].map(n => Date.now() + n * DAY).find(time => dailyChallenge(chicagoDay(time)).game === 'stack');
+  expect(now).not.toBeUndefined();
+  const fake = createFakeSupabase({ now: () => now });
+  const snapshot = householdFixture('established', now);
+  snapshot.settings.theatreOn = false; snapshot.lastBackup = now;
+  snapshot.testing = household().testing;
+  const player = await socialPlayer(fake, 'Tester', snapshot, { now: () => now });
+  await page.clock.install({ time: now });
+  await open(page, { fake, snapshot, meta: { session: player.session, socialUser: player.id }, path: '/?tester=1' });
+  await expect(page.locator('#testerVeil')).toBeVisible();
+  await page.locator('[data-tp="emergency"]').click();
+  await expect(page.locator('#testerSheet .tp-status')).toContainText('This is a tester save.');
+  expect((await saved(page)).tester).toBe(true);
+  await page.locator('[data-tp-close]').click();
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: 'stack' } })));
+  await page.locator('[data-ar="challenge"]').click(); await firstStackDrop(page);
+  await expect.poll(async () => Number(await page.locator('[data-ar-score]').textContent())).toBeGreaterThan(0);
+  await page.locator('#arcadeSheet [data-ar="close"]').click();
+  await expect(page.locator('#arcadeVeil')).toBeHidden();
+  expect((await saved(page)).arcade.daily.best).toBeGreaterThan(0);
+  expect(fake.calls('submit_score')).toHaveLength(0);
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('shelflife:arcade', { detail: { game: 'stack' } })));
+  await expect(page.locator('#arcadeSheet .ar-board')).toBeVisible();
+  expect(fake.calls('submit_score')).toHaveLength(0);
+});
+
+test('play-day opt-out clears referral days and blocks recounting until the player opts in', async ({ page }) => {
+  const { fake, player } = await signedIn(page);
+  await expect.poll(() => fake.feedback.playDays.length).toBe(1);
+  const activeDays = () => [...fake.social.coven.activeDays].filter(key => key.startsWith(player.id + '|'));
+  await page.evaluate(async () => { const { cloud } = await import('/src/cloud/index.js'); await cloud.rpc('mark_active_day', {}); });
+  expect(activeDays()).toHaveLength(1);
+  await page.locator('#tabMore').click(); await page.locator('#playDaysBtn').click();
+  await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(() => fake.feedback.playDays.length).toBe(0);
+  await expect.poll(() => activeDays().length).toBe(0);
+  const blocked = await page.evaluate(async () => { const { cloud } = await import('/src/cloud/index.js'); return cloud.rpc('mark_active_day', {}); });
+  expect(blocked).toMatchObject({ ok: true, counted: false, opted_out: true, days: 0 });
+  expect(activeDays()).toHaveLength(0);
+  await page.reload(); await expect(page.locator('#cabinet .piece.pet')).toHaveCount(3);
+  await page.locator('#tabMore').click(); await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'false');
+  expect(fake.feedback.playDays).toHaveLength(0);
+  await page.locator('#playDaysBtn').click(); await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => fake.feedback.playDays.length).toBe(1);
+  const resumed = await page.evaluate(async () => { const { cloud } = await import('/src/cloud/index.js'); return cloud.rpc('mark_active_day', {}); });
+  expect(resumed).toMatchObject({ ok: true, counted: true, days: 1 });
+  expect(activeDays()).toHaveLength(1);
+  expect((await saved(page)).testing.countDays).toBe(true);
 });
