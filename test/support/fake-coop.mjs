@@ -76,6 +76,7 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
   const friendly = (uid, other) => !!other && other !== uid && areFriends(uid, other) && !blocked(uid, other);
   class Refusal { constructor(token) { this.token = token; } }
   const stop = token => { throw new Refusal(token); };
+  const requests = new Map();
 
   function limit(uid, kind, max, windowMs) {
     if (attempts.filter(a => a.user === uid && a.kind === kind && a.at > now() - windowMs).length >= max) stop('rate_limited');
@@ -457,18 +458,28 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
         const detail = item.detail === undefined || item.detail === null ? null : item.detail;
         if (detail !== null && (typeof detail !== 'object' || Array.isArray(detail) || JSON.stringify(detail).length > 4096)) stop('bad_op');
         checkSemantic(user.id, item.id, detail, item.delta, item.earned, stop);
-        const had = receiptOf(user.id, 'game', item.id) || staged.find(x => x.id === item.id);
-        if (had) {
-          if (had.delta !== item.delta || had.earned !== item.earned || !same(had.detail ?? null, detail)) stop('bad_op');
-          staged.push({ id: item.id, same: true, delta: had.delta, earned: had.earned, detail: had.detail ?? null });
+        const req = { delta: item.delta, earned: item.earned, detail };
+        const had = receiptOf(user.id, 'game', item.id);
+        const inBatch = staged.find(x => x.id === item.id);
+        if (had || inBatch) {
+          const asked = had ? (requests.get(had.id) ?? { delta: had.delta, earned: had.earned, detail: had.detail ?? null }) : inBatch.req;
+          if (!same(asked, req)) stop('bad_op');
+          staged.push({ id: item.id, same: true, req });
           continue;
         }
-        staged.push({ id: item.id, delta: item.delta, earned: item.earned, detail });
+        staged.push({ id: item.id, delta: item.delta, earned: item.earned, detail, req });
       }
-      const made = new Map();
       const out = staged.map(x => {
-        if (!x.same) { const r = append(user.id, 'game', x.id, x.delta, x.earned, x.detail); made.set(x.id, r); return r; }
-        return receiptOf(user.id, 'game', x.id);
+        if (x.same) return receiptOf(user.id, 'game', x.id);
+        let { delta, earned, detail } = x;
+        // At most 3 paid Joint Bench rewards a local day: the rest are canonical unpaid.
+        if (detail?.reward === 'joint_bench' && detail.paid === true) {
+          const paid = receipts.filter(r => r.owner === user.id && r.kind === 'game' && r.detail?.reward === 'joint_bench' && r.detail.day === detail.day && r.detail.paid === true).length;
+          if (paid >= 3) { detail = { ...detail, paid: false }; delta = 0; earned = 0; }
+        }
+        const r = append(user.id, 'game', x.id, delta, earned, detail);
+        requests.set(r.id, x.req);
+        return r;
       });
       return { ok: true, receipts: out.map(receiptJson), balance: available(user.id), last_seq: w.last_seq };
     },

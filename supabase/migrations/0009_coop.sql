@@ -1403,6 +1403,16 @@ as $$
   select private.coop_wallet_json(private.require_user());
 $$;
 
+-- What a game receipt was asked to be, when the server settled it differently
+-- (a Joint Bench reward past the daily limit). Never exposed to players.
+create table if not exists private.coop_receipt_requests (
+  receipt_id uuid primary key references public.coop_receipts (id) on delete cascade,
+  owner uuid not null references auth.users (id) on delete cascade,
+  requested jsonb not null
+);
+alter table private.coop_receipt_requests enable row level security;
+revoke all on table private.coop_receipt_requests from public, anon, authenticated;
+
 -- The shared purse. Souls the player earns or spends outside Co-op still count
 -- toward the balance a stake is checked against, and the lifetime counter.
 -- p_ops is [{ id uuid, delta int, earned int, detail? object }], at most 100,
@@ -1418,6 +1428,11 @@ $$;
 -- Answers { ok, receipts: [one per op, in order], balance, last_seq }. The
 -- client skips only receipts matching an operation it already applied; a
 -- receipt it never applied (an older backup, a second device) it replays.
+--
+-- Joint Bench rewards are paid at most 3 times per detail.day: past that the
+-- receipt is canonical unpaid (paid false, delta 0, earned 0) and the original
+-- request is kept privately, so the same proposal retried answers the same
+-- receipt and an altered one is bad_op.
 --
 -- Known idempotent rewards use a semantic id, so a restored save cannot grant
 -- the reward twice under a fresh random id: id = UUIDv8 of
@@ -1461,6 +1476,8 @@ declare
   v_reward text;
   v_key text;
   rc public.coop_receipts%rowtype;
+  v_req jsonb;
+  v_paid bigint;
   out jsonb := '[]'::jsonb;
 begin
   if p_ops is null or jsonb_typeof(p_ops) <> 'array' or jsonb_array_length(p_ops) not between 1 and 100 then
@@ -1534,13 +1551,30 @@ begin
         end if;
       end if;
     end if;
+    -- The request as sent, kept apart from the canonical receipt: a retry of the
+    -- same proposal answers the same receipt even when the server clamped it.
+    v_req := jsonb_build_object('delta', v_delta, 'earned', v_earned, 'detail', v_detail);
     select * into rc from public.coop_receipts where owner = uid and kind = 'game' and source_id = v_id;
     if found then
-      if rc.delta <> v_delta or rc.earned <> v_earned or rc.detail is distinct from v_detail then
+      if coalesce((select q.requested from private.coop_receipt_requests q where q.receipt_id = rc.id),
+                  jsonb_build_object('delta', rc.delta, 'earned', rc.earned, 'detail', rc.detail)) is distinct from v_req then
         perform private.refuse('bad_op');
       end if;
     else
+      -- At most 3 paid Joint Bench rewards per local day. The 4th and later are
+      -- recorded as unpaid (delta 0, paid false), so the award is still canonical.
+      if v_detail ->> 'reward' = 'joint_bench' and (v_detail ->> 'paid')::boolean then
+        select count(*) into v_paid from public.coop_receipts r
+         where r.owner = uid and r.kind = 'game' and r.detail ->> 'reward' = 'joint_bench'
+           and r.detail ->> 'day' = v_detail ->> 'day' and r.detail ->> 'paid' = 'true';
+        if v_paid >= 3 then
+          v_detail := jsonb_set(v_detail, '{paid}', 'false'::jsonb);
+          v_delta := 0;
+          v_earned := 0;
+        end if;
+      end if;
       rc := private.coop_append(uid, 'game', v_id, v_delta::int, v_earned::int, v_detail);
+      insert into private.coop_receipt_requests (receipt_id, owner, requested) values (rc.id, uid, v_req) on conflict do nothing;
     end if;
     out := out || jsonb_build_array(private.coop_receipt_json(rc));
   end loop;

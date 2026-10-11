@@ -24,7 +24,7 @@ const BOOTSTRAP = `
   insert into auth.users (id) values ('${A}'), ('${B}'), ('${C}'), ('${D}'), ('${E}'), ('${F}'), ('${G}'), ('${H}'), ('${K}'), ('${L}'), ('${M}');
 `;
 const TABLES = ['coop_duels', 'coop_hires', 'coop_holds', 'coop_listings', 'coop_receipts', 'coop_records', 'coop_rounds', 'coop_wallets'];
-const PRIVATE_TABLES = ['coop_attempts', 'coop_wage_days'];
+const PRIVATE_TABLES = ['coop_attempts', 'coop_receipt_requests', 'coop_wage_days'];
 const FUNCTIONS = ['coop_adjust', 'coop_collect', 'coop_duel_claim', 'coop_duel_create', 'coop_duel_decline', 'coop_duel_play', 'coop_duel_rematch',
   'coop_duel_submit', 'coop_duels', 'coop_finish_hire', 'coop_hire', 'coop_hire_board', 'coop_open', 'coop_receipts', 'coop_records',
   'coop_reports', 'coop_set_hires', 'coop_wallet'];
@@ -804,6 +804,34 @@ test('a known reward has one canonical semantic id: derived from sha256, validat
   assert.deepEqual(free.receipts[0].detail, { reward: 'something-else', n: 3 });
 });
 
+test('Joint Bench pays at most three times a local day: the rest are canonical unpaid, and the original request is remembered', async () => {
+  const hid = n => '27000000-0000-4000-8000-' + String(n).padStart(12, '0');
+  const jb = (n, day, paid = true) => game(currencyId(M, 'joint_bench:' + hid(n)), paid ? 25 : 0, paid ? 25 : 0, { reward: 'joint_bench', hearing: hid(n), day, curio: null, frame: null, paid });
+  const first = await adjust(M, [jb(1, '2026-11-3'), jb(2, '2026-11-3')]);
+  assert.deepEqual(first.receipts.map(r => r.delta), [25, 25]);
+  const third = await adjust(M, [jb(3, '2026-11-3')]);
+  assert.equal(third.receipts[0].delta, 25);
+  // Two devices each propose a paid fourth for different hearings: both are clamped.
+  const fourth = await adjust(M, [jb(4, '2026-11-3')]);
+  assert.deepEqual([fourth.receipts[0].delta, fourth.receipts[0].earned, fourth.receipts[0].detail.paid], [0, 0, false]);
+  const other = await adjust(M, [jb(5, '2026-11-3')]);
+  assert.equal(other.receipts[0].delta, 0);
+  // The same original proposal retried returns the same canonical receipt; an altered one is bad_op.
+  assert.deepEqual((await adjust(M, [jb(4, '2026-11-3')])).receipts, fourth.receipts);
+  await rejects(adjust(M, [jb(4, '2026-11-3', false)]), /bad_op/, 'the unpaid form is a different request');
+  await rejects(adjust(M, [{ ...jb(4, '2026-11-3'), detail: { ...jb(4, '2026-11-3').detail, frame: 'x' } }]), /bad_op/);
+  // The canonical award is still the original's: no extra cash, same detail otherwise.
+  assert.equal(fourth.receipts[0].detail.hearing, hid(4));
+  // Another local day pays again; unpaid receipts never count toward the limit.
+  assert.equal((await adjust(M, [jb(6, '2026-11-4')])).receipts[0].delta, 25);
+  const batch = await adjust(M, [jb(7, '2026-11-5'), jb(8, '2026-11-5'), jb(9, '2026-11-5'), jb(10, '2026-11-5')]);
+  assert.deepEqual(batch.receipts.map(r => r.delta), [25, 25, 25, 0]);
+  // The private request is not part of the receipt a player reads.
+  const feed = (await receipts(M, 0)).receipts.find(r => r.source_id === fourth.receipts[0].source_id);
+  assert.equal('requested' in feed, false);
+  assert.equal(await value(`select has_table_privilege('authenticated', 'private.coop_receipt_requests', 'select')`), false);
+});
+
 test('the fake mirrors the game receipts: idempotent, atomic, semantic ids, debt blocks stakes', async () => {
   const { createFakeCoop } = await import('./support/fake-coop.mjs');
   let n = 0;
@@ -836,6 +864,11 @@ test('the fake mirrors the game receipts: idempotent, atomic, semantic ids, debt
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(sid, 15, 15, { ...shoo, day: '2026-10-10' })] }), 'bad_op');
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(sid, 0, 0, { ...shoo, paid: false })] }), 'bad_op');
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(sid, 15, 15, { ...shoo, taps: 4 })] }), 'bad_op');
+  for (const n of [1, 2, 3, 4]) {
+    const h = '28000000-0000-4000-8000-00000000000' + n;
+    const r = rpc(A, 'coop_adjust', { p_ops: [game(currencyId(A, 'joint_bench:' + h), 25, 25, { reward: 'joint_bench', hearing: h, day: '2026-11-3', paid: true })] });
+    assert.equal(r.receipts[0].delta, n < 4 ? 25 : 0);
+  }
   const joint = { reward: 'joint_bench', hearing: haunt, day: '2026-10-9', paid: true };
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(currencyId(A, 'joint_bench:' + haunt), 20, 20, joint)] }), 'bad_op');
   assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(currencyId(A, 'joint_bench:' + haunt), 25, 25, joint)] }).receipts.length, 1);
