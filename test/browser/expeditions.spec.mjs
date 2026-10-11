@@ -111,3 +111,21 @@ test('an old two-choice expedition completes without changing its saved rules',a
  const complete=await saved(page);expect(complete.life.outing.version).toBeUndefined();expect(complete.life.outings).toBe(1);expect(complete.pets[1].expeditions).toBe(1);
  await fits(page);await page.reload();await open(page);expect((await saved(page)).life.xp).toBe(complete.life.xp);await expect(page.locator('[data-life="finish-outing"]')).toBeEnabled();
 });
+
+test('an expedition choice stays still when the pointer rests at its lower edge',async({page})=>{
+ await household(page,s=>{s.life.outing={route:'fridge',gear:'lantern',cast:['qa1'],step:0,score:0,log:[],choices:[]};chooseOuting(s,0);});
+ await open(page);await fits(page);
+ const choice=page.locator('[data-life="outing-choice"]').first();
+ const box=await choice.boundingBox();
+ await page.mouse.move(box.x+box.width/2,box.y+box.height-.5);
+ // A moving hover target can repeatedly move out from under the pointer,
+ // cancel hover, then move back into it and prevent a click from settling.
+ const movement=await choice.evaluate(el=>new Promise(resolve=>{
+  const tops=[];
+  const sample=()=>{tops.push(el.getBoundingClientRect().top);if(tops.length===30)resolve(Math.max(...tops)-Math.min(...tops));else requestAnimationFrame(sample);};
+  requestAnimationFrame(sample);
+ }));
+ expect(movement,'hover must keep the choice hit area stable').toBeLessThanOrEqual(.25);
+ await choice.click();
+ await expect(page.locator('[data-life="continue-outing"]')).toBeVisible();
+});

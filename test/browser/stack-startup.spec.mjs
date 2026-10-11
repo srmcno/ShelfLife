@@ -73,8 +73,15 @@ test('the natural count-in leaves Slim coffins undropped until the player acts',
 test('Again keeps starting and dropping separate during its shorter count-in', async ({ page }) => {
   await start(page, 'slim');
   await checkStart(page, () => page.keyboard.press('Space'), 'slim');
-  // A genuine second input at the wall misses the newly narrowed tower.
-  await page.keyboard.press('Space');
+  // Time a genuine miss in the same frame. A slower browser may have already
+  // moved the next coffin away from the wall by the time assertions finish.
+  await page.waitForFunction(() => {
+    const r = document.getElementById('arcadeSheet').arcadeRun, g = r.game, top = g.stack.at(-1);
+    const overlap = Math.min(g.mover.x + g.mover.w, top.x + top.w) - Math.max(g.mover.x, top.x);
+    if (r.phase !== 'play' || r.paused || overlap >= 0) return false;
+    r.field.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    return true;
+  }, null, { polling: 'raf' });
   await expect(page.locator('#arcadeSheet .ar-over')).toBeVisible();
   await expect(page.locator('#arcadeSheet .ar-again')).toBeEnabled();
   await page.locator('#arcadeSheet .ar-again').click();

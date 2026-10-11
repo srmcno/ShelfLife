@@ -180,7 +180,8 @@ body.app-hidden .project-moving,body.app-hidden .project-occupant{animation-play
 .expedition-next-stop b{display:block;margin-top:4px;font:21px/1.2 var(--display)}
 #lifeVeil .expedition-decision-list.expedition-choices{display:grid;grid-template-columns:1fr;gap:10px}
 #lifeVeil .expedition-option.btn{display:flex;flex-direction:row;align-items:flex-start;justify-content:flex-start;gap:10px;text-align:left;white-space:normal;min-height:92px;padding:13px;border:1px solid #c8bb934d;background:#74876d12;box-shadow:0 2px 3px #0001;border-radius:8px;color:var(--exp-paper)}
-#lifeVeil .expedition-option.btn:not(:disabled):hover{border-color:#d9c58d;background:#849a6928;transform:translateY(-1px)}
+/* Keep the hit area still: moving its edge can repeatedly cancel hover. */
+#lifeVeil .expedition-option.btn:not(:disabled):hover{border-color:#d9c58d;background:#849a6928;transform:none}
 #lifeVeil .expedition-option.btn:not(:disabled):active{transform:translateY(1px)}
 #lifeVeil .expedition-option.btn:disabled{opacity:.62;background:#7775680b;border-style:dashed;cursor:not-allowed}
 .expedition-option-number{font:22px/1 var(--display);color:var(--exp-gold);width:19px;text-align:center;flex:none;margin-top:3px}
