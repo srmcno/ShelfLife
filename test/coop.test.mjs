@@ -11,6 +11,7 @@ import {
   duelSummary, duelLapsesAt, markAttempt, attemptFor, reportSent, setListed, applyCoopReceipts
 } from '../src/engine/coop.js';
 import { residentMemories } from '../src/engine/resident-memory.js';
+import { addSouls } from '../src/engine/mayhem.js';
 import { mayhemState } from '../src/mayhem-state.js';
 import { createFakeSupabase } from './support/fake-supabase.mjs';
 import { socialPlayer } from './support/social-world.mjs';
@@ -234,9 +235,13 @@ test('readers rebuild what the server sends and refuse what they do not recognis
 test('the cloud wrappers drive the whole loop against the fake: list, hire, report, collect, duel and settle', async () => {
   const fake = createFakeSupabase({ now: () => now });
   const adaShelf = householdFixture('established', now), beaShelf = householdFixture('established', now);
+  // Explicit funded fixture using the game's ordinary reward path.
+  addSouls(adaShelf, 25); addSouls(beaShelf, 25);
   const ada = await socialPlayer(fake, 'Ada', adaShelf, { now: () => now }), bea = await socialPlayer(fake, 'Bea', beaShelf, { now: () => now });
   await ada.social.addFriend(bea.code); await bea.social.respond(ada.id, true);
   const adaCoop = createCoop({ cloud: ada.cloud, social: ada.social }), beaCoop = createCoop({ cloud: bea.cloud, social: bea.social });
+  await adaCoop.openWallet(mayhemState(adaShelf).souls);
+  await beaCoop.openWallet(mayhemState(beaShelf).souls);
   assert.deepEqual(await adaCoop.setHires([adaShelf.pets[0], adaShelf.pets[1]]), ['qa0', 'qa1']);
   const board = await beaCoop.hireBoard();
   assert.deepEqual(board.listings.map(l => [l.ownerName, l.resident.name, l.available]), [['Ada', 'Agnes', true], ['Ada', 'Lord Dampington III', true]]);
@@ -259,7 +264,9 @@ test('the cloud wrappers drive the whole loop against the fake: list, hire, repo
   assert.equal(mail.reports[0].hirerName, 'Bea');
   assert.match(fieldReport(mail.reports[0]), /^Your Agnes|Agnes/);
   assert.deepEqual(await adaCoop.collect(mail.reports[0].id), { wages: queued.report.tier * 3 + 6 });
-  assert.deepEqual(await adaCoop.collect(mail.reports[0].id), { wages: queued.report.tier * 3 + 6 }, 'retries return the same durable wages, not a consumed zero');
+  const immutableId = (await adaCoop.receipts()).receipts[0].id;
+  assert.deepEqual(await adaCoop.collect(mail.reports[0].id), { wages: 0 }, 'compatibility amount reports newly paid0; the immutable receipt survives');
+  assert.equal((await adaCoop.receipts()).receipts[0].id, immutableId, 'the retry points to the same durable payment');
   const receiptPage = await adaCoop.receipts(), initialSouls = mayhemState(adaShelf).souls;
   applyCoopReceipts(adaShelf, ada.id, receiptPage.receipts);
   applyCoopReceipts(adaShelf, ada.id, (await adaCoop.receipts()).receipts);

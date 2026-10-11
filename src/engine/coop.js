@@ -1,3 +1,4 @@
+import { advanceCoopMoney, applyCoopReward, readCoopRewardDetail } from './coop-money.js';
 import { coopState, normalizeOutingGuest, normalizeTripReport, COOP_LIMITS } from '../coop-state.js';
 import { residentVoice } from './resident-memory.js';
 import { addSouls } from './mayhem.js';
@@ -120,13 +121,13 @@ export function hireMemory(item) {
 // on the board and a memory for the resident, if it still lives here.
 export const receiptMark = (kind, id, owner = '') => (owner ? owner + ':' : '') + kind + ':' + id;
 
-export function collectReport(state, item, wages, now = Date.now(), owner = '') {
+export function collectReport(state, item, wages, now = Date.now(), owner = '', { credit = true } = {}) {
   const c = coopState(state), mark = receiptMark('h', item.id, owner);
   if (c.done.includes(mark)) return { souls: 0, text: fieldReport(item), fresh: false };
   c.done.push(mark);
   if (c.done.length > COOP_LIMITS.done) c.done.splice(0, c.done.length - COOP_LIMITS.done);
   const souls = Math.max(0, Math.min(30, Math.floor(wages || 0)));
-  if (souls) addSouls(state, souls);
+  if (souls && credit) addSouls(state, souls);
   const text = fieldReport(item);
   const pet = state.pets.find(p => p.id === item.petId);
   if (pet) {
@@ -253,38 +254,57 @@ export function applyCoopReceipts(state, owner, receipts) {
   if (!/^[0-9a-f-]{36}$/i.test(owner || '') || !Array.isArray(receipts)) throw new Error('Invalid Co-op receipts');
   const c = coopState(state), position = c.ledger[owner] || { seq: 0, debt: 0 };
   const fresh = receipts.filter(r => r.seq > position.seq);
+  const local = new Map(c.money.pending.filter(p => p.owner === owner).map(p => [p.id, p]));
   let seq = position.seq;
   for (const r of fresh) {
-    if (r.owner !== owner || r.seq !== ++seq || !['stake', 'duel', 'hire'].includes(r.kind)
+    if (r.owner !== owner || r.seq !== ++seq || !['stake', 'duel', 'hire', 'game'].includes(r.kind)
       || !/^[0-9a-f-]{36}$/i.test(r.id || '') || !/^[0-9a-f-]{36}$/i.test(r.sourceId || '')
-      || !Number.isInteger(r.delta) || r.delta < -25 || r.delta > 50 || !Number.isInteger(r.earned)
-      || r.earned < 0 || r.earned > Math.max(0, r.delta) || (r.kind === 'stake' ? r.delta >= 0 || r.earned !== 0 : r.delta < 0)) {
+      || !Number.isInteger(r.delta) || (r.kind === 'game' ? Math.abs(r.delta) > 100000000 : r.delta < -25 || r.delta > 50) || !Number.isInteger(r.earned)
+      || r.earned < 0 || (r.kind === 'game' ? r.earned > 100000000 : r.earned > Math.max(0, r.delta))
+      || (r.kind === 'stake' ? r.delta >= 0 || r.earned !== 0 : r.kind !== 'game' && r.delta < 0)) {
       throw new Error('Invalid Co-op receipt sequence');
     }
+    if (r.kind === 'game' && r.detail && !readCoopRewardDetail(r.detail)) throw new Error('Invalid currency reward detail');
+    const pending = r.kind === 'game' && local.get(r.sourceId);
+    if (pending && (pending.delta !== r.delta || pending.earned !== r.earned || JSON.stringify(pending.detail || null) !== JSON.stringify(r.detail || null))) throw new Error('Currency receipt does not match saved operation');
   }
-  const m = mayhemState(state);
+  const m = mayhemState(state), soulsBefore = m.souls, lifetimeBefore = m.lifetime;
   c.ledger[owner] = position;
   // Another local feature may have earned souls since a debit was deferred.
   const repayment = Math.min(m.souls, position.debt);
   m.souls -= repayment; position.debt -= repayment;
   let paid = 0;
   for (const r of fresh) {
-    if (r.kind === 'stake') {
-      const held = stakeHeld(state, r.sourceId, owner);
+    if (r.kind === 'game' && local.has(r.sourceId)) {
+      // This operation already changed the wallet before it was saved. Its
+      // receipt advances the cursor, but never pays or charges it again.
+      c.money.pending = c.money.pending.filter(p => p.owner !== owner || p.id !== r.sourceId);
+    } else if (r.delta < 0) {
+      const held = r.kind === 'stake' ? stakeHeld(state, r.sourceId, owner) : 0;
       const due = Math.max(0, -r.delta - held), debit = Math.min(m.souls, due);
       m.souls -= debit; position.debt += due - debit;
-      c.stakes = c.stakes.filter(s => s.duelId !== r.sourceId || s.owner !== owner);
-      c.stakes.push({ owner, duelId: r.sourceId, amount: -r.delta, at: Date.now() });
+      if (r.earned) { addSouls(state, r.earned); m.souls -= r.earned; }
+      if (r.kind === 'stake') {
+        c.stakes = c.stakes.filter(s => s.duelId !== r.sourceId || s.owner !== owner);
+        c.stakes.push({ owner, duelId: r.sourceId, amount: -r.delta, at: Date.now() });
+      }
     } else {
       const repayment = Math.min(position.debt, r.delta);
       position.debt -= repayment;
       const credit = r.delta - repayment;
       // addSouls raises ranks from earned winnings, never from returned stakes.
       if (r.earned) { addSouls(state, r.earned); m.souls -= r.earned; }
-      m.souls += credit; paid += credit;
+      m.souls += credit; if (r.kind !== 'game') paid += credit;
       if (r.kind === 'duel') c.stakes = c.stakes.filter(s => s.duelId !== r.sourceId || s.owner !== owner);
+      if (r.kind === 'hire' && r.detail) collectReport(state, r.detail, r.delta, Date.now(), owner, { credit: false });
+    }
+    if (r.kind === 'game' && r.detail) {
+      if (!local.has(r.sourceId)) applyCoopReward(state, owner, r.detail);
+      const rewards = c.money.rewards[owner] ||= [];
+      if (!rewards.includes(r.sourceId)) rewards.push(r.sourceId);
     }
     position.seq = r.seq;
   }
+  advanceCoopMoney(state, owner, soulsBefore, lifetimeBefore);
   return { paid, applied: fresh.length, seq: position.seq, debt: position.debt };
 }

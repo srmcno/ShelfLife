@@ -1,5 +1,6 @@
 import { registerFriendAction, registerPostboxSource, registerFriendsSection, registerSocialView } from './social-registry.js';
-import { state, save } from '../state.js';
+import { state, save, onBeforeSave, Store } from '../state.js';
+import { sync } from '../cloud/index.js';
 import { coop, flushOutbox } from './coop-hire.js';
 import { coopText } from '../cloud/coop.js';
 import { coopState } from '../coop-state.js';
@@ -7,6 +8,7 @@ import {
   collectReport, fieldReport, setListed, stakeHeld, attemptFor, markAttempt, markSeen, duelSummary, duelLapsesAt, rememberRecords,
   STAKES, STAT_KEYS, SKILLED, applyCoopReceipts, receiptMark
 } from '../engine/coop.js';
+import { bindCoopMoney, captureCoopMoney, assertCoopOpening } from '../engine/coop-money.js';
 import { sealLog } from '../engine/duel.js';
 import { ARCADE_GAMES, ARCADE_BY_ID } from '../content/arcade.js';
 import { mayhemState } from '../mayhem-state.js';
@@ -33,11 +35,14 @@ const REPORT_REASONS = ['A rude name', 'A rude resident', 'Bothering me', 'Somet
 
 /* ---------------- what the server last said ---------------- */
 
-const cache = { user: null, duels: null, reports: null, records: null, at: 0, tried: 0, loading: null, error: '' };
+const cache = { user: null, duels: null, reports: null, records: null, at: 0, tried: 0, loading: null, error: '', errorCode: '' };
 let confirming = null, busy = false;
+const sameShelf = (owner, origin) => owner === coop.userId() && coopState(state) === origin;
+onBeforeSave(s => captureCoopMoney(s, coop.userId()));
+const persisted = () => { if (!save() || !Store.persistent) throw Object.assign(new Error('Your device could not save the wager. Free some storage and try again.'), { code: 'save_unavailable' }); };
 function scope() {
   const user = coop.userId();
-  if (user !== cache.user) Object.assign(cache, { user, duels: null, reports: null, records: null, at: 0, tried: 0, loading: null, error: '' });
+  if (user !== cache.user) Object.assign(cache, { user, duels: null, reports: null, records: null, at: 0, tried: 0, loading: null, error: '', errorCode: '' });
 }
 // A section asks once in a while, never in a loop when the network is down.
 function refreshSoon(ctx) {
@@ -50,41 +55,73 @@ export function refreshCoop({ force = false } = {}) {
   if (!coop.active()) return Promise.resolve(cache);
   if (cache.loading) return cache.loading;
   if (!force && cache.at && Date.now() - cache.at < 20000) return Promise.resolve(cache);
-  const user = cache.user;
+  const user = cache.user, origin = coopState(state);
+  let request;
   cache.tried = Date.now();
-  cache.loading = (async () => {
+  cache.loading = request = (async () => {
+    await reconcileCoopWallet(user);
     await flushOutbox(state).catch(() => 0);
+    if (!sameShelf(user, origin)) return cache;
     await fileWaitingRuns().catch(() => 0);
-    await reconcileWallet(user);
     const [duels, reports, records] = await Promise.all([coop.duels(), coop.reports(), coop.records()]);
-    if (coop.userId() !== user) return cache;
-    Object.assign(cache, { duels, reports, records, at: Date.now(), error: '' });
+    if (coop.userId() !== user || coopState(state) !== origin) return cache;
+    Object.assign(cache, { duels, reports, records, at: Date.now(), error: '', errorCode: '' });
     rememberRecords(state, records, Date.now(), user);
     // Another device may have changed who is for hire.
     const listed = reports.listed.map(l => l.petId).filter(id => state.pets.some(p => p.id === id));
     if (coopState(state).listedOwner !== user || listed.join() !== coopState(state).listed.join()) setListed(state, listed, user);
     save();
     return cache;
-  })().catch(error => { if (coop.userId() === user) cache.error = coopText(error); return cache; }).finally(() => { if (cache.user === user) cache.loading = null; });
+  })().catch(error => { if (coop.userId() === user && coopState(state) === origin) { cache.error = coopText(error); cache.errorCode = error.code || ''; } return cache; }).finally(() => { if (cache.loading === request) cache.loading = null; });
   return cache.loading;
 }
 // A single reconciliation owns each cursor until its page is persisted.
 // Account changes cancel it; the next owner starts a separate reconciliation.
 let reconciling = null;
-async function reconcileWallet(owner = coop.userId()) {
+export async function reconcileCoopWallet(owner = coop.userId()) {
   if (!owner || owner !== coop.userId()) return 0;
-  if (reconciling) { await reconciling; if (owner !== coop.userId()) return 0; }
+  const origin = coopState(state), current = () => owner === coop.userId() && coopState(state) === origin;
+  const assertCurrent = () => {
+    if (!current()) throw Object.assign(new Error('Your shelf or account changed. Open it again to continue.'), { code: 'state_changed' });
+  };
+  while (reconciling) {
+    try { await reconciling; } catch (error) { if (error?.code !== 'state_changed') throw error; }
+    assertCurrent();
+  }
   const work = (async () => {
-    let paid = 0, more = true;
-    while (more) {
-      const after = coopState(state).ledger[owner]?.seq || 0;
-      const page = await coop.receipts(after);
-      if (owner !== coop.userId()) return 0;
-      const applied = applyCoopReceipts(state, owner, page.receipts);
-      if (page.more && applied.seq <= after) throw new Error('Co-op receipt page did not advance');
-      paid += applied.paid;
-      save(); more = page.more;
-    }
+    const wallet = await coop.wallet();
+    assertCurrent();
+    assertCoopOpening(state, owner, wallet, { conflict: !!sync.info().conflict });
+    const opening = bindCoopMoney(state, owner);
+    persisted();
+    const opened = await coop.openWallet(opening.souls, opening.after);
+    assertCurrent();
+    assertCoopOpening(state, owner, opened);
+    let paid = 0;
+    do {
+      // New gameplay can save while a request is in flight. Each batch is
+      // durable before transmission and stays pending until its receipt is
+      // persisted; then any newly added operations get their own batch.
+      persisted();
+      const pending = origin.money.pending.filter(p => p.owner === owner);
+      for (let i = 0; i < pending.length; i += 100) {
+        await coop.adjustMoney(pending.slice(i, i + 100));
+        assertCurrent();
+      }
+      let more = true;
+      while (more) {
+        const after = origin.ledger[owner]?.seq || 0;
+        const page = await coop.receipts(after);
+        assertCurrent();
+        const applied = applyCoopReceipts(state, owner, page.receipts);
+        if (page.more && applied.seq <= after) throw new Error('Co-op receipt page did not advance');
+        if (!page.more && applied.seq !== page.lastSeq) throw new Error('Co-op receipt page was incomplete');
+        paid += applied.paid;
+        persisted(); more = page.more;
+      }
+      if (pending.some(p => origin.money.pending.some(q => q.owner === owner && q.id === p.id))) throw new Error('Currency receipt was missing');
+    } while (origin.money.pending.some(p => p.owner === owner));
+    if (current()) renderAll(state);
     return paid;
   })();
   reconciling = work;
@@ -185,11 +222,13 @@ async function play(duelId, ctx, petId = '') {
   if (staking && mayhemState(state).souls < d.stake) { ctx?.say('You need ' + d.stake + ' souls to match the stake. Come back richer, or decline.'); return; }
   busy = true;
   try {
-    const owner = coop.userId();
+    const owner = coop.userId(), origin = coopState(state);
+    await reconcileCoopWallet(owner);
+    if (!sameShelf(owner, origin)) return;
     const turn = await coop.duelPlay(d.id, d.game);
-    if (owner !== coop.userId()) return;
-    await reconcileWallet(owner);
-    if (owner !== coop.userId()) return;
+    if (!sameShelf(owner, origin)) return;
+    await reconcileCoopWallet(owner);
+    if (!sameShelf(owner, origin)) return;
     save();
     launch(d, turn, s.otherName, petId);
   } catch (error) { ctx?.say(error?.code ? coopText(error) : error.message); }
@@ -200,9 +239,11 @@ async function rematch(duelId, ctx) {
   if (!entry || busy) return;
   busy = true;
   try {
-    const owner = coop.userId();
+    const owner = coop.userId(), origin = coopState(state);
+    await reconcileCoopWallet(owner);
+    if (!sameShelf(owner, origin)) return;
     const turn = await coop.duelRematch(duelId);
-    if (owner !== coop.userId()) return;
+    if (!sameShelf(owner, origin)) return;
     launch(entry.d, { ...turn, role: 'first', ghost: null }, entry.s.otherName);
   } catch (error) { ctx?.say(coopText(error)); paintStatus(duelId, coopText(error)); }
   finally { busy = false; }
@@ -211,11 +252,13 @@ async function claim(duelId, ctx) {
   if (busy) return;
   busy = true;
   try {
-    const owner = coop.userId();
+    const owner = coop.userId(), origin = coopState(state);
+    await reconcileCoopWallet(owner);
+    if (!sameShelf(owner, origin)) return;
     await coop.duelClaim(duelId);
-    if (owner !== coop.userId()) return;
-    const paid = await reconcileWallet(owner);
-    if (owner !== coop.userId()) return;
+    if (!sameShelf(owner, origin)) return;
+    const paid = await reconcileCoopWallet(owner);
+    if (!sameShelf(owner, origin)) return;
     save(); renderAll(state);
     const line = paid ? '+' + paid + ' souls from the duel.' : 'Settled. Nothing owed, nothing taken.';
     ctx?.say(line); toast(line); paintStatus(duelId, line);
@@ -238,11 +281,11 @@ async function fileRun(detail) {
 }
 async function submitAttempt(a, { name = '', early = false } = {}) {
   if (!a || a.owner !== coop.userId() || a.state !== 'played' || !a.game) return null;
-  const owner = a.owner;
+  const owner = a.owner, origin = coopState(state);
   const who = name || 'your friend';
   try {
     const r = await coop.duelSubmit(a.duelId, a.round, a.score, a.game, a.log || null);
-    if (owner !== coop.userId()) return null;
+    if (!sameShelf(owner, origin)) return null;
     markAttempt(state, a.duelId, a.round, 'sent', a.score, {}, Date.now(), owner);
     save();
     cache.at = 0;
@@ -262,7 +305,7 @@ async function submitAttempt(a, { name = '', early = false } = {}) {
     return r;
   } catch (error) {
     if (['not_your_turn', 'not_open', 'not_found', 'bad_score'].includes(error?.code)) {
-      if (owner !== coop.userId()) return null;
+      if (!sameShelf(owner, origin)) return null;
     markAttempt(state, a.duelId, a.round, 'sent', a.score, {}, Date.now(), owner); save();
       paintDuelPanel(a.duelId, a.round, { status: coopText(error) });
     } else {
@@ -301,11 +344,13 @@ async function issueChallenge(form, ctx) {
   if (stake > mayhemState(state).souls) { status.textContent = 'You need ' + stake + ' souls for that stake.'; return; }
   busy = true; status.textContent = 'Asking the server for a seed.';
   try {
-    const owner = coop.userId();
+    const owner = coop.userId(), origin = coopState(state);
+    await reconcileCoopWallet(owner);
+    if (!sameShelf(owner, origin)) return;
     const made = await coop.duelCreate(to, game, stake);
-    if (owner !== coop.userId()) return;
-    await reconcileWallet(owner);
-    if (owner !== coop.userId()) return;
+    if (!sameShelf(owner, origin)) return;
+    await reconcileCoopWallet(owner);
+    if (!sameShelf(owner, origin)) return;
     save(); renderAll(state);
     const name = ctx?.friend?.(to)?.name || '';
     cache.at = 0;
@@ -414,11 +459,13 @@ registerPostboxSource({
     if (!item) return;
     busy = true;
     try {
-      const owner = coop.userId();
+      const owner = coop.userId(), origin = coopState(state);
+      await reconcileCoopWallet(owner);
+      if (!sameShelf(owner, origin)) return;
       await coop.collect(id);
-      if (owner !== coop.userId()) return;
-      const wages = await reconcileWallet(owner);
-      if (owner !== coop.userId()) return;
+      if (!sameShelf(owner, origin)) return;
+      const wages = await reconcileCoopWallet(owner);
+      if (!sameShelf(owner, origin)) return;
       const out = collectReport(state, item, 0, Date.now(), owner);
       out.souls = wages;
       save(); renderAll(state);
@@ -460,12 +507,14 @@ registerFriendsSection({
         '<b>' + esc(p.name) + '</b><small>' + esc(skilled.length ? 'good for ' + skilled.join(' and ') : 'no specialities, plenty of opinions') + '</small><span>' + (on ? 'For hire' : 'At home') + '</span></button></li>';
     }).join('');
     return '<section class="co-section" aria-labelledby="coHireHomeTitle"><h3 id="coHireHomeTitle">Hired help</h3>' +
+      (cache.error ? '<p role="status">' + esc(cache.error) + '</p>' + (cache.errorCode === 'cloud_copy_required' ? '<button class="btn btn-sm" type="button" data-sx="cloud-copy">Open cloud save</button>' : '') : '') +
       '<p>Put up to two residents up for hire. A friend can take one on an expedition: you get a field report and wages, your resident gets a story, and nothing else about it changes.</p>' +
       (away.length ? '<p class="co-away">' + away.map(a => esc(a.name) + ' is out on ' + esc(a.hirerName || 'a friend') + '’s expedition.').join(' ') + '</p>' : '') +
       '<details class="co-hire-list"' + (listed.length ? '' : ' open') + '><summary>' + (listed.length ? 'For hire: ' + esc(listed.map(id => state.pets.find(p => p.id === id)?.name).filter(Boolean).join(' and ')) : 'Nobody is for hire. They have been told this is a compliment.') + '</summary>' +
       '<ul class="co-listing">' + rows + '</ul></details></section>';
   },
   async onClick(action, el, ctx) {
+    if (action === 'cloud-copy') { ctx.close(); document.getElementById('cloudBtn')?.click(); await sync.syncNow(); return; }
     if (action !== 'hire-toggle' || busy) return;
     const id = el.dataset.sxId, c = coopState(state), listed = c.listedOwner === coop.userId() ? c.listed : [];
     const next = listed.includes(id) ? listed.filter(x => x !== id) : [...listed, id].slice(0, 2);
@@ -494,6 +543,10 @@ if (typeof window !== 'undefined') {
     refreshCoop({ force: true }).then(() => b.dataset.duelAct === 'rematch' ? rematch(id, null) : claim(id, null)).finally(() => { b.disabled = false; });
   });
   window.addEventListener('online', () => refreshCoop({ force: true }));
+  window.addEventListener('shelflife:state-replaced', () => {
+    Object.assign(cache, { duels: null, reports: null, records: null, at: 0, tried: 0, loading: null, error: '', errorCode: '' });
+    if (coop.active()) refreshCoop({ force: true });
+  });
   // Reports and scores left over from last time go in once the cloud is ready.
   setTimeout(() => { if (coop.active()) refreshCoop(); }, 4000);
 }

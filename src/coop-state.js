@@ -17,7 +17,7 @@ const petId = x => typeof x === 'string' && PET.test(x) && !['__proto__', 'const
 const intIn = (x, lo, hi) => Number.isInteger(x) && x >= lo && x <= hi;
 
 export function blankCoop() {
-  return { v: 2, listed: [], listedOwner: '', outbox: [], memories: [], done: [], stakes: [], attempts: [], seen: [], records: {}, recordsOwner: '', ledger: {} };
+  return { v: 2, listed: [], listedOwner: '', outbox: [], memories: [], done: [], stakes: [], attempts: [], seen: [], records: {}, recordsOwner: '', ledger: {}, money: { checkpoint: null, openings: {}, pending: [], rewards: {} } };
 }
 
 // The trip report a hirer sends: ids and numbers only (see 0009_coop.sql).
@@ -78,6 +78,23 @@ export function normalizeCoop(raw) {
   // an owner's cursor: losing it would replay already paid receipts.
   s.ledger = Object.fromEntries(Object.entries(obj(r.ledger) ? r.ledger : {}).filter(([owner, v]) => uuid(owner) && obj(v))
     .map(([owner, v]) => [uuid(owner), { seq: num(v.seq, Number.MAX_SAFE_INTEGER), debt: num(v.debt) }]));
+  const money = obj(r.money) ? r.money : {}, checkpoint = money.checkpoint;
+  const balance = n => Number.isInteger(n) && n >= 0 && n <= 100000000;
+  if (uuid(checkpoint?.owner) && balance(checkpoint.souls) && balance(checkpoint.lifetime))
+    s.money.checkpoint = { owner: uuid(checkpoint.owner), souls: checkpoint.souls, lifetime: checkpoint.lifetime };
+  s.money.openings = Object.fromEntries(Object.entries(obj(money.openings) ? money.openings : {}).filter(([owner, o]) =>
+    uuid(owner) && obj(o) && balance(o.souls) && Number.isSafeInteger(o.after) && o.after >= 0)
+    .map(([owner, o]) => [uuid(owner), { souls: o.souls, after: o.after }]));
+  s.money.rewards = Object.fromEntries(Object.entries(obj(money.rewards) ? money.rewards : {}).filter(([owner, ids]) => uuid(owner) && Array.isArray(ids))
+    .map(([owner, ids]) => [uuid(owner), [...new Set(ids.map(uuid).filter(Boolean))]]));
+  const operations = new Set();
+  // Unacknowledged money operations are never pruned by an activity limit.
+  s.money.pending = (Array.isArray(money.pending) ? money.pending : []).filter(p => {
+    if (!uuid(p?.id) || !uuid(p?.owner) || operations.has(p.owner + ':' + p.id) || !Number.isInteger(p.delta)
+      || Math.abs(p.delta) > 100000000 || !balance(p.earned)) return false;
+    operations.add(p.owner + ':' + p.id); return true;
+  }).map(p => ({ id: uuid(p.id), owner: uuid(p.owner), delta: p.delta, earned: p.earned,
+    ...(obj(p.detail) && JSON.stringify(p.detail).length < 4000 ? { detail: JSON.parse(JSON.stringify(p.detail)) } : {}) }));
   // Unowned v1 prototype records remain quarantined. An owner is never
   // guessed from whichever account happens to be signed in on load.
   const stakes = new Set();

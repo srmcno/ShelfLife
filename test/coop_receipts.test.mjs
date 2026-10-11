@@ -64,8 +64,8 @@ test('a delayed cloud reply cannot return receipts or a turn for a replacement a
 });
 test('financial readers refuse negative credits and a pagination reply that cannot advance', async () => {
   const { readCoopReceipts } = await import('../src/cloud/coop.js');
-  assert.throws(() => readCoopReceipts({ receipts: [], more: true }, A));
-  assert.throws(() => readCoopReceipts({ receipts: [{ ...receipt(1, 'hire', -1), source_id: D }], more: false }, A));
+  assert.throws(() => readCoopReceipts({ receipts: [], has_more: true, last_seq: 1 }, A));
+  assert.throws(() => readCoopReceipts({ receipts: [{ ...receipt(1, 'hire', -1), source_id: D }], has_more: false, last_seq: 1 }, A));
 });
 
 test('labelled fake server commits before a lost claim/collect response; durable retries recover both payments once', async () => {
@@ -84,12 +84,13 @@ test('labelled fake server commits before a lost claim/collect response; durable
   } };
   const coop = createCoop({ cloud, social: ada.social }), other = createCoop({ cloud: bea.cloud, social: bea.social });
   let local = wallet(100);
+  await coop.openWallet(100);
   const duel = await coop.duelCreate(bea.id, 'stack', 25);
   applyCoopReceipts(local, ada.id, (await coop.receipts()).receipts);
   fake.coop.age(49 * 3600000); await coop.duels();
   lose = 'coop_duel_claim'; await assert.rejects(coop.duelClaim(duel.id));
   assert.equal(mayhemState(local).souls, 75);
-  assert.deepEqual(await coop.duelClaim(duel.id), { souls: 25 });
+  assert.deepEqual(await coop.duelClaim(duel.id), { souls: 0 }, 'retry compatibilityamount is0, but the committed refund receipt remains replayable');
   local = normalizeState(structuredClone(local));
   applyCoopReceipts(local, ada.id, (await coop.receipts(coopState(local).ledger[ada.id].seq)).receipts);
   assert.equal(mayhemState(local).souls, 100);
@@ -98,7 +99,7 @@ test('labelled fake server commits before a lost claim/collect response; durable
   await other.finishHire(h.id, { route: 'drawer', gear: 'thread', edition: 0, rev: 2, score: 8, tier: 2, returned: 0, built: false, choices: [1, 0, 1], helped: [0], crew: ['Bea'] });
   lose = 'coop_collect'; await assert.rejects(coop.collect(h.id));
   assert.equal(mayhemState(local).souls, 100);
-  assert.deepEqual(await coop.collect(h.id), { wages: 12 });
+  assert.deepEqual(await coop.collect(h.id), { wages: 0 }, 'retry reads the original receipt instead of issuing another payment');
   const page = await coop.receipts(coopState(local).ledger[ada.id].seq);
   applyCoopReceipts(local, ada.id, page.receipts); applyCoopReceipts(local, ada.id, page.receipts);
   assert.equal(mayhemState(local).souls, 112);

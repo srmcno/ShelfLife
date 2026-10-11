@@ -10,6 +10,7 @@
 import { readResident, residentSnapshot, cleanText, cleanUuid, socialCode, socialText, SCORE_CAPS } from './social.js';
 import { CloudError } from './client.js';
 import { readDuelLog, DUEL_GAMES } from '../engine/duel.js';
+import { readCoopRewardDetail } from '../engine/coop-money.js';
 import { normalizeTripReport } from '../coop-state.js';
 import { listingFor, STAT_KEYS } from '../engine/coop.js';
 
@@ -27,6 +28,13 @@ const TEXT = {
   bad_resident: 'That resident could not be listed. Nothing was changed.',
   bad_report: 'The trip report was refused. Nothing was changed.',
   bad_stake: 'A stake is 0 to 25 souls.',
+  cloud_copy_required: 'Open Cloud save to choose your shelf. For Co-op, use the cloud copy with this account’s souls.',
+  state_changed: 'Your shelf or account changed. Open it again to continue.',
+  save_unavailable: 'Your device could not save the wager. Free some storage and try again.',
+  needs_opening: 'Connect once to prepare your souls for a duel.',
+  insufficient_souls: 'You need more souls to match that stake. Play or take care of your residents first.',
+  bad_balance: 'Your souls could not be checked. Nothing was changed.',
+  bad_seq: 'Your souls need to finish syncing. Try again.',
   bad_log: 'The duel run could not be sent. Nothing was changed.',
   not_your_turn: 'It is not your move in that duel.',
   not_open: 'That duel has already been settled.',
@@ -132,16 +140,44 @@ export function readRecords(raw) {
 // Unlike recent activity, financial receipts may never be silently dropped.
 // One malformed or missing sequence leaves the save's cursor untouched.
 export function readCoopReceipts(raw, owner) {
-  if (!record(raw) || !Array.isArray(raw.receipts) || raw.receipts.length > 100 || typeof raw.more !== 'boolean') throw refuse('unexpected');
+  if (!record(raw) || !Array.isArray(raw.receipts) || raw.receipts.length > 100 || typeof raw.has_more !== 'boolean' || !Number.isSafeInteger(raw.last_seq) || raw.last_seq < 0) throw refuse('unexpected');
   const receipts = raw.receipts.map(r => {
     const id = cleanUuid(r?.id), sourceId = cleanUuid(r?.source_id), who = cleanUuid(r?.owner);
-    if (!id || !sourceId || who !== owner || !Number.isSafeInteger(r.seq) || r.seq < 1 || !['stake', 'duel', 'hire'].includes(r.kind)
-      || !Number.isInteger(r.delta) || r.delta < -25 || r.delta > 50 || !Number.isInteger(r.earned) || r.earned < 0 || r.earned > Math.max(0, r.delta)
-      || (r.kind === 'stake' ? r.delta >= 0 || r.earned !== 0 : r.delta < 0)) throw refuse('unexpected');
-    return { id, owner: who, sourceId, seq: r.seq, kind: r.kind, delta: r.delta, earned: r.earned };
+    if (!id || !sourceId || who !== owner || !Number.isSafeInteger(r.seq) || r.seq < 1 || !['stake', 'duel', 'hire', 'game'].includes(r.kind)
+      || !Number.isInteger(r.delta) || (r.kind === 'game' ? Math.abs(r.delta) > 100000000 : r.delta < -25 || r.delta > 50) || !Number.isInteger(r.earned) || r.earned < 0
+      || (r.kind === 'game' ? r.earned > 100000000 : r.earned > Math.max(0, r.delta))
+      || (r.kind === 'stake' ? r.delta >= 0 || r.earned !== 0 : r.kind !== 'game' && r.delta < 0)) throw refuse('unexpected');
+    let detail = null;
+    if (r.detail != null) {
+      if (!record(r.detail)) throw refuse('unexpected');
+      if (r.kind === 'hire') {
+        if (cleanUuid(r.detail.hire_id) !== sourceId) throw refuse('unexpected');
+        detail = readReport({ ...r.detail, id: sourceId });
+        if (!detail || detail.wages !== r.delta) throw refuse('unexpected');
+      } else if (r.kind === 'game') {
+        detail = readCoopRewardDetail(r.detail);
+        if (!detail) throw refuse('unexpected');
+      } else {
+        const d = r.detail, against = cleanUuid(d.against);
+        if (cleanUuid(d.duel_id) !== sourceId || !DUEL_GAMES.includes(d.game) || !against || against === owner
+          || !Number.isInteger(d.stake) || d.stake < 0 || d.stake > 25 || ![null, 'challenger', 'opponent', 'tie', 'void'].includes(d.outcome)
+          || !Number.isInteger(d.wins_mine) || d.wins_mine < 0 || d.wins_mine > 3 || !Number.isInteger(d.wins_theirs) || d.wins_theirs < 0 || d.wins_theirs > 3) throw refuse('unexpected');
+        detail = { game: d.game, stake: d.stake, against, againstName: cleanText(d.against_name, 24), outcome: d.outcome,
+          winsMine: d.wins_mine, winsTheirs: d.wins_theirs };
+      }
+    }
+    return { id, owner: who, sourceId, seq: r.seq, kind: r.kind, delta: r.delta, earned: r.earned, ...(detail ? { detail } : {}) };
   });
-  if (raw.more && !receipts.length) throw refuse('unexpected');
-  return { receipts, more: raw.more };
+  if (raw.has_more && !receipts.length) throw refuse('unexpected');
+  if (receipts.some(r => r.seq > raw.last_seq)) throw refuse('unexpected');
+  return { receipts, more: raw.has_more, lastSeq: raw.last_seq };
+}
+
+export function readCoopWallet(raw) {
+  if (!record(raw) || ![raw.opening, raw.balance].every(v => v === null || Number.isSafeInteger(v))
+    || (raw.opening !== null && (raw.opening < 0 || raw.opening > 100000000))
+    || !Number.isSafeInteger(raw.opening_seq) || raw.opening_seq < 0 || !Number.isSafeInteger(raw.last_seq) || raw.last_seq < raw.opening_seq) throw refuse('unexpected');
+  return { opening: raw.opening, openingSeq: raw.opening_seq, balance: raw.balance, lastSeq: raw.last_seq, accepted: raw.accepted === true };
 }
 
 /* ---------------- the wrappers ---------------- */
@@ -224,6 +260,24 @@ export function createCoop({ cloud, social }) {
   const duels = async () => readDuels(await call('coop_duels', {}));
   async function duelClaim(id) { const r = await call('coop_duel_claim', { p_duel: uuid(id) }); return { souls: count(r?.souls, 50) }; }
   const records = async () => readRecords(await call('coop_records', {}));
+  async function adjustMoney(operations) {
+    if (!Array.isArray(operations) || !operations.length || operations.length > 100) throw refuse('bad_balance');
+    const owner = cloud.userId(), ids = new Set();
+    const clean = operations.map(p => {
+      const id = cleanUuid(p?.id);
+      if (!id || p.owner !== owner || ids.has(id) || !Number.isInteger(p.delta) || Math.abs(p.delta) > 100000000
+        || !Number.isInteger(p.earned) || p.earned < 0 || p.earned > 100000000) throw refuse('bad_balance');
+      const detail = p.detail == null ? null : readCoopRewardDetail(p.detail);
+      if (p.detail != null && !detail) throw refuse('bad_balance');
+      ids.add(id); return { id, delta: p.delta, earned: p.earned, ...(detail ? { detail } : {}) };
+    });
+    await call('coop_adjust', { p_ops: clean });
+  }
+  const wallet = async () => readCoopWallet(await call('coop_wallet', {}));
+  async function openWallet(souls, after = 0) {
+    if (!Number.isInteger(souls) || souls < 0 || souls > 100000000 || !Number.isSafeInteger(after) || after < 0) throw refuse('bad_balance');
+    return readCoopWallet(await call('coop_open', { p_souls: souls, p_after: after }));
+  }
   async function receipts(after = 0) {
     if (!Number.isSafeInteger(after) || after < 0) throw refuse('unexpected');
     const owner = cloud.userId();
@@ -231,5 +285,5 @@ export function createCoop({ cloud, social }) {
   }
 
   return { active, signedIn, userId: () => signedIn() ? cloud.userId() : null, setHires, hireBoard, hire, finishHire, reports, collect,
-    duelCreate, duelPlay, duelSubmit, duelDecline, duelRematch, duels, duelClaim, records, receipts, block: id => social.block(id), report: (id, why) => social.report(id, why) };
+    duelCreate, duelPlay, duelSubmit, duelDecline, duelRematch, duels, duelClaim, records, receipts, wallet, openWallet, adjustMoney, block: id => social.block(id), report: (id, why) => social.report(id, why) };
 }

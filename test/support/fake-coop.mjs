@@ -6,13 +6,10 @@
 // Knobs for tests: setDnd(userId, on), age(ms) to move every co-op clock
 // back, and the raw maps (listings, hires, duels, records).
 //
-// The money ledger (coop_open, coop_wallet, coop_receipts, and the `receipt`
-// fields on create, play, claim and collect) mirrors the SQL, with one knob:
-// until setStrictFunds(true), a player who never called coop_open may still
-// stake (the SQL refuses with needs_opening), so older tests that stake
-// without declaring an opening keep working. Once an opening is declared,
-// insufficient_souls is enforced either way. Raw state: wallets, receipts,
-// holds.
+// Labelled in-memory model of the production wallet and receipt API. Funding
+// checks are strict by default. setStrictFunds(false) is only an explicit
+// compatibility fixture for the unreleased prototype; live-path tests use
+// the real opening/budget checks. Raw state: wallets, receipts, holds.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PET = /^[A-Za-z0-9_-]{1,100}$/;
@@ -28,7 +25,7 @@ const copy = value => value === undefined ? undefined : JSON.parse(JSON.stringif
 export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, blocks }) {
   const listings = new Map(), hires = new Map(), duels = new Map(), records = new Map(), attempts = [], dnd = new Set();
   const wallets = new Map(), receipts = [], holds = new Map();
-  let strictFunds = false;
+  let strictFunds = true;
   const iso = t => new Date(t).toISOString();
   const day = (t = now()) => new Date(t).toISOString().slice(0, 10);
   const refuse = token => rest(400, 'P0001', token);

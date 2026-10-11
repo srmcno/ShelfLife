@@ -409,6 +409,8 @@ export function normalizeState(raw) {
   s.mischief = normalizeMischief(s.mischief, s, now); // friends' hexes, hauntings and helps
   s.arcade = normalizeArcade(s.arcade);
   s.coop = normalizeCoop(s.coop); // co-op: hired help and duels (coop-state.js)
+  // Loading/restore establishes the wallet baseline; it is not a reward.
+  if (s.coop.money.checkpoint) Object.assign(s.coop.money.checkpoint, { souls: s.mayhem.souls, lifetime: s.mayhem.lifetime });
   s.courtroom = normalizeCourtroom(s.courtroom);
   normalizeRetention(s, now); // the Almanac, streak freezes, return chest, Legacy, collections, exchange and owned decor
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
@@ -613,7 +615,12 @@ export function load() {
 }
 
 export let state = load();
-export function setState(next) { state = next; }
+export function setState(next) {
+  state = next;
+  if (state.coop?.money?.checkpoint && state.mayhem) Object.assign(state.coop.money.checkpoint, { souls: state.mayhem.souls, lifetime: state.mayhem.lifetime });
+}
+const saveObservers = new Set();
+export function onBeforeSave(observer) { saveObservers.add(observer); return () => saveObservers.delete(observer); }
 export function save() {
   try {
     // Never overwrite an unreadable original until its recovery copy is safe.
@@ -621,6 +628,9 @@ export function save() {
       if (!Store.set(RECOVERY_KEY, Store.get(RECOVERY_KEY))) return false;
       recoveryRequired = false;
     }
+    // Observers run before serialization so bookkeeping and game changes are
+    // written in one operation. A failed write must never be sent as money.
+    for (const observe of saveObservers) observe(state);
     const ok = Store.set(SAVE_KEY, JSON.stringify(state));
     // The first successful v4 save retires the old keys: a v3 shelf of drawn
     // pets is megabytes of data-URLs sitting next to the live save, and on a
