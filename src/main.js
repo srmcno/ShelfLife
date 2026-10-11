@@ -263,6 +263,8 @@ function applyRestoredState(normalized) {
   syncNight();
   renderAll(state);
   syncAudioButtons();
+  // Controls that paint themselves from settings (Calm, nudges, haptics) repaint here.
+  window.dispatchEvent(new CustomEvent('shelflife:state-replaced'));
 }
 document.getElementById('restoreConfirm').addEventListener('click', () => {
   if (!pendingRestore) return;

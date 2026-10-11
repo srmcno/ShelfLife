@@ -22,11 +22,11 @@ const LOCKED_FOLDERS=[
 export function renderAcquainted(state,first){
  const panel=document.getElementById('acquaintPanel'),locked=document.getElementById('lockedFolders');
  if(!panel||!locked)return;
- if(!first){panel.hidden=true;locked.hidden=true;if(panel.innerHTML)panel.innerHTML='';if(locked.innerHTML)locked.innerHTML='';return;}
+ if(!first){panel.hidden=true;locked.hidden=true;if(panel.innerHTML)panel.innerHTML='';if(locked.innerHTML)locked.innerHTML='';delete panel.dataset.key;return;}
  const cared=state.pets.some(p=>(p.careLog?.food||0)+(p.careLog?.fuss||0)+(p.careLog?.clean||0)>0);
  const markup=cared?'2':'1';
  const key=JSON.stringify([markup,first.name]);
- if(panel.dataset.key===key){panel.hidden=false;locked.hidden=false;return;}
+ if(panel.dataset.key===key&&panel.innerHTML&&locked.innerHTML){panel.hidden=false;locked.hidden=false;return;}
  panel.dataset.key=key;
  const dots='<span class="acq-dots" role="img" aria-label="Step '+markup+' of 3">'+[1,2,3].map(i=>'<i class="'+(i<Number(markup)?'done':i===Number(markup)?'now':'')+'"></i>').join('')+'</span>';
  panel.innerHTML='<span class="eyebrow">Getting acquainted'+dots+'</span><h2>'+esc(cared?'Make your first shared memory.':'Someone small is counting on you.')+'</h2><p>'+esc(cared?'A game together, a trip, or the housewarming below. Any of them counts, and any of them opens the rest.':'Start with a little individual care for '+first.name+'. Then make a first memory together.')+'</p><div class="life-links">'+button(cared?'Play together':'Meet '+esc(first.name),cared?'play':'care')+button('Explore everything','skip')+'</div>';

@@ -97,7 +97,7 @@ function stepDone(step, state, g) {
   const m = mayhemState(state);
   switch (step.id) {
     case 'meet': return g.seen.includes('meet');
-    case 'feed': return (state.pets || []).some(p => (p.careLog?.food || 0) + (p.careLog?.fuss || 0) + (p.careLog?.clean || 0) > 0);
+    case 'feed': return (state.pets || []).some(p => (p.careLog?.food || 0) > 0);
     case 'emergency': return m.resolved >= 1;
     case 'omen': return m.omen.streak >= 1 && m.omen.lastDay !== '';
     case 'note': return g.seen.includes('note');

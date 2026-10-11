@@ -125,9 +125,12 @@ test('only the screen can see two steps, and only while the tour is on', () => {
   assert.equal(markGuideSeen(s, 'note'), false, 'a skipped tour records nothing');
 });
 
-test('any individual care counts as the first care, not only food', () => {
+test('the feeding step needs actual food: a wash or a fuss does not count', () => {
   const s = newcomer(); ensureGuide(s, noon);
   care(s, 'clean');
+  care(s, 'fuss');
+  assert.equal(advanceGuide(s, noon), null);
+  care(s, 'food');
   assert.deepEqual(advanceGuide(s, noon).steps.map(x => x.id), ['feed']);
 });
 

@@ -79,3 +79,21 @@ test('the switch is described honestly in both states', async () => {
   assert.match(calmLabels(true).label, /on/);
   assert.doesNotMatch(JSON.stringify([calmLabels(true), calmLabels(false)]), /[–—]/);
 });
+
+test('the Calm switch repaints when a restored backup or cloud copy replaces the settings', async () => {
+  stage();
+  const handlers = {};
+  window.addEventListener = (type, fn) => { (handlers[type] ||= []).push(fn); };
+  const attrs = {}, name = { textContent: '' }, small = { textContent: '' };
+  const button = { setAttribute: (k, v) => { attrs[k] = v; }, querySelector: sel => (sel === 'span' ? name : small), addEventListener() {} };
+  document.getElementById = id => (id === 'calmBtn' ? button : null);
+  const calm = await import('../src/ui/calm.js?restore');
+  const state = { settings: { calm: false } };
+  calm.initCalm(state);
+  assert.equal(attrs['aria-pressed'], 'false');
+  state.settings = { calm: true };
+  for (const fn of handlers['shelflife:state-replaced'] || []) fn();
+  assert.equal(attrs['aria-pressed'], 'true');
+  assert.equal(name.textContent, calm.calmLabels(true).label);
+  calm.applyCalm(false);
+});

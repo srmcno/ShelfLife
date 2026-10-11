@@ -31,3 +31,13 @@ test('the return chest points at the chest on the desk', () => {
 test('an empty shelf raises nothing', () => {
   assert.deepEqual(claimableExtras({ pets: [] }, Date.now()), []);
 });
+
+test('claimables outrank the fallback suggestion but not the daily docket', async () => {
+  const { PRIORITY, nextSteps } = await import('../src/engine/nextstep.js');
+  for (const p of [0, 30, 95, 100]) {
+    const step = normalizeExtra(routeClaimable({ id: 'x', label: 'L', hint: 'h', tab: 'almanac', priority: p }));
+    assert.ok(step.priority > PRIORITY.play, 'priority ' + p);
+    assert.ok(step.priority < PRIORITY.docket, 'priority ' + p);
+  }
+  assert.equal(typeof nextSteps, 'function');
+});

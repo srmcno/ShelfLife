@@ -69,6 +69,8 @@ export function initCalm(state, { save = () => {}, onChange = () => {} } = {}) {
     if (small && small.textContent !== sub) small.textContent = sub;
   };
   button?.addEventListener('click', () => { state.settings.calm = state.settings.calm !== true; save(); paint(); onChange(state.settings.calm); });
+  // A restored backup or a cloud copy can bring a different setting with it.
+  if (typeof window !== 'undefined') window.addEventListener('shelflife:state-replaced', paint);
   paint();
   return paint;
 }

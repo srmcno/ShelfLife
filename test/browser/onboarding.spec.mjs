@@ -171,7 +171,7 @@ test('the desk grows over the first days, by the calendar and by what has been d
 test('on the second day, once something has been solved, the omen and chores arrive', async ({ page }) => {
   await firstDay(page, s => {
     s.started = Date.now() - 2 * DAY;
-    s.life.guide = { v: 1, status: 'done', at: Date.now() - 1.5 * DAY, seen: ['meet', 'note'], done: ['meet', 'feed', 'emergency', 'omen', 'note', 'coffin'], finishedAt: Date.now() - 1.5 * DAY, celebrated: true };
+    s.life.guide = { v: 1, status: 'done', at: Date.now() - DAY, seen: ['meet', 'note'], done: ['meet', 'feed', 'emergency', 'omen', 'note', 'coffin'], finishedAt: Date.now() - DAY, celebrated: true };
     s.mayhem = { resolved: 3, coffins: 1, lifetime: 90, souls: 10, nextAt: Date.now() + 600000, omen: { day: 'old', id: 'wet-hand', streak: 1, lastDay: 'old', grace: 1 } };
     s.life.introDone = true;
   });
@@ -179,11 +179,11 @@ test('on the second day, once something has been solved, the omen and chores arr
   await expect(page.locator('#mayhemDesk .mh-omen-tile')).toBeVisible();
   // Not yet the third day: the Playroom board and the Cabinet wait.
   const guide = (await saved(page)).life.guide;
-  const day = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(guide.at).setHours(0, 0, 0, 0)) / DAY) + 1;
-  if (day < 3) {
-    await expect(page.locator('#mayhemDesk .mh-today')).toHaveCount(0);
-    await expect(page.locator('#mayhemDesk .mh-teaser')).toContainText('Playroom board');
-  }
+  // Count calendar days in the page's time zone (the game's), not the test runner's.
+  const day = await page.evaluate(([at, DAY]) => Math.round((new Date().setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / DAY) + 1, [guide.at, DAY]);
+  expect(day).toBe(2);
+  await expect(page.locator('#mayhemDesk .mh-today')).toHaveCount(0);
+  await expect(page.locator('#mayhemDesk .mh-teaser')).toContainText('Playroom board');
 });
 
 test('Stories shows what is still locked, with a way to open it, instead of hiding it', async ({ page }) => {
