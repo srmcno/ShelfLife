@@ -21,7 +21,16 @@
 //     toast(text),             a game toast
 //     save(),                  persist the game state
 //     renderAll(),             repaint the whole game (after state changes)
+//     postbox,                 the postbox client (src/cloud/postbox.js)
+//     act(work, focus?),       run async work with the sheet busy and errors on the status line;
+//                              work(current) gets current() -> false once the account has changed
+//     current(),               false once the account has changed since this ctx was made
+//     openFriend(userId),      openPostbox(), close(), visitShelf(friend, { serve })
+//     online(),                false when the device says it is offline
+//     level(userId),           { name, line, total, next, progress } from the friendship counts
 //   }
+// The Friends sheet renders friend actions as [data-fr-action="<id>"] buttons and
+// sections inside [data-fr-section="<id>"], so specs can find them.
 
 const actions = [];
 const sources = [];
@@ -48,10 +57,14 @@ export function friendActions(friend, ctx) {
 /* A kind of mail in the postbox (summonses, visit requests, trade offers, gifts, verdicts).
    { id, order, label,
      count(ctx) -> number                     how many need the player (drives the badge), synchronous, from cache
-     load(ctx) -> Promise<item[]>             fetch fresh; items are { id, at (ms), title, line, html? }
+     load(ctx) -> Promise<item[]>             fetch fresh; items are { id, at (ms), title, line, html?,
+                                              from?: userId (adds Block and Report to the row),
+                                              unread?: true (counts for the friend's dot), read?: true (Clear read) }
      render(item, ctx) -> html               one row; buttons carry data-sx="<action>" data-sx-id="<item.id>"
      onClick(action, itemId, ctx) -> Promise  handle a button in a row
-     poll?: true                              include in the 30 second inbox check } */
+     poll?: true                              include in the 30 second inbox check
+     seen?(ctx) -> Promise                    the player has looked at the postbox
+     clear?(ctx) -> Promise                   "Clear read": drop the items marked read } */
 export function registerPostboxSource(source) {
   if (!source?.id || typeof source.load !== 'function') return;
   replace(sources, source);
@@ -78,5 +91,11 @@ export function socialView(id) { return views.get(id) || null; }
 
 export function renderSafely(fn, fallback = '') { return guard(fn, fallback); }
 
+// The Friends sheet's ctx, for things outside the sheet (the 30 second mail
+// check, the badge). null until the sheet has been built.
+let context = null;
+export function setSocialContext(ctx) { context = ctx || null; }
+export function socialContext() { return context; }
+
 // For tests.
-export function resetSocialRegistry() { actions.length = 0; sources.length = 0; sections.length = 0; views.clear(); }
+export function resetSocialRegistry() { actions.length = 0; sources.length = 0; sections.length = 0; views.clear(); context = null; }

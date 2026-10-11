@@ -149,20 +149,20 @@ test('add a friend by code, accept one, visit a shelf and serve papers', async (
   await expect(page.locator('#friendsSheet .fr-status')).toHaveText('Friends now. Their shelf is open to you, and yours to them.');
   await expect(page.locator('#friendsSheet .fr-friend .fr-who b')).toHaveText(['<img src=x onerror=y>', 'Bea']);
 
-  // Report and block the one with the name.
+  // Report and block the one with the name, from their profile.
   const catRow = page.locator('#friendsSheet .fr-friend').filter({ hasText: '<img' });
-  await catRow.locator('[data-fr="menu"]').click();
-  await expect(catRow.locator('[data-fr="visit"]')).toBeFocused();
-  await expect(catRow.locator('[data-fr="menu"]')).toHaveAttribute('aria-expanded', 'true');
-  await catRow.locator('[data-fr="report"]').click();
+  await catRow.locator('[data-fr="profile"]').click();
+  await expect(page.locator('#friendsVeil h2')).toHaveText('<img src=x onerror=y>');
+  await expect(page.locator('#friendsSheet [data-fr="back"]')).toBeFocused();
+  await expect(page.locator('#friendsSheet [data-fr-action="visit-shelf"]')).toBeVisible();
+  await page.locator('#friendsSheet .fr-options [data-fr="report"]').click();
   await expect(page.locator('#frReportMore')).toBeFocused();
   await page.locator('#friendsSheet input[name="frReason"][value="A rude name"]').check();
   await fits(page, [320]);
   await page.locator('#friendsSheet [data-fr="report-yes"]').click();
   await expect(page.locator('#friendsSheet .fr-status')).toHaveText('Reported. Block them too if you would rather not hear from them.');
   expect(fake.social.reports.map(r => [r.reported, r.reason])).toEqual([[cat.id, 'A rude name']]);
-  await catRow.locator('[data-fr="menu"]').click();
-  await catRow.locator('[data-fr="block"]').click();
+  await page.locator('#friendsSheet .fr-options [data-fr="block"]').click();
   await expect(page.locator('#friendsSheet [data-fr="block-yes"]')).toBeFocused();
   await page.locator('#friendsSheet [data-fr="block-yes"]').click();
   await expect(page.locator('#friendsSheet .fr-status')).toHaveText('Blocked. They will not find you again.');
@@ -170,8 +170,9 @@ test('add a friend by code, accept one, visit a shelf and serve papers', async (
 
   // Visit Bea: read only, drawn from the snapshot.
   const beaRow = page.locator('#friendsSheet .fr-friend').filter({ hasText: 'Bea' });
-  await beaRow.locator('[data-fr="menu"]').click();
-  await beaRow.locator('[data-fr="visit"]').click();
+  await beaRow.locator('[data-fr="profile"]').click();
+  await expect(page.locator('#friendsSheet .fr-portrait')).toHaveCount(2);
+  await page.locator('#friendsSheet [data-fr-action="visit-shelf"]').click();
   await expect(page.locator('#friendsVeil h2')).toHaveText('Bea’s shelf');
   await expect(page.locator('#friendsSheet .fr-res h4')).toHaveText(['Gladys', 'Snag']);
   await expect(page.locator('#friendsSheet .fr-res .sprite')).toHaveCount(2);
@@ -197,6 +198,8 @@ test('add a friend by code, accept one, visit a shelf and serve papers', async (
   const box = await bea.social.inbox();
   expect(box.cases.map(c => [c.fromName, c.plaintiff.name, c.defendant.name])).toEqual([['Ada', 'Pip', 'Snag']]);
 
+  await page.locator('#friendsSheet [data-fr="back"]').click();
+  await expect(page.locator('#friendsVeil h2')).toHaveText('Bea');
   await page.locator('#friendsSheet [data-fr="back"]').click();
   await expect(page.locator('#frAdd')).toBeFocused();
   await page.keyboard.press('Escape');

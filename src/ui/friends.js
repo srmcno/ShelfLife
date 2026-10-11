@@ -1,11 +1,18 @@
-// The Friends sheet: your code, adding by code, requests, the friend list and
-// its row menu, a friend's shelf (read only) and serving papers for Shelf
-// Court. Only built when cloud save is configured; the tray button reads
-// "Needs cloud save first" and opens the Cloud save sheet until the player is
-// signed in.
+// The Friends sheet: one hub in three places.
+//   Home       your postbox, requests, the friends list (portraits, level, a dot
+//              for mail), your code and name, Do not disturb, and the sections
+//              other features register.
+//   A friend   their household, cabinet, guestbook, your history together and
+//              every registered friend action, with the unavailable ones saying why.
+//   Postbox    one list of everything every registered source sent you.
+// Visiting a friend's shelf (read only, waves and papers) and serving papers
+// live here too. Only built when cloud save is configured; the tray button
+// reads "Needs cloud save first" and opens the Cloud save sheet until the
+// player is signed in.
 //
-// Everything a friend wrote arrives through the readers in src/cloud/social.js
-// and is printed through esc(). Nothing from the server is ever markup.
+// Features plug in through src/ui/social-registry.js and never edit this file.
+// Everything a friend wrote arrives through the readers in src/cloud/ and is
+// printed through esc(). Nothing from the server is ever markup.
 import { formatCode, socialText, guestPet } from '../cloud/social.js';
 import { emptyState, loadingState } from './fx.js';
 import { PLAY_URL } from '../backup.js';
@@ -14,14 +21,26 @@ import { TRAIT_BY_ID } from '../content/traits.js';
 import { RANKS } from '../content/mayhem.js';
 import { COURT_CASES } from '../content/court.js';
 import { COURT_BY_ID, docketToday, summonsReward } from '../engine/court.js';
+import { CURIO_BY_ID } from '../engine/mayhem.js';
 import { renderPetSprite } from '../art/sprite.js';
+import { curioSVG } from '../art/curios.js';
 import { save } from '../state.js';
 import { timeAgo } from './cloud.js';
+import { toast } from './toast.js';
+import { friendActions, friendsSections, postboxSources, postboxCount, socialView, renderSafely, setSocialContext } from './social-registry.js';
+import { friendLevel } from '../engine/visits.js';
+import { roomLook } from '../cloud/shelf-extras.js';
+import { HISTORY_KINDS, DND, WAVE_LINES, POKE_LINES, WAVE_SENT } from '../content/postbox.js';
+import { CloudError } from '../cloud/client.js';
+
+// The wrappers in src/cloud/ already word their refusals; anything else is the cloud's fault.
+const errorText = error => error instanceof CloudError && error.message ? error.message : socialText(error);
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const MOOD_LINES = { content: 'Content. Suspiciously so.', fine: 'Fine, it says.', annoyed: 'Annoyed at someone.', furious: 'Furious. Do not knock.' };
 export const REPORT_REASONS = ['A rude name', 'A rude drawing', 'Bothering me', 'Something else'];
 const MISSING_ART = '<svg class="fr-missing" viewBox="0 0 60 60" aria-hidden="true"><path d="M14 52V27a16 16 0 0 1 32 0v25l-5-4-5 4-5-4-5 4-5-4z" fill="currentColor" opacity=".3"/><circle cx="24" cy="27" r="3" fill="currentColor" opacity=".7"/><circle cx="36" cy="27" r="3" fill="currentColor" opacity=".7"/></svg>';
+export const HOME_FRIENDS = 12, MAIL_PAGE = 20;
 
 export const friendName = f => f?.name || (f?.code ? 'Code ' + formatCode(f.code) : 'A friend');
 export const traitNames = traits => (traits || []).map(t => TRAIT_BY_ID[t]?.name).filter(Boolean).join(', ');
@@ -55,15 +74,18 @@ export function collectVerdicts(state, social, results, now = Date.now(), persis
   for (const r of results) social.seen(r.id).catch(() => { /* shown again next time, never paid twice */ });
   return out;
 }
+// A trait's blurb is the closest thing to a line about a friend's resident.
+export const residentLine = r => TRAIT_BY_ID[r?.traits?.[0]]?.blurb || 'Keeps itself to itself. Mostly.';
 
 /* ---------------- markup (pure, so it can be checked without a page) ---------------- */
-export function friendRow(f, { menu = false, confirm = '' } = {}) {
+// A friend in the list: the whole row opens their profile.
+export function friendRow(f, { confirm = '', level = null, count = 0, mail = false, strip = '' } = {}) {
   const who = esc(friendName(f)), id = esc(f.userId);
   const when = f.shelfAt ? 'Shelf updated ' + timeAgo(f.shelfAt) : 'No shelf on show yet';
-  const items = [['visit', 'Visit shelf'], ['serve', 'Serve papers'], ['remove', 'Remove'], ['block', 'Block'], ['report', 'Report']];
-  return '<li class="fr-friend" data-user="' + id + '"><div class="fr-line"><div class="fr-who"><b>' + who + '</b><small>' + esc(when) + '</small></div>' +
-    '<button class="btn btn-ghost btn-sm fr-more" type="button" data-fr="menu" data-user="' + id + '" aria-expanded="' + menu + '" aria-controls="frMenu-' + id + '">Options<span class="sr-only"> for ' + who + '</span></button></div>' +
-    '<div class="fr-menu" id="frMenu-' + id + '"' + (menu ? '' : ' hidden') + '>' + items.map(([act, label]) => '<button class="btn btn-sm' + (act === 'block' || act === 'report' ? ' fr-warn' : '') + '" type="button" data-fr="' + act + '" data-user="' + id + '">' + label + '</button>').join('') + '</div>' +
+  const sub = [level?.name, count ? count + (count === 1 ? ' resident' : ' residents') : '', when].filter(Boolean).join(' · ');
+  return '<li class="fr-friend" data-user="' + id + '"><button class="fr-row-open" type="button" data-fr="profile" data-user="' + id + '">' +
+    '<span class="fr-who"><b>' + who + (mail ? '<i class="fr-dot" title="Mail from ' + who + '"></i><span class="sr-only">, has sent you something</span>' : '') + '</b>' +
+    '<small>' + esc(sub) + '</small></span><span class="fr-strip" data-fr-strip="' + id + '" aria-hidden="true">' + strip + '</span></button>' +
     (confirm ? confirmBox(confirm, f) : '') + '</li>';
 }
 export function requestRow(f, { confirm = '' } = {}) {
@@ -77,23 +99,39 @@ export function requestRow(f, { confirm = '' } = {}) {
     '<button class="btn btn-sm fr-warn" type="button" data-fr="block" data-user="' + id + '">Block</button><button class="btn btn-sm fr-warn" type="button" data-fr="report" data-user="' + id + '">Report</button></div>' +
     (confirm ? confirmBox(confirm, f) : '') + '</li>';
 }
-function confirmBox(kind, f) {
+export function confirmBox(kind, f) {
   const who = esc(friendName(f)), id = esc(f.userId);
   const yes = (act, label) => '<div class="fr-actions"><button class="btn fr-warn" type="button" data-fr="' + act + '" data-user="' + id + '">' + label + '</button><button class="btn btn-ghost" type="button" data-fr="cancel">Cancel</button></div>';
-  if (kind === 'remove') return '<div class="fr-confirm" role="group" aria-label="Remove ' + who + '"><p><b>Remove ' + who + '?</b> You stop seeing each other’s shelves. Either of you can ask again later.</p>' + yes('remove-yes', 'Remove') + '</div>';
-  if (kind === 'block') return '<div class="fr-confirm" role="group" aria-label="Block ' + who + '"><p><b>Block ' + who + '?</b> They are removed, any papers between you are torn up, and your code stops working for them. They are not told.</p>' + yes('block-yes', 'Block') + '</div>';
+  if (kind === 'remove') return '<div class="fr-confirm" role="group" aria-label="Remove ' + who + '"><p><b>Remove ' + who + '?</b> You stop seeing each other’s shelves. Guests go home and waiting mail is withdrawn. Either of you can ask again later.</p>' + yes('remove-yes', 'Remove') + '</div>';
+  if (kind === 'block') return '<div class="fr-confirm" role="group" aria-label="Block ' + who + '"><p><b>Block ' + who + '?</b> They are removed, everything between you is torn up, and your code stops working for them. They are not told.</p>' + yes('block-yes', 'Block') + '</div>';
   return '<div class="fr-confirm" role="group" aria-label="Report ' + who + '"><p><b>Report ' + who + '?</b> A person reads every report. They are not told who sent it.</p>' +
     '<fieldset class="fr-reasons"><legend class="sr-only">What is wrong</legend>' + REPORT_REASONS.map((r, i) => '<label><input type="radio" name="frReason" value="' + esc(r) + '"' + (i ? '' : ' checked') + '> ' + esc(r) + '</label>').join('') + '</fieldset>' +
     '<label class="fr-label" for="frReportMore">Anything to add (optional)</label><input class="fr-input" id="frReportMore" maxlength="150" autocomplete="off">' + yes('report-yes', 'Send report') + '</div>';
 }
-export function residentCard(r) {
-  return '<article class="fr-res" data-res="' + esc(r.id) + '"><span class="fr-res-art" data-res-art="' + esc(r.id) + '"></span><h4>' + esc(r.name) + '</h4>' +
+// A resident on a friend's shelf you are visiting: wave, poke or serve papers.
+export function residentCard(r, { waves = true } = {}) {
+  const name = esc(r.name);
+  return '<article class="fr-res" data-res="' + esc(r.id) + '"><span class="fr-res-art" data-res-art="' + esc(r.id) + '"></span><h4>' + name + '</h4>' +
     '<p class="fr-mood">' + esc(MOOD_LINES[r.mood] || MOOD_LINES.fine) + '</p>' + (r.traits.length ? '<p class="fr-traits">' + esc(traitNames(r.traits)) + '</p>' : '') +
-    '<button class="btn btn-sm" type="button" data-fr="papers" data-res="' + esc(r.id) + '">Serve papers<span class="sr-only"> on ' + esc(r.name) + '</span></button></article>';
+    (waves ? '<div class="fr-res-acts"><button class="btn btn-sm" type="button" data-fr="wave" data-res="' + esc(r.id) + '">Wave<span class="sr-only"> at ' + name + '</span></button>' +
+      '<button class="btn btn-sm" type="button" data-fr="poke" data-res="' + esc(r.id) + '">Poke<span class="sr-only"> ' + name + '</span></button></div>' : '') +
+    '<button class="btn btn-sm" type="button" data-fr="papers" data-res="' + esc(r.id) + '">Serve papers<span class="sr-only"> on ' + name + '</span></button></article>';
+}
+// The history together, from the server's counts, as one sentence.
+export function historyLine(kinds = {}) {
+  const parts = HISTORY_KINDS.filter(k => kinds[k.id] > 0).map(k => kinds[k.id] + ' ' + (kinds[k.id] === 1 ? k.one : k.many));
+  return parts.length ? parts.join(', ') + '.' : 'Nothing yet. Every friendship starts with a small, regrettable gesture.';
+}
+export function levelMarkup(level) {
+  const pct = Math.round(level.progress * 100);
+  return '<div class="fr-level" data-fr-level><div class="fr-level-head"><b>' + esc(level.name) + '</b><small>' +
+    (level.next === null ? 'As close as it gets.' : (level.next - level.total) + ' more to ' + esc(level.nextName)) + '</small></div>' +
+    '<div class="fr-level-bar" role="progressbar" aria-label="Friendship" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"><i style="width:' + pct + '%"></i></div>' +
+    '<p>' + esc(level.line) + '</p></div>';
 }
 
 /* ---------------- the sheet ---------------- */
-export function initFriends({ state, cloud, sync, social, openCloud = () => {}, onRefresh = () => {} }) {
+export function initFriends({ state, cloud, sync, social, postbox = null, openCloud = () => {}, onRefresh = () => {} }) {
   if (!cloud?.configured || !social) return null;
   const $ = id => document.getElementById(id);
   const veil = $('friendsVeil'), sheet = $('friendsSheet');
@@ -107,10 +145,12 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   button.innerHTML = '<span>Friends <i class="fr-badge" id="friendsBadge" hidden></i></span><small id="friendsBtnSub"></small>';
   tray.after(button);
 
-  let view = 'main', message = '', busy = false, menuFor = '', confirm = null;
-  let me = { code: '', name: '' }, friends = [], loaded = false, waiting = 0;
-  let visiting = null, serving = null, title = ['Friends', ''], drafts = {}, verdicts = [];
+  let view = 'main', message = '', busy = false, confirm = null;
+  let me = { code: '', name: '' }, friends = [], loaded = false, showAll = false;
+  let visiting = null, serving = null, profile = null, custom = null, title = ['Friends', ''], drafts = {};
+  let mail = new Map(), mailLoading = false, mailLoaded = false, mailShown = MAIL_PAGE, mailSafety = '', strips = new Map(), shelves = new Map();
   let sent = [], sentNext = null, sentLoaded = false, sentLoading = false, sentError = '', sentRetryOlder = false, sentUser = cloud.userId(), sentToken = 0, accountEpoch = 0, justServed = false;
+  const sprites = new Map();
   // Built once: the head stays a direct child of the sheet (it sticks on
   // phones) and the status line stays put, so screen readers hear each change.
   sheet.innerHTML = '<div class="sheet-head"><div><span class="eyebrow" data-fr-kicker></span><h2 data-fr-title tabindex="-1">Friends</h2></div><button class="btn btn-ghost btn-sm" type="button" data-fr="close">Close</button></div>' +
@@ -119,7 +159,52 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
   const isOpen = () => veil.classList.contains('open');
   const accepted = () => friends.filter(f => f.status === 'accepted');
   const byId = id => friends.find(f => f.userId === id) || null;
+  const online = () => typeof navigator === 'undefined' || navigator.onLine !== false;
+  const levelOf = userId => friendLevel(postbox?.state().levels.find(l => l.userId === userId)?.total || 0);
 
+  /* ---- the ctx every registered feature gets ---- */
+  function makeCtx(current = () => true) {
+    const ctx = {
+      state, social, cloud, postbox,
+      get me() { return { userId: social.userId(), code: me.code, name: me.name }; },
+      friends: () => accepted(),
+      friend: id => accepted().find(f => f.userId === id) || null,
+      show(v) {
+        if (!v?.id) return;
+        custom = { back: 'main', ...v }; view = 'custom'; message = v.message || '';
+        render(v.focus || '[data-fr="custom-back"]');
+      },
+      back: () => goBack(custom?.back || 'main'),
+      refresh: () => render(),
+      say(text) { message = String(text || ''); render(); },
+      toast, save, renderAll: onRefresh,
+      act: (work, focus) => act(work, focus),
+      current,
+      openFriend: userId => { const f = ctx.friend(userId); if (f) openProfile(f); },
+      openPostbox: () => openPostbox(),
+      close: () => close(),
+      visitShelf: (friend, options) => visit(friend, options),
+      online,
+      level: levelOf,
+      reloadMail: () => loadMail()
+    };
+    return ctx;
+  }
+  const ctx = makeCtx();
+  setSocialContext(ctx);
+  function epochCtx() {
+    const epoch = accountEpoch, user = cloud.userId();
+    return makeCtx(() => epoch === accountEpoch && user === cloud.userId());
+  }
+
+  function goBack(where) {
+    message = '';
+    if (where.startsWith('friend:')) { const f = byId(where.slice(7)); if (f) { openProfile(f, { reload: false }); return; } }
+    if (where === 'postbox') { view = 'postbox'; custom = null; render('[data-fr="back"]'); return; }
+    view = 'main'; custom = null; visiting = null; profile = null; render('#frAdd');
+  }
+
+  /* ---- cases you've sent (unchanged behaviour, now on the home view) ---- */
   function sentMarkup() {
     const rows = sent.map(c => {
       const p = c.plaintiff.name || 'Your resident', d = c.defendant.name || 'Their resident';
@@ -157,7 +242,8 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     if (user === sentUser) return false;
     sentUser = user; sentToken++; sent = []; sentNext = null; sentLoaded = sentLoading = false; sentError = ''; justServed = false;
     accountEpoch++; busy = false;
-    friends = []; loaded = false; waiting = 0; verdicts = []; me = { code: '', name: '' }; drafts = {}; message = '';
+    friends = []; loaded = false; me = { code: '', name: '' }; drafts = {}; message = '';
+    mail = new Map(); mailLoaded = false; mailLoading = false; strips = new Map(); shelves = new Map(); sprites.clear(); profile = null;
     return true;
   }
   async function loadSent({ older = false } = {}) {
@@ -179,8 +265,9 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     }
   }
 
+  /* ---- the tray badge counts everything in the postbox ---- */
   function syncTray() {
-    const signedIn = social.signedIn(), count = signedIn ? social.inboxCount() : 0;
+    const signedIn = social.signedIn(), count = signedIn ? postboxCount(ctx) : 0;
     $('friendsBtnSub').textContent = !signedIn ? 'Needs cloud save first' : count ? count + ' waiting for you' : 'Shelves, papers and scores';
     const badge = $('friendsBadge');
     badge.hidden = !count;
@@ -188,34 +275,126 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     button.setAttribute('aria-label', !signedIn ? 'Friends: needs cloud save first' : count ? 'Friends, ' + count + ' waiting' : 'Friends');
   }
 
+  /* ---- sections and actions from the registry ---- */
+  function sectionsMarkup(where, friend = null) {
+    return friendsSections(where).map(s => {
+      const html = renderSafely(() => s.render(ctx, friend), '');
+      return html ? '<section class="fr-section" data-fr-section="' + esc(s.id) + '">' + html + '</section>' : '';
+    }).join('');
+  }
+  function actionsMarkup(friend) {
+    const list = friendActions(friend, ctx);
+    if (!list.length) return '';
+    return '<div class="fr-big-actions" role="group" aria-label="Things to do with ' + esc(friendName(friend)) + '">' + list.map(a => {
+      const why = typeof a.state === 'string' ? a.state : '';
+      const reason = why ? ' aria-describedby="frWhy-' + esc(a.id) + '"' : '';
+      return '<div class="fr-big"><button class="btn' + (a.primary ? ' btn-primary' : '') + '" type="button" data-fr-action="' + esc(a.id) + '" data-user="' + esc(friend.userId) + '"' + (why ? ' disabled' : '') + reason + '>' +
+        (a.icon ? '<span class="fr-big-icon" aria-hidden="true">' + a.icon + '</span>' : '') + '<span>' + esc(a.label) + '</span></button>' +
+        (why ? '<small id="frWhy-' + esc(a.id) + '">' + esc(why) + '</small>' : '') + '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* ---- home ---- */
+  function mailFrom() {
+    const out = new Set();
+    for (const items of mail.values()) for (const item of items) if (item.from && item.unread) out.add(item.from);
+    return out;
+  }
+  function stripMarkup(userId) {
+    const strip = strips.get(userId);
+    if (!strip) return '';
+    return strip.residents.map(r => '<span class="fr-mini" data-mini="' + esc(userId + '/' + r.id) + '"></span>').join('');
+  }
   function mainMarkup() {
     const incoming = friends.filter(f => f.status === 'pending');
     const list = accepted();
     const share = isNative() || (typeof navigator !== 'undefined' && typeof navigator.share === 'function');
+    const count = postboxCount(ctx), dots = mailFrom(), dnd = !!postbox?.state().dnd;
+    const shown = showAll ? list : list.slice(0, HOME_FRIENDS);
     title = ['Friends', 'Seen by friends. Nobody else.'];
-    return '<section class="fr-me" aria-labelledby="frCodeTitle"><h3 id="frCodeTitle">Your friend code</h3>' +
+    return '<button class="fr-postbox-entry" type="button" data-fr="postbox"><span class="fr-pb-icon" aria-hidden="true">' + POSTBOX_ICON + '</span>' +
+      '<span class="fr-pb-text"><b>Postbox</b><small>' + (count ? count + ' waiting for you' : 'Nothing waiting. Suspicious.') + '</small></span>' +
+      (count ? '<i class="fr-badge" aria-hidden="true">' + (count > 99 ? '99+' : count) + '</i>' : '') + '</button>' +
+      (incoming.length ? '<section aria-labelledby="frRequestsTitle"><h3 id="frRequestsTitle">Requests</h3><ul class="fr-list">' + incoming.map(f => requestRow(f, { confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul></section>' : '') +
+      '<section aria-labelledby="frListTitle"><h3 id="frListTitle">Friends' + (list.length ? ' <small>' + list.length + '</small>' : '') + '</h3>' +
+      (list.length ? '<ul class="fr-list">' + shown.map(f => friendRow(f, { confirm: confirm?.userId === f.userId ? confirm.kind : '', level: levelOf(f.userId),
+          count: strips.get(f.userId)?.count || 0, mail: dots.has(f.userId), strip: stripMarkup(f.userId) })).join('') + '</ul>' +
+          (list.length > shown.length ? '<div class="fr-actions"><button class="btn" type="button" data-fr="show-all">Show all ' + list.length + ' friends</button></div>' : '')
+        : loaded ? emptyState({ kind: 'friends', compact: true, line: 'Nobody yet. Swap codes with someone you know.', lineClass: 'fr-empty' }) : loadingState('Knocking on doors.')) + '</section>' +
+      '<section class="fr-me" aria-labelledby="frCodeTitle"><h3 id="frCodeTitle">Your friend code</h3>' +
       '<p class="fr-code" data-fr-code>' + (me.code ? esc(formatCode(me.code)) : '<span class="fr-wait">Fetching</span>') + '</p>' +
       '<div class="fr-actions"><button class="btn" type="button" data-fr="copy"' + (me.code ? '' : ' disabled') + '>Copy code</button>' +
       (share ? '<button class="btn" type="button" data-fr="share"' + (me.code ? '' : ' disabled') + '>Share</button>' : '') + '</div>' +
-      '<form class="fr-form" data-fr-form="name"><label class="fr-label" for="frName">Your name, as friends see it</label><div class="fr-row"><input class="fr-input" id="frName" maxlength="24" autocomplete="nickname" value="' + esc(drafts.frName ?? me.name) + '" placeholder="Leave blank to go by your code"><button class="btn" type="submit">Save name</button></div></form></section>' +
       '<form class="fr-form fr-add" data-fr-form="add"><label class="fr-label" for="frAdd">Add a friend by code</label><div class="fr-row"><input class="fr-input fr-code-input" id="frAdd" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD EFGH" value="' + esc(drafts.frAdd || '') + '"><button class="btn btn-primary" type="submit">Add</button></div></form>' +
-      (verdicts.length ? '<section aria-labelledby="frVerdictsTitle"><h3 id="frVerdictsTitle">Verdicts</h3><ul class="fr-verdicts">' + verdicts.map(v => '<li>' + esc(verdictLine(v)) + '</li>').join('') + '</ul></section>' : '') +
-      (waiting ? '<p class="fr-inbox"><b>' + waiting + (waiting === 1 ? ' set of papers waits' : ' sets of papers wait') + ' for you in Shelf Court.</b> <button class="btn btn-sm" type="button" data-fr="court">Open Shelf Court</button></p>' : '') +
+      '<form class="fr-form" data-fr-form="name"><label class="fr-label" for="frName">Your name, as friends see it</label><div class="fr-row"><input class="fr-input" id="frName" maxlength="24" autocomplete="nickname" value="' + esc(drafts.frName ?? me.name) + '" placeholder="Leave blank to go by your code"><button class="btn" type="submit">Save name</button></div></form></section>' +
+      sectionsMarkup('home') +
       sentMarkup() +
-      (incoming.length ? '<section aria-labelledby="frRequestsTitle"><h3 id="frRequestsTitle">Requests</h3><ul class="fr-list">' + incoming.map(f => requestRow(f, { confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul></section>' : '') +
-      '<section aria-labelledby="frListTitle"><h3 id="frListTitle">Friends' + (list.length ? ' <small>' + list.length + '</small>' : '') + '</h3>' +
-      (list.length ? '<ul class="fr-list">' + list.map(f => friendRow(f, { menu: menuFor === f.userId, confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul>'
-        : loaded ? emptyState({ kind: 'friends', compact: true, line: 'Nobody yet. Swap codes with someone you know.', lineClass: 'fr-empty' }) : loadingState('Knocking on doors.')) + '</section>' +
+      (postbox ? '<section class="fr-dnd" aria-labelledby="frDndTitle"><div class="fr-dnd-row"><div><h3 id="frDndTitle">' + esc(DND.label) + '</h3><p id="frDndLine">' + esc(dnd ? DND.on : DND.off) + '</p></div>' +
+        '<button class="fr-switch" type="button" role="switch" data-fr="dnd" aria-checked="' + dnd + '" aria-labelledby="frDndTitle" aria-describedby="frDndLine"><i></i></button></div></section>' : '') +
       '<p class="hint fr-small">Your name, residents and drawings are shown to accepted friends only. Daily scores reach everyone else as a percentage, never a name.</p>';
+  }
+
+  /* ---- a friend's profile ---- */
+  function profileMarkup() {
+    const f = profile.friend, s = profile.shelf, who = friendName(f);
+    title = [who, profile.loading ? 'Knocking' : 'A friend'];
+    const level = levelOf(f.userId), kinds = postbox?.state().levels.find(l => l.userId === f.userId)?.kinds || {};
+    const facts = s ? [RANKS[s.rank]?.title, s.title ? 'wears “' + s.title + '”' : '', s.curios + (s.curios === 1 ? ' curio' : ' curios'),
+      f.shelfAt ? 'updated ' + timeAgo(f.shelfAt) : ''].filter(Boolean).join(' · ') : '';
+    const selected = s?.residents.find(r => r.id === profile.resident) || null;
+    return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to friends</button></div>' +
+      (facts ? '<p class="fr-facts">' + esc(facts) + '</p>' : '') +
+      levelMarkup(level) +
+      actionsMarkup(f) +
+      '<section aria-labelledby="frRosterTitle"><h3 id="frRosterTitle">Their household' + (s ? ' <small>' + s.residents.length + '</small>' : '') + '</h3>' +
+      (profile.loading ? loadingState('Counting heads.') : !s || !s.residents.length ? '<p class="fr-empty">Nothing on show yet. Their shelf appears once they open Friends.</p>'
+        : '<div class="fr-roster">' + s.residents.map(r => '<button class="fr-portrait" type="button" data-fr="resident" data-res="' + esc(r.id) + '" aria-pressed="' + (r.id === profile.resident) + '">' +
+            '<span class="fr-portrait-art" data-res-art="' + esc(r.id) + '"></span><span>' + esc(r.name) + '</span></button>').join('') + '</div>' +
+          (selected ? '<article class="fr-res-card" data-fr-res-card="' + esc(selected.id) + '" tabindex="-1"><h4>' + esc(selected.name) + '</h4>' +
+            '<p class="fr-mood">' + esc(MOOD_LINES[selected.mood] || MOOD_LINES.fine) + '</p>' + (selected.traits.length ? '<p class="fr-traits">' + esc(traitNames(selected.traits)) + '</p>' : '') +
+            '<p class="fr-res-line">' + esc(residentLine(selected)) + '</p></article>' : '')) + '</section>' +
+      (s?.highlights?.length ? '<section aria-labelledby="frCabTitle"><h3 id="frCabTitle">From their cabinet</h3><ul class="fr-cabinet">' + s.highlights.map(id =>
+        '<li><span class="fr-curio">' + curioSVG(CURIO_BY_ID[id]?.glyph || id) + '</span><span>' + esc(CURIO_BY_ID[id]?.name || '') + '</span></li>').join('') + '</ul></section>' : '') +
+      '<section aria-labelledby="frHistoryTitle"><h3 id="frHistoryTitle">Your history together</h3><p class="fr-history">' + esc(historyLine(kinds)) + '</p></section>' +
+      sectionsMarkup('friend', f) +
+      '<section class="fr-options" aria-labelledby="frOptionsTitle"><h3 id="frOptionsTitle">If it has come to this</h3><div class="fr-menu">' +
+      [['remove', 'Remove'], ['block', 'Block'], ['report', 'Report']].map(([act, label]) => '<button class="btn btn-sm' + (act === 'remove' ? '' : ' fr-warn') + '" type="button" data-fr="' + act + '" data-user="' + esc(f.userId) + '">' + label + '</button>').join('') +
+      '</div>' + (confirm?.userId === f.userId ? confirmBox(confirm.kind, f) : '') + '</section>';
+  }
+
+  /* ---- visiting their shelf ---- */
+  function sceneMarkup(s) {
+    const look = roomLook(s.decor), slots = s.slots || {};
+    // Their own arrangement where the snapshot says; anyone unplaced fills the gaps.
+    const cells = new Map(), taken = new Set(Object.values(slots));
+    let next = 0;
+    for (const r of s.residents) {
+      let i = slots[r.id];
+      if (!Number.isInteger(i)) { while (taken.has(next)) next++; i = next; taken.add(i); }
+      cells.set(i, r);
+    }
+    const rows = Math.max(1, Math.ceil((Math.max(...cells.keys(), 0) + 1) / 6));
+    const style = '--fs-a:' + look.a + ';--fs-b:' + look.b + ';--fs-wood:' + look.wood + ';--fs-lip:' + look.lip + ';--fs-ink:' + look.ink;
+    let html = '<div class="fr-scene wall-' + esc(look.wall) + '" style="' + style + '" data-fr-scene>';
+    for (let row = 0; row < rows; row++) {
+      html += '<div class="fr-scene-row">';
+      for (let c = 0; c < 6; c++) {
+        const r = cells.get(row * 6 + c);
+        html += r ? '<button class="fr-scene-pet" type="button" data-fr="scene-pet" data-res="' + esc(r.id) + '" aria-label="' + esc(r.name) + '"><span data-scene-art="' + esc(r.id) + '"></span><i>' + esc(r.name) + '</i></button>' : '<span class="fr-scene-gap"></span>';
+      }
+      html += '</div><div class="fr-scene-plank"></div>';
+    }
+    return html + '</div>';
   }
   function shelfMarkup() {
     const v = visiting, f = v.friend, s = v.shelf;
     const facts = s ? [RANKS[s.rank]?.title, s.curios + (s.curios === 1 ? ' curio' : ' curios'), v.updatedAt ? 'Updated ' + timeAgo(v.updatedAt) : ''].filter(Boolean).join(' · ') : '';
     title = [friendName(f) + '’s shelf', 'Visiting · look, do not touch'];
-    return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to friends</button>' + (justServed ? '<button class="btn" type="button" data-fr="sent-view">View my cases</button>' : '') + '</div>' +
+    return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to ' + esc(v.from === 'profile' ? friendName(f) : 'friends') + '</button>' + (justServed ? '<button class="btn" type="button" data-fr="sent-view">View my cases</button>' : '') + '</div>' +
       (v.loading ? loadingState('Wiping their doormat.')
         : !s || !s.residents.length ? emptyState({ kind: 'friends', compact: true, line: 'Nothing on show yet. Their shelf appears here once they open Friends.', lineClass: 'fr-empty' })
-        : '<p class="fr-facts">' + esc(facts) + '</p><div class="fr-shelf">' + s.residents.map(residentCard).join('') + '</div>');
+        : '<p class="fr-facts">' + esc(facts) + '</p>' + sceneMarkup(s) + '<p class="hint fr-small">Wave or poke and they hear about it in their postbox. Three a day each, so make them count.</p>' +
+          '<div class="fr-shelf">' + s.residents.map(r => residentCard(r, { waves: !!postbox })).join('') + '</div>');
   }
   function serveMarkup() {
     const v = serving, docket = docketToday(state);
@@ -232,25 +411,88 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       '<div class="fr-actions"><button class="btn btn-primary" type="submit"' + (state.pets.length ? '' : ' disabled') + '>Serve the papers</button></div></form>';
   }
 
+  /* ---- the postbox ---- */
+  function allMail() {
+    const out = [];
+    for (const source of postboxSources()) for (const item of mail.get(source.id) || []) out.push({ source, item });
+    return out.sort((a, b) => (b.item.at || 0) - (a.item.at || 0));
+  }
+  function mailMarkup() {
+    const items = allMail(), shown = items.slice(0, mailShown), read = items.filter(x => x.item.read).length;
+    title = ['Postbox', 'Everything friends sent'];
+    const rows = shown.map(({ source, item }) => {
+      const key = source.id + ':' + item.id, from = item.from ? byId(item.from) : null;
+      const inner = source.render ? renderSafely(() => source.render(item, ctx), '') : '';
+      const safety = from && mailSafety === key;
+      return '<li class="pb-item' + (item.unread ? ' pb-unread' : '') + (item.read ? ' pb-read' : '') + '" data-fr-mail="' + esc(source.id) + '" data-fr-item="' + esc(item.id) + '">' +
+        (inner || '<p class="pb-title"><b>' + esc(item.title || source.label || 'Post') + '</b></p>' + (item.line ? '<p class="pb-line">' + esc(item.line) + '</p>' : '')) +
+        '<div class="pb-foot"><small>' + (item.at ? esc(timeAgo(item.at)) : '') + (item.fromName || from ? ' · from ' + esc(item.fromName || friendName(from)) : '') + '</small>' +
+        (from ? '<button class="btn btn-ghost btn-sm pb-safety" type="button" data-fr="mail-safety" data-key="' + esc(key) + '" aria-expanded="' + safety + '">Block or report<span class="sr-only"> ' + esc(friendName(from)) + '</span></button>' : '') + '</div>' +
+        (safety ? '<div class="fr-menu"><button class="btn btn-sm fr-warn" type="button" data-fr="block" data-user="' + esc(from.userId) + '">Block ' + esc(friendName(from)) + '</button><button class="btn btn-sm fr-warn" type="button" data-fr="report" data-user="' + esc(from.userId) + '">Report</button></div>' +
+          (confirm?.userId === from.userId ? confirmBox(confirm.kind, from) : '') : '') + '</li>';
+    }).join('');
+    return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="back">Back to friends</button>' +
+      '<button class="btn" type="button" data-fr="clear-read"' + (read ? '' : ' disabled') + '>Clear read' + (read ? ' (' + read + ')' : '') + '</button></div>' +
+      (mailLoading && !items.length ? loadingState('Shaking the postbox.') : !items.length
+        ? emptyState({ kind: 'friends', compact: true, line: 'Empty. Not even a bill. Friends’ visitors, treats, waves and papers land here.', lineClass: 'fr-empty' })
+        : '<ul class="pb-list" aria-label="Postbox, newest first">' + rows + '</ul>' +
+          (items.length > shown.length ? '<div class="fr-actions"><button class="btn" type="button" data-fr="mail-more">Show ' + Math.min(MAIL_PAGE, items.length - shown.length) + ' older</button></div>' : '')) +
+      (mailLoading && items.length ? '<p class="hint" role="status">Checking for more.</p>' : '');
+  }
+  function customMarkup() {
+    const v = custom;
+    title = [v.title || 'Friends', v.kicker || ''];
+    const backLabel = v.back === 'postbox' ? 'Back to the postbox' : v.back?.startsWith('friend:') ? 'Back to ' + friendName(byId(v.back.slice(7))) : 'Back to friends';
+    return '<div class="fr-actions fr-back"><button class="btn btn-ghost" type="button" data-fr="custom-back">' + esc(backLabel) + '</button></div>' +
+      '<div class="fr-custom" data-fr-view="' + esc(v.id) + '">' + (v.html || '') + '</div>';
+  }
+
   // Redraws keep the focus on the same control where it still exists.
   function render(focus = null) {
     if (!isOpen()) { syncTray(); return; }
     const active = document.activeElement, key = focus || (active && body.contains(active) ? focusKey(active) : null);
-    body.innerHTML = view === 'shelf' ? shelfMarkup() : view === 'serve' ? serveMarkup() : mainMarkup();
+    body.innerHTML = view === 'shelf' && visiting ? shelfMarkup() : view === 'serve' ? serveMarkup() : view === 'friend' && profile ? profileMarkup()
+      : view === 'postbox' ? mailMarkup() : view === 'custom' && custom ? customMarkup() : mainMarkup();
     sheet.querySelector('[data-fr-title]').textContent = title[0];
     sheet.querySelector('[data-fr-kicker]').textContent = title[1];
     if (status.textContent !== message) status.textContent = message;
-    if (view === 'shelf' && visiting?.shelf) for (const r of visiting.shelf.residents) body.querySelector('[data-res-art="' + CSS.escape(r.id) + '"]')?.appendChild(guestSprite(r));
-    if (view === 'serve') body.querySelector('[data-serve-art]')?.appendChild(guestSprite(serving.resident));
+    paintSprites();
     body.querySelectorAll('button').forEach(b => { if (busy) b.disabled = true; });
     const target = key && sheet.querySelector(key);
     if (target && !target.disabled) target.focus({ preventScroll: true });
     else if (key) sheet.querySelector('h2')?.focus({ preventScroll: true });
     syncTray();
   }
+  // Sprites are drawn once per resident and moved into each fresh render.
+  function sprite(key, resident) {
+    let el = sprites.get(key);
+    if (!el) { el = guestSprite(resident); sprites.set(key, el); }
+    return el;
+  }
+  function paintSprites() {
+    if (view === 'shelf' && visiting?.shelf) for (const r of visiting.shelf.residents) {
+      const k = visiting.friend.userId + '/' + r.id;
+      body.querySelector('[data-res-art="' + CSS.escape(r.id) + '"]')?.appendChild(sprite('card:' + k, r));
+      body.querySelector('[data-scene-art="' + CSS.escape(r.id) + '"]')?.appendChild(sprite('scene:' + k, r));
+    }
+    if (view === 'friend' && profile?.shelf) for (const r of profile.shelf.residents) {
+      body.querySelector('[data-res-art="' + CSS.escape(r.id) + '"]')?.appendChild(sprite('portrait:' + profile.friend.userId + '/' + r.id, r));
+    }
+    if (view === 'serve') body.querySelector('[data-serve-art]')?.appendChild(guestSprite(serving.resident));
+    if (view === 'main') for (const slot of body.querySelectorAll('[data-mini]')) {
+      const [userId, id] = slot.dataset.mini.split('/'), r = strips.get(userId)?.residents.find(x => x.id === id);
+      if (r) slot.appendChild(sprite('mini:' + slot.dataset.mini, r));
+    }
+    // Custom views and postbox rows name residents as <span data-fr-pet="key"> and hand
+    // them over as { pets: { key: resident } }; they are drawn fresh each time.
+    const pets = view === 'custom' ? custom?.pets : view === 'postbox' ? Object.assign({}, ...allMail().map(x => x.item.pets || {})) : null;
+    if (pets) body.querySelectorAll('[data-fr-pet]').forEach(slot => { const r = pets[slot.dataset.frPet]; if (r) slot.appendChild(guestSprite(r)); });
+  }
   function focusKey(el) {
     if (el.id) return '#' + CSS.escape(el.id);
-    if (el.dataset.fr) return '[data-fr="' + el.dataset.fr + '"]' + (el.dataset.user ? '[data-user="' + CSS.escape(el.dataset.user) + '"]' : '') + (el.dataset.res ? '[data-res="' + CSS.escape(el.dataset.res) + '"]' : '');
+    if (el.dataset.frAction) return '[data-fr-action="' + CSS.escape(el.dataset.frAction) + '"]';
+    if (el.dataset.sx) return '[data-sx="' + CSS.escape(el.dataset.sx) + '"]' + (el.dataset.sxId ? '[data-sx-id="' + CSS.escape(el.dataset.sxId) + '"]' : '');
+    if (el.dataset.fr) return '[data-fr="' + el.dataset.fr + '"]' + (el.dataset.user ? '[data-user="' + CSS.escape(el.dataset.user) + '"]' : '') + (el.dataset.res ? '[data-res="' + CSS.escape(el.dataset.res) + '"]' : '') + (el.dataset.key ? '[data-key="' + CSS.escape(el.dataset.key) + '"]' : '');
     return null;
   }
 
@@ -260,31 +502,49 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     const current = () => epoch === accountEpoch && user === cloud.userId();
     busy = true; message = ''; render();
     try { await work(current); }
-    catch (error) { if (current()) message = socialText(error); }
+    catch (error) { if (current()) message = errorText(error); }
     finally { if (current()) { busy = false; render(focus); } }
   }
   async function reload() {
     const epoch = accountEpoch, user = cloud.userId();
-    const [list, box] = await Promise.all([social.friends(), social.inbox()]);
+    const list = await social.friends();
     if (epoch !== accountEpoch || user !== cloud.userId()) return null;
-    friends = list; waiting = box.cases.length; loaded = true;
-    const fresh = collectVerdicts(state, social, box.results).filter(v => !verdicts.some(x => x.id === v.id));
-    if (fresh.length) { verdicts = [...fresh, ...verdicts]; onRefresh(); }
-    return box;
+    friends = list; loaded = true;
+    await Promise.all([loadMail({ quiet: true }), loadStrips()]);
+    return true;
+  }
+  async function loadStrips() {
+    if (!postbox) return;
+    const epoch = accountEpoch;
+    try {
+      const next = await postbox.strips();
+      if (epoch === accountEpoch) strips = next;
+    } catch { /* portraits are a nicety */ }
+  }
+  // Every source, fresh. A source that fails keeps what it had.
+  async function loadMail({ quiet = false } = {}) {
+    const local = epochCtx();
+    mailLoading = true;
+    if (!quiet && view === 'postbox') render();
+    const results = await Promise.allSettled(postboxSources().map(async source => [source.id, await source.load(local)]));
+    if (!local.current()) return;
+    for (const r of results) if (r.status === 'fulfilled' && Array.isArray(r.value[1])) mail.set(r.value[0], r.value[1].filter(i => i && i.id).slice(0, 50));
+    mailLoading = false; mailLoaded = true;
+    render();
   }
 
   async function open() {
     if (!social.signedIn()) { openCloud(); return; }
     scopeSent();
     social.optIn();
-    view = 'main'; message = ''; menuFor = ''; confirm = null; visiting = serving = null; verdicts = [];
+    view = 'main'; message = ''; confirm = null; visiting = serving = profile = custom = null; showAll = false; mailSafety = '';
     veil.classList.add('open');
     render();
     const epoch = accountEpoch, user = cloud.userId();
     await act(async current => {
-      const profile = await social.profile();
+      const me_ = await social.profile();
       if (!current()) return;
-      me = profile;
+      me = me_;
       await reload();
       if (!current()) return;
       await loadSent();
@@ -293,16 +553,43 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     // Friends see the shelf as it is now. Quietly: a failure here changes nothing.
     social.publish({ force: true }).catch(() => {});
   }
-  function close() { veil.classList.remove('open'); view = 'main'; visiting = serving = null; menuFor = ''; confirm = null; drafts = {}; syncTray(); }
+  function close() { veil.classList.remove('open'); view = 'main'; visiting = serving = profile = custom = null; confirm = null; drafts = {}; mailSafety = ''; syncTray(); }
+
+  async function openPostbox() {
+    if (!isOpen()) { await open(); if (!isOpen()) return; }
+    view = 'postbox'; custom = null; confirm = null; mailSafety = ''; mailShown = MAIL_PAGE; message = '';
+    render('[data-fr="back"]');
+    await loadMail();
+    if (view !== 'postbox') return;
+    for (const source of postboxSources()) if (source.seen) Promise.resolve().then(() => source.seen(ctx)).then(() => syncTray(), () => {});
+  }
+  async function openProfile(friend, { reload: fetch = true } = {}) {
+    view = 'friend'; custom = null; confirm = null; message = '';
+    profile = { friend, shelf: shelves.get(friend.userId)?.shelf || null, loading: !shelves.has(friend.userId), resident: profile?.friend.userId === friend.userId ? profile.resident : '' };
+    render('[data-fr="back"]');
+    if (!fetch && shelves.has(friend.userId)) return;
+    const epoch = accountEpoch;
+    try {
+      const r = await social.shelf(friend.userId);
+      if (epoch !== accountEpoch) return;
+      shelves.set(friend.userId, { shelf: r?.shelf || null, updatedAt: r?.updatedAt || 0 });
+      if (profile?.friend.userId === friend.userId) { profile.shelf = r?.shelf || null; profile.loading = false; render(); }
+    } catch (error) {
+      if (epoch === accountEpoch && profile?.friend.userId === friend.userId) { profile.loading = false; message = socialText(error); render(); }
+    }
+  }
 
   async function visit(friend, { serve = false } = {}) {
-    view = 'shelf'; visiting = { friend, shelf: null, loading: true, updatedAt: 0 }; menuFor = ''; confirm = null; message = '';
+    const from = view === 'friend' ? 'profile' : 'main';
+    const cached = shelves.get(friend.userId);
+    view = 'shelf'; visiting = { friend, shelf: cached?.shelf || null, loading: !cached, updatedAt: cached?.updatedAt || 0, from }; confirm = null; message = '';
     render('[data-fr="back"]');
     await act(async current => {
       try {
         const r = await social.shelf(friend.userId);
         if (!current()) return;
-        visiting = { friend, shelf: r?.shelf || null, loading: false, updatedAt: r?.updatedAt || 0 };
+        shelves.set(friend.userId, { shelf: r?.shelf || null, updatedAt: r?.updatedAt || 0 });
+        visiting = { friend, shelf: r?.shelf || null, loading: false, updatedAt: r?.updatedAt || 0, from };
         if (serve && visiting.shelf?.residents.length) message = 'Choose whom to sue.';
       } catch (error) { if (current() && visiting) visiting.loading = false; throw error; }
     }, serve ? '[data-fr="papers"]' : '[data-fr="back"]');
@@ -313,13 +600,29 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     message = '';
     render('#frCase');
   }
+  function wave(resident, kind) {
+    const friend = visiting?.friend;
+    if (!friend || !postbox) return;
+    const lines = kind === 'poke' ? POKE_LINES : WAVE_LINES;
+    const line = Math.floor(Math.random() * lines.length) + (kind === 'poke' ? 8 : 0);
+    act(async current => {
+      await postbox.wave({ to: friend.userId, residentId: resident.id, kind, line: line % 16 });
+      if (current()) message = WAVE_SENT[kind].replaceAll('{pet}', resident.name);
+    }, '[data-fr="' + kind + '"][data-res="' + CSS.escape(resident.id) + '"]');
+  }
 
   sheet.addEventListener('input', e => { if (['frAdd', 'frName'].includes(e.target.id)) drafts[e.target.id] = e.target.value; });
   button.addEventListener('click', open);
   veil.addEventListener('click', e => { if (e.target === veil) close(); });
+  window.addEventListener('shelflife:postbox', () => openPostbox());
   sheet.addEventListener('submit', e => {
     e.preventDefault();
     const form = e.target.dataset.frForm;
+    if (view === 'custom' && custom && e.target.closest('[data-fr-view]')) {
+      const owner = socialView(custom.id);
+      if (owner?.onSubmit) Promise.resolve().then(() => owner.onSubmit(e.target, ctx)).catch(error => { message = errorText(error); render(); });
+      return;
+    }
     if (form === 'add') {
       const input = $('frAdd');
       act(async current => {
@@ -333,7 +636,7 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       }, '#frAdd');
     } else if (form === 'name') {
       const name = $('frName').value;
-      act(async current => { const profile = await social.setName(name); if (!current()) return; me = profile; drafts.frName = undefined; message = me.name ? 'Friends now see you as ' + me.name + '.' : 'Friends now see your code instead of a name.'; social.publish({ force: true }).catch(() => {}); }, '#frName');
+      act(async current => { const p = await social.setName(name); if (!current()) return; me = p; drafts.frName = undefined; message = me.name ? 'Friends now see you as ' + me.name + '.' : 'Friends now see your code instead of a name.'; social.publish({ force: true }).catch(() => {}); }, '#frName');
     } else if (form === 'serve') {
       const caseId = $('frCase').value, plaintiff = state.pets.find(p => p.id === $('frPlaintiff').value), side = $('frSide').value === 'd' ? 'd' : 'p';
       serving.caseId = caseId; serving.plaintiffId = plaintiff?.id || ''; serving.side = side;
@@ -351,6 +654,14 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     }
   });
   sheet.addEventListener('click', e => {
+    const sx = e.target.closest('[data-sx]');
+    if (sx && !sx.disabled && body.contains(sx)) { routeSx(sx); return; }
+    const action = e.target.closest('[data-fr-action]');
+    if (action && !action.disabled) {
+      const friend = byId(action.dataset.user), a = friend && friendActions(friend, ctx).find(x => x.id === action.dataset.frAction);
+      if (a && a.state === true) Promise.resolve().then(() => a.run(friend, ctx)).catch(error => { message = errorText(error); render(); });
+      return;
+    }
     const b = e.target.closest('[data-fr]');
     if (!b || b.disabled) return;
     const act_ = b.dataset.fr, user = b.dataset.user, friend = user ? byId(user) : null;
@@ -359,30 +670,70 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
       case 'copy': copy(); break;
       case 'share': shareCode(); break;
       case 'court': close(); window.dispatchEvent(new CustomEvent('shelflife:court')); break;
+      case 'postbox': openPostbox(); break;
+      case 'show-all': { showAll = true; const next = accepted()[HOME_FRIENDS]; render(next ? '[data-fr="profile"][data-user="' + CSS.escape(next.userId) + '"]' : null); break; }
+      case 'profile': if (friend) openProfile(friend); break;
+      case 'resident': if (profile) { profile.resident = profile.resident === b.dataset.res ? '' : b.dataset.res; render('[data-fr="resident"][data-res="' + CSS.escape(b.dataset.res) + '"]'); } break;
       case 'sent-view': view = 'main'; visiting = null; message = ''; render('[data-fr="sent-refresh"]'); break;
       case 'sent-refresh': loadSent(); break;
       case 'sent-retry': loadSent({ older: sentRetryOlder }); break;
       case 'sent-older': loadSent({ older: true }); break;
-      case 'menu': menuFor = menuFor === user ? '' : user; confirm = null; render(menuFor ? '[data-fr="visit"][data-user="' + CSS.escape(user) + '"]' : null); break;
-      case 'visit': if (friend) visit(friend); break;
-      case 'serve': if (friend) visit(friend, { serve: true }); break;
-      case 'back': view = 'main'; visiting = null; message = ''; render('#frAdd'); break;
+      case 'back':
+        if (view === 'shelf' && visiting?.from === 'profile' && byId(visiting.friend.userId)) { const f = visiting.friend; visiting = null; openProfile(f, { reload: false }); break; }
+        view = 'main'; visiting = null; profile = null; message = ''; render('#frAdd'); break;
       case 'back-shelf': view = 'shelf'; message = ''; render('[data-fr="back"]'); break;
+      case 'custom-back': goBack(custom?.back || 'main'); break;
       case 'papers': { const r = visiting?.shelf?.residents.find(x => x.id === b.dataset.res); if (r) papers(r); break; }
-      case 'remove': case 'block': case 'report': confirm = { kind: act_, userId: user }; menuFor = ''; render(act_ === 'report' ? '#frReportMore' : '[data-fr="' + act_ + '-yes"]'); break;
+      case 'scene-pet': body.querySelector('.fr-res[data-res="' + CSS.escape(b.dataset.res) + '"] [data-fr="wave"], .fr-res[data-res="' + CSS.escape(b.dataset.res) + '"] [data-fr="papers"]')?.focus(); break;
+      case 'wave': case 'poke': { const r = visiting?.shelf?.residents.find(x => x.id === b.dataset.res); if (r) wave(r, act_); break; }
+      case 'mail-safety': mailSafety = mailSafety === b.dataset.key ? '' : b.dataset.key; confirm = null; render('[data-fr="mail-safety"][data-key="' + CSS.escape(b.dataset.key) + '"]'); break;
+      case 'mail-more': mailShown += MAIL_PAGE; render('[data-fr="mail-more"]'); break;
+      case 'clear-read': act(async current => {
+        for (const source of postboxSources()) if (source.clear) await source.clear(ctx);
+        if (!current()) return;
+        await loadMail({ quiet: true });
+        if (current()) message = 'Read post cleared. The rest is still glaring at you.';
+      }, '[data-fr="back"]'); break;
+      case 'dnd': {
+        const on = b.getAttribute('aria-checked') !== 'true';
+        act(async current => { await postbox.setDnd(on); if (current()) message = on ? 'Do not disturb is on. The doormat now says “Go away”.' : 'Do not disturb is off. The doormat is back to “Welcome”, reluctantly.'; }, '[data-fr="dnd"]');
+        break;
+      }
+      case 'remove': case 'block': case 'report': confirm = { kind: act_, userId: user }; render(act_ === 'report' ? '#frReportMore' : '[data-fr="' + act_ + '-yes"]'); break;
       case 'cancel': confirm = null; render(); break;
       case 'accept': act(async current => { await social.respond(user, true); if (!current()) return; await reload(); if (current()) message = 'Friends now. Their shelf is open to you, and yours to them.'; }, '#frAdd'); break;
       case 'decline': act(async current => { await social.respond(user, false); if (!current()) return; await reload(); if (current()) message = 'Declined. They are not told.'; }, '#frAdd'); break;
       case 'withdraw': act(async current => { await social.remove(user); if (!current()) return; await reload(); if (current()) message = 'Request withdrawn.'; }, '#frAdd'); break;
-      case 'remove-yes': act(async current => { await social.remove(user); if (!current()) return; confirm = null; await reload(); if (current()) message = 'Removed.'; }, '#frAdd'); break;
-      case 'block-yes': act(async current => { await social.block(user); if (!current()) return; confirm = null; await reload(); if (current()) message = 'Blocked. They will not find you again.'; }, '#frAdd'); break;
+      case 'remove-yes': act(async current => { await social.remove(user); if (!current()) return; confirm = null; leaveFriend(user); await reload(); if (current()) message = 'Removed.'; }, '#frAdd'); break;
+      case 'block-yes': act(async current => { await social.block(user); if (!current()) return; confirm = null; leaveFriend(user); await reload(); if (current()) message = 'Blocked. They will not find you again.'; }, view === 'postbox' ? '[data-fr="back"]' : '#frAdd'); break;
       case 'report-yes': {
         const reason = [sheet.querySelector('input[name="frReason"]:checked')?.value, $('frReportMore')?.value].filter(Boolean).join(': ');
-        act(async current => { await social.report(user, reason); if (!current()) return; confirm = null; message = 'Reported. Block them too if you would rather not hear from them.'; }, '#frAdd');
+        act(async current => { await social.report(user, reason); if (!current()) return; confirm = null; mailSafety = ''; message = 'Reported. Block them too if you would rather not hear from them.'; }, view === 'postbox' ? '[data-fr="back"]' : '#frAdd');
         break;
       }
     }
   });
+  // After a remove or block, nothing of theirs stays on screen.
+  function leaveFriend(userId) {
+    shelves.delete(userId); strips.delete(userId); mailSafety = '';
+    for (const [id, items] of mail) mail.set(id, items.filter(i => i.from !== userId));
+    if (profile?.friend.userId === userId || visiting?.friend.userId === userId) { view = 'main'; profile = null; visiting = null; }
+  }
+  // A [data-sx] button belongs to a postbox row, a section or a custom view.
+  function routeSx(el) {
+    const action = el.dataset.sx, row = el.closest('[data-fr-mail]'), section = el.closest('[data-fr-section]'), owned = el.closest('[data-fr-view]');
+    const fail = error => { message = errorText(error); render(); };
+    if (row) {
+      const source = postboxSources().find(s => s.id === row.dataset.frMail);
+      if (source?.onClick) Promise.resolve().then(() => source.onClick(action, el.dataset.sxId || row.dataset.frItem, ctx)).catch(fail);
+    } else if (section) {
+      const s = [...friendsSections('home'), ...friendsSections('friend')].find(x => x.id === section.dataset.frSection);
+      if (s?.onClick) Promise.resolve().then(() => s.onClick(action, el, ctx, profile?.friend || null)).catch(fail);
+    } else if (owned && custom) {
+      const owner = socialView(custom.id);
+      if (owner?.onClick) Promise.resolve().then(() => owner.onClick(action, el, ctx)).catch(fail);
+    }
+  }
 
   async function copy() {
     const text = me.code;
@@ -405,8 +756,11 @@ export function initFriends({ state, cloud, sync, social, openCloud = () => {}, 
     if (changed && isOpen()) { close(); return; }
     if (isOpen() && view === 'main') loadSent();
   });
+  postbox?.subscribe(() => { syncTray(); if (isOpen() && (view === 'main' || view === 'friend')) render(); });
   cloud.subscribe(() => { if (scopeSent() && isOpen()) close(); });
   sync.subscribe(() => { syncTray(); if (isOpen() && !social.signedIn()) close(); });
   syncTray();
-  return { open, close, refresh: render };
+  return { open, close, refresh: render, openPostbox, ctx };
 }
+
+const POSTBOX_ICON = '<svg viewBox="0 0 40 40"><path d="M9 34V18a11 11 0 0 1 22 0v16Z" fill="currentColor" opacity=".18" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 20h12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M20 34v4" stroke="currentColor" stroke-width="2"/><path d="M27 10h7v5h-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';

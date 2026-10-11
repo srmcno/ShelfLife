@@ -282,7 +282,7 @@ export function createPostbox({ cloud, social, now = Date.now } = {}) {
   const strips = async () => readStrips(await call('friend_strips'));
 
   return {
-    active, load, state, count, setDnd, sendVisit, withdrawVisit, respondVisit, care, collect, sendGift, openGift, declineGift,
+    active, load, state, count, loaded: () => !!boxUser && boxUser === uid() && active(), setDnd, sendVisit, withdrawVisit, respondVisit, care, collect, sendGift, openGift, declineGift,
     sign, removeSignature, guestbook, wave, seen, clear, strips,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
   };
