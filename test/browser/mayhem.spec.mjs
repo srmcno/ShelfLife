@@ -57,7 +57,8 @@ test('the omen, an emergency and a coffin pay souls, fill the cabinet and surviv
   await page.locator('#mayhemSheet .mh-next [data-mh="emergency"]').click();
   await expect(page.locator('#mayhemSheet .mh-title')).toBeVisible();
   await expect(page.locator('#mayhemSheet .mh-actor .sprite').first()).toBeVisible();
-  const before = (await saved(page)).mayhem.souls;
+  const beforeShelf = await saved(page);
+  const before = beforeShelf.mayhem.souls;
   await page.locator('#mayhemSheet [data-choice="0"]').click();
   await expect(page.locator('#mayhemSheet .mh-stamp')).toBeVisible();
   await expect(page.locator('#mayhemSheet .mh-rewards .souls').first()).toContainText('souls');
@@ -65,7 +66,11 @@ test('the omen, an emergency and a coffin pay souls, fill the cabinet and surviv
   const shelf = await saved(page);
   expect(shelf.mayhem.resolved).toBe(1);
   expect(shelf.mayhem.queue).toHaveLength(1);
-  expect(shelf.notes[0].from).toBe('the incident report');
+  const outcome = shelf.mayhem.log[0];
+  const reportText = outcome.stamp + '. ' + outcome.text;
+  const reports = notes => notes.filter(note => note.from === 'the incident report' && note.text === reportText);
+  expect(reports(shelf.notes)).toHaveLength(reports(beforeShelf.notes).length + 1);
+  expect(outcome.stamp).toBe(await page.locator('#mayhemSheet .mh-stamp').textContent());
   await noHorizontalOverflow(page);
 
   // Escape closes the sheet and the badge follows the tray.

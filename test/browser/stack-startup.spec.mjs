@@ -3,6 +3,7 @@ import { householdFixture } from '../household-fixtures.mjs';
 import { DAILY_MODS } from '../../src/content/daily.js';
 import { dailyChallenge } from '../../src/engine/daily.js';
 import { dropAlignedCoffin } from './support/stack.mjs';
+import { resumeArcadeIfPaused, waitForArcadePlay } from './support/arcade.mjs';
 
 const dates = Array.from({ length: 48 }, (_, n) => Date.UTC(2026, 9, 1 + n, 18));
 function dateFor(mod) {
@@ -29,6 +30,7 @@ const snapshot = page => page.evaluate(() => {
   return { phase: r.phase, score: r.game.score, drops: r.game.drops, coffins: r.game.stack.length, over: r.game.over, mod: r.mod?.id ?? null };
 });
 async function checkStart(page, input, mod) {
+  await resumeArcadeIfPaused(page);
   expect(await snapshot(page)).toEqual({ phase: 'ready', score: 0, drops: 0, coffins: 1, over: false, mod });
   await input();
   expect(await snapshot(page)).toEqual({ phase: 'play', score: 0, drops: 0, coffins: 1, over: false, mod });
@@ -64,10 +66,19 @@ test('ordinary play starts without dropping and still drops on the next input', 
 test('the natural count-in leaves Slim coffins undropped until the player acts', async ({ page }) => {
   await start(page, 'slim');
   await page.evaluate(() => { document.getElementById('arcadeSheet').arcadeRun.readyLen = 0.01; });
-  await expect.poll(() => page.evaluate(() => document.getElementById('arcadeSheet').arcadeRun.phase)).toBe('play');
+  await waitForArcadePlay(page);
   expect(await snapshot(page)).toEqual({ phase: 'play', score: 0, drops: 0, coffins: 1, over: false, mod: 'slim' });
   await dropAlignedCoffin(page);
   expect((await snapshot(page)).drops).toBe(1);
+});
+
+test('a paused count-in ignores drops and resumes without placing a coffin', async ({ page }) => {
+  await start(page, 'slim');
+  await page.evaluate(() => window.dispatchEvent(new Event('shelflife:pause')));
+  await expect(page.locator('#arcadeSheet .ar-paused')).toBeVisible();
+  await page.keyboard.press('Space');
+  expect(await snapshot(page)).toEqual({ phase: 'ready', score: 0, drops: 0, coffins: 1, over: false, mod: 'slim' });
+  await checkStart(page, () => page.keyboard.press('Space'), 'slim');
 });
 
 test('Again keeps starting and dropping separate during its shorter count-in', async ({ page }) => {

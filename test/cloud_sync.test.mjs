@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { blankState, normalizeState } from '../src/state.js';
-import { createCloud } from '../src/cloud/client.js';
+import { createCloud, CloudError } from '../src/cloud/client.js';
 import { createSync, saveHash, shelfSummary, deviceKind, SAFETY_KEY, DEBOUNCE_MS, MAX_WAIT_MS, MIN_GAP_MS, SAFETY_MS } from '../src/cloud/sync.js';
 import { createFakeSupabase, FAKE_CODE } from './support/fake-supabase.mjs';
 
@@ -312,6 +312,60 @@ test('a full browser still lets the player choose, and says no spare was kept', 
   assert.equal(info.safetyCopyFailed, true);
   assert.equal(info.safetyCopy, null);
   assert.deepEqual(names(browser.local), ['Agnes']);
+});
+
+test('choosing a shown cloud copy never falls back to an old account after a switch', async () => {
+  const { fake, clock, device: make } = world();
+  const d = make(shelf(['Local'])); await d.sync.enable();
+  fake.setRemote(d.cloud.userId(), shelf(['PrivateA']), { device: 'iphone' });
+  await d.play(); await d.sync.syncNow();
+  assert.equal(d.sync.status(), 'conflict');
+  let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  const originalRpc = d.cloud.rpc;
+  d.cloud.rpc = (name, ...args) => name === 'pull_save' ? new Promise((resolve, reject) => {
+    release = () => reject(new CloudError('The cloud account changed.', { code: 'session_changed', status: 401 }));
+    entered();
+  }) : originalRpc(name, ...args);
+  const resolving = d.sync.resolve('cloud'); await started;
+  const replacementCloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory(), now: () => clock.now });
+  const replacement = await replacementCloud.signInAnonymously();
+  d.cloud.setMeta({ session: replacement }); // Another tab replaces the stored account.
+  release(); const result = await resolving;
+  assert.deepEqual(names(d.local), ['Local']);
+  assert.deepEqual(d.applied, []);
+  assert.equal(d.cloud.userId(), replacement.user.id);
+  assert.equal(d.sync.info().conflict, null);
+  assert.equal(result.error.code, 'session_changed');
+});
+
+test('a conflict captured for a different stored account cannot be chosen later', async () => {
+  const { fake, clock, device: make } = world();
+  const d = make(shelf(['Local'])); await d.sync.enable();
+  fake.setRemote(d.cloud.userId(), shelf(['PrivateA']), { device: 'iphone' });
+  await d.play(); await d.sync.syncNow();
+  assert.equal(d.sync.status(), 'conflict');
+  const replacementCloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory(), now: () => clock.now });
+  d.cloud.setMeta({ session: await replacementCloud.signInAnonymously() });
+  fake.setOffline(true); // The older shown copy must not become a fallback for B.
+  await d.sync.resolve('cloud');
+  assert.deepEqual(names(d.local), ['Local']);
+  assert.deepEqual(d.applied, []);
+  assert.equal(d.sync.info().conflict, null);
+});
+
+test('the current account may still choose its shown cloud copy during a connection failure', async () => {
+  const { fake, device: make } = world();
+  const d = make(shelf(['Local'])); await d.sync.enable();
+  fake.setRemote(d.cloud.userId(), shelf(['Cloud']), { device: 'iphone' });
+  await d.play(); await d.sync.syncNow();
+  assert.equal(d.sync.status(), 'conflict');
+  const owner = d.cloud.userId(); fake.setOffline(true);
+  await d.sync.resolve('cloud');
+  assert.deepEqual(names(d.local), ['Cloud']);
+  assert.deepEqual(d.applied, ['chosen']);
+  assert.equal(d.meta().syncUser, owner);
+  assert.deepEqual(names(JSON.parse(d.storage.getItem(SAFETY_KEY))), ['Local']);
 });
 
 test('offline pushes fail quietly, keep the changes pending, and go through later', async () => {

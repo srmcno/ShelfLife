@@ -16,6 +16,159 @@ function setup(options = {}) {
   const cloud = createCloud({ config: fake.config, fetch: fake.fetch, storage, now: () => clock, ...options });
   return { fake, storage, cloud, tick: ms => { clock += ms; } };
 }
+function deferred() {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+test('a deferred 401 cannot retry a write with a replacement account token', async () => {
+  const now = () => Date.UTC(2026, 8, 29, 12), fake = createFakeSupabase({ now });
+  const entered = deferred(), response = deferred(); let held = false;
+  const cloud = createCloud({ config: fake.config, storage: memory(), now, fetch: (url, options) => {
+    if (url.endsWith('/submit_score') && !held) { held = true; entered.resolve(); return response.promise; }
+    return fake.fetch(url, options);
+  } });
+  const original = (await cloud.signInAnonymously()).user.id;
+  const pending = cloud.rpc('submit_score', { p_game: 'stack', p_day: '2026-09-29', p_score: 5, p_mod: 'slim' });
+  const outcome = pending.then(value => ({ value }), error => ({ error }));
+  await entered.promise; await cloud.signOut();
+  const replacement = (await cloud.signInAnonymously()).user.id;
+  assert.notEqual(replacement, original);
+  response.resolve(new Response(JSON.stringify({ message: 'expired' }), { status: 401 }));
+  const result = await outcome;
+  assert.equal(result.error?.code, 'session_changed');
+  assert.equal(cloud.userId(), replacement);
+  assert.equal(fake.social.scores.size, 0, 'the old write was never retried under the replacement account');
+});
+
+for (const status of [200, 401]) {
+  test(`a deferred ${status} refresh cannot replace or sign out a newer account`, async () => {
+    let time = Date.UTC(2026, 8, 29, 12); const now = () => time, fake = createFakeSupabase({ now });
+    const entered = deferred(), release = deferred();
+    const cloud = createCloud({ config: fake.config, storage: memory(), now, fetch: async (url, options) => {
+      if (url.includes('/auth/v1/token')) {
+        const response = status === 200 ? await fake.fetch(url, options) : new Response(JSON.stringify({ message: 'expired' }), { status });
+        entered.resolve(); await release.promise; return response;
+      }
+      return fake.fetch(url, options);
+    } });
+    await cloud.signInAnonymously(); time += 3570 * 1000;
+    const outcome = cloud.rpc('pull_save').then(value => ({ value }), error => ({ error }));
+    await entered.promise; await cloud.signOut();
+    const replacement = await cloud.signInAnonymously();
+    release.resolve(); const result = await outcome;
+    assert.equal(result.error?.code, 'session_changed');
+    assert.deepEqual(cloud.session(), replacement);
+    assert.equal(fake.calls('/rest/v1/rpc/pull_save').length, 0, 'no authenticated request leaves after the identity changes');
+  });
+}
+
+test('an old successful authenticated response is not returned after the account changes', async () => {
+  const now = () => Date.UTC(2026, 8, 29, 12), fake = createFakeSupabase({ now });
+  const entered = deferred(), release = deferred();
+  const cloud = createCloud({ config: fake.config, storage: memory(), now, fetch: async (url, options) => {
+    const response = await fake.fetch(url, options);
+    if (url.endsWith('/pull_save')) { entered.resolve(); await release.promise; }
+    return response;
+  } });
+  await cloud.signInAnonymously();
+  const outcome = cloud.rpc('pull_save').then(value => ({ value }), error => ({ error }));
+  await entered.promise; await cloud.signOut();
+  const replacement = await cloud.signInAnonymously();
+  release.resolve();
+  assert.equal((await outcome).error?.code, 'session_changed');
+  assert.deepEqual(cloud.session(), replacement);
+});
+
+test('local sign-out is immediate and a delayed logout cannot forget a new sign-in', async () => {
+  const now = () => Date.UTC(2026, 8, 29, 12), fake = createFakeSupabase({ now });
+  const entered = deferred(), release = deferred();
+  const cloud = createCloud({ config: fake.config, storage: memory(), now, fetch: async (url, options) => {
+    if (url.includes('/auth/v1/logout')) { entered.resolve(); await release.promise; }
+    return fake.fetch(url, options);
+  } });
+  const original = await cloud.signInAnonymously();
+  const logout = cloud.signOut(); await entered.promise;
+  const locallySignedOut = !cloud.signedIn();
+  const replacement = await cloud.signInAnonymously();
+  release.resolve(); await logout;
+  assert.equal(locallySignedOut, true);
+  assert.notEqual(replacement.user.id, original.user.id);
+  assert.deepEqual(cloud.session(), replacement);
+});
+
+test('sign-out cancels an anonymous sign-in that has not returned yet', async () => {
+  const now = () => Date.UTC(2026, 8, 29, 12), fake = createFakeSupabase({ now });
+  const entered = deferred(), release = deferred();
+  const cloud = createCloud({ config: fake.config, storage: memory(), now, fetch: async (url, options) => {
+    const response = await fake.fetch(url, options);
+    if (url.endsWith('/signup')) { entered.resolve(); await release.promise; }
+    return response;
+  } });
+  const outcome = cloud.signInAnonymously().then(value => ({ value }), error => ({ error }));
+  await entered.promise; await cloud.signOut(); release.resolve();
+  assert.equal((await outcome).error?.code, 'session_changed');
+  assert.equal(cloud.signedIn(), false);
+});
+
+test('sign-out in another tab cancels a pending signup even when neither tab has a session yet', async () => {
+  const now = () => Date.UTC(2026, 8, 29, 12), fake = createFakeSupabase({ now }), storage = memory();
+  const entered = deferred(), release = deferred();
+  const cloud = createCloud({ config: fake.config, storage, now, fetch: async (url, options) => {
+    const response = await fake.fetch(url, options);
+    if (url.endsWith('/signup')) { entered.resolve(); await release.promise; }
+    return response;
+  } });
+  const outcome = cloud.signInAnonymously().then(value => ({ value }), error => ({ error }));
+  await entered.promise;
+  const otherTab = createCloud({ config: fake.config, storage, fetch: fake.fetch, now });
+  await otherTab.signOut(); release.resolve();
+  assert.equal((await outcome).error?.code, 'session_changed');
+  assert.equal(cloud.signedIn(), false);
+  assert.equal(otherTab.signedIn(), false);
+});
+
+for (const grant of ['signup', 'verify']) {
+  test(`a delayed ${grant} cannot replace an account chosen in another tab`, async () => {
+    const now = () => Date.UTC(2026, 8, 29, 12), fake = createFakeSupabase({ now }), storage = memory();
+    const entered = deferred(), release = deferred();
+    const cloud = createCloud({ config: fake.config, storage, now, fetch: async (url, options) => {
+      const response = await fake.fetch(url, options);
+      if (url.endsWith('/' + grant)) { entered.resolve(); await release.promise; }
+      return response;
+    } });
+    if (grant === 'verify') {
+      await cloud.signInAnonymously();
+      await cloud.requestEmailCode('other@example.com', { mode: 'signin' });
+    }
+    const outcome = (grant === 'signup' ? cloud.signInAnonymously() : cloud.verifyEmailCode('other@example.com', FAKE_CODE)).then(value => ({ value }), error => ({ error }));
+    await entered.promise;
+    const otherTab = createCloud({ config: fake.config, storage, fetch: fake.fetch, now });
+    await otherTab.signOut(); const replacement = await otherTab.signInAnonymously();
+    release.resolve();
+    assert.equal((await outcome).error?.code, 'session_changed');
+    assert.deepEqual(cloud.session(), replacement);
+  });
+}
+
+test('a successful delayed refresh preserves a newer same-account token from another tab', async () => {
+  let time = Date.UTC(2026, 8, 29, 12); const now = () => time, fake = createFakeSupabase({ now });
+  const entered = deferred(), release = deferred(); let rotated;
+  const cloud = createCloud({ config: fake.config, storage: memory(), now, fetch: async (url, options) => {
+    const response = await fake.fetch(url, options);
+    if (url.includes('/auth/v1/token')) { rotated = await response.clone().json(); entered.resolve(); await release.promise; }
+    return response;
+  } });
+  const owner = (await cloud.signInAnonymously()).user.id; time += 3570 * 1000;
+  const pending = cloud.rpc('pull_save'); await entered.promise;
+  const response = await fake.fetch(fake.url + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: fake.config.anonKey }, body: JSON.stringify({ refresh_token: rotated.refresh_token }) });
+  const latest = await response.json(); cloud.setMeta({ session: latest });
+  release.resolve(); assert.equal(await pending, null);
+  assert.equal(cloud.userId(), owner);
+  assert.equal(cloud.session().access_token, latest.access_token);
+  assert.equal(fake.calls('/rest/v1/rpc/pull_save').at(-1).auth, 'Bearer ' + latest.access_token);
+});
 
 test('an unconfigured client never calls fetch and refuses every network method', async () => {
   let calls = 0;

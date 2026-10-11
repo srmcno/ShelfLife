@@ -511,6 +511,19 @@ test('arenas unlock by lifetime runs or by medals, and the next one is named', (
   assert.equal(lifetimeRuns(s.arcade), 11);
 });
 
+test('legacy arena progress includes challenge plays and resident run histories without double counting', () => {
+  const raw = { plays: { stack: 4 }, daily: { day: '2026-9-11', game: 'stack', plays: 3 }, theme: 'moonlit' };
+  assert.equal(normalizeArcade(raw).runs, 7, 'ordinary and challenge plays are separate counters');
+  const migrated = normalizeArcade(raw, [{ arcadeRuns: 6 }, { arcadeRuns: 5 }]);
+  assert.equal(migrated.runs, 11, 'resident totals already include both kinds of game');
+  assert.equal(migrated.theme, 'moonlit');
+  assert.deepEqual(normalizeArcade(migrated, [{ arcadeRuns: 6 }, { arcadeRuns: 5 }]), migrated);
+  assert.equal(normalizeArcade({ ...raw, runs: 4 }, [{ arcadeRuns: 50 }]).runs, 4, 'modern scored run totals are authoritative');
+  const shelf = household(); shelf.arcade = raw; shelf.pets[0].arcadeRuns = 11;
+  assert.equal(normalizeState(shelf).arcade.runs, 11, 'full save normalization passes resident history');
+  assert.equal(normalizeArcade(raw, [{ arcadeRuns: -4 }, { arcadeRuns: NaN }, { arcadeRuns: '100' }]).runs, 7);
+});
+
 test('ordinary and daily warm-ups never advance runs or unlock arenas', () => {
   for (const daily of [false, true]) {
     const s = household(), id = daily ? dailyChallenge(localDayKey(NOW)).game : 'frenzy';

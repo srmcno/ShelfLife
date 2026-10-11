@@ -102,7 +102,7 @@ export function createSync({
       ? { at: m.safetyCopyAt, until: m.safetyCopyAt + SAFETY_MS, ...(m.safetySummary || { residents: 0, names: [] }) } : null;
     return {
       status, error, lastSyncedAt: uid && m.syncUser === uid ? m.lastSyncedAt || 0 : 0,
-      conflict: pending?.kind === 'conflict' ? { local: shelfSummary(getState()), remote: pending.remote } : null,
+      conflict: pending?.kind === 'conflict' && pending.userId === uid ? { local: shelfSummary(getState()), remote: pending.remote } : null,
       repairable: pending?.kind === 'corrupt', safetyCopy: safe, safetyCopyFailed: safetyFailed,
       signedIn: cloud.signedIn(), anonymous: cloud.isAnonymous(), email: cloud.email(), pendingEmail: m.pending?.email || ''
     };
@@ -113,7 +113,7 @@ export function createSync({
   // A cloud copy that fails normalizeState is never applied. The shelf here
   // carries on, and the player may choose to overwrite the broken copy.
   function refuse(rev) {
-    pending = { kind: 'corrupt', rev, error: { code: 'corrupt_remote', message: 'The cloud copy could not be read.' } };
+    pending = { kind: 'corrupt', userId: cloud.userId(), rev, error: { code: 'corrupt_remote', message: 'The cloud copy could not be read.' } };
     return settle();
   }
 
@@ -268,7 +268,7 @@ export function createSync({
       clean({ syncUser: uid, baseRev: rev, lastPushHash: saveHash(exportState(state)), lastSyncedAt: now() });
       return settle();
     }
-    pending = { kind: 'conflict', rev, data: remote.data,                                             // (c)
+    pending = { kind: 'conflict', userId: uid, rev, data: remote.data,                                // (c)
       remote: { ...there, lastSaved: Date.parse(remote.updated_at) || there.lastSaved, device: deviceKind(remote.device || '') } };
     return setStatus('conflict');
   }
@@ -301,11 +301,17 @@ export function createSync({
       const p = pending;
       if (!p || !cloud.signedIn()) return settle();
       const uid = cloud.userId();
+      if (p.userId !== uid) { pending = null; needsCheck = true; return settle(); }
       if (choice === 'cloud') {
         if (p.kind !== 'conflict') return settle();
         let rev = p.rev, data = p.data;
         // "The cloud copy" means the latest one, if the network allows a look.
-        try { const latest = await cloud.rpc('pull_save'); if (latest?.data && normalize(latest.data)) ({ rev, data } = latest); } catch { /* use the copy already shown */ }
+        try { const latest = await cloud.rpc('pull_save'); if (latest?.data && normalize(latest.data)) ({ rev, data } = latest); }
+        catch (error) {
+          if (error.code === 'session_changed') { pending = null; needsCheck = true; throw error; }
+          // A temporary connection failure may use the copy already shown.
+        }
+        if (!cloud.signedIn() || cloud.userId() !== uid) { pending = null; needsCheck = true; return settle(); }
         const normalized = normalize(data);
         if (!normalized) return refuse(rev);
         keepSafetyCopy(exportState(getState()), shelfSummary(getState()));

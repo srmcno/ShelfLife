@@ -126,3 +126,14 @@ test('the challenge record survives reload and hostile data', () => {
   assert.equal(normalizeArcade({ daily: { day: '2026-8-25', game: 'nope' } }).daily, null);
   assert.equal(normalizeArcade({ daily: { day: '2026-8-25', game: 'whack', best: 1e12, plays: -5 } }).daily.best, 1e6);
 });
+
+test('a pending daily submission retains its account provenance through save normalization', () => {
+  const user = '00000000-0000-4000-8000-000000000001';
+  const raw = { daily: { day: '2026-8-25', game: 'stack', mod: 'slim', best: 12, plays: 1, submission: { user, score: 5, pending: true } } };
+  const a = normalizeArcade(raw);
+  assert.deepEqual(a.daily.submission, { user, score: 5, pending: true });
+  assert.deepEqual(normalizeArcade(a), a);
+  assert.equal(normalizeArcade({ daily: { ...raw.daily, submission: { user: 'someone else', score: 5, pending: true } } }).daily.submission, undefined);
+  assert.equal(normalizeArcade({ daily: { ...raw.daily, submission: { user, score: -5, pending: true } } }).daily.submission, undefined);
+  assert.deepEqual(normalizeArcade({ daily: { ...raw.daily, submission: { user, score: 1e12, pending: 'yes' } } }).daily.submission, { user, score: 500, pending: false });
+});

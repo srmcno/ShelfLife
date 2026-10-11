@@ -397,7 +397,7 @@ export function normalizeState(raw) {
   s.escapades = normalizeEscapades(s.escapades, s, now);
   delete s.rug; // The retired play rug kept trick journals here; earned discoveries stay in life.
   s.mayhem = normalizeMayhem(s.mayhem, s, now);
-  s.arcade = normalizeArcade(s.arcade);
+  s.arcade = normalizeArcade(s.arcade, s.pets);
   s.courtroom = normalizeCourtroom(s.courtroom);
   normalizeRetention(s, now); // the Almanac, streak freezes, return chest, Legacy, collections, exchange and owned decor
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);

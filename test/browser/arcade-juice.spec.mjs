@@ -1,5 +1,6 @@
 import { test as base, expect } from 'playwright/test';
 import { householdFixture } from '../household-fixtures.mjs';
+import { resumeArcadeIfPaused, waitForArcadePlay } from './support/arcade.mjs';
 
 /* The arcade as a player meets it: the count-in, the ladder, the banners, the
    reactions, the way a run ends, the hub, the haptics switch, the effects
@@ -37,7 +38,7 @@ async function start(page, game, { wait = true, govern = false, count = false } 
   await expect(page.locator('#arcadeSheet [data-ar-field]')).toBeVisible();
   // A long count-in would only make the tests slow; the count has its own test.
   await page.evaluate(([hold, quick]) => { const r = document.getElementById('arcadeSheet').arcadeRun; if (!r) return; if (hold) r.gov.push = () => null; if (quick) r.readyLen = 0.01; }, [!govern, !count && wait]);
-  if (wait) await expect.poll(() => phase(page), { timeout: 20000 }).toBe('play');
+  if (wait) await waitForArcadePlay(page);
 }
 const phase = page => page.evaluate(() => document.getElementById('arcadeSheet').arcadeRun?.phase || '');
 const saved = page => page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.v4')));
@@ -58,12 +59,13 @@ test('a run counts in from three, shows the count, and plays when it ends or is 
   await expect(page.locator('#arcadeSheet .ar-count')).toBeVisible();
   await expect(page.locator('#arcadeSheet .ar-count b')).toHaveText(/^[321]$/);
   expect(await phase(page)).toBe('ready');
-  await expect.poll(() => phase(page), { timeout: 20000 }).toBe('play');
+  await waitForArcadePlay(page);
   await expect(page.locator('#arcadeSheet .ar-count')).toBeHidden();
   // Starting again, any key ends the count at once and is the first move.
   await page.locator('#arcadeSheet [data-ar="close"]').click();
   await start(page, 'frenzy', { wait: false, count: true });
   expect(await phase(page)).toBe('ready');
+  await resumeArcadeIfPaused(page);
   await page.keyboard.down('ArrowRight');
   await expect.poll(() => phase(page)).toBe('play');
   expect(await page.evaluate(() => document.getElementById('arcadeSheet').arcadeRun.game.dir)).toBe(1);

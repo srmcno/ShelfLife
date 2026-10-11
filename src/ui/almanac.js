@@ -185,6 +185,8 @@ export function openAlmanac(state = S, now = Date.now()) {
 
 function afterClaim(results, kind = 'tier') {
   lastResults = results;
+  // Edition curios can finish this week's collection challenge during the claim.
+  syncAlmanac(S);
   checkAchievements(S);
   save();
   renderSheet(S);

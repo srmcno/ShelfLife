@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { createGovernor, fxLevelFor, FX_CAPS, buzz, HAPTICS, countUp, rememberLevel, rememberedLevel } from '../src/ui/arcade-fx.js';
+import { createFx, createGovernor, fxLevelFor, FX_CAPS, buzz, HAPTICS, countUp, rememberLevel, rememberedLevel } from '../src/ui/arcade-fx.js';
 import { ladderFreq, CANDLE_NOTES, arcadeSoundNames, sfx, bedState, stopBed } from '../src/audio/arcade-audio.js';
 import { ARCADE_GLYPH_NAMES, arcadeGlyph, sceneMarkup, hubArt, bossMarkup, allGlyphNames } from '../src/art/arcade-art.js';
 import { ARCADE_GAMES, ARCADE_THEMES, FRENZY_ITEMS } from '../src/content/arcade.js';
@@ -63,6 +63,35 @@ test('the frame governor steps effects down after a slow two seconds and never b
   // A device that begins at Light starts the governor there.
   const light = createGovernor(); light.level = 1;
   assert.equal(feed(light, 40, 3), 2);
+});
+
+test('a quality downgrade lowers the backing canvas DPR without a layout resize', () => {
+  const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const originalDpr = Object.getOwnPropertyDescriptor(globalThis, 'devicePixelRatio');
+  const transforms = [], children = [];
+  const ctx = { setTransform: (...args) => transforms.push(args), clearRect() {} };
+  const element = () => ({ dataset: {}, style: {}, classList: { remove() {} }, setAttribute() {}, remove() {}, getContext: () => ctx });
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: element } });
+  Object.defineProperty(globalThis, 'devicePixelRatio', { configurable: true, value: 3 });
+  try {
+    const host = { ...element(), append: (...els) => children.push(...els) };
+    const fx = createFx(host, { level: 0 });
+    fx.resize(200, 120);
+    const canvas = children[0];
+    assert.deepEqual([canvas.width, canvas.height], [400, 240]);
+    fx.setLevel(1);
+    assert.deepEqual([canvas.width, canvas.height], [200, 120]);
+    assert.deepEqual(transforms.at(-1), [1, 0, 0, 1, 0, 0]);
+    assert.deepEqual(fx.size, { w: 200, h: 120 });
+    fx.setLevel(0);
+    assert.equal(canvas.width, 200, 'quality cannot increase again');
+    fx.setLevel(2);
+    assert.equal(canvas.hidden, true);
+    fx.destroy();
+  } finally {
+    if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument); else delete globalThis.document;
+    if (originalDpr) Object.defineProperty(globalThis, 'devicePixelRatio', originalDpr); else delete globalThis.devicePixelRatio;
+  }
 });
 
 test('haptics: patterns exist, the switch is respected, and a flurry of taps is thinned', () => {

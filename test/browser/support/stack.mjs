@@ -1,14 +1,16 @@
 import { expect } from 'playwright/test';
+import { resumeArcadeIfPaused, waitForArcadePlay } from './arcade.mjs';
 
 // Wait for play, then time a real input against the moving coffin.
 // Perfect alignment also earns a point under the Strict inspector modifier.
 export async function firstStackDrop(page) {
   await expect(page.locator('#arcadeSheet [data-ar-field]')).toBeVisible();
-  await expect.poll(() => page.evaluate(() => document.getElementById('arcadeSheet').arcadeRun?.phase)).toBe('play');
+  await waitForArcadePlay(page);
   await dropAlignedCoffin(page);
 }
 
 export async function dropAlignedCoffin(page) {
+  await resumeArcadeIfPaused(page);
   await page.waitForFunction(() => {
     const run = document.getElementById('arcadeSheet').arcadeRun;
     if (!run || run.phase !== 'play' || run.paused || run.game.over) return false;

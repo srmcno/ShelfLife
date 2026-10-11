@@ -84,7 +84,10 @@ export function initDialogs({ onOpen } = {}) {
       return;
     }
     if (!active) {
-      returnTo = pendingTrigger || document.activeElement;
+      // A close control can reopen a chooser in the same event task. Its
+      // trusted click is still pending, but focus has returned to the launcher.
+      const closedSheetTrigger = pendingTrigger?.closest('.veil:not(.open)');
+      returnTo = closedSheetTrigger ? document.activeElement : pendingTrigger || document.activeElement;
       returnPet = returnTo?.closest('.piece')?.dataset.id;
       if (returnTo?.closest('#moreTray')) returnTo = [document.getElementById('tabMore'), document.getElementById('moreBtn')].find(usable);
       returnId = returnTo?.id || null;
