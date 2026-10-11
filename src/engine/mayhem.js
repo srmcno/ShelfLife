@@ -208,8 +208,8 @@ function spawn(state, now, rnd) {
 export function accrueMayhem(state, now = Date.now(), rnd = Math.random) {
   const m = mayhemState(state);
   const pets = state.pets || [];
-  // Rehomed residents take their emergencies with them.
-  m.queue = m.queue.filter(q => petById(state, q.a) && (!q.b || petById(state, q.b)));
+  // Rehomed residents take their emergencies with them. A card from outside the house leaves when it expires.
+  m.queue = m.queue.filter(q => petById(state, q.a) && (!q.b || petById(state, q.b)) && (!q.ext || externalLive(q, now)));
   if (!pets.length) return 0;
   const cap = queueCap(state, now);
   let added = 0;
@@ -287,7 +287,40 @@ export function choiceOdds(choice, pet) {
   return { ...p, label, level: p.bad === 0 ? 0 : p.bad < 0.3 ? 1 : p.bad < 0.55 ? 2 : 3 };
 }
 
+/* ---------- cards from outside the house ----------
+   A friend's hex (engine/mischief.js) is a queue entry with an `ext` payload,
+   turned into a card by the provider registered for its kind:
+     { template(entry), partner?(entry), from?(entry), live?(entry, now), resolved?(state, entry, detail, now) }
+   It takes a place in the tray under the same cap as the house's own trouble,
+   counts as an emergency like any other, never takes a need away, never files
+   a grudge and never touches the partner, who lives on someone else's shelf. */
+const EXTERNAL = new Map();
+export function registerExternalCards(kind, provider) { if (kind && provider?.template) EXTERNAL.set(kind, provider); }
+function externalLive(entry, now) {
+  const p = EXTERNAL.get(entry.ext?.kind);
+  try { return !!p && (p.live ? p.live(entry, now) !== false : true); } catch { return false; }
+}
+// Puts an outside card in the tray for one of our residents, if there is room. Returns the entry, or null.
+export function injectEmergency(state, ext, petId, now = Date.now()) {
+  const m = mayhemState(state);
+  if (!ext || !EXTERNAL.has(ext.kind) || !petById(state, petId) || m.queue.length >= queueCap(state, now)) return null;
+  if (ext.ref && m.queue.some(q => q.ext?.ref === ext.ref)) return null;
+  const entry = { uid: m.serial + 1, id: 'x:' + ext.card, a: petId, at: now, ext };
+  if (!externalLive(entry, now) || !describeEmergency(state, entry)) return null;
+  m.serial += 1;
+  m.queue.push(entry);
+  return entry;
+}
+function describeExternal(state, entry) {
+  const p = EXTERNAL.get(entry.ext?.kind), a = petById(state, entry.a);
+  let template = null, b = null, from = '';
+  try { template = p?.template(entry) || null; b = p?.partner ? p.partner(entry) : null; from = p?.from ? p.from(entry) : ''; } catch { return null; }
+  if (!template || !a || !Array.isArray(template.choices)) return null;
+  return { entry, template, a, b, external: entry.ext.kind, from, title: fill(template.title, a, b), choices: template.choices.map(c => fill(c.label, a, b)), odds: template.choices.map(c => choiceOdds(c, a)) };
+}
+
 export function describeEmergency(state, entry) {
+  if (entry?.ext) return describeExternal(state, entry);
   const template = EMERGENCY_BY_ID[entry?.id];
   if (!template) return null;
   const a = petById(state, entry.a), b = entry.b ? petById(state, entry.b) : null;
@@ -314,15 +347,15 @@ export function resolveEmergency(state, uid, choiceIndex, now = Date.now(), rnd 
   if (!info) return null;
   const choice = info.template.choices[choiceIndex];
   if (!choice) return null;
-  const { a, b } = info;
+  const { a, b } = info, outside = !!info.external;
   const outcome = pickOutcome(choice.outcomes, a, rnd);
   const text = fill(outcome.text, a, b);
   const souls = (outcome.souls || 0) * (omenEffect(state, 'mayhem', now) ? 2 : 1);
-  applyNeeds(a, outcome.a);
-  applyNeeds(b, outcome.b);
+  applyNeeds(a, outside ? upOnly(outcome.a) : outcome.a);
+  if (!outside) applyNeeds(b, outcome.b);
   // Bad endings leave a mess, so the slow loop has something to do afterwards.
   let fallout = null;
-  if (outcome.tone === 'bad' && !outcome.a) {
+  if (outcome.tone === 'bad' && !outcome.a && !outside) {
     const need = ['food', 'fuss', 'clean'][Math.floor(rnd() * 3) % 3];
     applyNeeds(a, { [need]: -FALLOUT });
     fallout = { name: a.name, need };
@@ -330,7 +363,7 @@ export function resolveEmergency(state, uid, choiceIndex, now = Date.now(), rnd 
   let trust = 0;
   if (outcome.bond === 'a') trust = grantBonusTrust(a, 1, now);
   let grudge = null;
-  const grudger = outcome.grudge === 'a' ? a : outcome.grudge === 'b' ? b : null;
+  const grudger = outside ? null : outcome.grudge === 'a' ? a : outcome.grudge === 'b' ? b : null;
   if (grudger && fileGrudge(state, grudger, info.title.slice(0, 70), now)) grudge = grudger.name;
   const rankUp = addSouls(state, souls);
   let curio = null;
@@ -340,8 +373,14 @@ export function resolveEmergency(state, uid, choiceIndex, now = Date.now(), rnd 
   if (m.log.length > LOG_MAX) m.log.length = LOG_MAX;
   addNote(state, outcome.stamp + '. ' + text, 'the incident report', 'note');
   const chores = deed(state, 'mayhem', 1, now, rnd);
-  return { title: info.title, choice: fill(choice.label, a, b), stamp: outcome.stamp, tone: outcome.tone, text, souls, trust, grudge, curio, fallout, rankUp: rankUp || curio?.rankUp || null, chores, a, b };
+  let extra = null;
+  if (outside) {
+    try { extra = EXTERNAL.get(info.entry.ext.kind)?.resolved?.(state, info.entry, { choice: choiceIndex, outcome: choice.outcomes.indexOf(outcome), rebound: outcome.rebound === true }, now) || null; } catch { extra = null; }
+  }
+  return { title: info.title, choice: fill(choice.label, a, b), stamp: outcome.stamp, tone: outcome.tone, text, souls, trust, grudge, curio, fallout, rankUp: rankUp || curio?.rankUp || null, chores, a, b,
+    ...(outside ? { external: info.external, from: info.from, note: typeof extra?.note === 'string' ? extra.note : '' } : {}) };
 }
+const upOnly = delta => delta && Object.fromEntries(Object.entries(delta).filter(([, v]) => Number.isFinite(v) && v > 0));
 
 /* ---------- daily chores ---------- */
 export function ensureChores(state, now = Date.now(), rnd = Math.random) {

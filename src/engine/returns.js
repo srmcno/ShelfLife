@@ -76,6 +76,14 @@ export function checkReturn(state, now = Date.now()) {
 }
 
 export function pendingReturn(state) { return returnsState(state).pending; }
+
+// Other modules may add a line or two to the card as it is drawn (a friend's help while you were out).
+const AWAY_EXTRAS = [];
+export function registerAwayExtra(fn) { if (typeof fn === 'function' && !AWAY_EXTRAS.includes(fn)) AWAY_EXTRAS.push(fn); }
+export function awayExtraLines(state, pending) {
+  return AWAY_EXTRAS.flatMap(fn => { try { const lines = fn(state, pending); return Array.isArray(lines) ? lines : []; } catch { return []; } })
+    .filter(line => typeof line === 'string' && line).slice(0, 3);
+}
 export function chestLine(p) { return fill(CHEST_LINE, { souls: p.souls, xp: p.xp }); }
 
 export function claimReturn(state, now = Date.now()) {

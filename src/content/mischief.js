@@ -33,7 +33,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Burn it', how: 'with fire', outcomes: [
         { tone: 'good', stamp: 'CREMATED', text: 'The sock burns with a small blue flame and a smell of 1974. {a} sleeps soundly for the first time in a week. Somewhere, a left foot is cold and furious.', souls: 16, report: 'The sock is ash. {c} came home smelling of 1974.' },
-        { tone: 'weird', stamp: 'FIREPROOF', text: 'The sock does not burn. It sits in the grate, glowing gently, as if waiting to be asked properly. {a} has started calling it Gerald.', souls: 18, rebound: true, report: 'The sock survived the fire and has a name now. It rebounded.' }
+        { tone: 'weird', stamp: 'FIREPROOF', text: 'The sock does not burn. It sits in the grate, glowing gently, as if waiting to be asked properly. {a} has started calling it Gerald.', souls: 18, rebound: true, report: 'The sock survived the fire and has a name now.' }
       ] },
       { label: 'Let {a} wear it', how: 'by wearing it', outcomes: [
         { tone: 'good', stamp: 'SNUG', text: '{a} wears it as a hat. It fits perfectly, which is the worrying part. {a} now refuses to take it off for meals, baths or the inquest.', souls: 15, a: { fuss: 15 }, report: 'The sock is a hat now. {f}’s resident will not take it off, even for the inquest.' },
@@ -45,7 +45,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Close the lid on it', how: 'with a firm lid', outcomes: [
         { tone: 'good', stamp: 'MUFFLED', text: 'You sit on the case until it stops. It sighs once, in B flat, and is still. {a} says it heard it whisper “encore”.', souls: 15, report: 'Your {c} was returned, flattened.' },
-        { tone: 'weird', stamp: 'ENCORE', text: 'The lid shuts. The accordion plays from inside the case anyway: a polka, slowly, for four hours. {a} learns every word. There are no words.', souls: 18, rebound: true, report: 'It played on inside the case. {f} knows the polka now. It rebounded.' }
+        { tone: 'weird', stamp: 'ENCORE', text: 'The lid shuts. The accordion plays from inside the case anyway: a polka, slowly, for four hours. {a} learns every word. There are no words.', souls: 18, rebound: true, report: 'It played on inside the case. {f} knows the polka now.' }
       ] },
       { label: 'Let {a} play it', how: 'by learning to play it', outcomes: [
         { tone: 'good', stamp: 'VIRTUOSO', text: '{a} plays one sea shanty with total confidence and no knowledge of the sea. The shelf weeps. The lamp requests it for the funeral it is planning.', souls: 17, a: { fuss: 15 }, fits: STAGEY, report: '{f}’s resident played it beautifully. {c} has asked for the accordion back and been refused.' },
@@ -61,7 +61,7 @@ export const HEX_DECK = [
       ] },
       { label: 'Let it talk', how: 'by letting the drawer talk', outcomes: [
         { tone: 'good', stamp: 'CLOSURE', text: 'It is cathartic. {a} finally learns where the left slipper went in 1931. The drawer apologises. {a} does not, on principle.', souls: 16, bond: 'a', report: '{f}’s resident got closure. {c} got nothing, and seemed to expect more.' },
-        { tone: 'weird', stamp: 'ACCOUNTED', text: 'The drawer remembers {b} too, in detail. {b} leaves by the window, which is on the wrong side of the room for a window.', souls: 20, rebound: true, report: 'The drawer had things to say about {c} as well. It rebounded. Check your own drawers.' }
+        { tone: 'weird', stamp: 'ACCOUNTED', text: 'The drawer remembers {b} too, in detail. {b} leaves by the window, which is on the wrong side of the room for a window.', souls: 20, rebound: true, report: 'The drawer had things to say about {c} as well. Check your own drawers.' }
       ] }
     ] },
   { id: 'damp-invitation', name: 'Damp Invitation', art: 'scroll', blurb: 'You are cordially invited. Bring a towel.',
@@ -73,7 +73,7 @@ export const HEX_DECK = [
       ] },
       { label: 'Go, in a raincoat', how: 'by attending in a raincoat', outcomes: [
         { tone: 'good', stamp: 'GUEST', text: '{a} goes, stays dry and leaves early with a goodie bag of pond. The hosts say it was the best guest they ever had. It was the only guest.', souls: 17, a: { clean: 20 }, report: '{f}’s resident was the best guest. {c} has been asked to host next year.' },
-        { tone: 'bad', stamp: 'SOAKED', text: 'The raincoat lets it down. {a} comes home a full pint heavier and squelches gently for the rest of the evening. Everyone pretends not to hear.', souls: 12, rebound: true, report: '{f}’s resident came home squelching. It rebounded. Hide your towels.' }
+        { tone: 'bad', stamp: 'SOAKED', text: 'The raincoat lets it down. {a} comes home a full pint heavier and squelches gently for the rest of the evening. Everyone pretends not to hear.', souls: 12, rebound: true, report: '{f}’s resident came home squelching. Hide your towels.' }
       ] }
     ] },
   { id: 'eulogy-in-advance', name: 'A Eulogy in Advance', art: 'book', blurb: 'Kind words, early. Very early.',
@@ -85,7 +85,7 @@ export const HEX_DECK = [
       ] },
       { label: 'Write one back', how: 'by writing one back', outcomes: [
         { tone: 'good', stamp: 'RECIPROCAL', text: '{a} writes {b}’s eulogy in four minutes flat. It is devastating and mostly about a hat. Both agree never to die, as a compromise.', souls: 15, report: 'They swapped eulogies. Theirs for {c} is mostly about a hat.' },
-        { tone: 'weird', stamp: 'REBUTTED', text: '{a}’s eulogy for {b} runs to nine pages with footnotes. The ninth page is just “and another thing”. It has been posted to {b}’s family.', souls: 20, rebound: true, fits: OFFICIAL, report: 'Your {c} received a nine page eulogy with footnotes. It rebounded.' }
+        { tone: 'weird', stamp: 'REBUTTED', text: '{a}’s eulogy for {b} runs to nine pages with footnotes. The ninth page is just “and another thing”. It has been posted to {b}’s family.', souls: 20, rebound: true, fits: OFFICIAL, report: 'Your {c} received a nine page eulogy with footnotes.' }
       ] }
     ] },
   { id: 'wrong-portrait', name: 'The Wrong Portrait', art: 'photo', blurb: 'A lovely likeness of someone else.',
@@ -97,7 +97,7 @@ export const HEX_DECK = [
       ] },
       { label: 'Let {a} grow into it', how: 'by leaving it up', outcomes: [
         { tone: 'good', stamp: 'FLATTERED', text: '{a} decides it is an improvement and starts standing like the portrait: one hand on a globe that is not there. It is a good look.', souls: 16, a: { fuss: 15 }, fits: STAGEY, report: '{f}’s resident has adopted the pose. There is no globe. It does not matter.' },
-        { tone: 'weird', stamp: 'SITTING', text: 'The person in the portrait arrives at teatime to collect it and stays for the biscuits. Nobody can bring themselves to ask who they are. They are still there.', souls: 21, rebound: true, report: 'The person in the portrait turned up and has not left. It rebounded.' }
+        { tone: 'weird', stamp: 'SITTING', text: 'The person in the portrait arrives at teatime to collect it and stays for the biscuits. Nobody can bring themselves to ask who they are. They are still there.', souls: 21, rebound: true, report: 'The person in the portrait turned up and has not left.' }
       ] }
     ] },
   { id: 'reverse-charge-seance', name: 'A Reverse-Charge Séance', art: 'planchette', blurb: 'The dead call. You pay.',
@@ -105,7 +105,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Accept the charges', how: 'by accepting the charges', outcomes: [
         { tone: 'good', stamp: 'CONNECTED', text: 'It is {a}’s great aunt, mainly to say the hat was a mistake. The call costs one tooth. {a} has a spare. {a} always has a spare.', souls: 17, report: 'They took the call. It cost one tooth, which they had spare.' },
-        { tone: 'weird', stamp: 'HELD', text: '{a} is on hold to the afterlife for three hours. The hold music is everyone it ever annoyed, humming. Then a voice says “sorry, wrong {a}” and hangs up.', souls: 19, rebound: true, report: 'Three hours on hold to the afterlife. It rebounded. Expect a call.' }
+        { tone: 'weird', stamp: 'HELD', text: '{a} is on hold to the afterlife for three hours. The hold music is everyone it ever annoyed, humming. Then a voice says “sorry, wrong {a}” and hangs up.', souls: 19, rebound: true, report: 'Three hours on hold to the afterlife. Expect a call.' }
       ] },
       { label: 'Hang up', how: 'by hanging up', outcomes: [
         { tone: 'good', stamp: 'DISCONNECTED', text: 'The phone stops. The planchette starts. It spells “RUDE”. {a} spells “BUSY” back with the biscuits. Honour is satisfied.', souls: 14, report: '{f}’s resident hung up on the dead. {c} has been blamed by both sides.' },
@@ -117,7 +117,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Cancel it', how: 'by cancelling the subscription', outcomes: [
         { tone: 'good', stamp: 'UNSUBSCRIBED', text: 'Cancelling takes forty minutes and a lot of pressing nine. The last moth leaves with a small suitcase and a face like you have ruined Christmas.', souls: 15, report: 'They cancelled. The last moth left with a suitcase. {c} has been sent the bill.' },
-        { tone: 'weird', stamp: 'RENEWED', text: 'The cancellation is accepted, then renewed by the moths, who own the company. {a} is now the face of the brand. The photographs are mostly lampshade.', souls: 20, rebound: true, report: 'The moths renewed it themselves. {f}’s resident is the face of the brand. It rebounded.' }
+        { tone: 'weird', stamp: 'RENEWED', text: 'The cancellation is accepted, then renewed by the moths, who own the company. {a} is now the face of the brand. The photographs are mostly lampshade.', souls: 20, rebound: true, report: 'The moths renewed it themselves. {f}’s resident is the face of the brand.' }
       ] },
       { label: 'Read the first issue', how: 'by reading the first issue', outcomes: [
         { tone: 'good', stamp: 'INFORMED', text: 'It is quite good. There is a crossword with every answer “lamp”. {a} gets them all and feels clever for the first time since the flood.', souls: 16, bond: 'a', report: 'They enjoyed the first issue. Every answer was “lamp”.' },
@@ -133,7 +133,7 @@ export const HEX_DECK = [
       ] },
       { label: 'Give it back to {b}', how: 'by returning the tooth', outcomes: [
         { tone: 'good', stamp: 'RETURNED', text: '{b} accepts the tooth, counts its own teeth, and goes very quiet. Nobody knows whose it was. Nobody is going to ask.', souls: 14, report: 'The tooth came back. {c} counted and went very quiet.' },
-        { tone: 'weird', stamp: 'TRADED', text: '{b} swaps it for another tooth, then another. By teatime there is a small market. {a} owns three molars and an interest in a canine.', souls: 21, rebound: true, curio: true, report: 'It became a market. {f}’s resident owns three molars now. It rebounded.' }
+        { tone: 'weird', stamp: 'TRADED', text: '{b} swaps it for another tooth, then another. By teatime there is a small market. {a} owns three molars and an interest in a canine.', souls: 21, rebound: true, curio: true, report: 'It became a market. {f}’s resident owns three molars now.' }
       ] }
     ] },
   { id: 'the-midnight-bell', name: 'The Midnight Bell', art: 'clock', blurb: 'Rings at midnight. Every hour.',
@@ -141,7 +141,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Find the bell', how: 'by finding the bell', outcomes: [
         { tone: 'good', stamp: 'FOUND', text: 'It is in the teapot. It has been in the teapot for days. {a} has been drinking tea that rings. That explains a great deal about Tuesday.', souls: 16, report: 'The bell was in the teapot. {f}’s resident drank from it for days.' },
-        { tone: 'weird', stamp: 'TOLLED', text: 'Every time {a} gets close, the bell moves and rings once, for whom it does not say. {a} has narrowed it down to the wall, the ceiling or itself.', souls: 18, rebound: true, report: 'They could not find it. It may be inside them. It rebounded.' }
+        { tone: 'weird', stamp: 'TOLLED', text: 'Every time {a} gets close, the bell moves and rings once, for whom it does not say. {a} has narrowed it down to the wall, the ceiling or itself.', souls: 18, rebound: true, report: 'They could not find it. It may be inside them.' }
       ] },
       { label: 'Keep its hours', how: 'by keeping its hours', outcomes: [
         { tone: 'good', stamp: 'PUNCTUAL', text: '{a} lives on bell time now. Twelve midnights a day. It has never been so rested, or so sure that something is coming.', souls: 15, a: { fuss: 20 }, fits: ['nocturnal', 'insomniac', 'sleepwalker'], report: '{f}’s resident lives on bell time now and has never been happier.' },
@@ -153,7 +153,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Open it', how: 'by opening the jar', outcomes: [
         { tone: 'good', stamp: 'FLATTERED', text: 'They are mostly compliments, whispered by people too proud to say them out loud. One just says “nice elbows”. {a} has not stopped touching its elbows.', souls: 17, bond: 'a', fits: NOSY, report: 'The whispers were compliments. Something about elbows. Well done, {c}.' },
-        { tone: 'weird', stamp: 'OVERHEARD', text: 'The whispers get out and settle in the curtains. Now the curtains talk about {a} too, but kindly, and only when the window is open.', souls: 19, rebound: true, report: 'The whispers live in their curtains now. It rebounded.' }
+        { tone: 'weird', stamp: 'OVERHEARD', text: 'The whispers get out and settle in the curtains. Now the curtains talk about {a} too, but kindly, and only when the window is open.', souls: 19, rebound: true, report: 'The whispers live in their curtains now.' }
       ] },
       { label: 'Put it on a high shelf', how: 'by putting it on a high shelf', outcomes: [
         { tone: 'good', stamp: 'SHELVED', text: 'Up there it can whisper all it likes. The spider on that shelf now knows everything and has started charging for it.', souls: 14, report: 'The jar is on a high shelf. A spider is selling the contents.' },
@@ -165,7 +165,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Send it back', how: 'by sending it back', outcomes: [
         { tone: 'good', stamp: 'RETURNED', text: 'The returns slip asks for a reason. {a} ticks “changed my mind” and then, after thought, “not dead”. Refund in five to seven working centuries.', souls: 15, report: 'They returned it. Reason given: not dead. {c} signed for that too.' },
-        { tone: 'weird', stamp: 'FORWARDED', text: 'The coffin is returned to sender. The sender is {b}. {b} is now sleeping in it and describes it as “restorative”.', souls: 19, rebound: true, report: 'It came back to {c}, who now sleeps in it. It rebounded.' }
+        { tone: 'weird', stamp: 'FORWARDED', text: 'The coffin is returned to sender. The sender is {b}. {b} is now sleeping in it and describes it as “restorative”.', souls: 19, rebound: true, report: 'It came back to {c}, who now sleeps in it.' }
       ] },
       { label: 'Try it for size', how: 'by trying it on', outcomes: [
         { tone: 'good', stamp: 'PERFECT FIT', text: '{a} gets in, gets comfortable and refuses to get out. The lid is propped open with a biscuit. {a} takes calls in there now.', souls: 17, a: { fuss: 20 }, fits: SPOOKY, report: '{f}’s resident loves the coffin and is taking calls from it.' },
@@ -177,7 +177,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Argue with it', how: 'by arguing with the raven', outcomes: [
         { tone: 'good', stamp: 'OUT-ARGUED', text: '{a} wins on points. The raven leaves a feather and a written apology, in a surprisingly neat hand. It still thinks the cardigan is wrong.', souls: 16, fits: ['critic', 'litigious', 'complaints', 'spiteful'], report: '{f}’s resident won the argument. The raven still thinks the cardigan is wrong.' },
-        { tone: 'weird', stamp: 'ADJOURNED', text: 'The debate is adjourned until the raven can consult its notes. Its notes are about {b}. They are scathing. {a} reads them aloud at dinner.', souls: 19, rebound: true, report: 'The raven’s notes were all about {c}. They were read aloud at dinner. It rebounded.' }
+        { tone: 'weird', stamp: 'ADJOURNED', text: 'The debate is adjourned until the raven can consult its notes. Its notes are about {b}. They are scathing. {a} reads them aloud at dinner.', souls: 19, rebound: true, report: 'The raven’s notes were all about {c}. They were read aloud at dinner.' }
       ] },
       { label: 'Feed it', how: 'by feeding the raven', outcomes: [
         { tone: 'good', stamp: 'CONVERTED', text: 'Three crusts in, the raven’s opinions soften. By the fifth it thinks {a} is wonderful and that {b} should be looked into.', souls: 15, bond: 'a', report: 'They fed the raven. It now thinks {c} should be looked into.' },
@@ -189,7 +189,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Evict it', how: 'with an eviction notice', outcomes: [
         { tone: 'good', stamp: 'EVICTED', text: 'The spider reads the notice, eight times, then packs. It leaves the corner spotless and a review that says “host was cold”.', souls: 14, report: 'The spider was evicted and left a bad review of {c}.' },
-        { tone: 'weird', stamp: 'APPEALED', text: 'The spider appeals. The appeal is heard by another spider. {a} loses on a technicality involving the word “corner”.', souls: 18, rebound: true, fits: OFFICIAL, report: 'The spider won on appeal. {f}’s resident has been served. It rebounded.' }
+        { tone: 'weird', stamp: 'APPEALED', text: 'The spider appeals. The appeal is heard by another spider. {a} loses on a technicality involving the word “corner”.', souls: 18, rebound: true, fits: OFFICIAL, report: 'The spider won on appeal. {f}’s resident has been served.' }
       ] },
       { label: 'Accept the lodger', how: 'by taking in the lodger', outcomes: [
         { tone: 'good', stamp: 'TIDY', text: 'Best tenant ever. It catches the flies, dusts the lamp and leaves notes about the water pressure that are, honestly, fair.', souls: 16, a: { clean: 20 }, report: 'They kept the spider. It does the dusting now. {c} has been outclassed.' },
@@ -201,7 +201,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Bury the spoon', how: 'by burying the spoon', outcomes: [
         { tone: 'good', stamp: 'INTERRED', text: 'A short service in the plant pot. {a} reads a few words. The humming stops. The plant now hums, faintly, and has started to flower.', souls: 16, report: 'The spoon was buried. The plant hums it now, and is flowering.' },
-        { tone: 'weird', stamp: 'HARMONY', text: 'From under the soil, the spoon is joined by a fork in harmony. {a} did not bury a fork. Nobody in this house owns a fork.', souls: 19, rebound: true, report: 'A fork turned up in harmony. Nobody owns a fork. It rebounded.' }
+        { tone: 'weird', stamp: 'HARMONY', text: 'From under the soil, the spoon is joined by a fork in harmony. {a} did not bury a fork. Nobody in this house owns a fork.', souls: 19, rebound: true, report: 'A fork turned up in harmony. Nobody owns a fork.' }
       ] },
       { label: 'Hum along', how: 'by humming along', outcomes: [
         { tone: 'good', stamp: 'DUET', text: '{a} finds the harmony on the first try. They perform it at teatime. A neighbour bangs on the wall in time, which counts as applause.', souls: 17, bond: 'a', fits: ['hummer', 'theatrical', 'understudy'], report: 'They hummed along and found the harmony. Even the neighbour joined in.' },
@@ -213,7 +213,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Unpick it', how: 'by unpicking the stitches', outcomes: [
         { tone: 'good', stamp: 'DETACHED', text: 'It comes off cleanly and slides under the door, back the way it came. {a}’s own shadow is visibly relieved and stands a little closer than usual.', souls: 15, report: 'The spare shadow came home under the door. Check behind {c}.' },
-        { tone: 'weird', stamp: 'CUSTODY', text: 'Both shadows claim to be the original. {a} has to choose. It picks the one that waves first. It is not sure it chose right.', souls: 19, rebound: true, report: 'There was a custody dispute over shadows. It rebounded.' }
+        { tone: 'weird', stamp: 'CUSTODY', text: 'Both shadows claim to be the original. {a} has to choose. It picks the one that waves first. It is not sure it chose right.', souls: 19, rebound: true, report: 'There was a custody dispute over shadows.' }
       ] },
       { label: 'Let it trail', how: 'by letting it trail along', outcomes: [
         { tone: 'good', stamp: 'ESCORTED', text: 'Two shadows look very grand. {a} walks the length of the shelf twice to show them off. The lamp has to work overtime and has filed a complaint.', souls: 16, fits: STAGEY, report: '{f}’s resident is showing off its second shadow. The lamp has complained.' },
@@ -225,7 +225,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Step out anyway', how: 'by stepping out', outcomes: [
         { tone: 'good', stamp: 'UNAGED', text: '{a} steps out and loses a year. It cannot die, so this just means it misses one Christmas it was dreading. Net gain.', souls: 17, report: 'They stepped out and lost a year. They were glad of it.' },
-        { tone: 'weird', stamp: 'RECEIPT', text: 'The year is billed to {b}. The bill arrives by mushroom. {b} owes the fairies a summer and has started saving.', souls: 19, rebound: true, report: 'The year was billed to {c}. It rebounded. Keep your summers close.' }
+        { tone: 'weird', stamp: 'RECEIPT', text: 'The year is billed to {b}. The bill arrives by mushroom. {b} owes the fairies a summer and has started saving.', souls: 19, rebound: true, report: 'The year was billed to {c}. Keep your summers close.' }
       ] },
       { label: 'Stay in and wait', how: 'by waiting it out', outcomes: [
         { tone: 'good', stamp: 'HOSTED', text: 'The fairies arrive for a dance and turn out to be terrible dancers. {a} teaches them a waltz. They leave a tip.', souls: 18, curio: true, report: '{f}’s resident taught the fairies to waltz and was tipped.' },
@@ -237,7 +237,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Blow it out', how: 'by blowing it out', outcomes: [
         { tone: 'good', stamp: 'EXTINGUISHED', text: 'On the ninth breath it goes out, and says “fine” in a tone that means it is not. {a} has to have a lie down. Candles are exhausting.', souls: 15, report: 'They blew it out on the ninth breath. It said “fine”.' },
-        { tone: 'weird', stamp: 'RELIT', text: 'It goes out, then relights at the exact moment anyone says {b}’s name. The shelf has stopped saying {b}’s name. This suits everybody.', souls: 18, rebound: true, report: 'It relights whenever anyone says {c}. They have stopped saying {c}. It rebounded.' }
+        { tone: 'weird', stamp: 'RELIT', text: 'It goes out, then relights at the exact moment anyone says {b}’s name. The shelf has stopped saying {b}’s name. This suits everybody.', souls: 18, rebound: true, report: 'It relights whenever anyone says {c}. They have stopped saying {c}.' }
       ] },
       { label: 'Talk it round', how: 'by talking the candle round', outcomes: [
         { tone: 'good', stamp: 'ALIGHT', text: 'It turns out the candle wanted to be asked. Once asked, it burns beautifully, all evening, and looks at {a} the way candles never look at anyone.', souls: 17, bond: 'a', report: 'The candle just wanted asking. It burns for them now.' },
@@ -249,7 +249,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Pay the secret', how: 'by paying up', outcomes: [
         { tone: 'good', stamp: 'PAID', text: '{a} pays with a small secret: it has never once read the terms and conditions. The landlord, who is real, is so moved that the rent goes down.', souls: 17, report: 'They paid the secret. The real landlord lowered the rent. Well done, {c}.' },
-        { tone: 'weird', stamp: 'ARREARS', text: '{a} pays with {b}’s secret instead. It is a big one. The landlord accepts it and asks if {b} has any more.', souls: 20, rebound: true, fits: NOSY, report: 'They paid the rent with one of {c}’s secrets. It rebounded.' }
+        { tone: 'weird', stamp: 'ARREARS', text: '{a} pays with {b}’s secret instead. It is a big one. The landlord accepts it and asks if {b} has any more.', souls: 20, rebound: true, fits: NOSY, report: 'They paid the rent with one of {c}’s secrets.' }
       ] },
       { label: 'Contest it', how: 'by contesting the letter', outcomes: [
         { tone: 'good', stamp: 'DISMISSED', text: '{a} spots the forgery: the landlord always signs in blood, and this is jam. Raspberry. {b} has been given a stern talking to by the jam.', souls: 16, fits: OFFICIAL, report: 'The forgery was spotted. It was signed in jam. {c} has been spoken to.' },
@@ -261,7 +261,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Apologise to it', how: 'by apologising to the mirror', outcomes: [
         { tone: 'good', stamp: 'RECONCILED', text: '{a} apologises without knowing what for. The mirror accepts. {a} reappears in it, with better posture than it has ever had in real life.', souls: 16, report: 'They apologised to the mirror. It shows them with better posture now.' },
-        { tone: 'weird', stamp: 'TERMS', text: 'The mirror will reflect {a} again, but only on weekdays and only from the left. Weekends it reflects {b}, waving.', souls: 19, rebound: true, report: 'At weekends the mirror shows {c}, waving. It rebounded.' }
+        { tone: 'weird', stamp: 'TERMS', text: 'The mirror will reflect {a} again, but only on weekdays and only from the left. Weekends it reflects {b}, waving.', souls: 19, rebound: true, report: 'At weekends the mirror shows {c}, waving.' }
       ] },
       { label: 'Turn it to the wall', how: 'by turning it to the wall', outcomes: [
         { tone: 'good', stamp: 'FACING', text: 'Facing the wall, the mirror reflects the wall, which has never been looked at so carefully. The wall is overwhelmed. It is a nice moment for the wall.', souls: 14, report: 'The mirror faces the wall now. The wall is having a lovely time.' },
@@ -273,7 +273,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Eat it', how: 'by eating the cake', outcomes: [
         { tone: 'good', stamp: 'ACCEPTED', text: 'It is a very good cake. {a} accepts the apology in full and in advance. Whatever {b} does next is pre-forgiven, up to a reasonable limit.', souls: 17, a: { food: 25 }, report: 'They ate it. You are forgiven in advance, up to a reasonable limit.' },
-        { tone: 'weird', stamp: 'LAYERED', text: 'Each layer apologises for something different and more specific. The bottom layer says “and the thing with the vicar”. {a} does not know about the vicar. It does now.', souls: 20, a: { food: 20 }, rebound: true, report: 'The cake confessed to the thing with the vicar. It rebounded.' }
+        { tone: 'weird', stamp: 'LAYERED', text: 'Each layer apologises for something different and more specific. The bottom layer says “and the thing with the vicar”. {a} does not know about the vicar. It does now.', souls: 20, a: { food: 20 }, rebound: true, report: 'The cake confessed to the thing with the vicar.' }
       ] },
       { label: 'Keep it as evidence', how: 'by keeping it as evidence', outcomes: [
         { tone: 'good', stamp: 'EXHIBIT A', text: '{a} bags it and labels it. The case against {b} is now very strong and slightly sticky.', souls: 15, fits: OFFICIAL, report: 'The cake is Exhibit A. The case against {c} is strong and sticky.' },
@@ -285,7 +285,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Cancel the booking', how: 'by cancelling the booking', outcomes: [
         { tone: 'good', stamp: 'CANCELLED', text: 'The cemetery refunds the deposit in worms. {a} invests them in the plant pot, where they are already doing better than most pensions.', souls: 16, report: 'They cancelled. The deposit came back in worms, which are thriving.' },
-        { tone: 'weird', stamp: 'TRANSFERRED', text: 'The booking cannot be cancelled, only transferred. {a} transfers it to {b}. The headstone now says “{b}, sooner”.', souls: 19, rebound: true, report: 'The grave is booked in {c}’s name now. It says “sooner”. It rebounded.' }
+        { tone: 'weird', stamp: 'TRANSFERRED', text: 'The booking cannot be cancelled, only transferred. {a} transfers it to {b}. The headstone now says “{b}, sooner”.', souls: 19, rebound: true, report: 'The grave is booked in {c}’s name now. It says “sooner”.' }
       ] },
       { label: 'Go and see it', how: 'by going to see it', outcomes: [
         { tone: 'good', stamp: 'VIEWING', text: 'It really is a lovely spot. {a} has a picnic on it and meets the neighbours, who are mostly lying down and great listeners.', souls: 17, bond: 'a', fits: SPOOKY, report: 'They had a picnic on it. The neighbours were great listeners.' },
@@ -297,7 +297,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Pick the bone', how: 'by picking the bone', outcomes: [
         { tone: 'good', stamp: 'PICKED', text: 'They pick it clean between them in an afternoon of honest conversation. It turns out to be a chicken bone and a misunderstanding about a chair.', souls: 16, bond: 'a', report: 'The bone was picked. It was about a chair. {c} feels heard.' },
-        { tone: 'weird', stamp: 'ASSEMBLED', text: 'There are more bones where that came from. By evening they have picked a whole skeleton, who thanks them and goes to the shops.', souls: 20, curio: true, rebound: true, report: 'They picked a whole skeleton, who went to the shops. It rebounded.' }
+        { tone: 'weird', stamp: 'ASSEMBLED', text: 'There are more bones where that came from. By evening they have picked a whole skeleton, who thanks them and goes to the shops.', souls: 20, curio: true, rebound: true, report: 'They picked a whole skeleton, who went to the shops.' }
       ] },
       { label: 'Bury it', how: 'by burying the bone', outcomes: [
         { tone: 'good', stamp: 'LET GO', text: '{a} buries the bone and the grievance with it. {b} stands by the grave for a long time, then admits it cannot remember what it was angry about.', souls: 15, report: 'They buried the bone. {c} cannot remember what it was angry about.' },
@@ -309,7 +309,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Whisper something false', how: 'by feeding it false rumours', outcomes: [
         { tone: 'good', stamp: 'PLANTED', text: '{a} whispers that it is secretly royal. By teatime the whole street curtseys. {a} has always known how to accept a curtsey.', souls: 17, fits: NOSY, report: 'They fed it a rumour. The whole street now believes they are royal.' },
-        { tone: 'weird', stamp: 'ECHO', text: 'The ear repeats it all back to {b}, word for word, in {a}’s voice. {b} now believes {b} owes {a} a pony.', souls: 19, rebound: true, report: '{c} now believes it owes {f}’s resident a pony. It rebounded.' }
+        { tone: 'weird', stamp: 'ECHO', text: 'The ear repeats it all back to {b}, word for word, in {a}’s voice. {b} now believes {b} owes {a} a pony.', souls: 19, rebound: true, report: '{c} now believes it owes {f}’s resident a pony.' }
       ] },
       { label: 'Put a hat on it', how: 'by putting a hat on the ear', outcomes: [
         { tone: 'good', stamp: 'MUFFLED', text: 'A small knitted hat. The ear is warm and hears nothing and is, for the first time, at peace. It is a better life than eavesdropping.', souls: 15, a: { fuss: 15 }, report: 'The ear is wearing a hat and hears nothing. It seems happier.' },
@@ -321,7 +321,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Shake it', how: 'by shaking hands', outcomes: [
         { tone: 'good', stamp: 'ACQUAINTED', text: 'A firm, dry handshake. The hand clearly went to a good school. It lets go first, which {a} respects.', souls: 16, bond: 'a', report: 'They shook hands. It went to a good school, apparently.' },
-        { tone: 'weird', stamp: 'HELD', text: 'The hand will not let go. {a} spends the day doing everything one handed and holding hands with a stranger. It is weirdly nice.', souls: 18, rebound: true, report: 'The hand would not let go. They have been holding hands all day. It rebounded.' }
+        { tone: 'weird', stamp: 'HELD', text: 'The hand will not let go. {a} spends the day doing everything one handed and holding hands with a stranger. It is weirdly nice.', souls: 18, rebound: true, report: 'The hand would not let go. They have been holding hands all day.' }
       ] },
       { label: 'Give it a job', how: 'by giving the hand a job', outcomes: [
         { tone: 'good', stamp: 'EMPLOYED', text: 'It does the washing up, beautifully. {a} gives it Thursdays off. The hand has never been happier, and never been asked.', souls: 17, a: { clean: 20 }, report: 'They gave the hand a job. It does the washing up and has Thursdays off.' },
@@ -333,7 +333,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Call it off', how: 'by calling off the engagement', outcomes: [
         { tone: 'good', stamp: 'JILTED', text: 'The ring takes it well, all things considered. It keeps the deposit on the hall and goes travelling. It sends postcards. They are not unkind.', souls: 16, report: 'The engagement is off. The ring went travelling and sends postcards.' },
-        { tone: 'weird', stamp: 'ANNULLED', text: 'It takes a priest, two lawyers and a crow to annul. The crow does the most work. The ring asks if {b} is single.', souls: 19, rebound: true, report: 'Annulled with the help of a crow. The ring asked if {c} is single. It rebounded.' }
+        { tone: 'weird', stamp: 'ANNULLED', text: 'It takes a priest, two lawyers and a crow to annul. The crow does the most work. The ring asks if {b} is single.', souls: 19, rebound: true, report: 'Annulled with the help of a crow. The ring asked if {c} is single.' }
       ] },
       { label: 'Plan the wedding', how: 'by planning the wedding', outcomes: [
         { tone: 'good', stamp: 'BETROTHED', text: 'Nobody is sure who {a} is marrying, but the cake is booked and the moths are bridesmaids. {a} is radiant. Sincerely.', souls: 18, a: { fuss: 20 }, fits: STAGEY, report: 'There will be a wedding. Nobody knows to whom. The moths are bridesmaids.' },
@@ -345,7 +345,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Hammer it back', how: 'with a hammer', outcomes: [
         { tone: 'good', stamp: 'SECURED', text: 'Three good blows. The nail goes back with a grudging creak. The board underneath says thank you, quietly, in pine.', souls: 15, report: 'The nail was hammered home. The floorboard said thank you.' },
-        { tone: 'weird', stamp: 'TUNNELLED', text: 'It goes down and keeps going. Later that day a nail comes up in {b}’s floor, out of breath, holding a small map.', souls: 19, rebound: true, report: 'The nail tunnelled through and came up in {c}’s floor. It rebounded.' }
+        { tone: 'weird', stamp: 'TUNNELLED', text: 'It goes down and keeps going. Later that day a nail comes up in {b}’s floor, out of breath, holding a small map.', souls: 19, rebound: true, report: 'The nail tunnelled through and came up in {c}’s floor.' }
       ] },
       { label: 'Let it go', how: 'by letting it go', outcomes: [
         { tone: 'good', stamp: 'FREE', text: 'The nail works itself loose, nods once, and rolls out under the door. {a} gets a postcard a week later from a fence in Norfolk. It sounds happy.', souls: 16, bond: 'a', report: 'They let the nail go. It writes from a fence in Norfolk.' },
@@ -360,7 +360,7 @@ export const HEX_DECK = [
         { tone: 'weird', stamp: 'PREMONITION', text: 'The portrait inside starts to age instead of {a}. It is going grey at the temples. {a} has never looked better and is insufferable about it.', souls: 20, curio: true, report: 'The brooch ages instead of them. They have never looked better.' }
       ] },
       { label: 'Post it back', how: 'by posting it back', outcomes: [
-        { tone: 'good', stamp: 'REDIRECTED', text: '{a} swaps the portrait for one of {b} and posts it back. “Gone but not yet” works just as well for {b}. Better, honestly.', souls: 16, rebound: true, report: 'The brooch came back with your {c}’s portrait in it. It rebounded.' },
+        { tone: 'good', stamp: 'REDIRECTED', text: '{a} swaps the portrait for one of {b} and posts it back. “Gone but not yet” works just as well for {b}. Better, honestly.', souls: 16, rebound: true, report: 'The brooch came back with your {c}’s portrait in it.' },
         { tone: 'weird', stamp: 'LOST', text: 'The brooch goes missing in the post and turns up at a funeral in Cornwall. Everyone there is very moved by {a}, whom nobody knew.', souls: 18, report: 'The brooch was lost in the post and moved a funeral in Cornwall.' }
       ] }
     ] },
@@ -369,7 +369,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Read the small print', how: 'by reading the small print', outcomes: [
         { tone: 'good', stamp: 'VOID', text: 'Clause eleven: the lease is void if the tenant is a mouse. The mouse is a mouse. It packs up without fuss and leaves a very small cheese as compensation.', souls: 16, fits: OFFICIAL, report: 'The lease was void. The mouse left a very small cheese.' },
-        { tone: 'weird', stamp: 'SUBLET', text: 'Clause twelve allows the mouse to sublet. It sublets to {b}. {b} is moving in on Thursday with several boxes.', souls: 19, rebound: true, report: 'The mouse sublet the skirting to {c}, who moves in on Thursday. It rebounded.' }
+        { tone: 'weird', stamp: 'SUBLET', text: 'Clause twelve allows the mouse to sublet. It sublets to {b}. {b} is moving in on Thursday with several boxes.', souls: 19, rebound: true, report: 'The mouse sublet the skirting to {c}, who moves in on Thursday.' }
       ] },
       { label: 'Welcome the neighbour', how: 'by welcoming the mouse', outcomes: [
         { tone: 'good', stamp: 'NEIGHBOURLY', text: '{a} brings round a crumb. The mouse brings round a smaller crumb. They exchange crumbs every evening now. It is the most civilised thing on the shelf.', souls: 17, a: { food: 20 }, report: 'They welcomed the mouse. There is a nightly exchange of crumbs.' },
@@ -381,7 +381,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Water it', how: 'by watering it', outcomes: [
         { tone: 'good', stamp: 'THRIVING', text: 'It loves the water and glows a soft green. {a} reads by it now. The shelf’s electricity bill has never been lower, or more radioactive.', souls: 17, report: 'They watered it. It is now their reading lamp.' },
-        { tone: 'weird', stamp: 'BLOOMING', text: 'It flowers. Each flower is a tiny lit window with a tiny {b} in it, waving. {a} draws the curtains on the plant at night.', souls: 19, rebound: true, report: 'It flowered. Every flower has a tiny {c} in it, waving. It rebounded.' }
+        { tone: 'weird', stamp: 'BLOOMING', text: 'It flowers. Each flower is a tiny lit window with a tiny {b} in it, waving. {a} draws the curtains on the plant at night.', souls: 19, rebound: true, report: 'It flowered. Every flower has a tiny {c} in it, waving.' }
       ] },
       { label: 'Put it outside', how: 'by putting it outside', outcomes: [
         { tone: 'good', stamp: 'LANDMARK', text: 'Outside it lights the whole street. Taxis use it to find the house. {a} has started charging a small fee to look at it.', souls: 16, fits: GREEDY, report: 'It lights the street now. {f}’s resident charges a fee to look at it.' },
@@ -393,7 +393,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Wash it off', how: 'by scrubbing it off', outcomes: [
         { tone: 'good', stamp: 'SCRUBBED', text: 'It comes off with soap and spite. {a} feels oddly lighter. The shelf is cleaner than it has been since the incident with the soup.', souls: 15, a: { clean: 20 }, report: 'They scrubbed it off with soap and spite. The shelf is spotless.' },
-        { tone: 'weird', stamp: 'REDRAWN', text: 'It redraws itself overnight, slightly bigger. Then bigger. {a} is now outlined to the scale of a small horse and is very proud.', souls: 18, rebound: true, report: 'The outline redrew itself to the size of a small horse. It rebounded.' }
+        { tone: 'weird', stamp: 'REDRAWN', text: 'It redraws itself overnight, slightly bigger. Then bigger. {a} is now outlined to the scale of a small horse and is very proud.', souls: 18, rebound: true, report: 'The outline redrew itself to the size of a small horse.' }
       ] },
       { label: 'Lie in it', how: 'by lying in it', outcomes: [
         { tone: 'good', stamp: 'RESTED', text: 'It is very comfortable, like being expected. {a} naps in it every afternoon now. Detectives keep turning up, and it waves them off.', souls: 16, a: { fuss: 20 }, report: '{f}’s resident naps in it daily. Detectives keep arriving.' },
@@ -405,7 +405,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Switch it off', how: 'by switching it off', outcomes: [
         { tone: 'good', stamp: 'OFF', text: 'In the dark it can only gossip about what it remembers, which is mostly lightbulbs. Nobody minds. Lightbulbs had it coming.', souls: 15, report: 'They switched it off. It only gossips about lightbulbs now.' },
-        { tone: 'weird', stamp: 'LEAKED', text: 'It goes off, but the kettle has already told the toaster, who told {b}. {b} has made a poster about the biscuit.', souls: 18, rebound: true, report: 'The toaster told {c}, who made a poster about the biscuit. It rebounded.' }
+        { tone: 'weird', stamp: 'LEAKED', text: 'It goes off, but the kettle has already told the toaster, who told {b}. {b} has made a poster about the biscuit.', souls: 18, rebound: true, report: 'The toaster told {c}, who made a poster about the biscuit.' }
       ] },
       { label: 'Tell it something back', how: 'by trading gossip', outcomes: [
         { tone: 'good', stamp: 'TRADED', text: '{a} gives the lamp something juicier about {b}. The lamp glows with delight. The biscuit is forgotten. {b} is not.', souls: 17, fits: NOSY, report: 'They traded gossip. The lamp now knows something juicy about {c}.' },
@@ -417,7 +417,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Demand it back', how: 'by demanding the name back', outcomes: [
         { tone: 'good', stamp: 'RESTORED', text: 'It comes back a bit stretched, with somebody else’s initials on it. {a} wears it in. In a week it fits again. Mostly.', souls: 16, report: 'They got the name back, stretched. It mostly fits.' },
-        { tone: 'weird', stamp: 'SWAPPED', text: '{b} returns the wrong name. {a} is now called Barry. Everyone agrees Barry suits it. {a} hates that everyone agrees.', souls: 19, rebound: true, fits: ['fullname', 'narcissist', 'revisionist'], report: 'You sent back the wrong name. {f}’s resident is Barry now. It rebounded.' }
+        { tone: 'weird', stamp: 'SWAPPED', text: '{b} returns the wrong name. {a} is now called Barry. Everyone agrees Barry suits it. {a} hates that everyone agrees.', souls: 19, rebound: true, fits: ['fullname', 'narcissist', 'revisionist'], report: 'You sent back the wrong name. {f}’s resident is Barry now.' }
       ] },
       { label: 'Enjoy being anonymous', how: 'by enjoying the anonymity', outcomes: [
         { tone: 'good', stamp: 'INCOGNITO', text: 'Nameless, {a} does all sorts. It cuts in line at the bowl and nobody can tell on it. It is the best afternoon it has had in years.', souls: 17, a: { food: 20 }, report: 'They loved being nameless and cut in line all afternoon.' },
@@ -429,7 +429,7 @@ export const HEX_DECK = [
     choices: [
       { label: 'Play along', how: 'by playing along', outcomes: [
         { tone: 'good', stamp: 'BEFRIENDED', text: '{a} and the friend get on brilliantly. It is invisible, agrees with everything and never needs feeding. It is the ideal resident and does not exist.', souls: 17, bond: 'a', report: 'They get on brilliantly with the imaginary friend. It never needs feeding.' },
-        { tone: 'weird', stamp: 'CUSTODY', text: 'The friend goes back to {b} every other weekend. Handover is in a car park. Nobody can see who is being handed over.', souls: 19, rebound: true, report: 'Shared custody of the imaginary friend, every other weekend. It rebounded.' }
+        { tone: 'weird', stamp: 'CUSTODY', text: 'The friend goes back to {b} every other weekend. Handover is in a car park. Nobody can see who is being handed over.', souls: 19, rebound: true, report: 'Shared custody of the imaginary friend, every other weekend.' }
       ] },
       { label: 'Refuse to imagine it', how: 'by refusing to imagine it', outcomes: [
         { tone: 'good', stamp: 'UNIMAGINED', text: 'The friend fades out politely, leaving a smell of crayons. {a} feels a small, unreasonable pang. It writes a short poem about it and burns it.', souls: 15, report: 'They refused to imagine it. It faded politely. There was a poem.' },

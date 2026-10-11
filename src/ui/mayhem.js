@@ -190,6 +190,7 @@ function showEmergency(state) {
   scene.prepend(sprite(info.a, 'mh-actor-a'));
   if (info.b) scene.appendChild(sprite(info.b, 'mh-actor-b'));
   scene.classList.toggle('pair', !!info.b);
+  window.dispatchEvent(new CustomEvent('shelflife:emergency', { detail: { info, sheet } })); // a friend's hex adds its extras (ui/mischief.js)
   open();
   sheet.querySelector('.mh-choice')?.focus({ preventScroll: true });
 }
@@ -248,6 +249,7 @@ function choose(state, index) {
     '<div class="mh-next">' + (left ? '<button class="btn btn-primary" type="button" data-mh="emergency">Next emergency <small>(' + left + ' left)</small></button>' : mayhemState(state).souls >= POKE_COST ? '<button class="btn btn-primary" type="button" data-mh="poke">Poke the drawer · ' + POKE_COST + '</button><button class="btn" type="button" data-mh="close">Back to the shelf</button>' : '<button class="btn btn-primary" type="button" data-mh="close">Back to the shelf</button>') +
     '<button class="btn btn-ghost" type="button" data-mh="cabinet">Cabinet</button></div></div>';
   card.querySelector('.mh-fineprint')?.remove();
+  window.dispatchEvent(new CustomEvent('shelflife:emergency-result', { detail: { result, card } }));
   (result.tone === 'bad' ? playFeud : result.tone === 'good' ? playStar : playStomp)();
   if (result.curio && !result.curio.duplicate) setTimeout(() => playUnlock(), 450);
   card.querySelectorAll('.mh-actor').forEach(el => el.classList.add(result.tone === 'bad' ? 'recoil' : 'bounce'));
