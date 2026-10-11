@@ -402,6 +402,8 @@ begin
   if p_to is null or p_to = uid or not private.are_friends(uid, p_to) or private.kin_blocked(uid, p_to) then
     perform private.refuse('not_friends');
   end if;
+  -- Lock order, everywhere: both players' account locks first, then any row lock.
+  perform private.lock_accounts(uid, p_to);
   if private.kin_dnd(p_to) then perform private.refuse('do_not_disturb'); end if;
   if p_parent is null or jsonb_typeof(p_parent) <> 'object' or coalesce(p_parent ->> 'id', '') !~ '^[a-zA-Z0-9_-]{1,100}$'
      or coalesce(p_theirs, '') !~ '^[a-zA-Z0-9_-]{1,100}$' then
@@ -450,6 +452,10 @@ declare
   b public.kin_baskets%rowtype;
   on_show int;
 begin
+  -- Account locks first (the sender is known from an unlocked read), then the basket row.
+  select * into b from public.kin_baskets where id = p_id and to_user = uid;
+  if not found then perform private.refuse('not_found'); end if;
+  perform private.lock_accounts(uid, b.from_user);
   select * into b from public.kin_baskets where id = p_id and to_user = uid for update;
   if not found then perform private.refuse('not_found'); end if;
   if b.status <> 'offered' then perform private.refuse('not_open'); end if;
@@ -539,6 +545,7 @@ begin
   if p_friend is null or p_friend = uid or not private.are_friends(uid, p_friend) or private.kin_blocked(uid, p_friend) then
     perform private.refuse('not_friends');
   end if;
+  perform private.lock_accounts(uid, p_friend);
   if private.kin_dnd(p_friend) then perform private.refuse('do_not_disturb'); end if;
   mine := private.kin_shelf_card(uid, p_mine);
   theirs := private.kin_shelf_card(p_friend, p_theirs);
@@ -601,6 +608,9 @@ declare
   made uuid;
 begin
   if p_choice is null or p_choice not between 0 and 2 then perform private.refuse('bad_reply'); end if;
+  select * into l from public.kin_letters where id = p_letter and to_user = uid;
+  if not found then perform private.refuse('not_found'); end if;
+  perform private.lock_accounts(uid, l.from_user);
   select * into l from public.kin_letters where id = p_letter and to_user = uid for update;
   if not found then perform private.refuse('not_found'); end if;
   if l.kind <> 'weekly' then perform private.refuse('bad_reply'); end if;

@@ -68,8 +68,9 @@ create index if not exists play_days_day on public.play_days (day);
 
 -- Players who switched the day count off. Their switch covers every day count
 -- the game keeps (play_days here, and active_days for coven invite rewards in
--- 0008): forget_play_days erases both and records this, and mark_play_day (the
--- game calls it only while the switch is on) clears it again.
+-- 0008): forget_play_days erases both and records this. Only resume_play_days,
+-- called when the player actively switches it on, clears it; passive marks from
+-- any device are refused while it stands.
 create table if not exists private.play_day_optouts (
   user_id uuid primary key references auth.users (id) on delete cascade,
   at timestamptz not null default now()
@@ -202,8 +203,13 @@ declare
   added boolean;
 begin
   if abs(d - current_date) > 1 then perform private.refuse('bad_day'); end if;
-  -- Counting a day is the switch being on again.
-  delete from private.play_day_optouts where user_id = uid;
+  -- Forgetting, marking and resuming happen one at a time per player, so a mark
+  -- already in flight (or from an older device) cannot slip past a switch-off.
+  perform private.lock_account(uid);
+  -- A passive mark never turns the count back on: only resume_play_days() does.
+  if exists (select 1 from private.play_day_optouts where user_id = uid) then
+    return jsonb_build_object('ok', true, 'counted', false, 'opted_out', true);
+  end if;
   insert into public.play_days (user_id, day) values (uid, d) on conflict do nothing;
   added := found;
   delete from public.play_days where user_id = uid and day < current_date - 400;
@@ -223,6 +229,7 @@ declare
   uid uuid := private.require_user();
   removed int;
 begin
+  perform private.lock_account(uid);
   delete from public.play_days where user_id = uid;
   get diagnostics removed = row_count;
   -- The same switch covers the days counted for coven invite rewards (0008), if that is installed.
@@ -235,6 +242,24 @@ begin
 end;
 $$;
 
+-- Switching the count back on is an explicit act, made by the player in More,
+-- never a side effect of opening the game. Nothing is restored: counting just
+-- starts again from the next mark.
+create or replace function public.resume_play_days()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := private.require_user();
+begin
+  perform private.lock_account(uid);
+  delete from private.play_day_optouts where user_id = uid;
+  return jsonb_build_object('ok', true, 'opted_out', false);
+end;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Who may call what: signed-in players (anonymous ones included), nobody else.
 -- ---------------------------------------------------------------------------
@@ -242,7 +267,9 @@ $$;
 revoke all on function public.submit_feedback(text, text, text, text, int, text, text, text, jsonb) from public, anon, authenticated;
 revoke all on function public.mark_play_day(text) from public, anon, authenticated;
 revoke all on function public.forget_play_days() from public, anon, authenticated;
+revoke all on function public.resume_play_days() from public, anon, authenticated;
 
 grant execute on function public.submit_feedback(text, text, text, text, int, text, text, text, jsonb) to authenticated;
 grant execute on function public.mark_play_day(text) to authenticated;
 grant execute on function public.forget_play_days() to authenticated;
+grant execute on function public.resume_play_days() to authenticated;

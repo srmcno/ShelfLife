@@ -23,7 +23,7 @@ const BOOTSTRAP = `
   alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
   insert into auth.users (id, email) values ('${A}', 'ada@example.com'), ('${B}', null), ('${C}', null);
 `;
-const FUNCTIONS = ['forget_play_days', 'mark_play_day', 'submit_feedback'];
+const FUNCTIONS = ['forget_play_days', 'mark_play_day', 'resume_play_days', 'submit_feedback'];
 
 let db, today;
 before(async () => {
@@ -180,11 +180,16 @@ test('the owner queries in the README run and count what they say', async () => 
     assert.ok(found, 'README has the query: ' + name);
     return found;
   };
-  const people = Array.from({ length: 4 }, (_, i) => '10000000-0000-4000-8000-00000000000' + i);
-  await db.query(`insert into auth.users (id) select unnest($1::uuid[])`, [people]);
+  const people = Array.from({ length: 5 }, (_, i) => '10000000-0000-4000-8000-00000000000' + i);
+  // The cohort is the week the cloud account was created, set independently of any play day:
+  // two 40 days ago, one 3 days ago, one today, and one 20 days ago who only first played 5 days ago.
+  const created = [-40, -40, -3, 0, -20];
+  for (let i = 0; i < people.length; i++) {
+    await db.query(`insert into auth.users (id, created_at) values ($1, now() + ($2::int * interval '1 day'))`, [people[i], created[i]]);
+  }
   // Two started 40 days ago (one came back the next day, a week and a month
-  // later), one started 3 days ago and came back the day after, and one today.
-  const days = [[people[0], [-40, -39, -33, -10]], [people[1], [-40]], [people[2], [-3, -2]], [people[3], [0]]];
+  // later), one started 3 days ago and came back the day after, one today, and the late first player.
+  const days = [[people[0], [-40, -39, -33, -10]], [people[1], [-40]], [people[2], [-3, -2]], [people[3], [0]], [people[4], [-5]]];
   for (const [id, list] of days) for (const d of list) await db.query('insert into public.play_days (user_id, day) values ($1, current_date + $2::int)', [id, d]);
   const cohorts = (await db.query(named('Retention'))).rows;
   const week = async offset => (await one("select date_trunc('week', current_date + $1::int)::date::text as w", [offset])).w;
@@ -192,12 +197,18 @@ test('the owner queries in the README run and count what they say', async () => 
   const old = await cohort(-40);
   assert.ok(old, 'the two players who started 40 days ago share a cohort: ' + JSON.stringify(cohorts));
   assert.deepEqual([Number(old.players), Number(old.d1_pct), Number(old.d7_pct), Number(old.d30_pct)], [2, 50, 50, 50]);
+  // Signup is not the first counted play: this player created the account 20 days ago and first played
+  // 5 days ago, so they belong to the week of day -20, not the week of day -5.
+  const late = await cohort(-20);
+  assert.ok(late, 'the late first player sits in the week their account was created: ' + JSON.stringify(cohorts));
+  assert.equal(Number(late.players), 1);
+  assert.equal(Number(cohorts.reduce((n, r) => n + Number(r.players), 0)), 5);
   const young = await cohort(-3);
   assert.equal(young.d30_pct, null, 'a cohort too young for D30 shows a blank rather than 0');
   assert.equal(young.d7_pct, null);
   assert.ok(cohorts.indexOf(young) < cohorts.indexOf(old), 'newest cohort first');
   const active = (await db.query(named('Daily active players'))).rows;
-  assert.equal(active.length, 4, 'days within the last 30: ' + JSON.stringify(active));
+  assert.equal(active.length, 5, 'days within the last 30: ' + JSON.stringify(active));
   assert.ok(active.every(r => Number(r.players) === 1));
   const pulses = (await db.query(named('Check-ins'))).rows;
   assert.ok(pulses.every(r => ['day2', 'court', 'day7'].includes(r.moment)));

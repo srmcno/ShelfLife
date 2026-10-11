@@ -54,11 +54,16 @@ export function createFakeFeedback({ now, json, rest }) {
     mark_play_day(user, { p_day }) {
       const d = day(p_day);
       if (!d || Math.abs(gap(d, today())) > 1) return refuse('bad_day');
-      optouts.delete(user.id); // counting a day is the switch being on again
+      // A passive mark never turns the count back on: only resume_play_days does.
+      if (optouts.has(user.id)) return json(200, { ok: true, counted: false, opted_out: true });
       const added = !playDays.some(p => p.user_id === user.id && p.day === d);
       if (added) playDays.push({ user_id: user.id, day: d });
       for (let i = playDays.length - 1; i >= 0; i--) if (playDays[i].user_id === user.id && gap(today(), playDays[i].day) > 400) playDays.splice(i, 1);
       return json(200, { ok: true, counted: added });
+    },
+    resume_play_days(user) {
+      optouts.delete(user.id);
+      return json(200, { ok: true, opted_out: false });
     },
     forget_play_days(user) {
       let removed = 0;

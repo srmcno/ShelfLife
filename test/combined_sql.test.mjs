@@ -114,7 +114,7 @@ test('no public table is open to direct reads or writes by players after all ten
   }
 });
 
-test('switching the day count off erases play days and coven active days, stops both, and switching on resumes', async () => {
+test('switching the day count off erases both histories, passive marks never reverse it, and only an explicit resume does', async () => {
   const today = await value("select to_char(current_date, 'YYYY-MM-DD')");
   await call(C, 'public.mark_play_day($1)', [today]);
   await call(C, 'public.mark_active_day()');
@@ -124,12 +124,21 @@ test('switching the day count off erases play days and coven active days, stops 
   assert.equal(forgot.ok, true);
   assert.equal(Number(await value('select count(*) from public.play_days where user_id = $1', [C])), 0);
   assert.equal(Number(await value('select count(*) from public.active_days where user_id = $1', [C])), 0, 'coven active days are erased too');
+  // A stale second device, or a mark already in flight, still thinks the switch is on.
+  const stale = await call(C, 'public.mark_play_day($1)', [today]);
+  assert.deepEqual([stale.ok, stale.counted, stale.opted_out], [true, false, true], 'a passive mark is refused');
   const quiet = await call(C, 'public.mark_active_day()');
   assert.equal(quiet.opted_out, true);
-  assert.equal(Number(await value('select count(*) from public.active_days where user_id = $1', [C])), 0, 'and not counted while switched off');
-  // The game calls mark_play_day only while the switch is on: that is switching it on.
-  await call(C, 'public.mark_play_day($1)', [today]);
+  assert.equal(Number(await value('select count(*) from public.play_days where user_id = $1', [C])), 0, 'the stale mark counted nothing');
+  assert.equal(Number(await value('select count(*) from public.active_days where user_id = $1', [C])), 0);
+  assert.equal(await value('select exists (select 1 from private.play_day_optouts where user_id = $1)', [C]), true, 'and the opt-out still stands');
+  const back = await call(C, 'public.resume_play_days()');
+  assert.deepEqual([back.ok, back.opted_out], [true, false]);
+  const counted = await call(C, 'public.mark_play_day($1)', [today]);
+  assert.equal(counted.counted, true);
   await call(C, 'public.mark_active_day()');
   assert.equal(Number(await value('select count(*) from public.active_days where user_id = $1', [C])), 1);
   assert.equal(await value('select has_table_privilege($1, $2, $3)', ['authenticated', 'private.play_day_optouts', 'select']), false);
+  assert.equal(await value('select has_function_privilege($1, $2, $3)', ['anon', 'public.resume_play_days()', 'execute']), false);
+  assert.equal(await value('select has_function_privilege($1, $2, $3)', ['authenticated', 'public.resume_play_days()', 'execute']), true);
 });
