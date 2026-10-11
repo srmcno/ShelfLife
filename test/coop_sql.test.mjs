@@ -198,6 +198,9 @@ test('a finished trip pays the lender wages the server decides, capped at 30 a d
   const again = await call(A, 'public.coop_collect($1)', [fromBea.id]);
   assert.equal(again.wages, 0, 'never paid twice');
   assert.deepEqual(again.receipt, paid.receipt, 'a retry answers the same receipt');
+  // The receipt keeps the report as the postbox showed it, for a device that lost the answer.
+  const { id: hireId, ...shown } = fromBea;
+  assert.deepEqual(paid.receipt.detail, { hire_id: hireId, ...shown });
   assert.equal((await call(A, 'public.coop_reports()')).reports.length, 2);
   const records = await call(A, 'public.coop_records()');
   assert.deepEqual(records.filter(r => r.trips).map(r => r.trips), [1, 1, 1]);
@@ -454,6 +457,9 @@ test('a stake leaves the balance in the same call that holds it, and a retry of 
   // The answer to the first claim is lost; every retry gets the same receipt.
   const first = await claim(G, made.id);
   assert.deepEqual([first.souls, first.receipt.delta, first.receipt.earned], [50, 50, 25]);
+  assert.deepEqual(first.receipt.detail, { duel_id: made.id, game: 'stack', stake: 25, against: H, against_name: 'Hal', outcome: 'challenger',
+    wins_mine: 2, wins_theirs: 0 });
+  assert.deepEqual(made.receipt.detail, { ...first.receipt.detail, outcome: null, wins_mine: 0 }, 'the stake receipt keeps the series as it began');
   for (let i = 0; i < 3; i++) assert.deepEqual((await claim(G, made.id)).receipt, first.receipt);
   assert.deepEqual((await receipts(G, made.receipt.seq)).receipts, [first.receipt], 'and the feed has it once');
   assert.equal((await wallet(G)).balance, 125);
@@ -566,7 +572,7 @@ test('rows from before the ledger: held stakes become holds once, already-paid o
 test('the receipt feed pages 100 at a time in seq order and says when there is more', async () => {
   // Dan has no receipts yet.
   assert.equal((await wallet(D)).last_seq, 0);
-  await db.query(`select private.coop_append('${D}', 'hire', gen_random_uuid(), 1, 1) from generate_series(1, 230)`);
+  await db.query(`select private.coop_append('${D}', 'hire', gen_random_uuid(), 1, 1, null) from generate_series(1, 230)`);
   const first = await receipts(D, 0);
   assert.equal(first.receipts.length, 100);
   assert.equal(first.has_more, true);
@@ -577,4 +583,20 @@ test('the receipt feed pages 100 at a time in seq order and says when there is m
   assert.deepEqual(all.map(r => Number(r.seq)), Array.from({ length: 230 }, (_, i) => i + 1));
   assert.deepEqual(await receipts(D, 230), { ok: true, receipts: [], has_more: false, last_seq: 230 });
   assert.equal((await receipts(D, -5)).receipts[0].seq, 1, 'a negative cursor reads from the start');
+});
+
+test('a report collected with no wages left that day still gets a receipt, with the report in it', async () => {
+  await friends(G, K);
+  await call(G, 'public.coop_set_hires($1)', [json([resident('g1', 'Gertie')])]);
+  const hire = await call(K, 'public.coop_hire($1, $2)', [G, 'g1']);
+  await db.query(`insert into private.coop_wage_days (owner, day, paid) values ('${G}', (now() at time zone 'utc')::date, 30)
+    on conflict (owner, day) do update set paid = 30`);
+  assert.equal((await call(K, 'public.coop_finish_hire($1, $2)', [hire.id, json(report())])).wages, 0);
+  const got = await call(G, 'public.coop_collect($1)', [hire.id]);
+  assert.deepEqual([got.wages, got.receipt.kind, got.receipt.delta, got.receipt.earned], [0, 'hire', 0, 0]);
+  assert.deepEqual([got.receipt.detail.name, got.receipt.detail.hirer, got.receipt.detail.hirer_name, got.receipt.detail.report.route],
+    ['Gertie', K, 'Kit', 'drawer']);
+  assert.deepEqual((await call(G, 'public.coop_collect($1)', [hire.id])).receipt, got.receipt);
+  const feed = (await receipts(G, got.receipt.seq - 1)).receipts;
+  assert.deepEqual(feed, [got.receipt], 'and the feed carries it');
 });

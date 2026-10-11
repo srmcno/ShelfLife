@@ -44,7 +44,7 @@
 --
 -- The money ledger. Souls live in the save, so every soul co-op moves is
 -- written down as a receipt that belongs to one account:
--- { id, owner, seq, kind, source_id, delta, earned }. seq counts 1, 2, 3...
+-- { id, owner, seq, kind, source_id, delta, earned, created_at, detail }. seq counts 1, 2, 3...
 -- per owner with no gaps; kind is 'stake' (a duel stake leaving the purse,
 -- delta negative), 'duel' (a refund or winnings, delta positive) or 'hire'
 -- (wages). earned is the profit part only: 0 for stakes and refunds, the
@@ -194,21 +194,33 @@ create table if not exists public.coop_wallets (
 
 -- Every soul co-op moves, per owner, never deleted while the account exists.
 -- source_id is the duel or the hire; there is no foreign key on it, so a
--- receipt outlives the row it came from.
+-- receipt outlives the row it came from. detail is a snapshot of what the
+-- receipt is for, taken when it is written and never changed (see
+-- private.coop_append's callers), so a device that lost an answer gets the
+-- story back with the souls.
 create table if not exists public.coop_receipts (
   id uuid primary key default gen_random_uuid(),
   owner uuid not null references auth.users (id) on delete cascade,
   seq bigint not null check (seq > 0),
   kind text not null check (kind in ('stake', 'duel', 'hire')),
   source_id uuid not null,
-  delta int not null check (delta between -25 and 50 and delta <> 0),
+  delta int not null,
   earned int not null default 0 check (earned >= 0),
   created_at timestamptz not null default now(),
   constraint coop_receipts_seq unique (owner, seq),
-  constraint coop_receipts_once unique (owner, kind, source_id),
-  constraint coop_receipts_sign check ((kind = 'stake' and delta < 0 and earned = 0)
-    or (kind <> 'stake' and delta > 0 and earned <= delta))
+  constraint coop_receipts_once unique (owner, kind, source_id)
 );
+alter table public.coop_receipts add column if not exists detail jsonb;
+-- A stake is negative and earns nothing; a duel payout is positive and earns
+-- at most itself; wages earn all of themselves and may be 0 (the day's cap
+-- was spent), so every collected report has a receipt.
+alter table public.coop_receipts drop constraint if exists coop_receipts_sign;
+alter table public.coop_receipts add constraint coop_receipts_sign check (delta between -25 and 50 and (
+  (kind = 'stake' and delta < 0 and earned = 0) or (kind = 'duel' and delta > 0 and earned <= delta)
+  or (kind = 'hire' and delta >= 0 and earned = delta)));
+alter table public.coop_receipts drop constraint if exists coop_receipts_detail_size;
+alter table public.coop_receipts add constraint coop_receipts_detail_size
+  check (detail is null or octet_length(detail::text) < 4000);
 
 -- A stake held on a duel, per player. stake_receipt is null for a stake held
 -- before the ledger existed (the save took it then). released_at is set when
@@ -557,13 +569,14 @@ immutable
 set search_path = public
 as $$
   select case when r.id is null then null else jsonb_build_object('id', r.id, 'owner', r.owner, 'seq', r.seq, 'kind', r.kind,
-    'source_id', r.source_id, 'delta', r.delta, 'earned', r.earned, 'created_at', r.created_at) end;
+    'source_id', r.source_id, 'delta', r.delta, 'earned', r.earned, 'created_at', r.created_at, 'detail', r.detail) end;
 $$;
 
 -- Writes the owner's receipt for (kind, source) once and answers it; a second
 -- call answers the one already written. seq comes from the owner's wallet row
 -- under the owner's lock, so it has no gaps and only goes up.
-create or replace function private.coop_append(p_owner uuid, p_kind text, p_source uuid, p_delta int, p_earned int)
+drop function if exists private.coop_append(uuid, text, uuid, int, int);
+create or replace function private.coop_append(p_owner uuid, p_kind text, p_source uuid, p_delta int, p_earned int, p_detail jsonb)
 returns public.coop_receipts
 language plpgsql
 set search_path = public
@@ -578,11 +591,51 @@ begin
   insert into public.coop_wallets (owner) values (p_owner) on conflict do nothing;
   update public.coop_wallets set last_seq = last_seq + 1, total = total + p_delta where owner = p_owner
   returning last_seq into v_seq;
-  insert into public.coop_receipts (owner, seq, kind, source_id, delta, earned)
-  values (p_owner, v_seq, p_kind, p_source, p_delta, p_earned)
+  insert into public.coop_receipts (owner, seq, kind, source_id, delta, earned, detail)
+  values (p_owner, v_seq, p_kind, p_source, p_delta, p_earned, p_detail)
   returning * into rc;
   return rc;
 end;
+$$;
+
+-- What a 'stake' or 'duel' receipt is for, from the owner's side:
+-- { duel_id, game, stake, against, against_name, outcome, wins_mine,
+--   wins_theirs }. against_name is '' when either has blocked the other;
+-- outcome is null while the series is open (a stake).
+create or replace function private.coop_duel_detail(p_owner uuid, p_duel uuid)
+returns jsonb
+language sql
+stable
+set search_path = public
+as $$
+  select jsonb_build_object('duel_id', d.id, 'game', d.game, 'stake', d.stake,
+    'against', case when d.challenger = p_owner then d.opponent else d.challenger end,
+    'against_name', case when private.coop_blocked(d.challenger, d.opponent) then ''
+      else coalesce((select display_name from public.profiles
+                      where user_id = case when d.challenger = p_owner then d.opponent else d.challenger end), '') end,
+    'outcome', d.outcome,
+    'wins_mine', case when d.challenger = p_owner then d.wins_challenger else d.wins_opponent end,
+    'wins_theirs', case when d.challenger = p_owner then d.wins_opponent else d.wins_challenger end)
+    from public.coop_duels d where d.id = p_duel;
+$$;
+
+-- What a 'hire' receipt is for, for the lender: the field report as
+-- coop_reports shows it. { hire_id, pet_id, name, hirer, hirer_name, report,
+-- wages, finished_at }; report is null for a trip that came home by itself,
+-- and hirer_name and the report's crew are left out when either has blocked
+-- the other.
+create or replace function private.coop_hire_detail(p_hire uuid)
+returns jsonb
+language sql
+stable
+set search_path = public
+as $$
+  select jsonb_build_object('hire_id', h.id, 'pet_id', h.pet_id, 'name', h.resident ->> 'name', 'hirer', h.hirer,
+    'hirer_name', case when private.coop_blocked(h.owner, h.hirer) then ''
+      else coalesce((select display_name from public.profiles where user_id = h.hirer), '') end,
+    'report', case when private.coop_blocked(h.owner, h.hirer) then h.report - 'crew' else h.report end,
+    'wages', h.wages, 'finished_at', h.finished_at)
+    from public.coop_hires h where h.id = p_hire;
 $$;
 
 -- The owner's co-op balance, or null before an opening is declared.
@@ -613,7 +666,7 @@ begin
   end if;
   have := private.coop_available(p_owner);
   if have < p_amount then perform private.refuse('insufficient_souls'); end if;
-  rc := private.coop_append(p_owner, 'stake', p_duel, -p_amount, 0);
+  rc := private.coop_append(p_owner, 'stake', p_duel, -p_amount, 0, private.coop_duel_detail(p_owner, p_duel));
   insert into public.coop_holds (duel_id, owner, amount, stake_receipt) values (p_duel, p_owner, p_amount, rc.id)
   on conflict do nothing;
   return rc;
@@ -811,7 +864,9 @@ revoke all on function private.coop_clean_resident(jsonb) from public;
 revoke all on function private.coop_clean_report(jsonb) from public;
 revoke all on function private.coop_grant_wages(uuid, int) from public;
 revoke all on function private.coop_receipt_json(public.coop_receipts) from public;
-revoke all on function private.coop_append(uuid, text, uuid, int, int) from public;
+revoke all on function private.coop_append(uuid, text, uuid, int, int, jsonb) from public;
+revoke all on function private.coop_duel_detail(uuid, uuid) from public;
+revoke all on function private.coop_hire_detail(uuid) from public;
 revoke all on function private.coop_available(uuid) from public;
 revoke all on function private.coop_stake(uuid, uuid, int) from public;
 revoke all on function private.coop_wallet_json(uuid) from public;
@@ -983,8 +1038,8 @@ $$;
 
 -- Reads a report and pays its wages into the ledger, once:
 -- { ok, wages, receipt }. receipt is the lender's 'hire' receipt, the same one
--- on every call (null when the wages were 0, or were collected before the
--- ledger existed). wages is what this call newly paid: the receipt's delta
+-- on every call, written even when the wages were 0 so its detail keeps the
+-- report (null only for a report collected before the ledger existed). wages is what this call newly paid: the receipt's delta
 -- the first time, 0 after, kept for older clients. A report from someone the
 -- lender blocked still pays.
 create or replace function public.coop_collect(p_hire uuid)
@@ -1006,7 +1061,7 @@ begin
   if found or h.collected_at is not null then
     return jsonb_build_object('ok', true, 'wages', 0, 'receipt', private.coop_receipt_json(rc));
   end if;
-  if h.wages > 0 then rc := private.coop_append(uid, 'hire', p_hire, h.wages, h.wages); end if;
+  rc := private.coop_append(uid, 'hire', p_hire, h.wages, h.wages, private.coop_hire_detail(p_hire));
   update public.coop_hires set collected_at = now() where id = p_hire;
   return jsonb_build_object('ok', true, 'wages', h.wages, 'receipt', private.coop_receipt_json(rc));
 end;
@@ -1266,7 +1321,7 @@ begin
    where h.duel_id = p_duel and h.released_at is null
      and (won or (h.owner = uid and d.outcome in ('void', 'tie')));
   if owed > 0 then
-    rc := private.coop_append(uid, 'duel', p_duel, owed, owed - own);
+    rc := private.coop_append(uid, 'duel', p_duel, owed, owed - own, private.coop_duel_detail(uid, p_duel));
     update public.coop_holds h set released_at = now(), released_to = uid, release_receipt = rc.id
      where h.duel_id = p_duel and h.released_at is null
        and (won or (h.owner = uid and d.outcome in ('void', 'tie')));
@@ -1333,7 +1388,7 @@ as $$
 $$;
 
 -- The caller's receipts with seq > p_after, oldest first, 100 at a time:
--- { ok, receipts: [{ id, owner, seq, kind, source_id, delta, earned, created_at }],
+-- { ok, receipts: [{ id, owner, seq, kind, source_id, delta, earned, created_at, detail }],
 --   has_more, last_seq }. has_more says to ask again after the last seq in
 -- this page; last_seq is the newest seq the caller has.
 create or replace function public.coop_receipts(p_after bigint)
