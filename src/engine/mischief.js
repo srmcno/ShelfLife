@@ -92,7 +92,7 @@ function forgetHex(ms, ref) {
   markDone(ms, ref);
 }
 function queueOutbox(ms, item, now) {
-  if (ms.outbox.some(o => o.op === item.op && o.ref === item.ref)) return;
+  if (ms.outbox.some(o => o.op === item.op && o.ref === item.ref && o.user === ms.user)) return;
   ms.outbox.push({ ...item, user: ms.user, at: now });
   const ordinary = ms.outbox.filter(item => item.op !== 'shoo' && item.user);
   const trimmed = new Set(ordinary.slice(0, Math.max(0, ordinary.length - OUTBOX_MAX)));

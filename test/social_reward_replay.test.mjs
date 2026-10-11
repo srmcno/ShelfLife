@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeState, localDayKey } from '../src/state.js';
 import { householdFixture } from './household-fixtures.mjs';
 import { planFullBench, JOINT_BENCH_DAILY } from '../src/engine/court-joint.js';
-import { planShoo, dismissHaunt, receiveInbox, outboxFor } from '../src/engine/mischief.js';
+import { planShoo, dismissHaunt, receiveInbox, outboxFor, clearOutbox } from '../src/engine/mischief.js';
 import { rewardDay } from '../src/reward-state.js';
 import { currencyRewardId, queueCoopReward, bindCoopMoney, applyCoopReward, readCoopRewardDetail } from '../src/engine/coop-money.js';
 import { applyCoopReceipts } from '../src/engine/coop.js';
@@ -82,4 +82,16 @@ test('ownerless prototype reports remain quarantined through reload and account 
   loaded.mischief.user=A;
   receiveInbox(loaded,{hexes:[],helps:[],hauntings:[]},B,NOW+8*DAY);
   assert.equal(loaded.mischief.outbox.length,2);assert.deepEqual(outboxFor(loaded,B),[]);
+});
+
+
+test('a quarantined or other-owner report cannot block the current authenticated shoo', () => {
+  const s=shelf(), ref=U(70);haunt(s,ref);
+  s.mischief.outbox=[{op:'shoo',ref,user:'',taps:5,at:NOW},{op:'shoo',ref,user:B,taps:5,at:NOW}];
+  dismissHaunt(s,5,NOW);
+  assert.equal(s.mischief.outbox.length,3);assert.equal(outboxFor(s,A).length,1);
+  haunt(s,ref);dismissHaunt(s,5,NOW);
+  assert.equal(outboxFor(s,A).length,1,'verified-owner retry is still deduplicated');
+  clearOutbox(s,outboxFor(s,A));
+  assert.deepEqual(s.mischief.outbox.map(item=>item.user),['',B],'recovery evidence and other account reports remain');
 });
