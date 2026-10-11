@@ -112,16 +112,23 @@ test('wages: four collects at once write one receipt; four trips finishing at on
   const trips = [...ok(hires).map(r => r.value), extra];
   const owner = await db.admin(`select string_agg(hirer::text || '=' || id::text, ',') from public.coop_hires where owner = '${G}';`);
   const byHirer = Object.fromEntries(owner.split(',').map(x => x.split('=')));
-  const finished = await db.race(Object.entries(byHirer).map(([h, hire]) => [h, `select public.coop_finish_hire('${hire}', '${JSON.stringify(report)}'::jsonb);`]));
+  const hired = Object.entries(byHirer);
+  const finished = await db.race(hired.map(([h, hire]) => [h, `select public.coop_finish_hire('${hire}', '${JSON.stringify(report)}'::jsonb);`]));
   assert.deepEqual(errors(finished), []);
   assert.equal(finished.reduce((n, r) => n + r.value.wages, 0), 30, JSON.stringify(finished.map(r => r.value.wages)));
   assert.equal(trips.length, 4);
-  const first = trips[0].id;
+  // Booking order does not determine which concurrent finish earns wages.
+  const first = hired[finished.findIndex(r => r.value.wages > 0)][1];
   const collects = await db.race(Array.from({ length: 4 }, () => [G, `select public.coop_collect('${first}');`]));
   assert.deepEqual(errors(collects), []);
   assert.ok(collects.every(r => r.value.receipt && r.value.receipt.id === collects[0].value.receipt.id));
   assert.equal(collects.filter(r => r.value.wages > 0).length, 1);
   assert.equal(await count(`select count(*) from public.coop_receipts where source_id = '${first}';`), 1);
+  const unpaid = hired[finished.findIndex(r => r.value.wages === 0)][1];
+  const zeroCollects = await db.race(Array.from({ length: 4 }, () => [G, `select public.coop_collect('${unpaid}');`]));
+  assert.deepEqual(errors(zeroCollects), []);
+  assert.ok(zeroCollects.every(r => r.value.wages === 0 && r.value.receipt?.delta === 0 && r.value.receipt.id === zeroCollects[0].value.receipt.id));
+  assert.equal(await count(`select count(*) from public.coop_receipts where source_id = '${unpaid}';`), 1);
 });
 
 test('caps with no profile row: eleven challenges at once from one account open ten', opts, async () => {
