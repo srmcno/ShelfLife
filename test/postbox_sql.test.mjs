@@ -25,7 +25,7 @@ const BOOTSTRAP = `
 `;
 const TABLES = ['friendship_points', 'gifts', 'guestbook', 'social_prefs', 'visits', 'waves'];
 const RPCS = ['collect_visit', 'care_visit', 'decline_gift', 'guestbook', 'open_gift', 'postbox', 'postbox_clear', 'postbox_seen',
-  'remove_signature', 'respond_visit', 'send_gift', 'send_visit', 'send_wave', 'set_dnd', 'sign_guestbook', 'withdraw_visit'];
+  'remove_signature', 'respond_visit', 'friend_strips', 'send_gift', 'send_visit', 'send_wave', 'set_dnd', 'sign_guestbook', 'withdraw_visit'];
 
 let db;
 const code = {};
@@ -355,4 +355,17 @@ test('a sixty day old row is tidied away by the next read', async () => {
   await sql("insert into public.waves (from_user, to_user, resident_id, resident_name, kind, line, day, created_at) values ($1, $2, 'x', 'X', 'wave', 0, current_date - 70, now() - interval '70 days')", [C, B]);
   await postbox(B);
   assert.equal(Number(await value("select count(*) from public.waves where created_at < now() - interval '60 days'")), 0);
+});
+
+test('friend strips: five portraits per friend, creatures only, friends only', async () => {
+  const creature = { v: 1, seed: 'x', body: 'blob', palette: 'p', parts: {}, tune: {} };
+  const residents = Array.from({ length: 7 }, (_, i) => ({ id: 'c' + i, name: 'Res ' + i, mood: 'fine', art: i === 1 ? { body: 'data:image/png;base64,AAAA', stamps: [] } : { creature } }));
+  await call(C, 'public.publish_shelf($1)', [JSON.stringify({ v: 1, residents })]);
+  const strips = await call(A, 'public.friend_strips()');
+  const cat = strips.find(s => s.user_id === C);
+  assert.equal(cat.count, 7);
+  assert.deepEqual(cat.residents.map(r => r.id), ['c0', 'c1', 'c2', 'c3', 'c4']);
+  assert.equal(cat.residents[1].art, null, 'a drawing stays home');
+  assert.deepEqual(cat.residents[0].art, { creature });
+  assert.equal((await call(F, 'public.friend_strips()')).some(s => s.user_id === C), false, 'not a friend, no strip');
 });

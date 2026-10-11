@@ -846,6 +846,37 @@ begin
 end;
 $$;
 
+-- The first five residents on each friend's published shelf, for the strip of
+-- portraits in the friends list: one call for every friend. A generated
+-- resident keeps its creature (well under a kilobyte); a drawn one travels
+-- without its drawing and is shown as a silhouette.
+create or replace function public.friend_strips()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with me as (select private.require_user() as uid),
+  circle as (
+    select case when f.requester = me.uid then f.addressee else f.requester end as other
+      from public.friendships f, me
+     where f.status = 'accepted' and me.uid in (f.requester, f.addressee)
+  ),
+  shelves as (
+    select c.other, case when jsonb_typeof(s.snapshot -> 'residents') = 'array' then s.snapshot -> 'residents' else '[]'::jsonb end as list
+      from circle c join public.shelves s on s.user_id = c.other
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'user_id', x.other,
+      'count', jsonb_array_length(x.list),
+      'residents', (select coalesce(jsonb_agg(jsonb_build_object('id', r -> 'id', 'name', r -> 'name', 'mood', r -> 'mood',
+            'art', case when jsonb_typeof(r -> 'art') = 'object' and (r -> 'art') ? 'creature' then jsonb_build_object('creature', r -> 'art' -> 'creature') end)
+          order by n), '[]'::jsonb)
+        from jsonb_array_elements(x.list) with ordinality as e(r, n) where n <= 5 and jsonb_typeof(r) = 'object'))), '[]'::jsonb)
+    from shelves x;
+$$;
+
 -- Opening the postbox has read the waves and signatures in it.
 create or replace function public.postbox_seen()
 returns jsonb
@@ -900,6 +931,7 @@ revoke all on function public.send_wave(uuid, text, text, int) from public, anon
 revoke all on function public.postbox() from public, anon, authenticated;
 revoke all on function public.postbox_seen() from public, anon, authenticated;
 revoke all on function public.postbox_clear() from public, anon, authenticated;
+revoke all on function public.friend_strips() from public, anon, authenticated;
 
 grant execute on function public.set_dnd(boolean) to authenticated;
 grant execute on function public.send_visit(uuid, jsonb, int) to authenticated;
@@ -917,3 +949,4 @@ grant execute on function public.send_wave(uuid, text, text, int) to authenticat
 grant execute on function public.postbox() to authenticated;
 grant execute on function public.postbox_seen() to authenticated;
 grant execute on function public.postbox_clear() to authenticated;
+grant execute on function public.friend_strips() to authenticated;
