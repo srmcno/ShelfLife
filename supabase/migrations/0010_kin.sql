@@ -137,6 +137,33 @@ create policy "letters are for the two players in them" on public.kin_letters
 -- Helpers (not callable from the API)
 -- ---------------------------------------------------------------------------
 
+-- Serialises one account's capped writes (count then insert), even before it
+-- has a profile row. The same helper, byte for byte, is in every migration
+-- that needs it, so each file loads on its own and the combined load agrees.
+create or replace function private.lock_account(p_user uuid)
+returns void
+language sql
+volatile
+set search_path = public
+as $$
+  select pg_advisory_xact_lock(hashtextextended('shelf-account:' || coalesce(p_user::text, ''), 0));
+$$;
+
+-- Two accounts, always in the same order, so two callers cannot deadlock.
+create or replace function private.lock_accounts(a uuid, b uuid)
+returns void
+language plpgsql
+volatile
+set search_path = public
+as $$
+begin
+  perform private.lock_account(least(a, b));
+  if a is distinct from b then perform private.lock_account(greatest(a, b)); end if;
+end;
+$$;
+revoke all on function private.lock_account(uuid) from public;
+revoke all on function private.lock_accounts(uuid, uuid) from public;
+
 -- Week 0 began on Monday 1 January 2024, in the server's UTC.
 create or replace function private.kin_week(t timestamptz)
 returns int
@@ -167,6 +194,11 @@ declare
   v boolean := false;
 begin
   begin
+    -- The postbox migration (0003) keeps the switch in social_prefs behind private.dnd_on.
+    if to_regprocedure('private.dnd_on(uuid)') is not null then
+      execute 'select private.dnd_on($1)' into v using target;
+      return coalesce(v, false);
+    end if;
     if exists (select 1 from pg_attribute where attrelid = 'public.profiles'::regclass and attname = 'dnd_until' and not attisdropped) then
       execute 'select coalesce(dnd_until > now(), false) from public.profiles where user_id = $1' into v using target;
     elsif exists (select 1 from pg_attribute where attrelid = 'public.profiles'::regclass and attname = 'dnd' and not attisdropped) then
@@ -254,6 +286,8 @@ declare
   made uuid;
 begin
   if u1 = u2 or coalesce(r1, '') !~ '^[a-zA-Z0-9_-]{1,100}$' or coalesce(r2, '') !~ '^[a-zA-Z0-9_-]{1,100}$' then return null; end if;
+  -- Both players' caps are counted under both players' locks.
+  perform private.lock_accounts(u1, u2);
   select id into made from public.kin_pals where user_a = ua and res_a = ra and user_b = ub and res_b = rb;
   if found then return made; end if;
   if (select count(*) from public.kin_pals where user_a = ua and user_b = ub) >= 12 then return null; end if;
@@ -392,6 +426,7 @@ begin
        and status = 'born' and answered_at > now() - interval '14 days') then
     perform private.refuse('too_soon');
   end if;
+  perform private.lock_account(uid);
   if (select count(*) from public.kin_baskets where from_user = uid and created_at > now() - interval '1 day') >= 6 then
     perform private.refuse('rate_limited');
   end if;
@@ -520,7 +555,11 @@ begin
     return jsonb_build_object('ok', true, 'id', existing.id);
   end if;
   if private.kin_history(uid, p_mine, p_friend, p_theirs) is null then perform private.refuse('no_history'); end if;
-  if (select count(*) from public.kin_pals where (user_a = uid or user_b = uid) and created_at > now() - interval '1 day' and history = 'introduced') >= 10 then
+  -- Ten introductions a day for each player involved, sent or received, from
+  -- however many friends: both counted under both players' locks.
+  perform private.lock_accounts(uid, p_friend);
+  if (select count(*) from public.kin_pals where (user_a = uid or user_b = uid) and created_at > now() - interval '1 day' and history = 'introduced') >= 10
+     or (select count(*) from public.kin_pals where (user_a = p_friend or user_b = p_friend) and created_at > now() - interval '1 day' and history = 'introduced') >= 10 then
     perform private.refuse('rate_limited');
   end if;
   made := private.kin_pal(uid, p_mine, mine ->> 'name', p_friend, p_theirs, theirs ->> 'name', 'introduced', null, null);
@@ -568,6 +607,7 @@ begin
   if exists (select 1 from public.kin_letters where reply_to = l.id) then perform private.refuse('already_replied'); end if;
   if not private.are_friends(uid, l.from_user) or private.kin_blocked(uid, l.from_user) then perform private.refuse('not_friends'); end if;
   if private.kin_dnd(l.from_user) then perform private.refuse('do_not_disturb'); end if;
+  perform private.lock_account(uid);
   if (select count(*) from public.kin_letters where from_user = uid and kind = 'reply' and created_at > now() - interval '1 day') >= 20 then
     perform private.refuse('rate_limited');
   end if;

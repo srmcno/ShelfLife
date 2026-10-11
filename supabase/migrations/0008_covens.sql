@@ -163,6 +163,33 @@ revoke all on table private.coven_actions from public;
 -- Helpers (not callable from the API)
 -- ---------------------------------------------------------------------------
 
+-- Serialises one account's capped writes (count then insert), even before it
+-- has a profile row. The same helper, byte for byte, is in every migration
+-- that needs it, so each file loads on its own and the combined load agrees.
+create or replace function private.lock_account(p_user uuid)
+returns void
+language sql
+volatile
+set search_path = public
+as $$
+  select pg_advisory_xact_lock(hashtextextended('shelf-account:' || coalesce(p_user::text, ''), 0));
+$$;
+
+-- Two accounts, always in the same order, so two callers cannot deadlock.
+create or replace function private.lock_accounts(a uuid, b uuid)
+returns void
+language plpgsql
+volatile
+set search_path = public
+as $$
+begin
+  perform private.lock_account(least(a, b));
+  if a is distinct from b then perform private.lock_account(greatest(a, b)); end if;
+end;
+$$;
+revoke all on function private.lock_account(uuid) from public;
+revoke all on function private.lock_accounts(uuid, uuid) from public;
+
 -- Weeks run Monday to Sunday in UTC. Day 0 (1970-01-01) was a Thursday, so
 -- adding three puts every Monday at the start of a week. src/engine/coven.js
 -- counts the same way.
@@ -283,6 +310,8 @@ language plpgsql
 set search_path = public
 as $$
 begin
+  -- Counted and recorded under the player's lock, so a burst cannot pass the limit.
+  perform private.lock_account(p_user);
   delete from private.coven_actions where user_id = p_user and at < now() - interval '1 day';
   if (select count(*) from private.coven_actions where user_id = p_user and kind = p_kind and at > now() - p_window) >= p_max then
     perform private.refuse('rate_limited');
@@ -912,6 +941,13 @@ declare
   uid uuid := private.require_user();
   today date := private.coven_today();
 begin
+  -- A player who switched the day count off (0006's private.play_day_optouts) is not counted here either.
+  if to_regclass('private.play_day_optouts') is not null then
+    if exists (select 1 from private.play_day_optouts where user_id = uid) then
+      return jsonb_build_object('ok', true, 'counted', false, 'opted_out', true,
+        'days', (select count(*)::int from public.active_days where user_id = uid and day > today - 30));
+    end if;
+  end if;
   insert into public.active_days (user_id, day) values (uid, today) on conflict do nothing;
   delete from public.active_days where user_id = uid and day < today - 60;
   return jsonb_build_object('ok', true, 'days', (select count(*)::int from public.active_days where user_id = uid and day > today - 30));

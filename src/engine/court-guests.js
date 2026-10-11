@@ -2,7 +2,7 @@ import { readResident, cleanText } from '../cloud/social.js';
 
 /* Residents visiting from a friend's shelf can be seated on the jury or called
    as a character witness. The visit itself belongs to the Friends postbox
-   (state.visits.guests, each { visitId, from: { userId, name }, resident,
+   (state.friendVisits.guests, each { visitId, from: { userId, name }, resident,
    arrived, leaves }); the court only reads it, and reads it as if it might be
    missing, malformed or from a newer edition. A guest is seated as kind
    'visitor' so nothing in the court mistakes it for a resident of this shelf:
@@ -12,10 +12,12 @@ const VISIT_ID = /^[\w-]{1,64}$/;
 const record = value => !!value && typeof value === 'object' && !Array.isArray(value);
 
 export function visitingGuests(state, now = Date.now()) {
-  const visits = state?.visits;
-  // `visits` was once (and may still be, in this edition) the array of the
-  // player's own sessions; only a `guests` list on it means anything here.
-  const list = visits && typeof visits === 'object' && Array.isArray(visits.guests) ? visits.guests : [];
+  // The postbox keeps guests in state.friendVisits (src/visits-state.js). An
+  // older draft of the brief named it state.visits, which is still read as a
+  // fallback; `visits` may also be the array of the player's own sessions, and
+  // only a `guests` list on it means anything here.
+  const pick = v => v && typeof v === 'object' && Array.isArray(v.guests) ? v.guests : null;
+  const list = pick(state?.friendVisits)?.length ? state.friendVisits.guests : pick(state?.visits) || [];
   const out = [], seen = new Set();
   for (const g of list.slice(0, 12)) {
     if (!record(g) || typeof g.visitId !== 'string' || !VISIT_ID.test(g.visitId) || seen.has(g.visitId)) continue;

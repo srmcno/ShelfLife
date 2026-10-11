@@ -66,6 +66,17 @@ create table if not exists public.play_days (
 );
 create index if not exists play_days_day on public.play_days (day);
 
+-- Players who switched the day count off. Their switch covers every day count
+-- the game keeps (play_days here, and active_days for coven invite rewards in
+-- 0008): forget_play_days erases both and records this, and mark_play_day (the
+-- game calls it only while the switch is on) clears it again.
+create table if not exists private.play_day_optouts (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  at timestamptz not null default now()
+);
+alter table private.play_day_optouts enable row level security;
+revoke all on table private.play_day_optouts from public, anon, authenticated;
+
 -- ---------------------------------------------------------------------------
 -- Row level security: on, with no policies and no grants. Nobody reads or
 -- writes these through the API; the functions below are the only way in.
@@ -79,6 +90,33 @@ revoke all on table public.feedback, public.play_days from public, anon, authent
 -- ---------------------------------------------------------------------------
 -- Helpers (not callable from the API)
 -- ---------------------------------------------------------------------------
+
+-- Serialises one account's capped writes (count then insert), even before it
+-- has a profile row. The same helper, byte for byte, is in every migration
+-- that needs it, so each file loads on its own and the combined load agrees.
+create or replace function private.lock_account(p_user uuid)
+returns void
+language sql
+volatile
+set search_path = public
+as $$
+  select pg_advisory_xact_lock(hashtextextended('shelf-account:' || coalesce(p_user::text, ''), 0));
+$$;
+
+-- Two accounts, always in the same order, so two callers cannot deadlock.
+create or replace function private.lock_accounts(a uuid, b uuid)
+returns void
+language plpgsql
+volatile
+set search_path = public
+as $$
+begin
+  perform private.lock_account(least(a, b));
+  if a is distinct from b then perform private.lock_account(greatest(a, b)); end if;
+end;
+$$;
+revoke all on function private.lock_account(uuid) from public;
+revoke all on function private.lock_accounts(uuid, uuid) from public;
 
 -- Like private.clean_text, but a report may keep its line breaks: other
 -- control characters become spaces, runs of blank lines shrink to one.
@@ -115,6 +153,8 @@ declare
   v_moment text := lower(coalesce(p_moment, ''));
   v_platform text := lower(coalesce(p_platform, ''));
 begin
+  -- One report at a time per account, so a burst cannot count past the cap.
+  perform private.lock_account(uid);
   if p_client_id is null or p_client_id !~ '^[a-z0-9-]{8,40}$' then perform private.refuse('bad_feedback'); end if;
   if v_kind not in ('bug', 'confusing', 'idea', 'love', 'pulse') then perform private.refuse('bad_kind'); end if;
   if exists (select 1 from public.feedback where user_id = uid and client_id = p_client_id) then
@@ -162,6 +202,8 @@ declare
   added boolean;
 begin
   if abs(d - current_date) > 1 then perform private.refuse('bad_day'); end if;
+  -- Counting a day is the switch being on again.
+  delete from private.play_day_optouts where user_id = uid;
   insert into public.play_days (user_id, day) values (uid, d) on conflict do nothing;
   added := found;
   delete from public.play_days where user_id = uid and day < current_date - 400;
@@ -169,7 +211,8 @@ begin
 end;
 $$;
 
--- Switching the count off in More also forgets the days already counted.
+-- Switching the count off in More forgets the days already counted, here and
+-- for coven invite rewards, and stops both counting until it is switched on.
 create or replace function public.forget_play_days()
 returns jsonb
 language plpgsql
@@ -182,6 +225,12 @@ declare
 begin
   delete from public.play_days where user_id = uid;
   get diagnostics removed = row_count;
+  -- The same switch covers the days counted for coven invite rewards (0008), if that is installed.
+  if to_regclass('public.active_days') is not null then
+    execute 'delete from public.active_days where user_id = $1' using uid;
+  end if;
+  insert into private.play_day_optouts (user_id) values (uid)
+  on conflict (user_id) do update set at = now();
   return jsonb_build_object('ok', true, 'removed', removed);
 end;
 $$;
