@@ -14,7 +14,7 @@ import { toast } from './toast.js';
 
 const SAY_FIRST_MS = 4000, SAY_EVERY_MS = 38000, SAY_FOR_MS = 6500, DODGE_MS = 1100;
 
-export function initGhost({ state, onShoo = () => {}, rnd = Math.random }) {
+export function initGhost({ state, onShoo = () => {}, shoo = taps => shooHaunt(state, taps), rnd = Math.random }) {
   let el = null, ref = '', game = null, said = 0, sayTimer = null, hushTimer = null, dodgeTimer = null;
 
   function remove() {
@@ -61,7 +61,7 @@ export function initGhost({ state, onShoo = () => {}, rnd = Math.random }) {
     clearInterval(dodgeTimer); dodgeTimer = null; game = null;
     el?.classList.remove('mx-dodging');
   }
-  function tap() {
+  async function tap() {
     const h = activeHaunt(state);
     if (!h || h.ref !== ref) { render(); return; }
     if (!game) {
@@ -77,12 +77,18 @@ export function initGhost({ state, onShoo = () => {}, rnd = Math.random }) {
     if (game.taps >= SHOO_TAPS) {
       const taps = game.taps;
       endGame();
-      const result = shooHaunt(state, taps);
-      if (!result) { render(); return; }
+      const target = el; target.querySelector('.mx-ghost').disabled = true;
+      let result;
+      try { result = await shoo(taps); } catch (error) {
+        if (el === target) { target.querySelector('.mx-ghost').disabled = false; say(error.message || 'Could not save that. Try shooing again.'); }
+        return;
+      }
+      if (el !== target) return;
+      if (!result) { target.querySelector('.mx-ghost').disabled = false; render(); return; }
       el.classList.add('mx-shooed');
       el.querySelector('.mx-ghost').disabled = true;
-      toast(result.line + (result.souls ? ' +' + result.souls + ' souls.' : ''));
-      setTimeout(remove, matchMedia('(prefers-reduced-motion: reduce)').matches ? 50 : 700);
+      toast(result.line + (result.pending ? ' Reward saved. It will collect when you are online.' : result.souls ? ' +' + result.souls + ' souls.' : ''));
+      setTimeout(() => { if (el === target) remove(); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 50 : 700);
       onShoo(result);
       return;
     }

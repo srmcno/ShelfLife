@@ -150,6 +150,26 @@ function nextUnowned(list, owned, week) {
   for (let i = 0; i < list.length; i++) { const id = list[(week + i) % list.length].id; if (!owned(id)) return id; }
   return null;
 }
+// A proposal has no local effects. Devices with different cupboards may choose
+// different gifts; the first immutable server receipt decides the actual gift.
+export function planChest(state, week, tier, owner) {
+  if (!REWARD_UUID.test(owner || '') || !Number.isInteger(week) || week < 0 || week >= 1e7 || !Number.isInteger(tier)) return null;
+  const c = covenState(state), def = CHEST_TIERS[tier - 1];
+  if (!def || chestPaid(state, week, tier, owner)) return null;
+  let curio = null, frame = null, extra = 0;
+  if (def.curio) { curio = nextUnowned(COVEN_CURIOS, id => c.curios[id] > 0, week); if (!curio) extra += DUPLICATE_SOULS; }
+  if (def.frame) {
+    frame = nextUnowned(SIGIL_FRAMES, id => c.frames.includes(id), week);
+    if (!frame) { curio = nextUnowned(COVEN_CURIOS, id => c.curios[id] > 0, week); if (!curio) extra += DUPLICATE_SOULS; }
+  }
+  return { delta: def.souls + extra, earned: def.souls + extra, detail: { reward: 'coven_chest', week, tier, curio, frame } };
+}
+export function planInvite(state, userId, owner) {
+  if (!REWARD_UUID.test(owner || '') || !REWARD_UUID.test(userId || '') || invitePaid(state, userId, owner)) return null;
+  const frames = INVITE_FRAMES.filter(id => !exchangeState(state).portraits.includes(id));
+  const souls = frames.length ? 0 : INVITE_REPEAT_SOULS;
+  return { delta: souls, earned: souls, detail: { reward: 'coven_invite', userId, frames } };
+}
 // Pays one tier into this save, once. The server has already said yes.
 export function payChest(state, week, tier, owner = '', operation = '') {
   if (!Number.isInteger(week) || week < 0 || week >= 1e7 || !Number.isInteger(tier) || owner && !REWARD_UUID.test(owner)) return null;
@@ -216,6 +236,7 @@ export function payInvite(state, userId, owner = '', operation = '') {
 // Currency receipts restore the associated paid mark and cosmetic effects.
 // The wallet owns money; these handlers must never add souls a second time.
 registerCoopReward('coven_chest', {
+  key: detail => chestKey(detail.week, detail.tier),
   normalize(raw) {
     if (!Number.isInteger(raw.week) || raw.week < 0 || raw.week >= 1e7 || !CHEST_TIERS[raw.tier - 1] || !Number.isInteger(raw.tier)) return null;
     const curio = raw.curio ?? null, frame = raw.frame ?? null;
@@ -234,6 +255,7 @@ registerCoopReward('coven_chest', {
   }
 });
 registerCoopReward('coven_invite', {
+  key: detail => detail.userId,
   normalize(raw) {
     if (typeof raw.userId !== 'string' || !REWARD_UUID.test(raw.userId)
       || !Array.isArray(raw.frames) || raw.frames.length > 2 || raw.frames.some(frame => !INVITE_FRAMES.includes(frame))) return null;

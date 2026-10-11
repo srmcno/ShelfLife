@@ -152,7 +152,7 @@ test('referral days obey the shared privacy switch, resume explicitly, and pay m
   expect(w.fake.social.coven.referrals.get(w.bea.id).inviter).toBe(w.ada.id);
   // Ada accepts the real friend request; existing friendship also remains valid.
   await expect.poll(() => w.fake.social.coven.activeDays.has(w.bea.id + '|2026-10-14')).toBe(true);
-  await page.locator('[data-fr="close"]').click(); await expect(page.locator('#friendsBtn')).toBeFocused(); await page.locator('#playDaysBtn').click();
+  await page.locator('[data-fr="close"]').click(); await expect(page.locator('#tabMore')).toBeFocused(); await page.locator('#tabMore').click(); await page.locator('#playDaysBtn').click();
   await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'false');
   await expect.poll(() => w.fake.social.coven.activeDays.size).toBe(0);
   let kept = await leave(page); w.date(NOW + DAY);
@@ -160,7 +160,7 @@ test('referral days obey the shared privacy switch, resume explicitly, and pay m
   // Cover the real four-second startup wake while consent is off.
   await page.waitForTimeout(4100);
   expect(w.fake.social.coven.activeDays.size).toBe(0);
-  await page.locator('[data-fr="close"]').click(); await expect(page.locator('#friendsBtn')).toBeFocused(); await page.locator('#playDaysBtn').click();
+  await page.locator('[data-fr="close"]').click(); await expect(page.locator('#tabMore')).toBeFocused(); await page.locator('#tabMore').click(); await page.locator('#playDaysBtn').click();
   await expect(page.locator('#playDaysBtn')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => w.fake.social.coven.activeDays.has(w.bea.id + '|2026-10-15')).toBe(true);
   kept = await leave(page);
@@ -290,5 +290,54 @@ test('a lost chest reply stays collectible after reload and the money receipt pa
   await expect(page.locator('[data-sx="claim"][data-tier="1"]')).toHaveCount(0);
   expect((await saved(page)).mayhem.souls).toBe(before + 40); expect(w.fake.social.coven.claims.size).toBe(1);
   expect(w.fake.coop.receipts.filter(r => r.owner === w.ada.id && r.kind === 'game' && r.detail?.reward === 'coven_chest')).toHaveLength(1);
+  await page.close(); expect(errors).toEqual([]);
+});
+
+
+test('a lost wallet reply leaves an unapplied chest proposal that recovers the canonical gift on reload', async ({ context }) => {
+  const w = await world(), errors = []; await createJoined(w); await w.ada.coven.contribute('2026-10-14', { coffin: 3 });
+  const page = await arrive(context, w, w.ada, errors); await friends(page); await main(page);
+  const before = (await saved(page)).mayhem.souls;
+  let blocked = true, committed = false;
+  await page.route('**/rest/v1/rpc/coop_adjust', route => {
+    const request = route.request(), payload = JSON.parse(request.postData() || '{}');
+    const reward = payload.p_ops?.some(op => op.detail?.reward === 'coven_chest');
+    if (!blocked || !reward) return w.fake.route(route);
+    if (!committed) { w.fake.handle({ method: request.method(), url: request.url(), headers: request.headers(), body: request.postData() }); committed = true; }
+    return route.abort('internetdisconnected');
+  });
+  // Receipt reads are also offline after the committed-but-lost response, so
+  // the test observes the durable pending state rather than an immediate retry.
+  await page.route('**/rest/v1/rpc/coop_receipts', route => committed && blocked ? route.abort('internetdisconnected') : w.fake.route(route));
+  await page.locator('[data-sx="claim"][data-tier="1"]').click();
+  await expect(page.locator('.cv-notice')).toContainText('No connection');
+  expect(committed).toBe(true);
+  const pending = (await saved(page)).coop.money.pending.filter(op => op.detail?.reward === 'coven_chest');
+  expect(pending).toHaveLength(1); expect(pending[0].preApplied).toBe(false);
+  expect((await saved(page)).mayhem.souls).toBe(before); expect((await saved(page)).coven.claimed).toEqual([]);
+  await page.reload(); blocked = false; await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await friends(page); await main(page);
+  await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(before + 40);
+  await expect(page.locator('[data-sx="claim"][data-tier="1"]')).toHaveCount(0);
+  expect(w.fake.coop.receipts.filter(r => r.owner === w.ada.id && r.detail?.reward === 'coven_chest')).toHaveLength(1);
+  await page.reload(); await friends(page); await main(page); expect((await saved(page)).mayhem.souls).toBe(before + 40);
+  await page.close(); expect(errors).toEqual([]);
+});
+
+test('device storage failure refuses a chest award and allows a saved retry after reload', async ({ context }) => {
+  const w = await world(), errors = []; await createJoined(w); await w.ada.coven.contribute('2026-10-14', { coffin: 3 });
+  const page = await arrive(context, w, w.ada, errors); await friends(page); await main(page);
+  const before = (await saved(page)).mayhem.souls;
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) { if (key === 'shelflife.v4') throw new DOMException('Test storage quota', 'QuotaExceededError'); return original.call(this, key, value); };
+  });
+  await page.locator('[data-sx="claim"][data-tier="1"]').click();
+  await expect(page.locator('.cv-notice')).toContainText('Free some storage');
+  expect((await saved(page)).mayhem.souls).toBe(before);
+  expect(w.fake.coop.receipts.filter(r => r.owner === w.ada.id && r.detail?.reward === 'coven_chest')).toHaveLength(0);
+  await page.reload(); await friends(page); await main(page);
+  await page.locator('[data-sx="claim"][data-tier="1"]').click();
+  await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(before + 40);
   await page.close(); expect(errors).toEqual([]);
 });

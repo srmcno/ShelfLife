@@ -9,11 +9,12 @@ import { PORTRAIT_BY_ID } from '../src/content/collections.js';
 import { blankCoven, normalizeCovenState, covenState } from '../src/coven-state.js';
 import {
   utcDay, covenWeek, weekStart, daysLeft, thresholds, tierReached, goalLine, syncCoven, setCoven, pendingReports, markReported,
-  payChest, chestPaid, bindCovenRewards, invitePaid, wearFrame, payInvite, randomName, randomSigil, covenName, cleanSigil, memberColours, noteParts, noteText, hideNote,
+  payChest, planChest, planInvite, chestPaid, bindCovenRewards, invitePaid, wearFrame, payInvite, randomName, randomSigil, covenName, cleanSigil, memberColours, noteParts, noteText, hideNote,
   computeAwards, ceremonyScript, recordCeremony
 } from '../src/engine/coven.js';
 import { normalizeState, localDayKey } from '../src/state.js';
-import { currencyRewardId, captureCoopMoney, applyCoopReward, readCoopRewardDetail } from '../src/engine/coop-money.js';
+import { currencyRewardId, captureCoopMoney, applyCoopReward, readCoopRewardDetail, queueCoopReward, coopRewardReceipt, bindCoopMoney } from '../src/engine/coop-money.js';
+import { applyCoopReceipts } from '../src/engine/coop.js';
 import { householdFixture } from './household-fixtures.mjs';
 
 const NODASH = /[–—]/;
@@ -398,4 +399,42 @@ test('invalid semantic payout identities and hostile receipt parts are refused b
   assert.deepEqual(s, before);
   assert.equal(readCoopRewardDetail({ reward: 'coven_chest', week: 2963, tier: 2, curio: '__proto__' }), null);
   assert.equal(readCoopRewardDetail({ reward: 'coven_chest', week: 2963, tier: 3, frame: 'constructor' }), null);
+});
+
+
+test('Coven proposals preserve the shelf until the first server gift settles, even if another device proposed a different gift', async () => {
+  const owner = '00000000-0000-4000-8000-000000000001', s = shelf(), week = 2963;
+  bindCovenRewards(s, owner); bindCoopMoney(s, owner);
+  const first = planChest(s, week, 2, owner), before = structuredClone(s);
+  assert.deepEqual(s, before);
+  s.coven.curios[first.detail.curio] = 1;
+  const next = planChest(s, week, 2, owner); assert.notEqual(next.detail.curio, first.detail.curio);
+  const operation = await currencyRewardId(owner, 'coven_chest:' + week + ':2');
+  const cash = s.mayhem.souls, proposal = queueCoopReward(s, { ...next, owner, id: operation });
+  assert.equal(proposal.preApplied, false); assert.equal(s.mayhem.souls, cash);
+  assert.equal(chestPaid(s, week, 2, owner), false); assert.equal(s.coven.curios[next.detail.curio] || 0, 0);
+  const loaded = normalizeState(structuredClone(s));
+  assert.equal(loaded.coop.money.pending[0].preApplied, false);
+  const receipt = { id: '00000000-0000-4000-8000-000000000099', sourceId: operation, owner, kind: 'game', ...first, seq: 1 };
+  applyCoopReceipts(loaded, owner, [receipt]); applyCoopReceipts(loaded, owner, [receipt]);
+  assert.equal(loaded.mayhem.souls, cash + first.delta);
+  assert.equal(loaded.coven.curios[first.detail.curio], 1); assert.equal(loaded.coven.curios[next.detail.curio] || 0, 0);
+  assert.equal(chestPaid(loaded, week, 2, owner), true);
+  assert.deepEqual(coopRewardReceipt(loaded, owner, operation), first);
+  assert.equal(loaded.coop.money.pending.length, 0);
+});
+
+test('a fully stocked shelf accepts the first canonical curio instead of its proposed duplicate cash', async () => {
+  const owner = '00000000-0000-4000-8000-000000000001', s = shelf(), week = 2963;
+  bindCovenRewards(s, owner); bindCoopMoney(s, owner);
+  const first = planChest(s, week, 2, owner);
+  for (const curio of COVEN_CURIOS) s.coven.curios[curio.id] = 1;
+  const full = planChest(s, week, 2, owner); assert.equal(full.delta, first.delta + DUPLICATE_SOULS);
+  const operation = await currencyRewardId(owner, 'coven_chest:' + week + ':2'), cash = s.mayhem.souls;
+  queueCoopReward(s, { ...full, owner, id: operation });
+  applyCoopReceipts(s, owner, [{ id: '00000000-0000-4000-8000-000000000098', sourceId: operation, owner, kind: 'game', ...first, seq: 1 }]);
+  assert.equal(s.mayhem.souls, cash + first.delta); assert.equal(s.coven.curios[first.detail.curio], 1);
+  assert.equal(planChest(s, week, 2, owner), null);
+  const invite = planInvite(s, '00000000-0000-4000-8000-000000000002', owner), before = structuredClone(s);
+  assert.equal(invite.delta, 0); assert.deepEqual(s, before);
 });

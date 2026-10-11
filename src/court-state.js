@@ -1,4 +1,5 @@
 import { COURT_CASES } from './content/court.js';
+import { normalizeRewardHistory } from './reward-state.js';
 import { BENCH_MAX } from './content/court-career.js';
 
 // Shelf Court records: episodes aired, correct rulings, and the best star
@@ -23,7 +24,7 @@ const PET_KEY = /^[\w-]{1,64}$/;
 const isRecord = value => value && typeof value === 'object' && !Array.isArray(value);
 // The Joint Bench (engine/court-joint.js): full-bench bonuses already paid,
 // and how many paid today.
-const blankJoint = () => ({ paid: [], day: '', benches: 0 });
+const blankJoint = () => ({ paid: [], day: '', benches: 0, rewards: {}, unowned: [] });
 export function blankCourtroom() {
   return {
     episodes: 0, justice: 0, best: {}, last: '', docketDay: '', docketStreak: 0, docketLastDay: '', summonsDay: '', summonsHeard: 0, summonsVerdicts: 0, summonsPaid: [],
@@ -50,6 +51,8 @@ export function courtroomState(state) {
   for (const key of ['stars', 'rank', 'flawless', 'flawlessBest']) if (!Number.isFinite(c[key])) c[key] = 0;
   if (!Array.isArray(c.summonsOwed)) c.summonsOwed = [];
   if (!isRecord(c.joint)) c.joint = blankJoint();
+  if (!Array.isArray(c.joint.unowned)) c.joint.unowned = [];
+  if (!isRecord(c.joint.rewards)) c.joint.rewards = {};
   if (!Array.isArray(c.joint.paid)) c.joint.paid = [];
   if (typeof c.joint.day !== 'string') c.joint.day = '';
   if (!Number.isFinite(c.joint.benches)) c.joint.benches = 0;
@@ -109,6 +112,8 @@ export function normalizeCourtroom(raw) {
   out.flawless = Math.min(count(raw.flawless), 9999);
   out.flawlessBest = Math.max(out.flawless, Math.min(count(raw.flawlessBest), 9999));
   if (isRecord(raw.joint)) {
+    out.joint.rewards = normalizeRewardHistory(raw.joint.rewards);
+    out.joint.unowned = [...new Set([...(Array.isArray(raw.joint.unowned) ? raw.joint.unowned : []), ...(raw.joint.rewards ? [] : Array.isArray(raw.joint.paid) ? raw.joint.paid : [])].filter(id => typeof id === 'string' && SUMMONS_ID.test(id)))];
     if (Array.isArray(raw.joint.paid)) out.joint.paid = [...new Set(raw.joint.paid.filter(id => typeof id === 'string' && SUMMONS_ID.test(id)))].slice(-JOINT_REMEMBERED);
     out.joint.day = dayKey(raw.joint.day);
     out.joint.benches = Math.min(count(raw.joint.benches), 99);

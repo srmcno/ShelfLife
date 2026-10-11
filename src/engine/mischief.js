@@ -9,6 +9,8 @@ import {
 import { SEASONS, SEASON_RARITY } from '../content/seasons.js';
 import { guestPet } from '../cloud/social.js';
 import { addNote, clamp, localDayKey, petById } from '../state.js';
+import { registerCoopReward } from './coop-money.js';
+import { REWARD_UUID, rewardDay, rewardCount, pendingRewardCount } from '../reward-state.js';
 import { registerAwayExtra } from './returns.js';
 
 /* ================= MISCHIEF =================
@@ -92,7 +94,9 @@ function forgetHex(ms, ref) {
 function queueOutbox(ms, item, now) {
   if (ms.outbox.some(o => o.op === item.op && o.ref === item.ref)) return;
   ms.outbox.push({ ...item, user: ms.user, at: now });
-  if (ms.outbox.length > OUTBOX_MAX) ms.outbox.splice(0, ms.outbox.length - OUTBOX_MAX);
+  const ordinary = ms.outbox.filter(item => item.op !== 'shoo');
+  const trimmed = new Set(ordinary.slice(0, Math.max(0, ordinary.length - OUTBOX_MAX)));
+  ms.outbox = ms.outbox.filter(item => !trimmed.has(item));
 }
 function rollDay(ms, now) {
   const day = localDayKey(now);
@@ -120,7 +124,8 @@ function dropFromTray(state, ref, now) {
 function changeAccount(state, userId, now) {
   const ms = mischiefState(state);
   for (const h of ms.hexes.slice()) dropFromTray(state, h.ref, now);
-  ms.hexes = []; ms.outbox = []; ms.haunt = null;
+  ms.hexes = []; ms.outbox = ms.outbox.filter(item => item.op === 'shoo'); ms.haunt = null;
+  ms.done = []; ms.paid = { day: '', help: 0, knock: 0, shoo: 0 };
   ms.user = userId;
 }
 
@@ -149,7 +154,7 @@ export function receiveInbox(state, box, userId, now = Date.now()) {
   // One ghost at a time. One that has gone from the server (it ended, or the friend was blocked) leaves.
   if (ms.haunt && !ms.haunt.shooed && !box.hauntings.some(g => g.id === ms.haunt.ref)) ms.haunt = null;
   if (!ms.haunt || ms.haunt.shooed) {
-    const g = box.hauntings.find(x => !ms.done.includes(x.id) && x.id !== ms.haunt?.ref && x.endsAt > now);
+    const g = box.hauntings.find(x => !ms.shooRewards[userId]?.[x.id] && !(state.coop?.money?.pending || []).some(op => op.owner === userId && op.detail?.reward === 'mischief_shoo' && op.detail.haunt_id === x.id) && !ms.done.includes(x.id) && x.id !== ms.haunt?.ref && x.endsAt > now);
     const ghost = g && normalizeGuest(g.ghost);
     if (ghost) {
       ms.haunt = { ref: g.id, from: { userId: g.fromUser, name: g.fromName }, ghost, arrived: Math.min(g.createdAt, now),
@@ -264,6 +269,43 @@ export function hauntLine(state, haunt, n = 0) {
   return fillAll(pickBy(HAUNT_LINES, haunt.ref + ':' + n), { g: haunt.ghost.name, r, f: friendName(haunt.from) });
 }
 export function shooMissLine(haunt, n = 0) { return fillAll(pickBy(SHOO_MISS_LINES, haunt.ref + ':miss' + n), { g: haunt.ghost.name, f: friendName(haunt.from) }); }
+// Dismissal remains a local game. Its durable outbox reaches the server before
+// the proposed reward; a connection failure never makes the player shoo twice.
+export function planShoo(state, taps, owner, now = Date.now()) {
+  const h = activeHaunt(state, now), ms = mischiefState(state), day = localDayKey(now);
+  if (!h || !REWARD_UUID.test(owner || '') || !REWARD_UUID.test(h.ref) || !Number.isInteger(taps) || taps < SHOO_TAPS || taps > 99) return null;
+  if (ms.shooRewards[owner]?.[h.ref]) return null;
+  const paid = rewardCount(ms.shooRewards, owner, day) + pendingRewardCount(state, owner, 'mischief_shoo', day) < SHOO_PAID_PER_DAY;
+  return { delta: paid ? SHOO_SOULS : 0, earned: paid ? SHOO_SOULS : 0,
+    detail: { reward: 'mischief_shoo', haunt_id: h.ref, day, paid, taps } };
+}
+export function dismissHaunt(state, taps, now = Date.now()) {
+  const ms = mischiefState(state), h = activeHaunt(state, now);
+  if (!h || !Number.isInteger(taps) || taps < SHOO_TAPS || taps > 99) return null;
+  h.shooed = true; markDone(ms, h.ref);
+  queueOutbox(ms, { op: 'shoo', ref: h.ref, taps }, now);
+  return { souls: 0, line: fillAll(pickBy(SHOO_WIN_LINES, h.ref), { g: h.ghost.name, f: friendName(h.from) }) };
+}
+registerCoopReward('mischief_shoo', {
+  key: detail => detail.haunt_id,
+  normalize(raw) {
+    const day = rewardDay(raw.day);
+    return typeof raw.haunt_id === 'string' && REWARD_UUID.test(raw.haunt_id) && day && typeof raw.paid === 'boolean' && Number.isInteger(raw.taps) && raw.taps >= SHOO_TAPS && raw.taps <= 99
+      ? { haunt_id: raw.haunt_id, day, paid: raw.paid, taps: raw.taps } : null;
+  },
+  apply(state, owner, detail) {
+    const ms = mischiefState(state);
+    ms.shooRewards[owner] ||= {};
+    ms.shooRewards[owner][detail.haunt_id] ||= { day: detail.day, paid: detail.paid };
+    // An inactive account's receipt retains its proof but cannot dismiss the
+    // replacement account's visitor or borrow its daily activity counters.
+    if (ms.user !== owner) return;
+    markDone(ms, detail.haunt_id);
+    if (ms.haunt?.ref === detail.haunt_id) { ms.haunt.shooed = true; ms.haunt.paid = detail.paid; }
+    if (ms.paid.day === detail.day) ms.paid.shoo = rewardCount(ms.shooRewards, owner, detail.day);
+  }
+});
+
 export function shooHaunt(state, taps, now = Date.now()) {
   const ms = mischiefState(state), h = activeHaunt(state, now);
   if (!h) return null;

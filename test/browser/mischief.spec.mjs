@@ -235,10 +235,24 @@ for (const result of ['trick', 'treat']) test('seasonal ' + result + ' uses the 
     });
     expect(layout).toEqual({ overlaps: 0, contained: true }); await fits(page);
   };
+  let disconnected = result === 'trick';
+  if (disconnected) await page.route('**/rest/v1/rpc/**', route => disconnected ? route.abort('internetdisconnected') : w.fake.route(route));
   await assertVisitorSpace();
   for (let tap = 0; tap < 5; tap++) { await ghost.click(); if (tap < 4) await assertVisitorSpace(); }
   await expect.poll(async () => (await saved(page)).mischief?.haunt?.shooed).toBe(true);
-  await expect.poll(async () => (await saved(page)).mayhem.souls).toBeGreaterThan(before);
+  if (disconnected) {
+    expect((await saved(page)).mayhem.souls).toBe(before);
+    expect((await saved(page)).coop.money.pending.filter(op => op.detail?.reward === 'mischief_shoo' && op.preApplied === false)).toHaveLength(1);
+    await expect(page.locator('#toast')).toContainText('collect when you are online');
+    await page.reload();
+    await expect(page.locator('.mx-ghost')).toHaveCount(0);
+    expect((await saved(page)).mayhem.souls).toBe(before);
+    expect((await saved(page)).mischief.outbox.filter(op => op.op === 'shoo')).toHaveLength(1);
+    disconnected = false; await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await expect.poll(() => [...w.fake.mischief.hauntings.values()][0].status).toBe('shooed');
+  }
+  await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(before + 15);
+  await expect.poll(async () => (await saved(page)).coop.money.pending.filter(op => op.detail?.reward === 'mischief_shoo').length).toBe(0);
   const paid = (await saved(page)).mayhem.souls;
   await page.reload(); await friends(page); await postbox(page);
   await expect(mail(page, 'incoming')).toHaveCount(0);

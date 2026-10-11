@@ -12,6 +12,8 @@ import { addSouls } from './mayhem.js';
 import { localDayKey, petById } from '../state.js';
 import { residentSnapshot } from '../cloud/social.js';
 import { readCast, MAX_CAST_CHARS } from '../cloud/hearings.js';
+import { registerCoopReward } from './coop-money.js';
+import { REWARD_UUID, rewardDay, rewardCount, pendingRewardCount } from '../reward-state.js';
 import { postedStars } from '../tester-state.js';
 
 /* The Joint Bench, as pure rules. Two friends hear the same hearing: the same
@@ -237,6 +239,32 @@ export function revealScript(ep, hearing, truth, other = 'Your friend') {
   lines.push({ s: 'announcer', t: close });
   return { outcome, title: OUTCOMES[outcome].title, lines };
 }
+
+// The network path proposes a reward before any local payment. A receipt
+// restores both the once-only hearing mark and its original day's cap.
+export function planFullBench(state, hearing, outcome, owner, now = Date.now()) {
+  if (outcome !== 'full' || !REWARD_UUID.test(hearing || '') || !REWARD_UUID.test(owner || '')) return null;
+  const j = courtroomState(state).joint, day = localDayKey(now);
+  if (j.rewards[owner]?.[hearing]) return null;
+  const paid = rewardCount(j.rewards, owner, day) + pendingRewardCount(state, owner, 'joint_bench', day) < JOINT_BENCH_DAILY;
+  return { delta: paid ? JOINT_BENCH_SOULS : 0, earned: paid ? JOINT_BENCH_SOULS : 0,
+    detail: { reward: 'joint_bench', hearing, day, paid } };
+}
+registerCoopReward('joint_bench', {
+  key: detail => detail.hearing,
+  normalize(raw) {
+    const day = rewardDay(raw.day);
+    return typeof raw.hearing === 'string' && REWARD_UUID.test(raw.hearing) && day && typeof raw.paid === 'boolean' ? { hearing: raw.hearing, day, paid: raw.paid } : null;
+  },
+  apply(state, owner, detail) {
+    const j = courtroomState(state).joint;
+    j.rewards[owner] ||= {};
+    j.rewards[owner][detail.hearing] ||= { day: detail.day, paid: detail.paid };
+    if (!j.paid.includes(detail.hearing)) j.paid = [...j.paid, detail.hearing].slice(-JOINT_REMEMBERED);
+    // An old receipt must never consume today's three hearings.
+    if (j.day === detail.day) j.benches = rewardCount(j.rewards, owner, detail.day);
+  }
+});
 
 // A full bench pays each judge once per hearing, three a day. Returns the souls
 // paid, or -1 when today's three are already spent; 0 when it is not owed.

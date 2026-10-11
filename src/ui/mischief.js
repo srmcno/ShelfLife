@@ -13,15 +13,17 @@ import { registerFriendAction, registerPostboxSource, registerFriendsSection, re
 import { createMischief, mischiefText, mischiefCode, FINAL } from '../cloud/mischief.js';
 import {
   receiveInbox, settleMischief, declineHex, dropFriend, outboxFor, clearOutbox, helped, takeKnock, activeHaunt,
-  hexResultLine, hauntResultLine, doorstepLine, helpLineText, inTray, fromLabel
+  planShoo, dismissHaunt, hexResultLine, hauntResultLine, doorstepLine, helpLineText, inTray, fromLabel
 } from '../engine/mischief.js';
 import { HEX_BY_ID, HAUNT_CARD, BOWLS, BOWL_BY_ID, HELP_BUTTONS, HELP_NOTHING_LINES, HELP_NEEDS } from '../content/mischief.js';
+import { mischiefState } from '../mischief-state.js';
+import { currencyRewardId, queueCoopReward } from '../engine/coop-money.js';
 import { mayhemState } from '../mayhem-state.js';
 import { glyph } from '../art/mayhem-glyphs.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { guestPet } from '../cloud/social.js';
 import { activeSeason } from '../engine/seasons.js';
-import { save } from '../state.js';
+import { save, Store } from '../state.js';
 import { toast } from './toast.js';
 import { initGhost } from './mischief-ghost.js';
 
@@ -156,33 +158,53 @@ function hexBarHTML(ext) {
 export function initMischief({ state, cloud, social, refresh = () => {} }) {
   if (!cloud?.configured || !social) return null;
   const mx = createMischief({ cloud, social });
-  const ghost = initGhost({ state, onShoo: () => { save(); refresh(); sync(); } });
+  const ghost = initGhost({ state, shoo: finishShoo, onShoo: () => { refresh(); sync(); } });
   let syncing = null, view = null, viewToken = 0;
   const now = () => Date.now();
   const repaint = () => { refresh(); ghost.render(); };
-  const current = (user, ctx) => !!user && mx.userId() === user && mx.active() && ctx?.isCurrent?.() !== false;
+  const current = (user, ctx, domain) => !!user && mx.userId() === user && mx.active() && ctx?.isCurrent?.() !== false
+    && (!domain || state.mischief === domain);
+
+  async function finishShoo(taps) {
+    const owner = mx.userId(), domain = mischiefState(state), h = activeHaunt(state), purse = state.coop;
+    if (!h || !current(owner, null, domain)) return null;
+    const id = await currencyRewardId(owner, 'mischief_shoo:' + h.ref);
+    if (!current(owner, null, domain) || state.coop !== purse || activeHaunt(state) !== h) return null;
+    const plan = planShoo(state, taps, owner);
+    const before = structuredClone(domain);
+    const alreadyPending = state.coop?.money?.pending?.some(op => op.owner === owner && op.id === id);
+    if (plan) queueCoopReward(state, { ...plan, owner, id });
+    const result = dismissHaunt(state, taps);
+    if (!result) return null;
+    if (!save() || !Store.persistent) {
+      Object.keys(domain).forEach(key => delete domain[key]); Object.assign(domain, before);
+      if (!alreadyPending) state.coop.money.pending = state.coop.money.pending.filter(op => op.owner !== owner || op.id !== id);
+      throw new Error('Could not save the shoo. Free some device space and try again.');
+    }
+    return { ...result, pending: !!plan?.detail.paid };
+  }
 
   /* ---- keeping the shelf and the server in step ---- */
   async function flush() {
-    const uid = mx.userId();
+    const uid = mx.userId(), domain = state.mischief;
     if (!uid || !mx.active()) return;
     const items = outboxFor(state, uid);
     const acks = items.filter(o => o.op === 'ack');
     if (acks.length) {
-      try { await mx.ackHelps(acks.map(o => o.ref)); if (!current(uid)) return; clearOutbox(state, acks); }
-      catch (error) { if (!current(uid)) return; if (FINAL.has(mischiefCode(error))) clearOutbox(state, acks); else return; }
+      try { await mx.ackHelps(acks.map(o => o.ref)); if (!current(uid, null, domain)) return; clearOutbox(state, acks); }
+      catch (error) { if (!current(uid, null, domain)) return; if (FINAL.has(mischiefCode(error))) clearOutbox(state, acks); else return; }
     }
     for (const item of items.filter(o => o.op !== 'ack')) {
-      if (!current(uid)) return;
+      if (!current(uid, null, domain)) return;
       try {
         if (item.op === 'resolve') await mx.resolveHex(item.ref, item);
         else if (item.op === 'decline') await mx.declineHex(item.ref);
         else if (item.op === 'shoo') await mx.shoo(item.ref, item.taps);
         else if (item.op === 'seen') await mx.seen(item.kind, item.ref);
-        if (!current(uid)) return;
+        if (!current(uid, null, domain)) return;
         clearOutbox(state, [item]);
       } catch (error) {
-        if (!current(uid)) return;
+        if (!current(uid, null, domain)) return;
         if (FINAL.has(mischiefCode(error))) clearOutbox(state, [item]);
         else return;
       }
@@ -196,18 +218,25 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
   function sync() {
     if (!mx.active()) return Promise.resolve(null);
     const user = mx.userId();
-    if (syncing?.user === user) return syncing.promise;
-    const request = { user };
+    const domain = state.mischief;
+    if (syncing?.user === user && syncing.domain === domain) return syncing.promise;
+    const request = { user, domain };
     request.promise = (async () => {
       await flush();
-      if (!current(user)) return null;
+      if (!current(user, null, domain)) return null;
       const box = await mx.inbox();
-      if (!box || !current(user)) return null;
+      if (!box || !current(user, null, domain)) return null;
       const news = receiveInbox(state, box, user, now());
       const added = settleMischief(state, now());
       await flush();
-      if (!current(user)) return null;
-      save();
+      if (!current(user, null, domain)) return null;
+      if (!save()) return null;
+      if ((state.coop?.money?.pending || []).some(op => op.owner === user && op.detail?.reward === 'mischief_shoo')) {
+        const purse = state.coop;
+        try { await (await import('./coop.js')).reconcileCoopWallet(user); }
+        catch (error) { if (current(user, null, domain)) toast(error.code === 'reward_legacy' ? 'The saved ghost reward needs recovery before it can be collected.' : 'The ghost reward is saved and waiting for a connection.'); }
+        if (!current(user, null, domain) || state.coop !== purse) return null;
+      }
       announce(news, added);
       repaint();
       return box;

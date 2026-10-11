@@ -14,12 +14,13 @@
 import { registerFriendAction, registerPostboxSource, registerFriendsSection, registerSocialView } from './social-registry.js';
 import { cloud, social } from '../cloud/index.js';
 import { createCovenClient, covenText } from '../cloud/coven.js';
+import { coopText } from '../cloud/coop.js';
 import { CloudError } from '../cloud/client.js';
 import { formatCode, cleanCode } from '../cloud/social.js';
-import { state as liveState, save } from '../state.js';
+import { state as liveState, save, Store } from '../state.js';
 import {
-  syncCoven, setCoven, pendingReports, markReported, covenWeek, daysLeft, thresholds, tierReached, goalLine, counterWord, payChest, chestPaid,
-  wearFrame, payInvite, invitePaid, bindCovenRewards, randomName, randomSigil, covenName, cleanSigil, memberColours, noteParts, noteText, hideNote, computeAwards, ceremonyScript,
+  syncCoven, setCoven, pendingReports, markReported, covenWeek, daysLeft, thresholds, tierReached, goalLine, counterWord, planChest, chestPaid,
+  wearFrame, planInvite, invitePaid, bindCovenRewards, randomName, randomSigil, covenName, cleanSigil, memberColours, noteParts, noteText, hideNote, computeAwards, ceremonyScript,
   recordCeremony, utcDay
 } from '../engine/coven.js';
 import { covenState } from '../coven-state.js';
@@ -37,7 +38,7 @@ import { celebrate, chime } from './retention-kit.js';
 import { timeAgo } from './cloud.js';
 import { PLAY_URL } from '../backup.js';
 import { isNative, shareText } from '../native.js';
-import { currencyRewardId } from '../engine/coop-money.js';
+import { currencyRewardId, queueCoopReward, coopRewardReceipt } from '../engine/coop-money.js';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const coven = createCovenClient({ cloud, social });
@@ -486,7 +487,7 @@ async function busyRun(ctx, work, focus) {
   const user = me(), version = accountVersion;
   busy = true; notice = '';
   try { await work(); }
-  catch (error) { if (identity(user, version)) say(ctx, covenText(error)); }
+  catch (error) { if (identity(user, version)) say(ctx, ['save_unavailable', 'reward_legacy'].includes(error.code) ? coopText(error) : covenText(error)); }
   finally { if (identity(user, version)) { busy = false; if (currentCtx(ctx)) repaint(focus); } }
 }
 
@@ -645,12 +646,14 @@ async function handle(action, el, ctx) {
       const operation = await owned(ctx, rewardWallet.operationId(owner, 'coven_invite:' + data.user));
       const r = await owned(ctx, coven.claimReferral(data.user));
       if (!r.ok) return;
-      const paid = payInvite(S(), data.user, owner, operation);
-      save();
-      ctx.renderAll?.();
+      const plan = planInvite(S(), data.user, owner);
+      if (plan) queueCoopReward(S(), { ...plan, id: operation, owner });
+      if (!save() || !Store.persistent) throw new CloudError('The reward could not be saved. Free some device space and try again.', { code: 'save_unavailable' });
       await reconcileRewardWallet(ctx, owner);
+      const paid = coopRewardReceipt(S(), owner, operation);
+      ctx.renderAll?.();
       referrals = await owned(ctx, coven.referrals());
-      notice = !paid ? 'Already collected.' : paid.frames.length ? 'A matching pair of portrait frames. Wear them in the Collector’s Exchange, on any resident’s card.' : '+' + paid.souls + ' souls. You already own the frames.';
+      notice = !paid ? 'Already collected.' : paid.detail.frames.length ? 'A matching pair of portrait frames. Wear them in the Collector’s Exchange, on any resident’s card.' : '+' + paid.delta + ' souls. You already own the frames.';
       if (paid) { celebrate('chest'); chime('curio'); toastOf(ctx, notice); }
     });
   }
@@ -677,16 +680,18 @@ async function claimChest(ctx, week, tier) {
     const operation = await owned(ctx, rewardWallet.operationId(owner, 'coven_chest:' + week + ':' + tier));
     const r = await owned(ctx, coven.claim(week, tier));
     if (!r.ok) return;
-    const paid = payChest(S(), week, tier, owner, operation);
-    save();
-    ctx.renderAll?.();
+    const plan = planChest(S(), week, tier, owner);
+    if (plan) queueCoopReward(S(), { ...plan, id: operation, owner });
+    if (!save() || !Store.persistent) throw new CloudError('The reward could not be saved. Free some device space and try again.', { code: 'save_unavailable' });
     await reconcileRewardWallet(ctx, owner);
+    const paid = coopRewardReceipt(S(), owner, operation);
     await owned(ctx, refreshStatus({ force: true }));
     if (!paid) { notice = 'Already opened on this shelf.'; return; }
-    const bits = [paid.souls + paid.extra + ' souls', paid.curio && paid.curio.name + ' for the cupboard', paid.frame && paid.frame.name + ', a sigil frame'].filter(Boolean);
-    notice = paid.name + ': ' + bits.join(', ') + '.';
+    const curio = COVEN_CURIOS.find(item => item.id === paid.detail.curio), frame = SIGIL_FRAME_BY_ID[paid.detail.frame];
+    const bits = [paid.delta + ' souls', curio && curio.name + ' for the cupboard', frame && frame.name + ', a sigil frame'].filter(Boolean);
+    notice = CHEST_TIERS[tier - 1].name + ': ' + bits.join(', ') + '.';
     toastOf(ctx, notice);
-    celebrate('chest'); chime(paid.curio || paid.frame ? 'curio' : 'chest');
+    celebrate('chest'); chime(curio || frame ? 'curio' : 'chest');
     ctx.renderAll?.();
   }, '[data-sx="compose"]');
 }
@@ -719,7 +724,7 @@ registerFriendAction({
   },
   async run(friend, ctx) {
     lastCtx = ctx;
-    try { await owned(ctx, refreshStatus()); } catch (error) { say(ctx, covenText(error)); return; }
+    try { await owned(ctx, refreshStatus()); } catch (error) { say(ctx, ['save_unavailable', 'reward_legacy'].includes(error.code) ? coopText(error) : covenText(error)); return; }
     const s = current();
     if (!s?.coven) { pendingInvite = friend; draft = null; return openFound(ctx); }
     const why = inviteBlocker(s, friend);
@@ -729,7 +734,7 @@ registerFriendAction({
       await owned(ctx, refreshStatus({ force: true }));
       const line = lineOf(COVEN_LINES.inviteSent, Date.now()).replace('{name}', friend.name || 'Your friend');
       say(ctx, line); if (currentCtx(ctx)) ctx.refresh?.();
-    } catch (error) { say(ctx, covenText(error)); }
+    } catch (error) { say(ctx, ['save_unavailable', 'reward_legacy'].includes(error.code) ? coopText(error) : covenText(error)); }
   }
 });
 

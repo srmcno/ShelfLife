@@ -233,8 +233,8 @@ test('a full bench pays each judge once per hearing, three a day', () => {
   assert.equal(s.mayhem.souls - before, JOINT_BENCH_SOULS * (JOINT_BENCH_DAILY + 1));
   const reloaded = normalizeState(JSON.parse(JSON.stringify(s)));
   assert.deepEqual(reloaded.courtroom.joint.paid, s.courtroom.joint.paid);
-  assert.deepEqual(normalizeCourtroom({ joint: { paid: ['nope', id(2), id(2)], day: 'Tuesday', benches: 1e9 } }).joint, { paid: [id(2)], day: '', benches: 99 });
-  assert.deepEqual(normalizeCourtroom({}).joint, { paid: [], day: '', benches: 0 }, 'an old save loads with an empty bench');
+  assert.deepEqual(normalizeCourtroom({ joint: { paid: ['nope', id(2), id(2)], day: 'Tuesday', benches: 1e9 } }).joint, { paid: [id(2)], day: '', benches: 99, rewards: {}, unowned: [id(2)] });
+  assert.deepEqual(normalizeCourtroom({}).joint, { paid: [], day: '', benches: 0, rewards: {}, unowned: [] }, 'an old save loads with an empty bench');
 });
 
 test('the record line names the better judge, and has opinions', () => {

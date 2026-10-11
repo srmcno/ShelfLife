@@ -1,3 +1,4 @@
+import { normalizeRewardHistory } from './reward-state.js';
 import { HEX_BY_ID, TRICK_BY_ID, HELP_NEEDS } from './content/mischief.js';
 
 /* Save data for mischief (engine/mischief.js): friends' hexes waiting for a
@@ -29,7 +30,7 @@ const text = (value, max) => (typeof value === 'string' ? value.replace(/[\u0000
 const PNG = /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/;
 
 export function blankMischief() {
-  return { v: 1, user: '', hexes: [], outbox: [], helps: [], haunt: null, done: [], paid: { day: '', help: 0, knock: 0, shoo: 0 } };
+  return { v: 1, user: '', hexes: [], outbox: [], helps: [], haunt: null, done: [], shooRewards: {}, paid: { day: '', help: 0, knock: 0, shoo: 0 } };
 }
 
 // A friend's resident as the save keeps it. Shape and size only.
@@ -78,7 +79,7 @@ const OPS = new Set(['resolve', 'decline', 'shoo', 'ack', 'seen']);
 function normalizeOutboxItem(raw, now) {
   if (!object(raw) || !OPS.has(raw.op) || !uuid(raw.ref)) return null;
   const at = finite(raw.at, now, 0, now);
-  if (at < now - WEEK) return null;
+  if (raw.op !== 'shoo' && at < now - WEEK) return null;
   const out = { op: raw.op, ref: raw.ref, user: uuid(raw.user), at };
   if (raw.op === 'resolve') Object.assign(out, { choice: Math.floor(finite(raw.choice, 0, 0, 3)), outcome: Math.floor(finite(raw.outcome, 0, 0, 3)), rebound: raw.rebound === true });
   if (raw.op === 'shoo') out.taps = Math.floor(finite(raw.taps, 1, 1, 99));
@@ -112,7 +113,10 @@ export function normalizeMischief(raw, state = {}, now = Date.now()) {
   const refs = new Set();
   out.hexes = (Array.isArray(raw.hexes) ? raw.hexes : []).map(h => normalizeHexPayload(h, now))
     .filter(h => h && !refs.has(h.ref) && refs.add(h.ref)).slice(0, PENDING_MAX);
-  out.outbox = (Array.isArray(raw.outbox) ? raw.outbox : []).map(x => normalizeOutboxItem(x, now)).filter(Boolean).slice(-OUTBOX_MAX);
+  const outbox = (Array.isArray(raw.outbox) ? raw.outbox : []).map(x => normalizeOutboxItem(x, now)).filter(Boolean);
+  const activity = new Set(outbox.filter(item => item.op !== 'shoo').slice(-OUTBOX_MAX));
+  out.outbox = outbox.filter(item => item.op === 'shoo' || activity.has(item));
+  out.shooRewards = normalizeRewardHistory(raw.shooRewards);
   const seen = new Set();
   out.helps = (Array.isArray(raw.helps) ? raw.helps : []).map(x => normalizeHelp(x, now)).filter(h => h && !seen.has(h.id) && seen.add(h.id)).slice(0, HELP_LOG_MAX);
   out.haunt = normalizeHaunt(raw.haunt, now);
@@ -126,5 +130,6 @@ export function normalizeMischief(raw, state = {}, now = Date.now()) {
 
 export function mischiefState(state) {
   if (!object(state.mischief)) state.mischief = blankMischief();
+  if (!object(state.mischief.shooRewards)) state.mischief.shooRewards = {};
   return state.mischief;
 }

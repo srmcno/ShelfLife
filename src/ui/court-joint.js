@@ -16,9 +16,12 @@ import { REACTIONS, REACTION_IDS, FULL_BENCH_PAID, FULL_BENCH_SPENT, OUTCOMES } 
 import { COURT_BY_ID, docketToday, summonsReward, rotateCast } from '../engine/court.js';
 import { effectiveCase, twistById } from '../engine/court-twists.js';
 import {
-  newSeed, jointVersion, jointCast, castAsSent, castJointEpisode, invitableCases, revealScript, benchOutcome, payFullBench, recordLine,
+  newSeed, jointVersion, jointCast, castAsSent, castJointEpisode, invitableCases, revealScript, benchOutcome, planFullBench, recordLine,
   addMark, marksByLine, galleryLine, sealedRuling, truthLine, MARK_LIMIT, SERVED, INVITE
 } from '../engine/court-joint.js';
+import { save, Store } from '../state.js';
+import { courtroomState } from '../court-state.js';
+import { currencyRewardId, queueCoopReward, coopRewardReceipt } from '../engine/coop-money.js';
 import { glyph } from '../art/mayhem-glyphs.js';
 import { playStar, playAchievement, playError, playTone } from '../audio/sound.js';
 
@@ -296,12 +299,30 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
     await revealIn(ep, h, truth);
   }
   async function revealIn(ep, h, truth) {
-    const tok = stage.session();
+    const tok = stage.session(), owner = hearings.userId(), domain = courtroomState(S).joint, purse = S.coop;
+    const live = () => stage.alive(tok) && hearings.userId() === owner && courtroomState(S).joint === domain && S.coop === purse;
     const script = revealScript(ep, h, truth, nameOf(h));
     await stage.wait(400); if (!stage.alive(tok)) return;
-    await stage.play(script.lines, 'reveal'); if (!stage.alive(tok)) return;
-    const paid = payFullBench(S, h.id, script.outcome);
-    if (paid) { stage.save(); stage.refresh(); }
+    await stage.play(script.lines, 'reveal'); if (!live()) return;
+    let paid = 0, rewardError = '';
+    if (script.outcome === 'full') {
+      try {
+        const alreadyCollected = !!domain.rewards[owner]?.[h.id];
+        const wallet = await import('./coop.js');
+        await wallet.reconcileCoopWallet(owner); if (!live()) return;
+        const operation = await currencyRewardId(owner, 'joint_bench:' + h.id); if (!live()) return;
+        const plan = planFullBench(S, h.id, script.outcome, owner);
+        if (plan) queueCoopReward(S, { ...plan, owner, id: operation });
+        if (!save() || !Store.persistent) throw new Error('The reward could not be saved. Free some device space and open the envelopes again.');
+        await wallet.reconcileCoopWallet(owner); if (!live()) return;
+        const receipt = coopRewardReceipt(S, owner, operation);
+        paid = alreadyCollected ? 0 : receipt ? receipt.detail.paid ? receipt.delta : -1 : 0;
+        stage.refresh();
+      } catch (error) {
+        if (!live()) return;
+        rewardError = 'The full-bench reward is waiting. Open the envelopes again when you are online. ' + (error.code === 'reward_legacy' ? 'This saved reward needs recovery before it can be collected.' : '');
+      }
+    }
     if (script.outcome === 'full') { stage.applause(2600); playAchievement(); } else if (script.outcome === 'divided') playStar(); else playError();
     const envelope = (who, r) => '<li><b>' + esc(who) + '</b> ' + (r ? esc(r.ruling === 'both' ? 'declared them both idiots' : 'found for ' + (r.ruling === 'plaintiff' ? ep.p.name : ep.d.name)) +
       ' <span class="sc-wrap-stars" aria-label="' + r.stars + ' of 3 stars">' + stage.stars(r.stars) + '</span>' : 'did not rule') + '</li>';
@@ -311,7 +332,7 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
       '<h3>' + esc(script.title) + '</h3><ul class="jc-envelopes">' + envelope('You', h.mine) + envelope(nameOf(h), h.theirs) +
       '<li class="jc-truth"><b>The truth</b> ' + esc(truthLine(ep, truth)) + '</li></ul>' +
       (paid > 0 ? '<ul class="mh-rewards"><li class="souls">' + glyph('soul') + esc(FULL_BENCH_PAID.replace('{n}', paid)) + '</li></ul>' : paid < 0 ? '<p class="jc-note">' + esc(FULL_BENCH_SPENT) + '</p>' : '') +
-      '<p class="jc-record" data-jc-record></p>' +
+      (rewardError ? '<p class="jc-note" role="status">' + esc(rewardError) + '</p>' : '') + '<p class="jc-record" data-jc-record></p>' +
       '<div class="sc-actions">' + (h.status === 'revealed' ? '<button class="btn btn-primary" type="button" data-jc="replay" data-jc-id="' + esc(h.id) + '">Replay the hearing</button>' : '') +
       '<button class="btn" type="button" data-jc="lobby">Back to the lobby</button><button class="btn btn-ghost" type="button" data-sc="close">Back to the shelf</button></div></div>';
     controls.querySelector('.btn')?.focus({ preventScroll: true });
