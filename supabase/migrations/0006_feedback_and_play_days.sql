@@ -80,6 +80,33 @@ revoke all on table public.feedback, public.play_days from public, anon, authent
 -- Helpers (not callable from the API)
 -- ---------------------------------------------------------------------------
 
+-- Serialises one account's capped writes (count then insert), even before it
+-- has a profile row. The same helper, byte for byte, is in every migration
+-- that needs it, so each file loads on its own and the combined load agrees.
+create or replace function private.lock_account(p_user uuid)
+returns void
+language sql
+volatile
+set search_path = public
+as $$
+  select pg_advisory_xact_lock(hashtextextended('shelf-account:' || coalesce(p_user::text, ''), 0));
+$$;
+
+-- Two accounts, always in the same order, so two callers cannot deadlock.
+create or replace function private.lock_accounts(a uuid, b uuid)
+returns void
+language plpgsql
+volatile
+set search_path = public
+as $$
+begin
+  perform private.lock_account(least(a, b));
+  if a is distinct from b then perform private.lock_account(greatest(a, b)); end if;
+end;
+$$;
+revoke all on function private.lock_account(uuid) from public;
+revoke all on function private.lock_accounts(uuid, uuid) from public;
+
 -- Like private.clean_text, but a report may keep its line breaks: other
 -- control characters become spaces, runs of blank lines shrink to one.
 create or replace function private.clean_note(value text, max_length int)
@@ -115,6 +142,8 @@ declare
   v_moment text := lower(coalesce(p_moment, ''));
   v_platform text := lower(coalesce(p_platform, ''));
 begin
+  -- One report at a time per account, so a burst cannot count past the cap.
+  perform private.lock_account(uid);
   if p_client_id is null or p_client_id !~ '^[a-z0-9-]{8,40}$' then perform private.refuse('bad_feedback'); end if;
   if v_kind not in ('bug', 'confusing', 'idea', 'love', 'pulse') then perform private.refuse('bad_kind'); end if;
   if exists (select 1 from public.feedback where user_id = uid and client_id = p_client_id) then

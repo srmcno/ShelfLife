@@ -92,7 +92,7 @@ test('Do not disturb from the postbox stops trades, baskets and new hearings, an
 });
 
 test('the private helpers cannot be called by players or by anonymous callers', async () => {
-  for (const fn of ['private.dnd_on(uuid)', 'private.trade_dnd(uuid)', 'private.kin_dnd(uuid)', 'private.hearing_dnd(uuid)']) {
+  for (const fn of ['private.dnd_on(uuid)', 'private.trade_dnd(uuid)', 'private.kin_dnd(uuid)', 'private.hearing_dnd(uuid)', 'private.lock_account(uuid)', 'private.lock_accounts(uuid,uuid)']) {
     for (const role of ['anon', 'authenticated']) {
       assert.equal(await value('select has_function_privilege($1, $2, $3)', [role, fn, 'execute']), false, role + ' can execute ' + fn);
     }

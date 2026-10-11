@@ -75,8 +75,18 @@ export async function freshDatabase(ids = []) {
       const last = lines.at(-1) ?? '';
       try { return { ok: true, value: JSON.parse(last) }; } catch { return { ok: true, value: last }; }
     },
-    // Start all calls at once, each on its own connection.
-    race(calls) { return Promise.all(calls.map(([user, sql]) => this.as(user, sql))); },
+    // Start all calls at once, each on its own connection. A gate holds an
+    // exclusive advisory lock while every racer connects and queues for a
+    // shared one; when the gate lets go they are all released together.
+    async race(calls) {
+      const key = 7700 + serial;
+      const gate = psql(conn, `select pg_advisory_lock(${key}); select pg_sleep(${Math.max(1.5, calls.length * 0.08)});`);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const wait = `select pg_advisory_lock_shared(${key}); select pg_advisory_unlock_shared(${key});\n`;
+      const results = await Promise.all(calls.map(([user, sql]) => this.as(user, wait + sql)));
+      await gate;
+      return results;
+    },
     async drop() { await psql(CONN, 'drop database if exists ' + name + ' with (force);'); }
   };
 }

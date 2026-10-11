@@ -101,6 +101,33 @@ revoke all on table public.hearings, public.bench_records from public, anon, aut
 -- Helpers (not callable from the API)
 -- ---------------------------------------------------------------------------
 
+-- Serialises one account's capped writes (count then insert), even before it
+-- has a profile row. The same helper, byte for byte, is in every migration
+-- that needs it, so each file loads on its own and the combined load agrees.
+create or replace function private.lock_account(p_user uuid)
+returns void
+language sql
+volatile
+set search_path = public
+as $$
+  select pg_advisory_xact_lock(hashtextextended('shelf-account:' || coalesce(p_user::text, ''), 0));
+$$;
+
+-- Two accounts, always in the same order, so two callers cannot deadlock.
+create or replace function private.lock_accounts(a uuid, b uuid)
+returns void
+language plpgsql
+volatile
+set search_path = public
+as $$
+begin
+  perform private.lock_account(least(a, b));
+  if a is distinct from b then perform private.lock_account(greatest(a, b)); end if;
+end;
+$$;
+revoke all on function private.lock_account(uuid) from public;
+revoke all on function private.lock_accounts(uuid, uuid) from public;
+
 create or replace function private.blocked_either(a uuid, b uuid)
 returns boolean
 language sql
@@ -322,6 +349,8 @@ begin
   if p_seed is null or p_seed < 1 then perform private.refuse('bad_hearing'); end if;
   perform private.check_cast(p_cast);
   ruling := private.clean_ruling(p_ruling);
+  -- The sender's daily cap is counted under the sender's lock.
+  perform private.lock_account(uid);
   if (select count(*) from public.hearings where from_user = uid and created_at > now() - interval '1 day') >= 20 then
     perform private.refuse('rate_limited');
   end if;
