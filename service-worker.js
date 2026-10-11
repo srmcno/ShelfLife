@@ -98,6 +98,7 @@ const SHELL = [
   "./src/engine/nextstep.js",
   "./src/ui/nextstep.js",
   "./src/ui/nextstep-extras.js",
+  "./src/ui/social-registry.js",
   "./src/ui/glossary.js",
   "./src/ui/stars.js",
   "./src/ui/calm.js",
