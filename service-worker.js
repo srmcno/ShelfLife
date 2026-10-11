@@ -103,6 +103,7 @@ const SHELL = [
   "./src/content/magnets.js",
   "./src/coven-state.js",
   "./src/engine/coven.js",
+  "./src/cloud/coven.js",
   "./src/ui/glossary.js",
   "./src/ui/stars.js",
   "./src/ui/calm.js",

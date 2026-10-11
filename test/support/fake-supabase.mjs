@@ -8,6 +8,7 @@
 // code is 123456. Knobs: setOffline, failNext, hangNext, expireTokens,
 // revokeRefreshTokens and setRemote (another device writing a save).
 import { createFakeSocial } from './fake-social.mjs';
+import { createFakeCoven } from './fake-coven.mjs';
 
 export const FAKE_URL = 'https://fake.supabase.test';
 export const FAKE_KEY = 'fake-anon-key';
@@ -99,6 +100,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const social = createFakeSocial({ users, profiles, now, json, rest, uuid,
     ensureProfile: user => RPC.ensure_profile(user, {}) });
   Object.assign(RPC, social.RPC);
+  Object.assign(RPC, createFakeCoven({ users, profiles, social, now, json, rest, uuid }).RPC); // fake.social.coven
   const TABLES = {
     ...social.TABLES,
     saves: user => [...saves].filter(([id]) => id === user.id).map(([id, r]) => ({ user_id: id, rev: r.rev, data: r.data, device_id: r.device_id, updated_at: r.updated_at })),
