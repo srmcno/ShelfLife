@@ -17,6 +17,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 const clock = ms => { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
 let S = null, refresh = () => {}, lastKey = '', ringEls = [], ringFrame = 0;
+let cardPetId = () => null;
 const providers = [];
 
 // The retention module calls this once with a function (state, now) => extra[].
@@ -152,7 +153,7 @@ function perform(step) {
   const action = step.action || {};
   switch (action.type) {
     case 'guide': {
-      const petId = S.pets[0]?.id;
+      const petId = guideView(S)?.step?.petId;
       if (action.step === 'meet' || action.step === 'feed') fire('shelflife:care', { petId });
       else if (action.step === 'note') fire('shelflife:goto', { tab: 'notes' });
       else fire('shelflife:mayhem', { open: action.step === 'coffin' ? 'coffin' : action.step });
@@ -181,7 +182,10 @@ function ringTargets() {
   const one = el => (el ? [el] : []);
   switch (step.id) {
     case 'meet': return one(first('#cabinet .pet[data-id="' + CSS.escape(step.petId) + '"]') || go);
-    case 'feed': return one(first('#cardSheet [data-care="food"]:not([disabled])') || first('#cardSheet [data-care]:not([disabled])') || go);
+    case 'feed': {
+      if (cardPetId() === step.petId) return one(first('#cardSheet [data-care="food"]:not([disabled])') || first('#cardSheet [data-care]:not([disabled])') || go);
+      return one(first('#cabinet .pet[data-id="' + CSS.escape(step.petId) + '"]') || go);
+    }
     // Every choice pays, so the ring does not recommend one over the other.
     case 'emergency': { const choices = [...document.querySelectorAll('#mayhemSheet .mh-choice')].filter(visible); return choices.length ? choices : one(go); }
     case 'omen': return one(first('#mayhemSheet [data-mh="flip"]') || go);
@@ -209,7 +213,7 @@ function watchScreen() {
   const poke = () => {
     if (!S || !guideActive(S)) { scheduleRing(); return; }
     let changed = false;
-    if ($('cardVeil')?.classList.contains('open') && $('cardSheet')?.querySelector('[data-care]')) changed = markGuideSeen(S, 'meet') || changed;
+    if ($('cardVeil')?.classList.contains('open') && $('cardSheet')?.querySelector('[data-care]')) changed = markGuideSeen(S, 'meet', cardPetId()) || changed;
     if (document.body.dataset.tab === 'notes') changed = markGuideSeen(S, 'note') || changed;
     if (changed) { save(); refresh(); } else scheduleRing();
   };
@@ -222,8 +226,9 @@ function watchScreen() {
   poke();
 }
 
-export function initNextStep(state, onRefresh) {
+export function initNextStep(state, onRefresh, { getOpenPetId } = {}) {
   S = state;
+  cardPetId = typeof getOpenPetId === 'function' ? getOpenPetId : () => null;
   refresh = onRefresh || refresh;
   const host = $('nextStep');
   host?.addEventListener('click', event => {

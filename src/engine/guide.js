@@ -86,9 +86,10 @@ export function guideActive(state) { return guideOf(state)?.status === 'on'; }
 // Things only the screen can observe. 'meet' (the resident's card was opened)
 // and 'note' (the note board was visited) count whenever the tour is on, even
 // before they are the current step.
-export function markGuideSeen(state, id) {
+export function markGuideSeen(state, id, petId) {
   const g = guideOf(state);
   if (!g || g.status !== 'on' || !['meet', 'note'].includes(id) || g.seen.includes(id)) return false;
+  if (id === 'meet' && (!petId || petId !== state.pets?.[0]?.id)) return false;
   g.seen.push(id);
   return true;
 }
@@ -97,7 +98,7 @@ function stepDone(step, state, g) {
   const m = mayhemState(state);
   switch (step.id) {
     case 'meet': return g.seen.includes('meet');
-    case 'feed': return (state.pets || []).some(p => (p.careLog?.food || 0) > 0);
+    case 'feed': return (state.pets?.[0]?.careLog?.food || 0) > 0;
     case 'emergency': return m.resolved >= 1;
     case 'omen': return m.omen.streak >= 1 && m.omen.lastDay !== '';
     case 'note': return g.seen.includes('note');

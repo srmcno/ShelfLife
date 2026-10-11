@@ -96,8 +96,8 @@ test('steps finish on the real action, in any order, and each pays its reward on
   assert.equal(m.souls, GUIDE_STEPS.find(x => x.id === 'feed').reward);
   assert.equal(advanceGuide(s, noon), null, 'paid once');
   assert.equal(guideView(s).step.id, 'meet', 'the current step is the first one still open');
-  assert.equal(markGuideSeen(s, 'meet'), true);
-  assert.equal(markGuideSeen(s, 'meet'), false);
+  assert.equal(markGuideSeen(s, 'meet', 'p0'), true);
+  assert.equal(markGuideSeen(s, 'meet', 'p0'), false);
   result = advanceGuide(s, noon);
   assert.deepEqual(result.steps.map(x => x.id), ['meet']);
   assert.equal(guideView(s).step.id, 'emergency');
@@ -134,6 +134,35 @@ test('the feeding step needs actual food: a wash or a fuss does not count', () =
   assert.deepEqual(advanceGuide(s, noon).steps.map(x => x.id), ['feed']);
 });
 
+test('meeting another fresh resident does not complete the named resident step', () => {
+  const s = newcomer(noon, 2); ensureGuide(s, noon);
+  assert.equal(guideView(s).step.petId, 'p0');
+  assert.equal(markGuideSeen(s, 'meet', 'p1'), false);
+  assert.equal(advanceGuide(s, noon), null);
+  assert.deepEqual(guideOf(s).seen, []);
+  assert.equal(markGuideSeen(s, 'meet', 'p0'), true);
+  assert.deepEqual(advanceGuide(s, noon).steps.map(step => step.id), ['meet']);
+});
+
+test('feeding another fresh resident does not complete the named resident step', () => {
+  const s = newcomer(noon, 2); ensureGuide(s, noon);
+  s.pets[1].careLog = { food: 1, fuss: 0, clean: 0 };
+  assert.equal(advanceGuide(s, noon), null);
+  assert.deepEqual(guideOf(s).done, []);
+  assert.equal(mayhemState(s).souls, 0);
+
+  const loaded = roundTrip(s);
+  skipGuide(loaded); resumeGuide(loaded);
+  assert.equal(guideView(loaded).step.petId, 'p0');
+  assert.equal(advanceGuide(loaded, noon), null, 'another resident’s care stays unrelated after reload/resume');
+  // The named resident can still finish feeding before meeting, and each reward pays once.
+  care(loaded);
+  assert.deepEqual(advanceGuide(loaded, noon).steps.map(step => step.id), ['feed']);
+  assert.equal(markGuideSeen(loaded, 'meet', 'p0'), true);
+  assert.deepEqual(advanceGuide(loaded, noon).steps.map(step => step.id), ['meet']);
+  assert.equal(advanceGuide(loaded, noon), null);
+});
+
 test('the rewards guarantee the first coffin is affordable by the time it is offered', () => {
   const beforeCoffin = GUIDE_STEPS.filter(x => x.id !== 'coffin').reduce((n, x) => n + x.reward, 0);
   const worstEmergency = Math.min(...EMERGENCIES.flatMap(e => e.choices.flatMap(c => c.outcomes.map(o => o.souls || 0))));
@@ -160,7 +189,7 @@ test('skipping is remembered, can be resumed with progress intact, and a finishe
 });
 
 test('guide state survives reloads and repairs malformed data', () => {
-  const s = newcomer(); ensureGuide(s, noon); markGuideSeen(s, 'meet');
+  const s = newcomer(); ensureGuide(s, noon); markGuideSeen(s, 'meet', 'p0');
   const loaded = roundTrip(s);
   assert.deepEqual(guideOf(loaded), guideOf(s));
   assert.equal(JSON.stringify(roundTrip(loaded)), JSON.stringify(loaded), 'idempotent');

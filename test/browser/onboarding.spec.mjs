@@ -141,6 +141,42 @@ test('the tour survives a reload, can be skipped, and comes back from Help', asy
   await expect(card(page).locator('.ns-title')).toHaveText('Deal with the emergency.');
 });
 
+test('a two-resident tour only counts meeting and feeding the resident it names', async ({ page }) => {
+  await firstDay(page, snapshot => {
+    const second = structuredClone(snapshot.pets[0]);
+    second.id = 'second'; second.name = 'Pip';
+    snapshot.pets.push(second); snapshot.slots[1] = second.id;
+  });
+  await expect(card(page).locator('.ns-title')).toHaveText('Say hello to Mabel.');
+  await page.locator('#cabinet .pet[data-id="second"]').click();
+  await expect(page.locator('#cardSheet h2')).toHaveText('Pip');
+  expect((await saved(page)).life.guide.done).toEqual([]);
+  await expect(card(page).locator('.ns-title')).toHaveText('Say hello to Mabel.');
+  await page.locator('#cardVeil [data-care="food"]').click();
+  expect((await saved(page)).life.guide.done).toEqual([]);
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await expect(card(page).locator('.ns-title')).toHaveText('Say hello to Mabel.');
+
+  await card(page).locator('[data-ns-go]').click();
+  await expect(page.locator('#cardSheet h2')).toHaveText('Mabel');
+  await expect.poll(async () => (await saved(page)).life.guide.done).toEqual(['meet']);
+  await expect(card(page).locator('.ns-title')).toHaveText('Feed Mabel.');
+  await page.keyboard.press('Escape');
+  await page.locator('#cabinet .pet[data-id="second"]').click();
+  await expect(page.locator('#cardVeil [data-care="food"]')).not.toHaveClass(/guide-ring/);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#cabinet .pet[data-id="first"]')).toHaveClass(/guide-ring/);
+  await card(page).locator('[data-ns-go]').click();
+  await expect(page.locator('#cardSheet h2')).toHaveText('Mabel');
+  await expect(page.locator('#cardVeil [data-care="food"]')).toHaveClass(/guide-ring/);
+  await page.locator('#cardVeil [data-care="food"]').click();
+  await expect.poll(async () => (await saved(page)).life.guide.done).toEqual(['meet', 'feed']);
+  await page.keyboard.press('Escape');
+  await page.reload();
+  expect((await saved(page)).life.guide.done).toEqual(['meet', 'feed']);
+});
+
 test('an established household never sees the tour and keeps the whole desk and the omen strip', async ({ page }) => {
   await seed(page, householdFixture('established'));
   await expect(page.locator('#mayhemAlert .mh-alert.omen')).toBeVisible();

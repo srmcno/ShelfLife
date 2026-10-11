@@ -436,7 +436,7 @@ initAlmanac(state, () => renderAll(state));
 initCollections(state, () => renderAll(state));
 initReturns(state, () => renderAll(state));
 initNudgeSettings(state);
-initNextStep(state, () => renderAll(state));
+initNextStep(state, () => renderAll(state), { getOpenPetId });
 initCalm(state, { save, onChange: () => renderAll(state) });
 initArcade(state, () => renderAll(state), { social });
 initCourt(state, () => renderAll(state), { social, cloud });
