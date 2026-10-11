@@ -7,6 +7,7 @@
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PET = /^[A-Za-z0-9_-]{1,100}$/;
 const TRAIT = /^[a-z0-9-]{1,24}$/;
+const DUEL_GAMES = ['frenzy', 'stack', 'seance', 'whack'];
 export const COOP_LIMITS = { listed: 2, outbox: 8, memories: 24, perPet: 3, done: 80, stakes: 20, attempts: 20, seen: 60, records: 50 };
 const obj = x => !!x && typeof x === 'object' && !Array.isArray(x);
 const num = (x, max = 1e14) => Number.isFinite(x) ? Math.max(0, Math.min(max, Math.floor(x))) : 0;
@@ -79,13 +80,20 @@ export function normalizeCoop(raw) {
     stakes.add(duelId);
     return { duelId, amount: x.amount, at: num(x.at) };
   }).filter(Boolean).slice(-COOP_LIMITS.stakes);
+  // A duel run started, played (its score kept until the server has it, with
+  // the first player's log while it fits) or sent. Two logs at most.
   const attempts = new Set();
+  let logs = 0;
   s.attempts = (Array.isArray(r.attempts) ? r.attempts : []).map(x => {
     const duelId = uuid(x?.duelId);
-    if (!duelId || !intIn(x.round, 1, 3) || attempts.has(duelId + ':' + x.round) || !['started', 'sent'].includes(x.state)) return null;
+    if (!duelId || !intIn(x.round, 1, 3) || attempts.has(duelId + ':' + x.round) || !['started', 'played', 'sent'].includes(x.state)) return null;
     attempts.add(duelId + ':' + x.round);
-    return { duelId, round: x.round, state: x.state, score: num(x.score, 3000), at: num(x.at) };
-  }).filter(Boolean).slice(-COOP_LIMITS.attempts);
+    const out = { duelId, round: x.round, state: x.state, score: num(x.score, 3000), at: num(x.at) };
+    if (DUEL_GAMES.includes(x.game)) out.game = x.game;
+    if (intIn(x.seed, 1, 2147483647)) out.seed = x.seed;
+    if (x.state === 'played' && obj(x.log) && JSON.stringify(x.log).length <= 30000) out.log = x.log;
+    return out;
+  }).filter(Boolean).slice(-COOP_LIMITS.attempts).reverse().map(a => { if (a.log && ++logs > 2) delete a.log; return a; }).reverse();
   s.seen = [...new Set((Array.isArray(r.seen) ? r.seen : []).filter(x => typeof x === 'string' && /^[0-9a-f-]{36}:[1-3]$/i.test(x)))].slice(-COOP_LIMITS.seen);
   s.records = Object.fromEntries(Object.entries(obj(r.records) ? r.records : {}).filter(([k, v]) => uuid(k) && obj(v))
     .sort(([, a], [, b]) => num(b.at) - num(a.at)).slice(0, COOP_LIMITS.records).map(([k, v]) => [k.toLowerCase(), record(v)]));

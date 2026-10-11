@@ -187,12 +187,16 @@ export function payDuel(state, duelId, souls) {
 export function attemptFor(state, duelId, round) {
   return coopState(state).attempts.find(a => a.duelId === duelId && a.round === round) || null;
 }
-export function markAttempt(state, duelId, round, status, score = 0, now = Date.now()) {
+// `extra` carries { game, seed, log } for a run that still has to be filed.
+export function markAttempt(state, duelId, round, status, score = 0, extra = {}, now = Date.now()) {
   const c = coopState(state);
   const found = attemptFor(state, duelId, round);
-  if (found) Object.assign(found, { state: status, score: Math.max(found.score, Math.floor(score || 0)), at: now });
-  else c.attempts.push({ duelId, round, state: status, score: Math.floor(score || 0), at: now });
+  const next = { state: status, score: Math.max(found?.score || 0, Math.floor(score || 0)), at: now };
+  for (const k of ['game', 'seed']) if (extra[k] !== undefined) next[k] = extra[k];
+  if (found) { Object.assign(found, next); if (status === 'played' && extra.log) found.log = extra.log; if (status !== 'played') delete found.log; }
+  else c.attempts.push({ duelId, round, ...next, ...(status === 'played' && extra.log ? { log: extra.log } : {}) });
   if (c.attempts.length > COOP_LIMITS.attempts) c.attempts.splice(0, c.attempts.length - COOP_LIMITS.attempts);
+  return attemptFor(state, duelId, round);
 }
 export function markSeen(state, duelId, round) {
   const c = coopState(state), key = duelId + ':' + round;
