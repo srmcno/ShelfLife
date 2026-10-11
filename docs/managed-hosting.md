@@ -55,7 +55,9 @@ for public player accounts.
 
 ## Release gates
 
-Require the repository's Game checks and Secret Scan before production promotion.
+Require the repository's Game checks, PostgreSQL checks and Secret Scan before
+production promotion. PostgreSQL checks run migrations and concurrent writes on
+an isolated PostgreSQL 17 service; a unit run that skips them is insufficient.
 Verify two authenticated players can complete every social flow in desktop
 Chromium, mobile Chromium and mobile WebKit, including lost responses, retries,
 account switches, duplicate submissions, concurrent writes and restored older
