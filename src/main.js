@@ -10,6 +10,7 @@ import { initBackupTransfer } from './ui/backup.js';
 import { cloud, sync, social, connectCloud } from './cloud/index.js';
 import { initCloudUI } from './ui/cloud.js';
 import { initFriends } from './ui/friends.js';
+import { initTrades } from './ui/trades.js';
 import { initSocialInbox } from './ui/social-inbox.js';
 import { initTesters } from './ui/testers.js';
 import './ui/coven.js';
@@ -273,6 +274,8 @@ function applyRestoredState(normalized) {
   syncAudioButtons();
   // Controls that paint themselves from settings (Calm, nudges, haptics) repaint here.
   window.dispatchEvent(new CustomEvent('shelflife:state-replaced'));
+  // Trading settles anything this copy of the shelf predates (src/ui/trades.js).
+  window.dispatchEvent(new CustomEvent('shelflife:restored'));
 }
 document.getElementById('restoreConfirm').addEventListener('click', () => {
   if (!pendingRestore) return;
@@ -290,6 +293,7 @@ const CLOUD_ARRIVALS = {
 };
 cloudUI = initCloudUI({ cloud, sync, getState: () => state, onChange: () => syncBackupBanner() });
 initFriends({ state, cloud, sync, social, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
+initTrades({ state, cloud, social, save, renderAll: () => renderAll(state), toast });
 connectCloud({
   applyRemote: (next, { reason } = {}) => {
     applyRestoredState(next);

@@ -25,6 +25,7 @@ import { VISITORS } from '../content/stories.js';
 import { renderTheatreControls } from './shelf-theatre.js';
 import { createArrivalInvitation } from './arrival.js';
 import { renderMayhem } from './mayhem.js';
+import { packingFor } from '../engine/trades.js';
 import { renderNextStep } from './nextstep.js';
 import { syncRetention } from './almanac.js';
 
@@ -150,6 +151,8 @@ function petEl(state, pet, slotIndex, existing, feuds, feudIds) {
   // creature's own inner monologue instead of a generic mood bubble.
   btn.dataset.traits = (pet.traits || []).join(' ');
   btn.dataset.mood = mood;
+  const packing = !!packingFor(state, pet.id); // offered in a trade: still here, bags by the door
+  btn.classList.toggle('packing', packing);
   const needs = Object.keys(needWords).filter(k => pet.needs[k] < 42).map(k => needWords[k]);
   btn.setAttribute('aria-label', 'Take care of ' + pet.name + ', currently ' + MOOD_WORD[mood] + (needs.length ? ', ' + needs.join(', ') : ''));
   btn.title = pet.name + ' · ' + (needs.join(', ') || MOOD_WORD[mood]);
@@ -175,7 +178,7 @@ function petEl(state, pet, slotIndex, existing, feuds, feudIds) {
   if (nameplate.textContent !== pet.name) nameplate.textContent = pet.name;
   let pips = btn.querySelector('.pips');
   if (!pips) { pips = document.createElement('span'); pips.className = 'pips'; btn.appendChild(pips); }
-  const pipMarkup = (plotting && !asleep ? '<span class="pip plotting">plotting</span>' : '') +
+  const pipMarkup = (packing ? '<span class="pip packing">packing</span>' : '') + (plotting && !asleep ? '<span class="pip plotting">plotting</span>' : '') +
     (asleep ? '<span class="pip zzz">asleep</span>' : '') +
     ['food', 'fuss', 'clean'].filter(k => pet.needs[k] < 42).map(k => '<span class="pip ' + k + '" data-gloss="needs" role="img" aria-label="' + PIP_WORD[k] + '"><b aria-hidden="true">' + PIP_LETTER[k] + '</b></span>').join('');
   if (pips.innerHTML !== pipMarkup) pips.innerHTML = pipMarkup;

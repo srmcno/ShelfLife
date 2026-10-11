@@ -11,6 +11,7 @@ import { generateCreature } from '../art/creatures.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { save } from '../state.js';
 import { toast } from './toast.js';
+import { renderTradePortraits } from './trades.js';
 import { checkAchievements } from '../engine/achievements.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -128,6 +129,7 @@ export function renderMuseum(state) {
       }).join('') + '</div>' + (sagas.length > 12 ? '<p class="hint">Showing the twelve most recent subplots.</p>' : '');
     host.querySelector('.memory-timeline').insertAdjacentHTML('beforebegin', section);
   }
+  renderTradePortraits(host, state);
 }
 export function initStories(state, refresh, refreshPet) {
   document.addEventListener('click', e => {

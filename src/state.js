@@ -13,6 +13,7 @@ import { blankRetention, normalizeRetention } from './almanac-state.js';
 import { normalizeTesting } from './tester-state.js';
 import { normalizeCovenState } from './coven-state.js';
 import { normalizeKin } from './kin-state.js';
+import { normalizeTrades } from './trade-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -408,6 +409,7 @@ export function normalizeState(raw) {
   s.testing = normalizeTesting(s.testing); // What's new, check-ins and the play-day switch
   s.coven = normalizeCovenState(s.coven); // covens: counting, chests, cupboard, trophies (src/coven-state.js)
   s.kin = normalizeKin(s.kin, s, now); // foundlings, kept letters and the step (kin-state.js)
+  s.trades = normalizeTrades(s.trades, s, now); // trading with friends: wishlist, escrow, applied trades, portraits
   return s;
 }
 

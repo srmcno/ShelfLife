@@ -15,6 +15,7 @@ import { renderPetSprite, moodMotionClasses } from '../art/sprite.js';
 import { reactTo, previewMotion } from '../art/animator.js';
 import { renderAll, escapeHtml, noteAbout, setPetFilter } from './render.js';
 import { toast } from './toast.js';
+import { tradeCardNote, rehomeBlock } from './trades.js';
 import { buildDecor } from './decorUI.js';
 import { playFeed, playFuss, playClean } from '../audio/sound.js';
 import { petById, propById, pick, addNote, save, clamp } from '../state.js';
@@ -146,6 +147,7 @@ export function openCard(state, id, keepScroll) {
   const careNames = { food: 'Feed it', fuss: 'Fuss over it', clean: 'Clean it up' };
   const adventure = escapadeView(state).active;
   const ourAdventure = adventure?.petId === pet.id ? adventure : null;
+  html += tradeCardNote(state, pet);
   if (ourAdventure) html += '<div class="escapade-care-note"><p><b>' + escapeHtml(ourAdventure.episode.title) + '</b>' + escapeHtml(ourAdventure.ready ? 'Our story is ready for its ending.' : ourAdventure.careDone ? 'Our personal moment is saved. Next, a game together.' : ourAdventure.episode.care.label + ': a personal moment for our adventure.') + '</p><button type="button" class="btn btn-ghost" data-escapade="open">' + (ourAdventure.ready ? 'Choose the ending' : 'Our adventure') + ' ↗</button></div>';
   html += '<div class="care-row">' + Object.keys(careNames).map(need => {
     const preview = previewCare(pet, need);
@@ -291,6 +293,8 @@ export function openCard(state, id, keepScroll) {
   });
   document.getElementById('rehomeBtn').addEventListener('click', () => {
     const btn = document.getElementById('rehomeBtn');
+    const promised = rehomeBlock(state, pet);
+    if (promised) { toast(promised); return; }
     // Two-step confirm in-page: the first click arms it, the second commits.
     if (btn.dataset.armed !== '1') {
       btn.dataset.armed = '1';
