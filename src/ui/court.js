@@ -276,12 +276,14 @@ function seatIcons(i) {
   const tags = seatTags(ep, i);
   return tags.length ? '<span class="sc-seat-tags" role="img" aria-label="' + esc(tags.map(t => t.text).join(' ')) + '">' + tags.map(t => ROLE_ICONS[t.role] || '').join('') + '</span>' : '';
 }
-// A juror from another shelf is labelled with where it came from.
+// A juror from another shelf is labelled with where it came from: a suitcase
+// on the seat, the words in its title and in the cast notes.
+const SUITCASE = '<svg viewBox="0 0 12 12"><path d="M4 3V2h4v1h2.5v7h-9V3zm1 0h2V2.8H5z" fill="currentColor"/></svg>';
 const fromLine = who => (who.kind !== 'visitor' ? '' : who.owner === 'from' || who.owner === 'to' ? 'from ' + (who.from || 'a friend') + '’s shelf' : 'visiting from ' + (who.from || 'a friend'));
 function seat(juror, i) {
   const from = fromLine(juror);
   return '<span class="sc-seat' + (from ? ' sc-visiting' : '') + '" data-seat="' + i + '" title="' + esc(juror.name + (from ? ', ' + from : '')) + '"><span class="sc-seat-art">' + portrait(juror) + '</span>' + seatIcons(i) +
-    (from ? '<span class="sc-seat-from" aria-hidden="true">Guest</span>' : '') + '<i class="sc-vote" aria-hidden="true"></i><i class="sc-zzz" aria-hidden="true">z<b>z</b><b>z</b></i></span>';
+    (from ? '<span class="sc-seat-from" aria-hidden="true">' + SUITCASE + '</span>' : '') + '<i class="sc-vote" aria-hidden="true"></i><i class="sc-zzz" aria-hidden="true">z<b>z</b><b>z</b></i></span>';
 }
 const party = side => '<span class="sc-lectern"><small>' + (side === 'p' ? 'Plaintiff' : 'Defendant') + '</small><span>' + esc(ep[side].name) + '</span></span>';
 function studioMarkup(dress) {

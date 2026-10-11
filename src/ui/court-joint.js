@@ -114,9 +114,10 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
 
   /* ---------------- forms: pick a friend, invite, serve ---------------- */
   const back = '<button class="btn btn-ghost" type="button" data-jc="lobby">Back to the lobby</button>';
-  function showView() {
+  function showView({ focus = true } = {}) {
     const v = view;
     if (!v) return;
+    const kept = !focus && document.activeElement?.dataset?.jcField;
     let html = '';
     const status = v.message ? '<p class="jc-note" role="status">' + esc(v.message) + '</p>' : '';
     if (v.mode === 'friends') {
@@ -151,7 +152,9 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
           '<div class="sc-actions"><button class="btn btn-primary" type="button" data-jc="serve-go">Serve and judge it first</button><button class="btn" type="button" data-jc="serve-plain">Serve without judging</button></div>') +
         '<div class="sc-actions">' + back + '</div>';
     }
+    const scroll = sheet.scrollTop;
     stage.view('jc-view jc-' + v.mode, html);
+    if (!focus) { sheet.scrollTop = scroll; if (kept) sheet.querySelector('[data-jc-field="' + kept + '"]')?.focus({ preventScroll: true }); return; }
     const target = sheet.querySelector('[data-jc-field], .jc-friend, [data-jc="lobby"]');
     target?.focus({ preventScroll: true });
   }
@@ -171,7 +174,11 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
     view = { mode: 'invite', friend, shelf: [], form: { caseId: cases.find(k => k.id === docket.caseId)?.id || cases[0]?.id || '', plaintiffId: turn.plaintiffId, defendantId: turn.defendantId } };
     showView();
     // Their residents may be called as witnesses. Quietly: without them the case still airs.
-    social.shelf(friend.userId).then(r => { if (view?.mode === 'invite' && view.friend.userId === friend.userId) view.shelf = r?.shelf?.residents || []; }).catch(() => {});
+    social.shelf(friend.userId).then(r => {
+      if (view?.mode !== 'invite' || view.friend.userId !== friend.userId || inEpisode()) return;
+      view.shelf = r?.shelf?.residents || [];
+      if (view.shelf.length) showView({ focus: false });
+    }).catch(() => {});
   }
   async function serve(friend) {
     view = { mode: 'serve', friend, loading: true, shelf: [], form: { caseId: docketToday(S).caseId, mineId: S.pets[0]?.id || '', theirId: '', side: 'p' } };

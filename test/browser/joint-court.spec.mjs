@@ -182,7 +182,9 @@ test('serve papers and judge: a sealed ruling, the identical episode, the galler
   await expect(page.locator('#courtSheet .sc-next')).toHaveCount(0);
   const [row] = [...fake.social.hearings.rows.values()];
   expect([row.kind, row.case_id, row.twist, row.status, row.first_ruling.ruling, row.first_ruling.truth]).toEqual(['served', DOCKET, docketTwist(DAY, DOCKET), 'open', TRUTH, TRUTH]);
-  expect(row.first_marks.map(m => m.r)).toEqual(['laugh', 'gasp']);
+  // The two taps, then a gavel for every time Ada banged one in a scene.
+  expect(row.first_marks.slice(0, 2).map(m => m.r)).toEqual(['laugh', 'gasp']);
+  expect(row.first_marks.slice(2).every(m => m.r === 'gavel')).toBe(true);
   expect(JSON.parse(await read(page, 'shelflife.v4')).courtroom.episodes, 'a joint hearing is not one of our own episodes').toBe(0);
   await page.locator('#courtSheet [data-sc="lobby"]').click();
   await expect(page.locator('#courtSheet .jc-row')).toContainText('Waiting for Bea');
@@ -203,7 +205,7 @@ test('serve papers and judge: a sealed ruling, the identical episode, the galler
   await expect(page.locator('#courtSheet .jc-react-label')).toContainText('The gallery is Ada');
   const beaSaid = await playEpisode(page, TRUTH);
   expect(beaSaid, 'every line the same, in the same order').toEqual(adaSaid);
-  await expect.poll(() => page.locator('#courtSheet [data-sc-stage]').getAttribute('data-jc-heard')).toBe('2');
+  await expect.poll(() => page.locator('#courtSheet [data-sc-stage]').getAttribute('data-jc-heard'), 'every reaction of Ada’s played in the gallery').toBe(String(row.first_marks.length));
   await expect(page.locator('#courtSheet [data-jc-seal]')).toContainText('+' + SUMMONS_SOULS + ' for hearing Ada’s case. Both envelopes are in.');
   expect(fake.social.hearings.rows.get(row.id).status).toBe('revealed');
   await page.locator('#courtSheet [data-jc="open-reveal"]').click();
@@ -220,6 +222,10 @@ test('serve papers and judge: a sealed ruling, the identical episode, the galler
   page = await arrive(context, fake, adaHere, errors);
   const adaBefore = await souls(page);
   await openCourt(page);
+  await page.waitForTimeout(2000);
+  console.log('DEBUG', JSON.stringify(await page.evaluate(async () => { const m = await import('/src/cloud/index.js'); return { active: m.social.active(), uid: m.cloud.userId() }; })),
+    fake.calls().slice(-6).map(r => r.path + ' ' + r.status).join(' | '), JSON.stringify([...fake.social.hearings.rows.values()].map(h => [h.from_user, h.to_user, h.status, h.created_at, h.ruled_at])));
+  console.log('LOBBY', await page.locator('#courtSheet [data-jc-lobby]').innerHTML());
   await expect(page.locator('#courtSheet .jc-record').first()).toHaveText(/^You and Bea: 1 hearing, 1 full bench\. (Dead level|Level)/);
   const ready = page.locator('#courtSheet .jc-row.jc-due');
   await expect(ready).toContainText('The envelopes are in');
@@ -293,7 +299,7 @@ test('the bench record on a friend’s profile and the postbox rows, through the
   const beaBench = createHearings({ cloud: bea.cloud, social: bea.social });
   const adaBench = createHearings({ cloud: ada.cloud, social: ada.social });
   const cast = { v: 1, p: { kind: 'npc', id: 'cat' }, d: { kind: 'npc', id: 'susan' }, jury: [{ kind: 'npc', id: 'raven' }], witnesses: [] };
-  const sealed = { ruling: 'both', truth: TRUTH, stars: 1, ratings: 50, agree: 1, dissent: 0 };
+  const sealed = { ruling: WRONG, truth: TRUTH, stars: 1, ratings: 50, agree: 1, dissent: 0 };
   const done = await adaBench.open({ to: bea.id, kind: 'invite', caseId: DOCKET, twist: docketTwist(DAY, DOCKET), seed: 5, cast, ruling: sealed });
   await beaBench.rule(done.id, { ...sealed, ruling: TRUTH });
   const waiting = await beaBench.open({ to: ada.id, kind: 'invite', caseId: DOCKET, twist: docketTwist(DAY, DOCKET), seed: 6, cast, ruling: sealed });
@@ -307,15 +313,17 @@ test('the bench record on a friend’s profile and the postbox rows, through the
     const section = reg.friendsSections('friend').find(s => s.id === 'bench-record');
     section.render(ctx, friend);
     await new Promise(resolve => setTimeout(resolve, 300));
-    return { count: source.count(ctx), poll: source.poll, items: items.map(i => [i.line, source.render(i, ctx)]), section: section.render(ctx, friend), said };
+    return { count: source.count(ctx), poll: source.poll, items: items.map(i => [i.id, i.line, source.render(i, ctx)]), section: section.render(ctx, friend), said };
   }, { friend: { userId: bea.id, name: 'Bea' } });
   expect(out.poll).toBe(true);
-  expect(out.count, 'one hearing waits for Ada').toBe(1);
-  expect(out.items[0][0]).toBe('Bea heard ' + COURT_BY_ID[DOCKET].title + ' and ruled. Sealed. Your turn.');
-  expect(out.items[0][1]).toContain('data-sx="hear" data-sx-id="' + waiting.id + '"');
-  expect(out.items[0][1]).toContain('data-sx="decline"');
-  expect(out.items[0][1]).toContain('data-sx="block"');
-  expect(out.items[0][1]).toContain('data-sx="report"');
+  expect(out.count, 'a hearing to answer and a reveal to read').toBe(2);
+  const [, line, html] = out.items.find(i => i[0] === waiting.id);
+  expect(line).toBe('Bea heard ' + COURT_BY_ID[DOCKET].title + ' and ruled. Sealed. Your turn.');
+  expect(html).toContain('data-sx="hear" data-sx-id="' + waiting.id + '"');
+  for (const action of ['decline', 'block', 'report']) expect(html).toContain('data-sx="' + action + '"');
+  const [, ready, readyHtml] = out.items.find(i => i[0] === done.id);
+  expect(ready).toBe('The envelopes are in: ' + COURT_BY_ID[DOCKET].title + ', with Bea.');
+  expect(readyHtml).toContain('data-sx="reveal" data-sx-id="' + done.id + '"');
   expect(out.section).toContain('You and Bea: 1 hearing, 0 full benches. Bea is ahead by one');
   expect(out.section).toContain('data-sx="replay" data-sx-id="' + done.id + '"');
   // Declining from the postbox, then replaying from the profile section.
@@ -353,7 +361,7 @@ test('a guest visiting the shelf is seated on the jury with where it came from',
   await expect(page.locator('#courtSheet .sc-stage')).toBeVisible();
   const mabel = page.locator('#courtSheet .sc-seat.sc-visiting[title="Mabel, visiting from Bea"]');
   await expect(mabel).toHaveCount(1);
-  await expect(mabel.locator('.sc-seat-from')).toHaveText('Guest');
+  await expect(mabel.locator('.sc-seat-from svg')).toHaveCount(1);
   await expect(mabel.locator('.sprite')).toHaveCount(1);
   await expect(page.locator('#courtSheet .sc-seat.sc-visiting[title="Crumb, visiting from Cat"]')).toHaveCount(1);
   await expect(page.locator('#courtSheet .sc-castnotes')).toContainText('Mabel, visiting from Bea, sits on the jury.');
