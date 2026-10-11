@@ -411,6 +411,7 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/engine/streaks.js`, `src/engine/returns.js`, `src/engine/claimables.js` | Streak freezes, the return chest and one list of everything claimable |
 | `src/engine/collections.js`, `src/engine/legacy.js`, `src/ui/collections.js` | Sets, Legacy ranks and tokens, and the Collector's Exchange |
 | `src/native.js`, `capacitor.config.json`, `android/` | The Android app: native glue, Capacitor settings and the native project |
+| `src/version.js`, `src/errors.js`, `src/clock.js`, `src/diagnostics.js`, `src/tester-state.js`, `src/cloud/feedback.js`, `src/ui/testers.js`, `src/ui/feedback.js`, `src/ui/whats-new.js`, `src/ui/tester-panel.js`, `src/content/tester-notes.js`, `css/testers.css` | Tools for testers: the version and release notes, caught errors, Report a problem, check-ins, play days, What's new and the tester panel |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
 | `src/art/` | Creature/drawing data, SVG rendering, animation and the studio |

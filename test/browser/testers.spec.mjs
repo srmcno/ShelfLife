@@ -284,7 +284,7 @@ test('?tester=1 opens the panel, and the clock moves a day on and back', async (
 test('the report sheet, the panel and help fit a small phone', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile-chromium', 'Phone widths');
   await page.setViewportSize({ width: 320, height: 640 });
-  await open(page);
+  await open(page, { fake: createFakeSupabase() });
   await openReport(page);
   await fits(page);
   await write(page);
