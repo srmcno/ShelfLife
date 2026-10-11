@@ -12,7 +12,7 @@
 // Everything a friend can make appear here is from a word bank, a part list or
 // a cleaned display name, and goes through esc().
 import { registerFriendAction, registerPostboxSource, registerFriendsSection, registerSocialView } from './social-registry.js';
-import { cloud, social } from '../cloud/index.js';
+import { cloud, social, sync } from '../cloud/index.js';
 import { createCovenClient, covenText } from '../cloud/coven.js';
 import { coopText } from '../cloud/coop.js';
 import { CloudError } from '../cloud/client.js';
@@ -53,7 +53,7 @@ const lineOf = (list, seed = 0) => list[Math.abs(seed) % list.length];
 /* ---------- what this page knows ---------- */
 let status = null, statusAt = 0, statusError = '', loading = null;
 let board = null, boardError = '', referrals = null;
-let draft = null, pendingInvite = null, confirm = '', notice = '', busy = false, ceremony = null, composer = null, recruitDraft = '';
+let draft = null, pendingInvite = null, confirm = '', notice = '', recoveryCode = '', busy = false, ceremony = null, composer = null, recruitDraft = '';
 // Backup restores replace the nested coven while keeping the exported shelf
 // object and account. Pending rewards belong to that original nested state.
 let accountOwner = me(), shelfOwner = covenState(S()), accountVersion = 0;
@@ -287,7 +287,7 @@ function covenHTML() {
   const c = s.coven, w = s.week, g = GOAL_BY_ID[w.goal], founder = c.role === 'founder', cs = colours(s);
   const st = covenState(S());
   const notes = visibleNotes();
-  return (notice ? '<p class="cv-notice" role="status">' + esc(notice) + '</p>' : '') +
+  return noticeMarkup() +
     '<header class="cv-head"><span class="cv-head-sigil">' + sigil(c, { frame: c.frame, label: 'The sigil of ' + name(c) }) + '</span><div><h3>' + esc(name(c)) + '</h3>' +
     '<p class="cv-small">' + esc(plural(s.members.length, 'member') + ' of ' + MAX_MEMBERS + (founder ? '. You hold the candle.' : '. ' + memberName(s, s.members.find(m => m.role === 'founder')?.userId) + ' holds the candle.')) + '</p></div></header>' +
     (awardsWaiting(s) ? '<div class="cv-banner"><p><b>The Shelfies are on.</b> ' + esc(lineOf(COVEN_LINES.awardsReady, s.last.no)) + '</p><button class="btn btn-primary" type="button" data-sx="ceremony">Watch the Shelfies</button></div>' : '') +
@@ -339,7 +339,7 @@ function foundHTML() {
   const d = draft, restyle = d.restyle, sg = cleanSigil(d.sigil);
   const choice = (list, key, art) => '<div class="cv-choices" role="group" aria-label="' + key + '">' + list.map(x =>
     '<button class="cv-choice" type="button" data-sx="pick" data-key="' + key + '" data-value="' + x.id + '" aria-pressed="' + (sg[key] === x.id) + '" title="' + esc(x.name) + '">' + art(x) + '<span class="sr-only">' + esc(x.name) + '</span></button>').join('') + '</div>';
-  return (notice ? '<p class="cv-notice" role="status">' + esc(notice) + '</p>' : '') +
+  return noticeMarkup() +
     (pendingInvite ? '<p class="cv-small">' + esc('Found a coven first. ' + (pendingInvite.name || 'Your friend') + ' gets the first invitation.') + '</p>' : '') +
     '<div class="cv-found-preview"><span class="cv-found-sigil">' + sigilSVG(sg) + '</span><p class="cv-found-name" aria-live="polite">' + esc(covenName(d.name)) + '</p></div>' +
     '<div class="fr-actions"><button class="btn" type="button" data-sx="reroll">Another name</button><button class="btn" type="button" data-sx="reform">Say it differently</button></div>' +
@@ -357,7 +357,7 @@ function pickHTML(ctx) {
   if (!s?.coven) return loadingState('Finding the guest list.');
   const friends = (ctx.friends?.() || []).filter(f => f && f.userId);
   if (!friends.length) return '<p class="cv-small">' + esc('No friends to invite yet. Add someone by code first, or invite a new player.') + '</p><div class="fr-actions"><button class="btn" type="button" data-sx="coven-recruit">Invite a new player</button></div>';
-  return (notice ? '<p class="cv-notice" role="status">' + esc(notice) + '</p>' : '') + '<ul class="cv-members">' + friends.map(f => {
+  return noticeMarkup() + '<ul class="cv-members">' + friends.map(f => {
     const why = inviteBlocker(s, f);
     return '<li><span class="cv-dot"></span><div><b>' + esc(f.name || 'A friend') + '</b>' + (why ? '<small>' + esc(why) + '</small>' : '') + '</div>' +
       (why ? '' : '<button class="btn btn-sm btn-primary" type="button" data-sx="invite" data-user="' + esc(f.userId) + '">Invite</button>') + '</li>';
@@ -376,14 +376,14 @@ function boardHTML() {
   const s = current();
   if (!s?.coven) return loadingState('Reading the fridge.');
   const notes = visibleNotes();
-  return (notice ? '<p class="cv-notice" role="status">' + esc(notice) + '</p>' : '') +
+  return noticeMarkup() +
     '<div class="fr-actions"><button class="btn btn-primary" type="button" data-sx="compose">Write a note</button><button class="btn btn-ghost" type="button" data-sx="coven-open">Back to the coven</button></div>' +
     (boardError ? '<p class="cv-error">' + esc(boardError) + ' <button class="btn btn-sm" type="button" data-sx="board">Try again</button></p>' : board === null ? loadingState('Reading the fridge.')
       : notes.length ? '<ul class="cv-notes">' + notes.map(n => noteHTML(n, s)).join('') + '</ul>' : '<p class="cv-small cv-quiet">' + esc(EMPTY_BOARD) + '</p>') +
     '<p class="cv-small cv-quiet">The board keeps the last twenty notes. Anyone a note names can take it down, and so can the candle holder.</p>';
 }
 function composeHTML() {
-  return (notice ? '<p class="cv-notice" role="status">' + esc(notice) + '</p>' : '') + composer.html() +
+  return noticeMarkup() + composer.html() +
     '<div class="fr-actions"><button class="btn btn-primary" type="button" data-sx="post"' + (composer.count() ? '' : ' disabled') + '>Pin it to the board</button>' +
     '<button class="btn btn-ghost" type="button" data-sx="board">Back to the board</button></div>';
 }
@@ -431,7 +431,7 @@ function recruitHTML(ctx) {
   const code = ctx?.me?.code || '';
   const r = referrals, st = covenState(S());
   const pair = INVITE_FRAMES.map(id => PORTRAIT_BY_ID[id]?.name).filter(Boolean).join(' and ');
-  return (notice ? '<p class="cv-notice" role="status">' + esc(notice) + '</p>' : '') +
+  return noticeMarkup() +
     '<section class="cv-recruit"><div class="cv-pair"><span class="pf-sample pf-accomplice-l"></span><span class="pf-sample pf-accomplice-r"></span></div>' +
     '<p>' + esc('Bring in somebody new. When they add you as a friend and play on ' + INVITE_DAYS + ' different days, you both get a matching pair of portrait frames: ' + pair + '.') + '</p>' +
     '<p class="cv-code">' + (code ? esc(formatCode(code)) : '<span class="cv-quiet">Your code appears once Friends has loaded.</span>') + '</p>' +
@@ -479,15 +479,27 @@ function repaint(focus = null) {
   if (open && viewEl) show(lastCtx, open, focus);
   else lastCtx.refresh?.();
 }
+function noticeMarkup() {
+  return notice ? '<p class="cv-notice" role="status">' + esc(notice) + '</p>' +
+    (['cloud_copy_required', 'household_sync_required'].includes(recoveryCode) ? '<button class="btn btn-sm" type="button" data-sx="reward-copy">Open cloud save</button>' : '') : '';
+}
 function say(ctx, text) { if (!currentCtx(ctx)) return; notice = text; if (ctx?.say) ctx.say(text); }
 function toastOf(ctx, text) { if (currentCtx(ctx)) (ctx?.toast || toast)(text); }
 
 async function busyRun(ctx, work, focus) {
   if (busy || !currentCtx(ctx)) return;
   const user = me(), version = accountVersion;
-  busy = true; notice = '';
+  busy = true; notice = ''; recoveryCode = '';
   try { await work(); }
-  catch (error) { if (identity(user, version)) say(ctx, error.code === 'save_unavailable' ? 'Your device could not save the reward. Free some storage and try again.' : error.code === 'reward_legacy' ? coopText(error) : covenText(error)); }
+  catch (error) {
+    if (identity(user, version)) {
+      recoveryCode = error.code || '';
+      say(ctx, error.code === 'save_unavailable' ? 'Your device could not save the reward. Free some storage and try again.'
+        : error.code === 'cloud_copy_required' ? 'Choose the matching household in Cloud save before collecting this reward.'
+        : error.code === 'household_sync_required' ? 'Your complete household needs to finish syncing before this reward can be collected.'
+        : error.code === 'reward_legacy' ? coopText(error) : covenText(error));
+    }
+  }
   finally { if (identity(user, version)) { busy = false; if (currentCtx(ctx)) repaint(focus); } }
 }
 
@@ -531,6 +543,14 @@ async function handle(action, el, ctx) {
   const data = el?.dataset || {};
   const s = current();
   switch (action) {
+    case 'reward-copy': {
+      if (!currentCtx(ctx)) return;
+      const user = me(), version = accountVersion;
+      ctx.close?.(); document.getElementById('cloudBtn')?.click();
+      await sync.requestCopyChoice();
+      if (!identity(user, version)) return;
+      return;
+    }
     case 'coven-open': notice = ''; return openCoven(ctx, '[data-sx="compose"]');
     case 'coven-retry': statusError = ''; return refreshStatus({ force: true }).then(() => repaint(), () => repaint());
     case 'coven-found': pendingInvite = null; return openFound(ctx);
@@ -806,7 +826,7 @@ if (typeof window !== 'undefined') {
     accountOwner = user; shelfOwner = shelf; accountVersion++;
     status = null; statusAt = 0; statusError = ''; loading = null;
     board = null; boardError = ''; referrals = null; composer = null; ceremony = null;
-    draft = null; pendingInvite = null; confirm = ''; notice = ''; busy = false; recruitDraft = '';
+    draft = null; pendingInvite = null; confirm = ''; notice = ''; recoveryCode = ''; busy = false; recruitDraft = '';
     reporting = null; lastReport = 0; lastCtx = null; open = '';
     const membershipChanged = setCoven(S(), '', Date.now());
     if (bindCovenRewards(S(), user) || membershipChanged) save();

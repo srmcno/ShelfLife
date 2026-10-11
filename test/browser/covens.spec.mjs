@@ -242,6 +242,9 @@ test('restoring a backup in place on the same account invalidates a pending ches
   expect(pending.response.status).toBe(200); expect(w.fake.social.coven.claims.size).toBe(1);
   await page.locator('[data-fr="close"]').click();
   const backup = await saved(page); backup.coven.claimed = [];
+  expect(backup.coop.money.checkpoint.owner).toBe(w.ada.id);
+  expect(backup.coop.money.openings[w.ada.id]).toBeDefined();
+  expect(w.fake.coop.wallets.get(w.ada.id).opening).toBe(backup.coop.money.openings[w.ada.id].souls);
   await page.locator('#importFile').setInputFiles({ name: 'same-account-backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
   await expect(page.locator('#restoreVeil')).toBeVisible(); await page.locator('#restoreConfirm').click();
   await pending.route.fulfill({ status: pending.response.status, headers: { ...pending.response.headers, 'access-control-allow-origin': '*' }, body: pending.response.body });
@@ -339,5 +342,43 @@ test('device storage failure refuses a chest award and allows a saved retry afte
   await page.reload(); await friends(page); await main(page);
   await page.locator('[data-sx="claim"][data-tier="1"]').click();
   await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(before + 40);
+  await page.close(); expect(errors).toEqual([]);
+});
+
+
+test('a genuinely pre-opening backup chooses the matching cloud household before recovering its chest receipt', async ({ context }, info) => {
+  const w = await world(), errors = []; await createJoined(w); await w.ada.coven.contribute('2026-10-14', { coffin: 3 }); await w.bea.coven.contribute('2026-10-14', { coffin: 3 });
+  const old = structuredClone(w.ada.shelf); old.mayhem.souls = 0; old.pets[0].name = 'Older untouched shelf';
+  expect(old.coop?.money?.openings?.[w.ada.id]).toBeUndefined();
+  const page = await arrive(context, w, w.ada, errors); await friends(page); await main(page);
+  await page.locator('[data-sx="claim"][data-tier="2"]').click();
+  await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(370);
+  const gift = w.fake.coop.receipts.find(row => row.owner === w.ada.id && row.detail?.reward === 'coven_chest')?.detail.curio;
+  expect(gift).toBeTruthy(); expect((await saved(page)).coven.curios[gift]).toBe(1);
+  await page.locator('[data-fr="close"]').click(); await page.locator('#tabMore').click(); await page.locator('#cloudBtn').click();
+  await page.locator('#cloudSyncNow').click(); await expect(page.locator('#cloudStatus')).toContainText('Synced just now.');
+  await expect.poll(() => w.fake.saves.get(w.ada.id).data.mayhem.souls).toBe(370);
+  await page.locator('#cloudClose').click();
+  await page.locator('#importFile').setInputFiles({ name: 'before-opening.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(old)) });
+  await page.locator('#restoreConfirm').click();
+  await friends(page); await main(page);
+  await page.locator('[data-sx="claim"][data-tier="2"]').click();
+  await expect(page.locator('.cv-notice')).toContainText('Choose the matching household');
+  expect((await saved(page)).mayhem.souls).toBe(0);
+  expect(w.fake.saves.get(w.ada.id).data.mayhem.souls).toBe(370,'restoring old metadata cannot overwrite the recovery household');
+  await page.locator('[data-sx="reward-copy"]').click();
+  await expect(page.locator('#cloudVeil')).toHaveClass(/open/);
+  await expect(page.locator('#cloudConflict')).toBeVisible();
+  await page.locator('#cloudUseRemote').click(); await expect(page.locator('#cloudStatus')).toContainText('Now using the cloud copy.');
+  await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(370);
+  const spare = await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.v4.beforecloud')));
+  expect(spare.mayhem.souls).toBe(0); expect(spare.pets[0].name).toBe('Older untouched shelf');
+  await page.locator('#cloudClose').click(); await friends(page); await main(page);
+  await expect(page.locator('[data-sx="claim"][data-tier="2"]')).toHaveCount(0);
+  expect((await saved(page)).coven.curios[gift]).toBe(1);
+  expect(w.fake.social.coven.claims.size).toBe(1);
+  expect(w.fake.coop.receipts.filter(row => row.owner === w.ada.id && row.detail?.reward === 'coven_chest')).toHaveLength(1);
+  await capture(page, info, 'coven-cloud-recovery');
+  await page.reload(); await friends(page); await main(page); expect((await saved(page)).mayhem.souls).toBe(370); expect((await saved(page)).coven.curios[gift]).toBe(1);
   await page.close(); expect(errors).toEqual([]);
 });
