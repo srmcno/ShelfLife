@@ -148,10 +148,11 @@ export const INVITE_REWARD_CAP = 10;
 export const INVITE_REPEAT_SOULS = 50;
 
 /* ---------- the Shelfies: Monday awards ----------
-   `stat` names what wins it. Every member wins one thing. The lowest
-   contributor in a coven of two or more is given Least Help first; everybody
-   else is given the first award they lead, in this order; anyone who did
-   nothing at all gets one of the last three. Citations use {name} and {n}. */
+   `stat` names what wins it (a counter, goal, days, late or notes). Every
+   member wins one thing (engine/coven.js computeAwards): Least Help for the
+   lowest contributor, then the award where each member stands out most;
+   'support' awards for anyone outshone everywhere, 'zero' awards for anyone
+   who did nothing at all. Citations use {name} and {n}. */
 export const AWARDS = [
   { id: 'carried', stat: 'goal', title: 'Carried the Coven', lines: [
     '{name} did {n} for the rite, which is more than the rest of you put together, if you round generously.',
@@ -213,6 +214,12 @@ export const AWARDS = [
     '{name} pinned {n} notes to the board. Several were about the board.',
     '{n} notes from {name}. The magnets have unionised.',
     '{name} left {n} notes. None of them were thank you notes. One was nearly a thank you note.'] },
+  { id: 'supporting', stat: 'support', title: 'Best Supporting Member', lines: [
+    '{name} did {n} things this week, all of them in the background, which is where the real work happens and nobody can check.',
+    '{name} contributed {n}, quietly, and has asked that this be mentioned loudly.'] },
+  { id: 'honourable', stat: 'support', title: 'Honourable Mention, Grudging', lines: [
+    '{name} did {n}, which was not the most of anything, but was not nothing, and the committee is legally obliged to say so.',
+    'For {n} things done and none of them done the most, {name} receives this mention, given through gritted dentures.'] },
   { id: 'least', stat: 'least', title: 'Least Help', lines: [
     '{name} contributed {n}, which the committee has decided to call a statement.',
     'With {n} to their name, {name} is this week’s Least Help. It is not an insult. It is a measurement.',

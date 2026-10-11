@@ -240,12 +240,13 @@ test('contributions: running totals, idempotent, capped per player per day acros
   await rejects(contribute(A, { care: 3 }, far), /bad_day/);
   await rejects(contribute(A, { care: 3 }, ahead), /bad_day/);
   await rejects(contribute(A, { care: 3 }, 'Tuesday'), /bad_day/);
-  const s = await status(A), k = s.week.counter;
-  const first = await contribute(A, { [k]: 2, omen: 1 });
+  // The goal is drawn at random for each coven, so whichever counter it is, two or its daily cap.
+  const s = await status(A), k = s.week.counter, two = Math.min(2, DAILY_CAPS[k]);
+  const first = await contribute(A, { [k]: two });
   assert.equal(first.ok, true);
-  assert.equal(first.mine, 2);
-  assert.equal((await contribute(A, { [k]: 2, omen: 1 })).mine, 2, 'the same report twice changes nothing');
-  assert.equal((await contribute(A, { [k]: 1 })).mine, 2, 'a lower running total never takes anything back');
+  assert.equal(first.mine, two);
+  assert.equal((await contribute(A, { [k]: two })).mine, two, 'the same report twice changes nothing');
+  assert.equal((await contribute(A, { [k]: 1 })).mine, two, 'a lower running total never takes anything back');
   assert.equal((await contribute(A, { omen: 5 })).ok, true);
   assert.equal(await value(`select amount from public.coven_tallies where user_id = $1 and counter = 'omen' and day = $2::date`, [A, today]), 1, 'one omen a day');
   const cap = DAILY_CAPS[k];

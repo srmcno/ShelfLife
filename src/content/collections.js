@@ -87,7 +87,10 @@ export const PORTRAIT_FRAMES = [
   { id: 'doily', name: 'Doily, Aggressive', line: 'Crocheted by a great-aunt who had a lot of time and a lot of feelings.', cost: 750 },
   { id: 'lineup', name: 'Police Lineup', line: 'Height marks on the wall behind. They are all the same height. It is being looked into.', cost: 900 },
   { id: 'gold-leaf', name: 'Leaf of Legacy', line: 'Gilded edges and an expression of long-suffering pride.', tokens: 3 },
-  { id: 'obsidian-oval', name: 'Obsidian Oval', line: 'A portrait frame so polished that the resident can see itself being judged.', tokens: 4 }
+  { id: 'obsidian-oval', name: 'Obsidian Oval', line: 'A portrait frame so polished that the resident can see itself being judged.', tokens: 4 },
+  // Never sold: a matching pair for bringing a new player in (src/content/coven.js INVITE_FRAMES).
+  { id: 'accomplice-l', name: 'The Accomplice, Left', line: 'Half of a matching pair. The other half is on a friend’s shelf, looking the other way.', reward: 'invite' },
+  { id: 'accomplice-r', name: 'The Accomplice, Right', line: 'The other half. Together they make a frame. Apart they make an alibi.', reward: 'invite' }
 ];
 export const PORTRAIT_BY_ID = Object.fromEntries(PORTRAIT_FRAMES.map(f => [f.id, f]));
 
