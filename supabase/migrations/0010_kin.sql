@@ -571,7 +571,8 @@ begin
   if (select count(*) from public.kin_letters where from_user = uid and kind = 'reply' and created_at > now() - interval '1 day') >= 20 then
     perform private.refuse('rate_limited');
   end if;
-  writer := coalesce(private.kin_shelf_card(uid, l.reader ->> 'id'), l.reader);
+  -- Both devices write the reply from the same cards, so it reads the same on each.
+  writer := l.reader;
   insert into public.kin_letters (pal_id, from_user, to_user, kind, week, reply_to, choice, writer, reader)
   values (l.pal_id, uid, l.from_user, 'reply', l.week, l.id, p_choice, writer, l.writer)
   returning id into made;

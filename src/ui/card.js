@@ -20,6 +20,7 @@ import { playFeed, playFuss, playClean } from '../audio/sound.js';
 import { petById, propById, pick, addNote, save, clamp } from '../state.js';
 import { SHELF_SCENES } from '../content/shelf-theatre.js';
 import { lampIsOn, toggleLamp, sceneAvailability, availableShelfScenes } from '../engine/shelf-theatre.js';
+import { kinCardHTML } from './kin-card.js';
 
 const cardVeil = document.getElementById('cardVeil');
 const cardSheet = document.getElementById('cardSheet');
@@ -158,7 +159,7 @@ export function openCard(state, id, keepScroll) {
   const intention=residentIntention(state,pet),memories=residentMemories(state,pet);
   if(intention)html+='<div class="resident-intention"><strong>'+escapeHtml(intention.label)+'</strong>'+escapeHtml(intention.text)+'</div>';
   if(memories.length)html+='<details class="resident-memories" id="residentMemories"><summary>What it remembers about you</summary><ul>'+memories.slice(0,6).map(memory=>'<li>'+escapeHtml(memory.text)+'<small>'+escapeHtml(memory.evidence)+'</small></li>').join('')+'</ul></details>';
-  html += residentLifeHTML(pet) + residentStory(state, pet);
+  html += residentLifeHTML(pet) + residentStory(state, pet) + kinCardHTML(state, pet);
   html += '<p class="bio">' + escapeHtml(pet.bio) + '</p>';
   html += '<div class="card-section-title">On file</div>' + onFile(state, pet);
   html += '<div class="card-section-title">Particulars</div>';
