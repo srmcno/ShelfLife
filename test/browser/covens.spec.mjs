@@ -366,9 +366,11 @@ test('a genuinely pre-opening backup chooses the matching cloud household before
   await expect(page.locator('.cv-notice')).toContainText('Choose the matching household');
   expect((await saved(page)).mayhem.souls).toBe(0);
   expect(w.fake.saves.get(w.ada.id).data.mayhem.souls).toBe(370,'restoring old metadata cannot overwrite the recovery household');
+  await capture(page, info, 'coven-reward-needs-cloud');
   await page.locator('[data-sx="reward-copy"]').click();
   await expect(page.locator('#cloudVeil')).toHaveClass(/open/);
   await expect(page.locator('#cloudConflict')).toBeVisible();
+  await capture(page, info, 'coven-household-choice');
   await page.locator('#cloudUseRemote').click(); await expect(page.locator('#cloudStatus')).toContainText('Now using the cloud copy.');
   await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(370);
   const spare = await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.v4.beforecloud')));
