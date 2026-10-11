@@ -58,7 +58,7 @@ test('release notes: this version has some, newest first, short and in the house
       assert.doesNotMatch(item.text, /'/, 'curly apostrophes');
     }
   }
-  assert.match(read('src/version.js'), /Integrator: append this release’s social features here/);
+  assert.doesNotMatch(read('src/version.js'), /Integrator: append/, 'release notes contain the finished feature descriptions');
 });
 
 test('changesSince shows what is newer than the last version seen, at most two releases', () => {

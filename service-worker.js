@@ -145,6 +145,7 @@ const SHELL = [
   "./src/coop-state.js",
   "./src/content/coop.js",
   "./src/engine/coop.js",
+  "./src/engine/coop-money.js",
   "./src/engine/duel.js",
   "./src/cloud/coop.js",
   "./src/ui/coop.js",

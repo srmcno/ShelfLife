@@ -23,15 +23,14 @@ export const CHANGES = [
     version: '1.1.0',
     date: '2026-10-11',
     items: [
-      { title: 'The Almanac', text: 'A chapter a month, each with thirty tiers of prizes for things you were doing anyway. Miss one and its curios turn up later in Back Issues, at a markup the Collector calls “sentimental”.' },
-      { title: 'The Thin Season', text: 'From 15 October to 2 November some coffins hold one of six seasonal curios. They stay in the cabinet afterwards. Nobody asked them to.' },
-      { title: 'Shelf Court reruns', text: 'Cases now have twisted versions, so memorising last week’s verdict will get you booed. You also get one Objection an episode, and a ten-rank bench career that starts at Courtroom Sweeper.' },
-      { title: 'A first day with directions', text: 'New households get a six-step tour and one card saying what to do next. Help → Glossary explains every number on the screen, including the ones you were pretending to understand.' },
-      { title: 'Calm mode', text: 'More → Calm mode stops everything moving. The residents still judge you. They just do it without blinking, which is worse.' },
-      { title: 'Report a problem', text: 'More → Report a problem sends a note to the people responsible, with the details that help them fix it. You see every word before it goes. Blame is not attached.' }
-      // Integrator: append this release’s social features here (the Postbox,
-      // trades, joint Court and the rest), one { title, text } each, in the
-      // same voice. Keep the list short: six to eight items in all.
+      { title: 'The Almanac and Thin Season', text: 'A chapter a month, with thirty tiers of prizes. Missed curios turn up in Back Issues. From 15 October to 2 November, coffins can also hold seasonal curios that stay in the cabinet afterwards.' },
+      { title: 'Directions and Calm mode', text: 'New households get a six-step tour and one card saying what to do next. Help → Glossary explains the numbers; More → Calm mode reduces background movement.' },
+      { title: 'The Postbox', text: 'Visit friends, invite their residents to stay, send treats, wave and sign guestbooks. Residents come home with postcards and souvenirs. The postbox keeps the replies together.' },
+      { title: 'Trades', text: 'Give or swap spare curios and residents with friends, with counter-offers and a final confirmation. Packed residents stay on the shelf until the trade is sealed.' },
+      { title: 'The Joint Bench', text: 'Serve papers for a friend to judge. Both rulings stay sealed until the second judge finishes, then the Bench reveals whether you agreed. Ordinary Court also has reruns, an Objection and a bench career.' },
+      { title: 'Covens and Mischief', text: 'Start or join a coven for shared weekly goals and a notice board. Friends can also send hexes, offer care help and visit seasonal trick-or-treat doors.' },
+      { title: 'Company for expeditions', text: 'Hire a friend’s resident, challenge them to an arcade duel, or introduce residents to raise foundlings and start pen-pal letters.' },
+      { title: 'Help improve Shelf Life', text: 'Review a problem report before sending it, or queue it offline. More controls play-day counting. Tester tools mark the save so test scores stay out of competition.' }
     ]
   }
 ];
