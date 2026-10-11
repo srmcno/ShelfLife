@@ -271,6 +271,101 @@ After the first visit, the installed game also works offline. Returning players 
 **Save & refresh** banner when a new edition is available. An active interaction or failed save
 prevents that refresh. Installation is available through your browser's app or home-screen menu.
 
+## For testers, and for reading what they say
+
+**More → Report a problem** (also in **Help → For testers**) is the main way to tell us something. Pick
+Bug, Confusing, Idea or Love it, write up to 1000 characters, optionally say what you were doing, and
+choose whether to attach diagnostics: the version and build, web or Android, the browser, screen size,
+effects and Calm settings, how many residents, days since the shelf started, the save's size, which
+sheet was open, whether the device was online and signed in to cloud save (never the email), and the
+last 20 errors the game caught. The game shows exactly what will be sent before it sends. With cloud
+save on it goes straight to the project (ten a day). Without it the report waits on this device and is
+sent once you sign in; **Copy report** puts the same text on the clipboard for an email. Nobody is ever
+signed in silently. The [issue form](https://github.com/srmcno/ShelfLife/issues/new/choose) still works.
+
+Errors are kept on the device (the last 20, message, file, line and time, never the shelf) under
+`shelflife.errors`, outside the save. The first one in a session brings up a small "Something on the
+shelf broke. Tell us?" notice. Three times in a tester's first week (after day two, after the first
+Shelf Court hearing, after day seven) a one-tap **How is it going?** card asks for a rating from 1 to 5;
+"Not now" twice and it stops asking.
+
+The version and the release notes live in `src/version.js`. More shows "Shelf Life 1.1.0 · build
+2026-10-11", and the first launch after an update shows a short **What's new** sheet, once, never on a
+brand-new install. Tap the version line seven times, or open the game with `?tester=1`, for the
+**tester panel**: start an emergency now, ready tonight's omen, finish the waits, move the clock a day on
+(and back), replay the first-day tour, rerun the effects benchmark, see the save's size and contents,
+export the save, check for an update, and pretend to be offline. Anything there that bends time or hands
+out souls marks the save as a tester save for good, and a tester save never sends daily challenge scores
+or Court verdict stars to the server. The weekly notes for testers are in `src/content/tester-notes.js`:
+edit them there.
+
+With cloud save on, the game also records which days each player opens it (one row per day, nothing
+else) so the owner can see retention. **More → Help improve the game: count which days I play** switches
+it off, and switching it off deletes the days already counted. [privacy.html](privacy.html) says so.
+
+### Reading feedback and retention in Supabase
+
+Both tables are in `supabase/migrations/0006_feedback_and_play_days.sql`; nobody can read them through
+the API. To look at them, open the project at [supabase.com/dashboard](https://supabase.com/dashboard):
+
+- **Table Editor** (left sidebar) → schema `public` → `feedback` shows every report as a row. Click a
+  `diagnostics` cell to read it. `play_days` is one row per player per day.
+- **SQL Editor** (left sidebar) → **New query**, paste one of the queries below, then **Run** (or
+  Ctrl+Enter). Saved queries stay in the sidebar for next time.
+
+```sql
+-- Latest feedback, newest first
+select created_at, kind, rating, moment, body, doing, app_version, platform,
+       diagnostics -> 'errors' as errors, diagnostics, user_id
+  from public.feedback
+ order by created_at desc
+ limit 200;
+```
+
+```sql
+-- Daily active players, the last 30 days
+select day, count(*) as players
+  from public.play_days
+ where day > current_date - 30
+ group by day
+ order by day desc;
+```
+
+```sql
+-- Retention: D1, D7 and D30 by the week players started
+-- (a player "starts" on their first counted day; a blank means too soon to tell)
+with firsts as (
+  select user_id, min(day) as first_day from public.play_days group by user_id
+), marked as (
+  select f.first_day, date_trunc('week', f.first_day)::date as signup_week,
+         exists (select 1 from public.play_days p where p.user_id = f.user_id and p.day = f.first_day + 1) as d1,
+         exists (select 1 from public.play_days p where p.user_id = f.user_id and p.day = f.first_day + 7) as d7,
+         exists (select 1 from public.play_days p where p.user_id = f.user_id and p.day = f.first_day + 30) as d30
+    from firsts f
+)
+select signup_week, count(*) as players,
+       round(100.0 * count(*) filter (where d1 and first_day + 1 < current_date)
+         / nullif(count(*) filter (where first_day + 1 < current_date), 0)) as d1_pct,
+       round(100.0 * count(*) filter (where d7 and first_day + 7 < current_date)
+         / nullif(count(*) filter (where first_day + 7 < current_date), 0)) as d7_pct,
+       round(100.0 * count(*) filter (where d30 and first_day + 30 < current_date)
+         / nullif(count(*) filter (where first_day + 30 < current_date), 0)) as d30_pct
+  from marked
+ group by signup_week
+ order by signup_week desc;
+```
+
+```sql
+-- Check-ins: how it is going, at each moment
+select moment, count(*) as answers, round(avg(rating), 1) as average_rating
+  from public.feedback
+ where kind = 'pulse'
+ group by moment
+ order by moment;
+```
+
+`test/feedback_sql.test.mjs` runs these exact queries, so they are known to work.
+
 ## Development
 
 No runtime dependencies, required backend or bundler. Plain ES modules, local styles, SVG creatures and
@@ -424,7 +519,8 @@ a real project (set `SHELF_REAL_CLOUD_CONFIG=1` to serve the real one).
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run `supabase/migrations/0001_accounts_and_saves.sql`, then
-   `supabase/migrations/0002_social.sql` for Friends. Running either again is harmless.
+   `supabase/migrations/0002_social.sql` for Friends, then the later ones in order (such as
+   `0006_feedback_and_play_days.sql` for feedback and play days). Running any of them again is harmless.
 3. Authentication → Sign In / Providers: enable **Anonymous sign-ins**, keep **Email** on, and enable
    **Confirm email**. Disabling confirmation automatically attaches email addresses to anonymous
    accounts without sending a code; the game refuses that configuration before changing the account.
