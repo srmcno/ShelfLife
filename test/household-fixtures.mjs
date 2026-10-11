@@ -73,6 +73,14 @@ export function householdFixture(kind='established', now=Date.now()) {
     s.exchange={frames:['tin','seance-felt'],frame:'tin',portraits:['cameo'],portrait:{qa0:'cameo'},commissions:['portrait'],titles:['ch:thin-2026','set:paper','cm:portrait'],title:'set:paper'};
     s.decor.owned=['room:pumpkin-hollow','wood:burnt-pumpkin','wall:scallop'];
     s.settings.nudgeCats={emergency:true,away:false,almanac:true,chest:true};
+    // Kin: Pip was found on the step, Agnes's co-parent writes to her, and Agnes answered once.
+    const friend='00000000-0000-4000-8000-0000000000f1', pal='00000000-0000-4000-8000-0000000000f2', basket='00000000-0000-4000-8000-0000000000f3';
+    s.kin={foundlings:[{pet:'qa2',basket,born:now-3*86400000,name:'Pip',parents:[{id:'qa0',name:'Agnes',home:true},{id:'b0',name:'Grubbs',home:false,friend,shelf:'Bea'}],twin:{friend,shelf:'Bea'}}],
+      letters:[{id:'00000000-0000-4000-8000-0000000000f4',pal,week:144,at:now-2*86400000,dir:'in',kind:'weekly',mine:'qa0',theirs:'Grubbs',friend,shelf:'Bea',
+        text:'Dear Agnes,\n\nPip bit the lamp. I told it you would be disappointed.\n\nYours in arrears,\nGrubbs\n\nP.S. You are on a list.',read:true,replied:true,
+        cards:{seed:42,writer:{name:'Grubbs',traits:['spiteful']},reader:{name:'Agnes',traits:['spiteful']}}},
+        {id:'00000000-0000-4000-8000-0000000000f5',pal,week:144,at:now-86400000,dir:'out',kind:'reply',mine:'qa0',theirs:'Grubbs',friend,shelf:'Bea',text:'Dear Grubbs,\n\nReceived. Read. Noted.\n\nYours,\nAgnes',read:true}],
+      step:[],notices:[],collected:[basket]};
   }
   if(kind==='drawing-heavy') { raster ||= drawing(); s.pets.forEach(p=>p.art={body:raster,stamps:Array.from({length:18},(_,i)=>({kind:i%2?'eyes':'legs',x:220+(i%6)*30,y:210+Math.floor(i/6)*65,size:24,rotation:i*3,color:'#271927'})),bounds:{x:.1,y:.1,width:.8,height:.85}}); }
   // A regular at Shelf Court: versions seen, a recent list, who last sat where, a rank and owed rewards.

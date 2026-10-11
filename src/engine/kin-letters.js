@@ -60,7 +60,7 @@ export function writeLetter({ seed, week, history, writer, reader, caseId = '', 
     : GENERAL_PS[walk(GENERAL_PS.length, key + ':ps', k)];
   const values = { to, from, case: caseTitle(caseId), child: child || 'the foundling' };
   const body = fill(opening + ' ' + middle, values);
-  const parts = { greeting: 'Dear ' + to + ',', body, signoff, from, ps: 'P.S. ' + fill(ps, values) };
+  const parts = { greeting: 'Dear ' + to + ',', body, opening: fill(opening, values), middle: fill(middle, values), signoff, from, ps: 'P.S. ' + fill(ps, values) };
   const text = [parts.greeting, parts.body, parts.signoff + '\n' + parts.from, parts.ps].join('\n\n');
   return { text: text.slice(0, LETTER_MAX), parts };
 }
