@@ -11,6 +11,7 @@ import { createFakeSocial } from './fake-social.mjs';
 import { createFakeFeedback } from './fake-feedback.mjs';
 import { attachFakeHearings } from './fake-hearings.mjs';
 import { createFakeCoven } from './fake-coven.mjs';
+import { createFakeKin } from './fake-kin.mjs';
 
 export const FAKE_URL = 'https://fake.supabase.test';
 export const FAKE_KEY = 'fake-anon-key';
@@ -105,6 +106,8 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const feedback = createFakeFeedback({ now, json, rest }); Object.assign(RPC, feedback.RPC);
   social.hearings = attachFakeHearings({ RPC, social, profiles, now, json, rest, uuid });
   Object.assign(RPC, createFakeCoven({ users, profiles, social, now, json, rest, uuid }).RPC); // fake.social.coven
+  const kin = createFakeKin({ social, users, profiles, now, json, rest, uuid, rpc: { ...RPC } });
+  Object.assign(RPC, kin.RPC);
   const TABLES = {
     ...social.TABLES,
     saves: user => [...saves].filter(([id]) => id === user.id).map(([id, r]) => ({ user_id: id, rev: r.rev, data: r.data, device_id: r.device_id, updated_at: r.updated_at })),
@@ -251,7 +254,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   }
 
   return {
-    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, feedback,
+    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, feedback, kin,
     fetch: fakeFetch, route, handle,
     setOffline(value = true) { offline = !!value; },
     failNext(count = 1, status = 500) { for (let i = 0; i < count; i++) failures.push(status); },

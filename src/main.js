@@ -13,6 +13,7 @@ import { initFriends } from './ui/friends.js';
 import { initSocialInbox } from './ui/social-inbox.js';
 import { initTesters } from './ui/testers.js';
 import './ui/coven.js';
+import './ui/kin.js';
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
