@@ -14,8 +14,10 @@ import { createTrades, readTrade, readTradeList, readTradeBook, tradeSnapshot, t
 import { createTradeSync } from '../src/cloud/trade-sync.js';
 import { normalizeTrades, blankTrades, tradesState } from '../src/trade-state.js';
 import {
-  spareCount, spares, applyTrade, packingFor, residentBlock, offerBlock, acceptBlock, toggleWish, seatWaiting, lastLineFor, firstLineFor, tradeBook
+  spareCount, spares, applyTrade, packingFor, residentBlock, offerBlock, acceptBlock, toggleWish, seatWaiting, lastLineFor, firstLineFor, tradeBook,
+  collectWaiting, effectAsTrade, ledgerCursor, declaredHoldings
 } from '../src/engine/trades.js';
+import { readLedger, readLedgerEntry } from '../src/cloud/trades.js';
 import { LAST_LINES, FIRST_LINES, WELCOME_LINES, FAREWELL_LINES, TRADE_LINES } from '../src/content/trades.js';
 
 const NOW = Date.UTC(2026, 9, 3, 17);
@@ -415,4 +417,233 @@ test('the trading book is published when it changes, and only then', async () =>
   await ada.sync.sync({ force: true });
   assert.equal(fake.calls('publish_trade_book').length, calls, 'an unchanged book is not sent again');
   assert.equal(tradeSnapshot({ id: 'x', name: 'Big', art: { body: 'data:image/png;base64,' + 'A'.repeat(130000), stamps: [] } }), null, 'a drawing too large to post is refused, never dropped');
+});
+
+// ---------------------------------------------------------------------------
+// Reservations across devices, the durable ledger, and the doorstep
+// ---------------------------------------------------------------------------
+
+test('two honest devices cannot both promise the same moth wings: the server refuses the second', async () => {
+  const { fake, ada, bea } = await world();
+  const phone = secondDevice(fake, ada, clone(ada.state)); // has not looked since
+  const tablet = await ada.sync.propose({ to: bea.id, toName: 'Bea', draft: curioDraft({ 'moth-wing': 2 }) });
+  assert.equal(offerBlock(phone.state, curioDraft({ 'moth-wing': 2 })), '', 'the phone’s own copy sees two spare');
+  await assert.rejects(phone.sync.propose({ to: bea.id, toName: 'Bea', draft: curioDraft({ 'moth-wing': 2 }) }), err => err.code === 'not_enough' && /promised them already/.test(err.message));
+  assert.equal(phone.state.trades.escrow[Object.keys(phone.state.trades.escrow).find(id => id !== tablet.id)], undefined, 'nothing held for a refused offer');
+  await bea.sync.sync({ force: true });
+  await bea.sync.accept(bea.sync.cache().trades.find(t => t.id === tablet.id));
+  await ada.sync.sync({ force: true });
+  await phone.sync.sync({ force: true });
+  assert.deepEqual([ada.state.mayhem.curios['moth-wing'], phone.state.mayhem.curios['moth-wing'], bea.state.mayhem.curios['moth-wing']], [1, 1, 2], 'three wings in all, before and after');
+  // A stale copy declares 3 at cursor 0; the server knows 2 have left since and refuses even one.
+  const stale = secondDevice(fake, ada, household(['Agnes', 'Mabel', 'Pip'], { 'moth-wing': 3 }));
+  await assert.rejects(stale.trades.propose({ to: bea.id, give: { curios: { 'moth-wing': 1 } }, want: {}, have: { seq: 0, curios: { 'moth-wing': 3 } } }), err => err.code === 'not_enough');
+});
+
+test('an acceptance that hands curios over declares them, and a double promise is refused', async () => {
+  const { ada, bea } = await world();
+  const ask = await ada.sync.propose({ to: bea.id, toName: 'Bea', draft: curioDraft({ 'moth-wing': 1 }, { 'half-candle': 1 }) });
+  await bea.sync.sync({ force: true });
+  // Bea's other device promised her only spare candle to Ada first (straight to the server, as another device would).
+  await bea.trades.propose({ to: ada.id, give: { curios: { 'half-candle': 1 } }, want: {}, have: declaredHoldings(bea.state, bea.id, ['half-candle']) });
+  await assert.rejects(bea.sync.accept(bea.sync.cache().trades.find(t => t.id === ask.id)), err => err.code === 'not_enough');
+  assert.equal(bea.state.trades.escrow[ask.id], undefined, 'the hold is released');
+});
+
+test('a backup restored 61 days after a trade still learns of it from the ledger', async () => {
+  const { fake, ada, bea } = await world();
+  const backup = createBackup(ada.state, NOW).text; // before the offer
+  const mabel = ada.state.pets.find(p => p.name === 'Mabel');
+  const offer = await ada.sync.propose({ to: bea.id, toName: 'Bea', draft: { mode: 'resident', giveResident: mabel.id } });
+  await bea.sync.sync({ force: true });
+  await bea.sync.accept(bea.sync.cache().trades.find(t => t.id === offer.id));
+  await ada.sync.sync({ force: true });
+  assert.equal(ledgerCursor(ada.state, ada.id), 1, 'the cursor is saved with the shelf');
+  clock += 61 * DAY;
+  assert.ok(!(await ada.trades.list([])).trades.some(t => t.id === offer.id), 'the list has forgotten it (the old bug’s window)');
+  ada.box.state = normalizeState(JSON.parse(backup));
+  assert.equal(ledgerCursor(ada.state, ada.id), 0);
+  const r = await ada.sync.sync({ force: true });
+  assert.equal(r.results.length, 1);
+  assert.ok(!ada.state.pets.some(p => p.id === mabel.id), 'Mabel stays on Bea’s shelf');
+  assert.ok(ada.state.trades.notices.some(n => n.kind === 'restored'));
+  assert.equal((await ada.sync.sync({ force: true })).results.length, 0, 'and only once');
+  // Two years on, with the trade row long gone, a copy from before still catches up; so does Bea’s.
+  clock += 700 * DAY;
+  await ada.trades.list([]);
+  ada.box.state = normalizeState(JSON.parse(backup));
+  await ada.sync.sync({ force: true });
+  assert.ok(!ada.state.pets.some(p => p.id === mabel.id));
+  bea.box.state = household(['Gladys', 'Snag', 'Wanda'], {});
+  bea.box.state.started = NOW - DAY;
+  await bea.sync.sync({ force: true });
+  assert.equal(bea.state.pets.filter(p => p.id === 'tr-' + offer.id).length, 1, 'Mabel arrives on Bea’s restored copy, drawing and all');
+});
+
+test('the ledger pages, and a copy written by an older build skips what that build had settled', async () => {
+  const { fake, ada, bea } = await world({ 'moth-wing': 30 });
+  const ids = [];
+  for (let i = 0; i < 4; i++) {
+    const o = await ada.sync.propose({ to: bea.id, toName: 'Bea', draft: curioDraft({ 'moth-wing': 1 }) });
+    await bea.sync.sync({ force: true });
+    await bea.sync.accept(bea.sync.cache().trades.find(t => t.id === o.id));
+    ids.push(o.id);
+  }
+  const page = await ada.trades.ledger(1, 2);
+  assert.deepEqual([page.entries.map(e => e.seq), page.next, page.more, page.head], [[2, 3], 3, true, 4]);
+  await ada.sync.sync({ force: true });
+  assert.equal(ada.state.mayhem.curios['moth-wing'], 26);
+  // A save from before the ledger: no cursor, and an older build applied everything up to 75 days before it was last played.
+  const raw = clone(ada.state.trades);
+  delete raw.ledger; delete raw.floor;
+  assert.equal(normalizeTrades(raw, { lastTick: NOW + 80 * DAY }, NOW + 90 * DAY).floor, NOW + 5 * DAY);
+  assert.equal(normalizeTrades(clone(ada.state.trades), { lastTick: NOW }, NOW).floor, 0, 'a save from this build keeps its own');
+  const legacy = clone(ada.state);
+  legacy.trades = { ...raw, applied: [] };
+  const loaded = normalizeState(legacy);
+  loaded.trades.floor = NOW + DAY; // as if last played well after these four were settled and forgotten
+  const old = secondDevice(fake, ada, loaded);
+  const r = await old.sync.sync({ force: true });
+  assert.equal(r.results.length, 0, 'nothing applied twice');
+  assert.equal(old.state.mayhem.curios['moth-wing'], 26);
+  assert.equal(ledgerCursor(old.state, ada.id), 4, 'but the cursor moves past them');
+  assert.equal(readLedgerEntry({ seq: 0 }), null);
+  assert.equal(readLedger({ effects: [{ seq: 1, trade_id: ids[0], kind: 'curio', role: 'from', curios_out: [{ id: 'nope', n: 1 }] }], head: 1, next: 1 }).entries[0].curiosOut.length, 0, 'unknown curios are dropped');
+});
+
+test('four residents arriving at a full copy all wait on the doorstep, and come in one by one', async () => {
+  const { fake, ada, bea } = await world();
+  const cat = await trader(fake, 'Cat', household(['Crumb', 'Doreen', 'Nell'], {}));
+  await cat.social.addFriend(bea.code);
+  await bea.social.respond(cat.id, true);
+  const backup = clone(bea.state);
+  const gifts = [];
+  for (const [giver, week] of [[ada, 0], [cat, 1]]) {
+    clock = NOW + week * 8 * DAY;
+    for (const pet of giver.state.pets.slice(0, 2)) {
+      const o = await giver.sync.propose({ to: bea.id, toName: 'Bea', draft: { mode: 'resident', giveResident: pet.id } });
+      await bea.sync.sync({ force: true });
+      await bea.sync.accept(bea.sync.cache().trades.find(t => t.id === o.id));
+      gifts.push(o.id);
+    }
+  }
+  assert.equal(gifts.length, 4);
+  // An old copy of Bea's shelf with every slot taken by furniture catches up.
+  backup.slots = backup.slots.map((x, i) => x || 'filler' + i);
+  const full = secondDevice(fake, bea, backup);
+  const r = await full.sync.sync({ force: true });
+  assert.equal(r.results.length, 4);
+  assert.ok(r.results.every(x => x.arrived?.waiting));
+  assert.deepEqual(full.state.trades.waiting.map(w => w.trade).sort(), [...gifts].sort(), 'all four wait; nobody was pushed off the step');
+  assert.ok(gifts.every(id => full.state.trades.applied.some(a => a.id === id)));
+  assert.equal(normalizeTrades(clone(full.state.trades), full.state, now()).waiting.length, 4, 'and all four survive a reload');
+  assert.match(collectWaiting(full.state, gifts[0], now()), /shelf is full/);
+  // Room for two.
+  for (let i = 0; i < 2; i++) full.state.slots[full.state.slots.findIndex(x => x?.startsWith('filler'))] = null;
+  const first = full.state.trades.waiting[2].trade;
+  assert.equal(collectWaiting(full.state, first, now()), '');
+  assert.ok(full.state.pets.some(p => p.id === 'tr-' + first));
+  assert.equal(full.state.trades.waiting.length, 3);
+  assert.equal(seatWaiting(full.state, now()).length, 1, 'the next free slot takes the next in line');
+  assert.equal(full.state.trades.waiting.length, 2);
+  assert.equal((await full.sync.sync({ force: true })).results.length, 0, 'and none of them arrives twice');
+  assert.equal(full.state.trades.waiting.length, 2);
+});
+
+test('engine: an accepted arrival is never dropped, however many are waiting', () => {
+  const me = '00000000-0000-4000-8000-0000000000aa';
+  const s = household(['Agnes'], {});
+  s.slots = s.slots.map((x, i) => x || 'filler' + i);
+  const ids = Array.from({ length: 9 }, (_, i) => '00000000-0000-4000-8000-00000000010' + i);
+  ids.forEach((tid, i) => {
+    const entry = readLedgerEntry({ seq: i + 1, trade_id: tid, kind: 'resident', role: 'to', partner_name: 'Ada', settled_at: new Date(NOW).toISOString(),
+      curios_out: [], curios_in: [], resident_out: null, resident_in: { id: 'ada-' + i, name: 'Guest ' + i, traits: ['damp'], art: { creature: { body: 'pear', palette: 'mint', parts: {} } } } });
+    assert.ok(applyTrade(s, effectAsTrade(entry, me), { me, now: NOW }).arrived.waiting);
+  });
+  assert.equal(s.trades.waiting.length, 9);
+  assert.equal(normalizeTrades(clone(s.trades), s, NOW).waiting.length, 9);
+});
+
+// ---------------------------------------------------------------------------
+// The shelf replaced under a request that is out (same account)
+// ---------------------------------------------------------------------------
+// main.js restores a backup or a cloud copy by swapping the contents of the one
+// state object; this does the same.
+function swapInPlace(state, next) {
+  Object.keys(state).forEach(k => delete state[k]);
+  Object.assign(state, next);
+}
+
+test('a shelf swapped in while the ledger is being read is not patched with the old cursor’s page', async () => {
+  const { ada, bea } = await world();
+  const offer = await ada.sync.propose({ to: bea.id, toName: 'Bea', draft: curioDraft({ 'moth-wing': 2 }) });
+  await bea.sync.sync({ force: true });
+  await bea.sync.accept(bea.sync.cache().trades.find(t => t.id === offer.id));
+  // Another device settled it and its copy is the newer cloud copy: cursor 1, one wing, and its old records long pruned.
+  const settled = clone(ada.state);
+  settled.mayhem.curios['moth-wing'] = 1;
+  settled.trades.escrow = {};
+  settled.trades.applied = [];
+  settled.trades.ledger = { [ada.id]: 1 };
+  const live = ada.state;
+  const realLedger = ada.trades.ledger;
+  let reads = 0;
+  ada.trades.ledger = async (...args) => {
+    const page = await realLedger(...args);
+    if (++reads === 1) swapInPlace(live, normalizeState(clone(settled))); // arrives while the first page is out
+    return page;
+  };
+  const r = await ada.sync.sync({ force: true });
+  ada.trades.ledger = realLedger;
+  assert.equal(reads, 2, 'the page for the old cursor was thrown away and the new cursor read');
+  assert.equal(r.results.length, 0);
+  assert.equal(live.mayhem.curios['moth-wing'], 1, 'not taken twice');
+  assert.equal(ledgerCursor(live, ada.id), 1);
+});
+
+test('a shelf swapped in while an acceptance is out gets the trade from the ledger, once', async () => {
+  const { ada, bea } = await world();
+  const offer = await ada.sync.propose({ to: bea.id, toName: 'Bea', draft: curioDraft({ 'moth-wing': 1 }, { 'button-eye': 2 }) });
+  await bea.sync.sync({ force: true });
+  const incoming = bea.sync.cache().trades.find(t => t.id === offer.id);
+  const live = bea.state, before = normalizeState(clone(bea.state));
+  before.mayhem.curios['button-eye'] = 5; // the restored copy differs: it had five
+  const realAccept = bea.trades.accept;
+  bea.trades.accept = async (...args) => { const sealed = await realAccept(...args); swapInPlace(live, before); return sealed; };
+  const { result } = await bea.sync.accept(incoming);
+  bea.trades.accept = realAccept;
+  assert.equal(result, null, 'not applied to a shelf it was not asked from');
+  assert.equal(live.mayhem.curios['button-eye'], 5, 'nothing written yet');
+  await bea.sync.sync({ force: true });
+  assert.deepEqual([live.mayhem.curios['button-eye'], live.mayhem.curios['moth-wing']], [3, 1], 'settled from the ledger onto the shelf that is here');
+  assert.equal((await bea.sync.sync({ force: true })).results.length, 0);
+  assert.equal(live.mayhem.curios['button-eye'], 3);
+});
+
+test('a shelf swapped in while an offer is out is not marked as holding it until the next look', async () => {
+  const { ada, bea } = await world();
+  const live = ada.state, other = normalizeState(clone(ada.state));
+  const realPropose = ada.trades.propose;
+  ada.trades.propose = async (...args) => { const t = await realPropose(...args); swapInPlace(live, other); return t; };
+  const offer = await ada.sync.propose({ to: bea.id, toName: 'Bea', draft: curioDraft({ 'moth-wing': 1 }) });
+  ada.trades.propose = realPropose;
+  await ada.sync.sync({ force: true });
+  assert.deepEqual(live.trades.escrow[offer.id].curios, { 'moth-wing': 1 }, 'held on the shelf that is here, from the server');
+  assert.equal(Object.keys(live.trades.escrow).length, 1);
+});
+
+test('a shelf swapped in while the offer list is out is looked at again', async () => {
+  const { ada, bea } = await world();
+  const offer = await ada.sync.propose({ to: bea.id, toName: 'Bea', draft: curioDraft({ 'glass-eye': 1 }) });
+  await bea.sync.sync({ force: true });
+  await bea.sync.decline(bea.sync.cache().trades.find(t => t.id === offer.id));
+  const live = ada.state, other = normalizeState(clone(ada.state));
+  const realList = ada.trades.list;
+  let lists = 0;
+  ada.trades.list = async (...args) => { const r = await realList(...args); if (++lists === 1) swapInPlace(live, other); return r; };
+  await ada.sync.sync({ force: true });
+  ada.trades.list = realList;
+  assert.equal(lists, 2);
+  assert.equal(live.trades.escrow[offer.id], undefined, 'the swapped-in copy is released too');
+  assert.equal(live.trades.notices.filter(n => n.kind === 'declined').length, 1);
 });

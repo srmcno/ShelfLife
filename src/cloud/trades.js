@@ -24,7 +24,8 @@ const TEXT = {
   bad_trade: 'The undertaker could not read that offer. Nothing was sent.',
   too_large: 'That resident is too large to post. Drawn residents take the most room.',
   too_many_open: 'There are already five offers open between you. Let some of them settle first.',
-  rate_limited: 'Twenty offers in a day. The undertaker has put his pen down until tomorrow.',
+  rate_limited: 'That is enough paperwork for one day. The undertaker has put his pen down until tomorrow.',
+  not_enough: 'You do not have that many spares any more. Another of your devices may have promised them already, which the undertaker considers greedy.',
   resident_limit: 'Two residents a week is the limit. Moving house is hard on everyone, especially the house.',
   in_escrow: 'That resident is already packed for another offer.',
   already_traded: 'That resident has already been traded away. The paperwork says so, and the paperwork is never wrong.',
@@ -108,6 +109,44 @@ export function readTradeList(raw) {
   const trades = (Array.isArray(r.trades) ? r.trades.slice(0, 160) : []).map(readTrade).filter(t => t && !seen.has(t.id) && seen.add(t.id));
   return { now: cleanTime(r.now), count: Number.isInteger(r.count) ? Math.max(0, Math.min(99, r.count)) : 0, trades };
 }
+// One entry of the caller's settlement ledger, from their side:
+// { seq, tradeId, kind, role, partnerName, settledAt, curiosOut, curiosIn,
+//   residentOut: { id, name } | null, residentIn: resident | null }.
+// A residentIn without its drawing is a placeholder (only a name survived).
+const ledgerCurios = list => {
+  const out = [];
+  for (const c of Array.isArray(list) ? list.slice(0, 3) : []) {
+    if (!record(c) || typeof c.id !== 'string' || !TRADE_CURIO_IDS.has(c.id) || out.some(x => x.id === c.id)) continue;
+    out.push({ id: c.id, n: Number.isInteger(c.n) ? Math.max(1, Math.min(3, c.n)) : 1 });
+  }
+  return out;
+};
+export function readLedgerEntry(raw) {
+  if (!record(raw) || !Number.isSafeInteger(raw.seq) || raw.seq < 1) return null;
+  const tradeId = cleanUuid(raw.trade_id);
+  if (!tradeId || !['curio', 'resident'].includes(raw.kind) || !['from', 'to'].includes(raw.role)) return null;
+  let residentOut = null, residentIn = null;
+  if (record(raw.resident_out) && typeof raw.resident_out.id === 'string' && PET_ID.test(raw.resident_out.id)) {
+    residentOut = { id: raw.resident_out.id, name: cleanText(raw.resident_out.name, 22) || 'Someone' };
+  }
+  if (record(raw.resident_in) && typeof raw.resident_in.id === 'string' && PET_ID.test(raw.resident_in.id)) {
+    const art = record(raw.resident_in.art);
+    residentIn = readTradeResident(raw.resident_in, { art });
+    if (residentIn && !art) residentIn.placeholder = true;
+  }
+  return { seq: raw.seq, tradeId, kind: raw.kind, role: raw.role, partnerName: cleanText(raw.partner_name, 24), settledAt: cleanTime(raw.settled_at),
+    curiosOut: ledgerCurios(raw.curios_out), curiosIn: ledgerCurios(raw.curios_in), residentOut, residentIn };
+}
+// { now, head, next, more, entries } with entries in seq order, after `after`.
+export function readLedger(raw, after = 0) {
+  const r = record(raw) ? raw : {};
+  const entries = (Array.isArray(r.effects) ? r.effects.slice(0, 50) : []).map(readLedgerEntry)
+    .filter(e => e && e.seq > after).sort((a, b) => a.seq - b.seq).filter((e, i, list) => i === 0 || list[i - 1].seq !== e.seq);
+  const head = Number.isSafeInteger(r.head) && r.head >= 0 ? r.head : 0;
+  const last = entries.length ? entries.at(-1).seq : after;
+  const next = Number.isSafeInteger(r.next) && r.next >= after && r.next <= Math.max(head, last) ? Math.max(r.next, last) : last;
+  return { now: cleanTime(r.now), head, next, more: r.more === true && next < head, entries };
+}
 export function readTradeBook(raw) {
   if (!record(raw)) return null;
   const wishlist = [...new Set((Array.isArray(raw.wishlist) ? raw.wishlist : []).filter(id => typeof id === 'string' && TRADE_CURIO_IDS.has(id)))].slice(0, 12);
@@ -146,6 +185,12 @@ export function createTrades({ cloud }) {
     }
   }
   const id = value => { const v = cleanUuid(value); if (!v) throw refuse('not_found'); return v; };
+  // { seq, curios: { id: n } } as the save holds them (engine declaredHoldings).
+  function haveArg(have) {
+    const curios = {};
+    for (const [cid, n] of Object.entries(have?.curios || {})) if (TRADE_CURIO_IDS.has(cid) && Number.isInteger(n) && n >= 0) curios[cid] = Math.min(9999, n);
+    return { seq: Number.isSafeInteger(have?.seq) && have.seq >= 0 ? have.seq : 0, curios };
+  }
   function offerArgs({ give = {}, want = {}, line = '' }) {
     const giveResident = give.resident ? tradeSnapshot(give.resident) : null;
     if (give.resident && !giveResident) throw refuse('too_large');
@@ -160,13 +205,21 @@ export function createTrades({ cloud }) {
   return {
     signedIn,
     // give: { curios: { id: n }, resident: pet | null }; want: { curios: { id: n }, resident: { id, name } | null }
-    async propose({ to, give, want, line }) { return trade(await call('propose_trade', { p_to: id(to), ...offerArgs({ give, want, line }) })); },
-    async counter(tradeId, { give, want, line }) { return trade(await call('counter_trade', { p_id: id(tradeId), ...offerArgs({ give, want, line }) })); },
-    // `resident` is the receiver's own pet when the offer asks for one.
-    async accept(tradeId, { resident = null } = {}) {
+    // `have` declares the offered curios as the save holds them, with its ledger cursor.
+    async propose({ to, give, want, line, have }) { return trade(await call('propose_trade', { p_to: id(to), ...offerArgs({ give, want, line }), p_have: haveArg(have) })); },
+    async counter(tradeId, { give, want, line, have }) { return trade(await call('counter_trade', { p_id: id(tradeId), ...offerArgs({ give, want, line }), p_have: haveArg(have) })); },
+    // `resident` is the receiver's own pet when the offer asks for one; `have`
+    // declares the curios it asks for. Answers the sealed trade, with `ledgerSeq`.
+    async accept(tradeId, { resident = null, have = null } = {}) {
       const mine = resident ? tradeSnapshot(resident) : null;
       if (resident && !mine) throw refuse('too_large');
-      return trade(await call('accept_trade', { p_id: id(tradeId), p_give: mine ? { resident: mine } : {} }));
+      const raw = await call('accept_trade', { p_id: id(tradeId), p_give: mine ? { resident: mine } : {}, p_have: have ? haveArg(have) : null });
+      return { ...trade(raw), ledgerSeq: Number.isSafeInteger(raw?.ledger_seq) ? raw.ledger_seq : 0 };
+    },
+    // The account's settled trades after `after`, oldest first.
+    async ledger(after = 0, limit = 25) {
+      const from = Number.isSafeInteger(after) && after >= 0 ? after : 0;
+      return readLedger(await call('trade_ledger', { p_after: from, p_limit: Math.max(1, Math.min(50, limit)) }), from);
     },
     async decline(tradeId) { await call('decline_trade', { p_id: id(tradeId) }); return true; },
     async cancel(tradeId) { await call('cancel_trade', { p_id: id(tradeId) }); return true; },

@@ -12,7 +12,11 @@
 // trade id goes into `applied`, so a replay, a second device or a restored
 // backup finds it there and changes nothing. A declined, cancelled, countered
 // or expired offer just comes off hold.
-import { tradesState, TRADE_CURIO_IDS, WISHLIST_MAX, APPLIED_MAX, PORTRAIT_MAX, WAITING_MAX, NOTICE_MAX, MAX_ART_CHARS, tradeArt } from '../trade-state.js';
+//
+// Settlements arrive from the account's ledger (0004 trade_ledger), in the
+// order they were sealed, after the cursor this copy saved. A restored backup
+// has an old cursor and so reads everything since, however long ago.
+import { tradesState, TRADE_CURIO_IDS, WISHLIST_MAX, APPLIED_MAX, PORTRAIT_MAX, NOTICE_MAX, MAX_ART_CHARS, LEDGER_USERS_MAX, tradeArt } from '../trade-state.js';
 import { mayhemState } from '../mayhem-state.js';
 import { addNote, defaultNeeds, normalizePetArt, clamp } from '../state.js';
 import { CURIO_BY_ID } from './mayhem.js';
@@ -82,6 +86,43 @@ export function toggleWish(state, id) {
   return 'added';
 }
 export const onWishlist = (state, id) => tradesState(state).wishlist.includes(id);
+
+// What this copy holds of the curios it is about to give, and how far it has
+// read the ledger: the server checks the offer against both.
+export function declaredHoldings(state, me, ids) {
+  const out = {};
+  for (const id of ids) if (TRADE_CURIO_IDS.has(id)) out[id] = Math.min(9999, owned(state, id));
+  return { seq: ledgerCursor(state, me), curios: out };
+}
+
+// ---------------------------------------------------------------------------
+// The ledger cursor, per account
+// ---------------------------------------------------------------------------
+export function ledgerCursor(state, me) {
+  const t = tradesState(state);
+  return Number.isSafeInteger(t.ledger?.[me]) ? t.ledger[me] : 0;
+}
+export function setLedgerCursor(state, me, seq) {
+  const t = tradesState(state);
+  if (!t.ledger || typeof t.ledger !== 'object') t.ledger = {};
+  if (!me || !Number.isSafeInteger(seq) || seq <= ledgerCursor(state, me)) return false;
+  delete t.ledger[me];
+  t.ledger = { [me]: seq, ...Object.fromEntries(Object.entries(t.ledger).slice(0, LEDGER_USERS_MAX - 1)) };
+  return true;
+}
+// Settlements before this belong to an older copy's history (see trade-state.js).
+export function ledgerFloor(state) {
+  const t = tradesState(state);
+  return Math.max(Number.isFinite(t.floor) ? t.floor : 0, Number.isFinite(state.started) ? state.started - DAY : 0);
+}
+// A ledger entry (src/cloud/trades.js readLedgerEntry) as applyTrade reads a trade.
+export function effectAsTrade(entry, me) {
+  const mine = { curios: entry.curiosOut, resident: entry.residentOut }, theirs = { curios: entry.curiosIn, resident: entry.residentIn };
+  const sender = entry.role === 'from';
+  return { id: entry.tradeId, kind: entry.kind, status: 'accepted', from: sender ? me : '', to: sender ? '' : me,
+    fromName: sender ? '' : entry.partnerName, toName: sender ? entry.partnerName : '', closedAt: entry.settledAt, createdAt: entry.settledAt,
+    give: sender ? mine : theirs, want: sender ? theirs : mine, parent: null, line: '', unknown: false };
+}
 
 // ---------------------------------------------------------------------------
 // Residents: who may leave
@@ -202,11 +243,29 @@ export function seatWaiting(state, now = Date.now()) {
   t.waiting = t.waiting.filter(w => {
     if (state.pets.some(p => p.id === w.pet.id)) return false;
     if (!seat(state, w.pet, now)) return true;
-    addNote(state, w.pet.name + ' has been let in from the doorstep, where it was waiting with its box and its opinions.', 'the shelf', 'arrival');
+    letIn(state, w, now);
     seated.push(w.pet);
     return false;
   });
   return seated;
+}
+function letIn(state, w, now) {
+  addNote(state, w.pet.name + ' has been let in from the doorstep, where it was waiting with its box and its opinions.', 'the shelf', 'arrival');
+  recordScene(state, 'trade', 'Let in from the doorstep', w.pet.name + ' waited on the step until there was room, and has made sure everyone knows it.', [w.pet.id], now);
+  const t = tradesState(state);
+  t.notices = t.notices.filter(n => !(n.id === w.trade && n.kind === 'arrived-waiting'));
+}
+// One resident off the doorstep, when the player asks. '' when it moved in,
+// otherwise why not.
+export function collectWaiting(state, tradeId, now = Date.now()) {
+  const t = tradesState(state);
+  const w = t.waiting.find(x => x.trade === tradeId);
+  if (!w) return 'Nobody by that name is on the doorstep.';
+  if (state.pets.some(p => p.id === w.pet.id)) { t.waiting = t.waiting.filter(x => x !== w); return ''; }
+  if (!seat(state, w.pet, now)) return 'The shelf is full. Rehome someone, or move some furniture, and ' + w.pet.name + ' will come in.';
+  t.waiting = t.waiting.filter(x => x !== w);
+  letIn(state, w, now);
+  return '';
 }
 
 // ---------------------------------------------------------------------------
@@ -266,7 +325,8 @@ export function applyTrade(state, trade, { me, now = Date.now(), fresh = false }
       if (!state.pets.some(p => p.id === pet.id)) {
         if (!seat(state, pet, now)) {
           waiting = true;
-          if (!t.waiting.some(w => w.trade === trade.id)) t.waiting = [...t.waiting, { trade: trade.id, pet, at: now }].slice(-WAITING_MAX);
+          // Every one of them waits; nobody already waiting is ever pushed off the step.
+          if (!t.waiting.some(w => w.trade === trade.id)) t.waiting = [...t.waiting, { trade: trade.id, pet, at: now }];
         }
         addNote(state, tradeLine(WELCOME_LINES, trade.id + ':welcome', { name: pet.name, from: partner }), 'the shelf', 'arrival');
         addNote(state, firstLine, pet.name, 'note');
@@ -274,7 +334,7 @@ export function applyTrade(state, trade, { me, now = Date.now(), fresh = false }
       }
       result.arrived = { pet, firstLine, waiting };
     } else {
-      // Snapshots are kept for 90 days. After that only the record of the trade remains.
+      // Only a name and an id: a record the ledger copied from a trade whose snapshot had already gone.
       result.arrived = { pet: null, lost: true, name: snapshot.name || 'Someone' };
     }
   }
@@ -303,15 +363,16 @@ export function applyTrade(state, trade, { me, now = Date.now(), fresh = false }
       ...(result.departed ? { last: result.departed.lastLine } : {}), ...(result.arrived?.firstLine ? { first: result.arrived.firstLine } : {}) });
   }
   if (result.arrived?.waiting) notice(state, { id: trade.id, kind: 'arrived-waiting', at: now, title: result.arrived.pet.name + ' is waiting on the doorstep',
-    text: 'The shelf is full. ' + result.arrived.pet.name + ' moves in as soon as a slot is free.' });
+    text: 'The shelf is full. ' + result.arrived.pet.name + ' is sitting on its box outside and will come in the moment there is a free slot. Nobody gets turned away.' });
 
   delete t.escrow[trade.id];
   t.applied = [{ id: trade.id, at: trade.closedAt || now }, ...t.applied].slice(0, APPLIED_MAX);
   return result;
 }
 
-// Forget applied records the server has long since forgotten too (it keeps
-// sealed trades in its sync window for 60 days). Measured on the server's clock.
+// Forget applied records older than 75 days, measured on the server's clock.
+// Only call this once the ledger cursor has caught up: everything older is
+// then behind the cursor and is never read again.
 export function pruneApplied(state, serverNow) {
   if (!Number.isFinite(serverNow) || serverNow <= 0) return;
   const t = tradesState(state);
