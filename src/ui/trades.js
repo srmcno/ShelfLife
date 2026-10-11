@@ -18,7 +18,7 @@ import { guestPet } from '../cloud/social.js';
 import { tradesState, TRADE_CURIO_IDS, WISHLIST_MAX } from '../trade-state.js';
 import {
   spares, spareCount, owned, toggleWish, packingFor, residentBlock, offerBlock, acceptBlock, curioName, curioList,
-  dismissNotice, shortDate, lockedUntil, stayers, CURIOS_PER_SIDE
+  dismissNotice, shortDate, lockedUntil, stayers, CURIOS_PER_SIDE, collectWaiting, freeSlot
 } from '../engine/trades.js';
 import { CURIO_BY_ID, RARITY_BY_ID } from '../engine/mayhem.js';
 import { glyph } from '../art/mayhem-glyphs.js';
@@ -158,7 +158,7 @@ function composeMarkup() {
   if (d.mode === 'curio') {
     const giveIds = Object.keys(mine).sort((a, b) => Number(theirWish.includes(b)) - Number(theirWish.includes(a)) || curioName(a).localeCompare(curioName(b)));
     body += '<section class="tr-part"><h3>You give <small>' + total(d.give) + ' of ' + CURIOS_PER_SIDE + '</small></h3>' +
-      (giveIds.length ? '<ul class="tr-picks">' + giveIds.map(id => curioPickRow('tr-give', id, d.give[id] || 0, Math.min(mine[id], CURIOS_PER_SIDE), theirWish.includes(id) ? [['want', 'On their wishlist']] : [])).join('') + '</ul>'
+      (giveIds.length ? '<ul class="tr-picks">' + giveIds.map(id => curioPickRow('tr-give', id, d.give[id] || 0, Math.min(mine[id], CURIOS_PER_SIDE), theirWish.includes(id) ? [['want', 'On ' + possessive(who) + ' wishlist']] : [])).join('') + '</ul>'
         : '<p class="tr-empty">You have no spares. A curio you own twice turns up here; the first copy never leaves the cabinet.</p>') + '</section>';
     const theirs = book?.book?.spares || {};
     const wantIds = Object.keys(theirs).sort((a, b) => Number(wishMine.includes(b)) - Number(wishMine.includes(a)) || curioName(a).localeCompare(curioName(b)));
@@ -521,13 +521,41 @@ registerFriendsSection({
     lastCtx = ctx;
     const s = state(), t = tradesState(s), mine = spares(s);
     const packing = s.pets.filter(p => packingFor(s, p.id));
-    return '<section class="tr-section tr-home" aria-labelledby="trHomeTitle"><h3 id="trHomeTitle">Your trading book</h3><p class="tr-hint">' +
+    return doorstepMarkup(s) + '<section class="tr-section tr-home" aria-labelledby="trHomeTitle"><h3 id="trHomeTitle">Your trading book</h3><p class="tr-hint">' +
       esc(t.wishlist.length + ' of ' + WISHLIST_MAX + ' on your wishlist · ' + Object.keys(mine).length + (Object.keys(mine).length === 1 ? ' spare' : ' spares') + ' · ' + Object.keys(t.escrow).length + ' held for offers') + '</p>' +
       (packing.length ? '<p class="tr-hint">' + esc(packing.map(p => p.name).join(', ') + (packing.length === 1 ? ' is' : ' are') + ' packed and waiting by the door.') + '</p>' : '') +
       '<div class="tr-actions"><button class="btn" type="button" data-sx="tr-book">Edit wishlist</button></div></section>';
   },
-  onClick(action, el, ctx) { if (action === 'tr-book') showBook(ctx); }
+  onClick(action, el, ctx) {
+    if (action === 'tr-book') showBook(ctx);
+    if (action === 'tr-let-in') letIn(el.dataset.sxId, ctx);
+  }
 });
+
+/* ---------------- the doorstep ---------------- */
+// Residents who arrived by trade to a full shelf. Every one waits until it is
+// let in; none is ever turned away.
+function doorstepMarkup(s) {
+  const waiting = tradesState(s).waiting;
+  if (!waiting.length) return '';
+  const room = freeSlot(s) >= 0;
+  return '<section class="tr-section tr-doorstep" aria-labelledby="trDoorTitle"><h3 id="trDoorTitle">On the doorstep <small>' + waiting.length + '</small></h3>' +
+    '<p class="tr-hint" id="trDoorWhy">' + esc(room ? 'There is a free slot. Whoever you let in first gets it, and the others will hear about it.'
+      : 'The shelf is full. They sit on their boxes outside until a slot is free. Rehome someone or move some furniture.') + '</p>' +
+    '<ul class="tr-open">' + waiting.map(w => '<li><span><b>' + esc(w.pet.name) + '</b> ' + esc('from ' + possessive(w.pet.arrivedByTrade?.from || 'a friend') + ' shelf, waiting since ' + shortDate(w.at)) + '</span>' +
+      '<button class="btn btn-sm' + (room ? ' btn-primary' : '') + '" type="button" data-sx="tr-let-in" data-sx-id="' + esc(w.trade) + '"' + (room ? '' : ' disabled aria-describedby="trDoorWhy"') + '>Let ' + esc(w.pet.name) + ' in</button></li>').join('') +
+    '</ul></section>';
+}
+function letIn(tradeId, ctx) {
+  if (!deps || !tradeId) return;
+  const s = state(), w = tradesState(s).waiting.find(x => x.trade === tradeId);
+  const why = collectWaiting(s, tradeId);
+  if (why) { ctx?.say?.(why); ctx?.refresh?.(); return; }
+  deps.save?.();
+  deps.renderAll?.();
+  if (w) { deps.toast?.(w.pet.name + ' is in. It has put its box down somewhere inconvenient.'); celebrateArrival({ arrived: { pet: w.pet } }); }
+  ctx?.refresh?.();
+}
 
 registerPostboxSource({
   id: 'trades', label: 'Trades', order: 30, poll: true,
@@ -549,6 +577,8 @@ registerPostboxSource({
       return '<div class="' + cls + '"><p><b>' + esc(item.title) + '</b> ' + esc(item.line) + '</p>' + (item.notice.last ? '<p class="tr-mail-quote">' + esc(item.notice.last) + '</p>' : '') +
         (item.notice.first ? '<p class="tr-mail-quote">' + esc(item.notice.first) + '</p>' : '') +
         '<div class="tr-actions">' + (item.notice.kind === 'sealed' ? '<button class="btn btn-sm" type="button" data-sx="tr-read-sealed" data-sx-id="' + esc(item.notice.id) + '">Read the bill</button>' : '') +
+        (item.notice.kind === 'arrived-waiting' && tradesState(state()).waiting.some(w => w.trade === item.notice.id) ? '<button class="btn btn-sm btn-primary" type="button" data-sx="tr-let-in" data-sx-id="' + esc(item.notice.id) + '"' +
+          (freeSlot(state()) >= 0 ? '' : ' disabled title="The shelf is full"') + '>Let them in</button>' : '') +
         '<button class="btn btn-sm btn-ghost" type="button" data-sx="tr-dismiss" data-sx-id="' + esc(item.notice.id) + '">Noted</button></div></div>';
     }
     return '<div class="' + cls + '"><p><b>' + esc(item.title) + '</b> ' + esc(item.line) + '</p><div class="tr-actions">' +
@@ -573,6 +603,7 @@ registerPostboxSource({
       if (dismissNotice(state(), itemId)) deps.save?.();
       return;
     }
+    if (action === 'tr-let-in') { letIn(itemId, ctx); return; }
     if (action === 'tr-dismiss') { if (dismissNotice(state(), itemId)) deps.save?.(); ctx?.refresh?.(); }
   }
 });

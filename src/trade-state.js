@@ -15,8 +15,17 @@ import { TRAIT_BY_ID } from './content/traits.js';
      applied    [{ id, at }] trades already applied to this shelf, by id, with
                 the server's time of sealing. A replay, a second device or a
                 restored backup checks here before applying anything twice.
+     ledger     { userId: seq } how far this copy has read each account's
+                settlement ledger (0004 trade_ledger). Everything up to seq is
+                applied or deliberately skipped; anything after is read again
+                and applied once, by trade id. Saved with the shelf, so a
+                restored backup carries the cursor it had and catches up.
+     floor      ms. Settlements before this were settled by an older build of
+                the game (which forgot its records after 75 days), so they are
+                taken as applied. 0 for a save written by this build.
      portraits  framed portraits of residents who left by trade (24 at most)
-     waiting    residents who arrived when the shelf was full (3 at most)
+     waiting    residents who arrived when the shelf was full, every one of
+                them, until there is room (nothing ever pushes one out)
      notices    news for the postbox until the player has seen it (20 at most)
 
    Pets that arrived by trade carry `arrivedByTrade: { id, at, from }`. */
@@ -34,13 +43,13 @@ export const WISHLIST_MAX = 12;
 export const ESCROW_MAX = 50;
 export const APPLIED_MAX = 400;
 export const PORTRAIT_MAX = 24;
-export const WAITING_MAX = 3;
+export const LEDGER_USERS_MAX = 8;
 export const NOTICE_MAX = 20;
 export const NOTICE_KINDS = ['sealed', 'declined', 'expired', 'cancelled', 'countered', 'restored', 'arrived-waiting'];
 export const MAX_ART_CHARS = 120 * 1024;
 
 export function blankTrades() {
-  return { v: 1, wishlist: [], escrow: {}, applied: [], portraits: [], waiting: [], notices: [] };
+  return { v: 1, wishlist: [], escrow: {}, applied: [], ledger: {}, floor: 0, portraits: [], waiting: [], notices: [] };
 }
 
 function curioMap(raw, perItem = 3) {
@@ -105,11 +114,23 @@ export function normalizeTrades(raw, state = {}, now = Date.now()) {
     if (object(a) && UUID.test(a.id || '') && !applied.has(a.id)) applied.set(a.id, { id: a.id, at: finite(a.at, 0, 0, now + 86400000) });
   }
   out.applied = [...applied.values()].sort((a, b) => b.at - a.at).slice(0, APPLIED_MAX);
+  if (object(raw.ledger)) {
+    for (const [user, seq] of Object.entries(raw.ledger).slice(0, LEDGER_USERS_MAX)) {
+      if (UUID.test(user) && Number.isSafeInteger(seq) && seq >= 0) out.ledger[user] = seq;
+    }
+    out.floor = finite(raw.floor, 0, 0, now);
+  } else {
+    // Written before the ledger: an older build applied trades from a 60 day
+    // window and forgot its records after 75 days, so anything settled more
+    // than 75 days before this copy was last played is already in it.
+    const last = finite(state.lastTick, now, 0, now);
+    out.floor = Math.max(0, last - 75 * 86400000);
+  }
   out.portraits = (Array.isArray(raw.portraits) ? raw.portraits : []).map(p => normalizePortrait(p, now)).filter(Boolean)
     .filter((p, i, list) => list.findIndex(q => q.id === p.id) === i).slice(0, PORTRAIT_MAX);
   const seated = new Set(pets.map(p => p && p.id));
   out.waiting = (Array.isArray(raw.waiting) ? raw.waiting : []).map(w => normalizeWaiting(w, now)).filter(w => w && !seated.has(w.pet.id))
-    .filter((w, i, list) => list.findIndex(x => x.trade === w.trade) === i).slice(0, WAITING_MAX);
+    .filter((w, i, list) => list.findIndex(x => x.trade === w.trade) === i);
   out.notices = (Array.isArray(raw.notices) ? raw.notices : []).filter(n => object(n) && UUID.test(n.id || '') && NOTICE_KINDS.includes(n.kind))
     .slice(0, NOTICE_MAX).map(n => ({ id: n.id, kind: n.kind, at: finite(n.at, now, 0, now + 86400000), title: text(n.title, 120), text: text(n.text, 600),
       ...(typeof n.last === 'string' ? { last: n.last.slice(0, 300) } : {}), ...(typeof n.first === 'string' ? { first: n.first.slice(0, 300) } : {}) }));

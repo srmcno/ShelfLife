@@ -290,6 +290,14 @@ button at all, and a player without cloud save is pointed at Cloud save first.
 - **Treats** (one a day per friend, the first five opened each day pay souls, unopened ones go off after
   a week), **guestbooks** (one signature a day from 24 lines and six stamps; the owner can tear out any
   page) and **waves and pokes** at a friend's resident (three a day) are all chosen from canned lines.
+- **Trades.** Propose a trade from a friend’s profile: up to three spare curios each way (the first copy of
+  anything never leaves the cabinet), or one resident as a gift or a one for one swap, two resident trades a
+  week. What you offer is held aside for seven days. Your account keeps one count across all your devices, so
+  two phones cannot promise the same moth wings twice. Every sealed trade goes into a ledger on the server
+  that is kept for as long as the account exists; any device, or a backup restored years later, catches up
+  from where its copy of the shelf left off and applies each trade exactly once. A resident who arrives to a
+  full shelf waits on the doorstep (Friends home, or the postbox notice) until there is room; nobody is ever
+  turned away.
 - **Friendship levels** count cases, visits, treats, signatures, waves, trades and joint hearings, a few
   a day each, from Acquaintance to Co-conspirators.
 - **Do not disturb** stops new visits, treats, waves and papers; what has arrived stays.

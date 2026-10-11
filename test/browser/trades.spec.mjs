@@ -279,3 +279,49 @@ test('the last resident cannot be offered, and says why', async ({ page }) => {
   expect((await saved(page)).trades.escrow).toEqual({});
   expect(fake.calls('propose_trade')).toHaveLength(0);
 });
+
+test('residents who arrive at a full shelf all wait on the doorstep, and come in when let in', async ({ page }) => {
+  const { fake, ada, bea } = await world();
+  // Ada's other device, with room, accepts two gifts from Bea.
+  const elsewhere = { state: shelf(['Agnes', 'Mabel', 'Pip'], {}) };
+  const adaTrades = createTrades({ cloud: ada.cloud });
+  const adaSync = createTradeSync({ cloud: ada.cloud, social: ada.social, trades: adaTrades, getState: () => elsewhere.state, now: () => NOW });
+  const gifts = [];
+  for (const name of ['Gladys', 'Snag']) {
+    const pet = bea.box.state.pets.find(p => p.name === name);
+    const offer = await bea.sync.propose({ to: ada.id, toName: 'Ada', draft: { mode: 'resident', giveResident: pet.id } });
+    await adaSync.sync({ force: true });
+    await adaSync.accept(adaSync.cache().trades.find(t => t.id === offer.id));
+    gifts.push(offer.id);
+  }
+  // This copy of Ada's shelf is full of furniture.
+  const free = ada.shelf.slots.map((s, i) => s ? -1 : i).filter(i => i >= 0);
+  free.forEach((slot, n) => { ada.shelf.props.push({ id: 'qf' + n, kind: 'bowl' }); ada.shelf.slots[slot] = 'qf' + n; });
+  await open(page, fake, ada);
+  await friends(page);
+  await postbox(page);
+  await expect(row(page, 'Gladys is waiting on the doorstep')).toBeVisible();
+  await expect(row(page, 'Snag is waiting on the doorstep')).toBeVisible();
+  await expect(row(page, 'Gladys is waiting on the doorstep').locator('[data-sx="tr-let-in"]')).toBeDisabled();
+  let after = await saved(page);
+  expect(after.trades.waiting.map(w => w.trade).sort()).toEqual([...gifts].sort());
+  expect(after.trades.applied.map(a => a.id).sort()).toEqual([...gifts].sort());
+
+  await page.evaluate(() => window.__tradeHost.go('main'));
+  const door = host(page).locator('[data-fr-section="trade-mine"] .tr-doorstep');
+  await expect(door).toContainText('On the doorstep');
+  await expect(door).toContainText('The shelf is full.');
+  await expect(door.locator('[data-sx="tr-let-in"]')).toHaveCount(2);
+  await expect(door.locator('[data-sx="tr-let-in"]').first()).toBeDisabled();
+  // A slot comes free.
+  await page.evaluate(() => import('/src/state.js').then(({ state }) => { const i = state.slots.indexOf('qf0'); state.slots[i] = null; state.props = state.props.filter(p => p.id !== 'qf0'); }));
+  await page.evaluate(() => window.__tradeHost.go('main'));
+  await expect(door).toContainText('There is a free slot.');
+  await door.locator('[data-sx="tr-let-in"]').filter({ hasText: 'Let Snag in' }).click();
+  await expect(page.locator('#cabinet .piece.pet[data-id="tr-' + gifts[1] + '"]')).toBeVisible();
+  await expect(door.locator('[data-sx="tr-let-in"]')).toHaveCount(1);
+  await expect(door.locator('[data-sx="tr-let-in"]')).toBeDisabled();
+  after = await saved(page);
+  expect(after.trades.waiting.map(w => w.trade)).toEqual([gifts[0]]);
+  expect(after.pets.some(p => p.id === 'tr-' + gifts[1])).toBe(true);
+});
