@@ -23,6 +23,9 @@ def build(output=None):
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     worker = output / "service-worker.js"
     worker.write_text(re.sub(r"const CACHE_VERSION = '[^']+';", f"const CACHE_VERSION = 'shelflife-{revision[:12]}';", worker.read_text()))
+    # The packaged copy says which commit it is, for feedback reports.
+    version = output / "src" / "version.js"
+    version.write_text(re.sub(r"export const COMMIT = '[^']*';", f"export const COMMIT = '{revision[:7]}';", version.read_text()))
     (output / ".nojekyll").touch()
     (output / "release.json").write_text(json.dumps({"revision": revision, "channel": "production"}) + "\n")
     return output

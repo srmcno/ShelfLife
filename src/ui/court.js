@@ -10,6 +10,7 @@ import { objectionOptions, checkNote, pressWitness } from '../engine/court-objec
 import { careerView } from '../engine/court-career.js';
 import { courtroomState } from '../court-state.js';
 import { save } from '../state.js';
+import { postedStars } from '../tester-state.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { castSvg, COURT_PROPS } from '../art/court-cast.js';
 import { dressClasses, benchDressing, stageDressing, GALLERY_REGULARS, LAUREL, ROLE_ICONS } from '../art/court-dress.js';
@@ -248,7 +249,8 @@ async function deliverVerdict(h, res, ruling) {
   const line = () => sheet.querySelector('[data-sc-verdict]');
   const to = h.summons.fromName || 'your friend';
   try {
-    await courtSocial.rule(h.summons.id, { verdict: slotVerdict(h.side, ruling), stars: res.stars, ratings: res.ratings });
+    // A tester save (src/ui/tester-panel.js) still delivers the verdict, but never its stars.
+    await courtSocial.rule(h.summons.id, { verdict: slotVerdict(h.side, ruling), stars: postedStars(S, res.stars), ratings: res.ratings });
     const souls = summonsReward(S, h.summons.id, 'heard');
     post.cases = post.cases.filter(c => c.id !== h.summons.id);
     save(); refresh();

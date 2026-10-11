@@ -462,9 +462,13 @@ npm run android:apk      # debug APK in android/app/build/outputs/apk/debug/
 npm run android:bundle   # release AAB in android/app/build/outputs/bundle/release/
 ```
 
-The version lives in one place: `version` in `package.json`. The app's `versionName` is that string and its
-`versionCode` is `major * 10000 + minor * 100 + patch` (1.0.0 is 10000, 1.2.3 is 10203), worked out in
-`android/app/build.gradle`. Play refuses a versionCode it has seen before, so bump `version` before every upload.
+The version lives in one place: `VERSION` in `src/version.js`, which More shows and every feedback report
+carries. The app's `versionName` is that string and its `versionCode` is `major * 10000 + minor * 100 + patch`
+(1.1.0 is 10100, 1.2.3 is 10203), worked out in `android/app/build.gradle`, which reads `src/version.js`.
+**Every upload to Play needs a higher versionCode**, even a closed-test build with one fix, because Play refuses
+a versionCode it has seen before. So for each upload: bump `VERSION` (a patch bump is enough: 1.1.0 to 1.1.1),
+set `BUILD` to the day, set `version` in `package.json` to the same string (`test/version.test.mjs` fails until
+they match), add a line to `CHANGES` if players should hear about it, then build the bundle.
 
 #### Signing a release
 

@@ -1,3 +1,6 @@
+// First, before anything reads the time or can break: the tester clock and the error buffer.
+import './clock.js';
+import './errors.js';
 import './ui/calm.js';
 import { initLife } from './ui/life.js';
 import { initWelcome } from './ui/welcome.js';
@@ -8,6 +11,7 @@ import { cloud, sync, social, connectCloud } from './cloud/index.js';
 import { initCloudUI } from './ui/cloud.js';
 import { initFriends } from './ui/friends.js';
 import { initSocialInbox } from './ui/social-inbox.js';
+import { initTesters } from './ui/testers.js';
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
@@ -439,6 +443,7 @@ initCalm(state, { save, onChange: () => renderAll(state) });
 initArcade(state, () => renderAll(state), { social });
 initCourt(state, () => renderAll(state), { social, cloud });
 initSocialInbox({ cloud, social });
+initTesters({ state, cloud, save, refresh: () => renderAll(state) });
 initSchemeUI(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
 initWelcome(state, () => renderAll(state));

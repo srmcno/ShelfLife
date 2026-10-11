@@ -7,6 +7,7 @@ import { DAILY_SOULS } from '../content/daily.js';
 import { mayhemState } from '../mayhem-state.js';
 import { GAME_SOULS_PER_DAY } from '../engine/mayhem.js';
 import { localDayKey, save } from '../state.js';
+import { mayPostScore } from '../tester-state.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { createPuppet } from '../art/animator.js';
 import { escapadeView } from '../engine/escapades.js';
@@ -90,7 +91,8 @@ const BOARD_SLOT = '<div class="ar-board" data-ar-board aria-live="polite"><p cl
 async function loadBoard(ch, score = 0) {
   const token = ++boardToken;
   const slot = () => token === boardToken ? sheet.querySelector('[data-ar-board]') : null;
-  if (score > 0) { try { await arcadeSocial.submitScore({ game: ch.game, day: ch.day, score, mod: ch.mod }); } catch { /* the board below says if we are offline */ } }
+  // A tester save (src/ui/tester-panel.js) may have bent time: its scores stay home.
+  if (score > 0 && mayPostScore(S)) { try { await arcadeSocial.submitScore({ game: ch.game, day: ch.day, score, mod: ch.mod }); } catch { /* the board below says if we are offline */ } }
   try {
     const [board, place] = await Promise.all([arcadeSocial.board(ch.game, ch.day), arcadeSocial.percentile(ch.game, ch.day)]);
     const el = slot();

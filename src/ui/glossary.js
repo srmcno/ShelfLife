@@ -86,7 +86,7 @@ function glossaryHTML() {
 }
 
 function selectTab(name) {
-  const tab = name === 'glossary' ? 'glossary' : 'first-day';
+  const tab = ['glossary', 'testers'].includes(name) ? name : 'first-day';
   document.querySelectorAll('#helpVeil [role="tab"]').forEach(button => {
     const on = button.dataset.helpTab === tab;
     button.setAttribute('aria-selected', String(on));

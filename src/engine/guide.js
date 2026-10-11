@@ -93,15 +93,16 @@ export function markGuideSeen(state, id) {
   return true;
 }
 
+const careTotal = state => (state.pets || []).reduce((n, p) => n + (p.careLog?.food || 0) + (p.careLog?.fuss || 0) + (p.careLog?.clean || 0), 0);
 function stepDone(step, state, g) {
-  const m = mayhemState(state);
+  const m = mayhemState(state), base = g.replay || null;
   switch (step.id) {
     case 'meet': return g.seen.includes('meet');
-    case 'feed': return (state.pets || []).some(p => (p.careLog?.food || 0) + (p.careLog?.fuss || 0) + (p.careLog?.clean || 0) > 0);
-    case 'emergency': return m.resolved >= 1;
-    case 'omen': return m.omen.streak >= 1 && m.omen.lastDay !== '';
+    case 'feed': return base ? careTotal(state) > base.care : (state.pets || []).some(p => (p.careLog?.food || 0) + (p.careLog?.fuss || 0) + (p.careLog?.clean || 0) > 0);
+    case 'emergency': return m.resolved >= 1 + (base ? base.resolved : 0);
+    case 'omen': return m.omen.streak >= 1 && m.omen.lastDay !== '' && (!base || m.omen.lastDay !== base.omen);
     case 'note': return g.seen.includes('note');
-    case 'coffin': return m.coffins >= 1;
+    case 'coffin': return m.coffins >= 1 + (base ? base.coffins : 0);
     default: return false;
   }
 }
@@ -128,6 +129,17 @@ export function skipGuide(state) {
   if (!g || g.status !== 'on') return false;
   g.status = 'skipped';
   return true;
+}
+// The tester panel's "Replay the first-day tour" (src/ui/tester-panel.js): the
+// same six steps from the start for any household, counting only what happens
+// from now on. Its rewards are paid again, which is why the panel marks the
+// save as a tester save first. The desk stays as it was.
+export function replayGuide(state, now = Date.now()) {
+  if (!(state.pets || []).length) return null;
+  const m = mayhemState(state);
+  lifeState(state).guide = { v: 1, status: 'on', at: now, seen: [], done: [], finishedAt: 0, celebrated: false,
+    replay: { care: careTotal(state), resolved: m.resolved, coffins: m.coffins, omen: m.omen.lastDay || '' } };
+  return lifeState(state).guide;
 }
 export function resumeGuide(state) {
   const g = guideOf(state);
@@ -171,7 +183,7 @@ export function guideDay(g, now = Date.now()) {
 export function deskStage(state, now = Date.now()) {
   const g = guideOf(state);
   if (!g) return householdIsFresh(state, now) ? 1 : 3;
-  if (g.status === 'skipped') return 3;
+  if (g.status === 'skipped' || g.replay) return 3;
   const m = mayhemState(state), day = guideDay(g, now);
   const learned = g.status === 'done' || m.resolved >= 1;
   if (day >= 3 && learned && (g.status === 'done' || m.coffins >= 1)) return 3;
