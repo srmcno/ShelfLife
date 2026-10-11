@@ -2,7 +2,7 @@ import { blankState, normalizeState, localDayKey } from '../src/state.js';
 import { generateCreature } from '../src/art/creatures.js';
 
 // Deterministic, synthetic households. No player data belongs in this file.
-export const FIXTURE_NAMES = ['fresh', 'established', 'nearly-full', 'drawing-heavy', 'conflicting', 'sleeping', 'capped', 'legacy', 'court-veteran', 'veteran'];
+export const FIXTURE_NAMES = ['fresh', 'established', 'nearly-full', 'drawing-heavy', 'conflicting', 'sleeping', 'capped', 'legacy', 'court-veteran', 'veteran', 'hexed'];
 const names = ['Agnes', 'Lord Dampington III', 'Pip', 'Bitey', 'Velvet', 'Mothball', 'Cricket', 'Doreen', 'Gladys', 'Snag', 'Mildred', 'Crumb', 'Wanda', 'Nell', 'Gnasher'];
 const traits = ['spiteful', 'damp', 'theatrical', 'magpie', 'porcelain', 'sugar', 'loadbearing', 'nocturnal'];
 // A valid synthetic raster with deliberately uncompressed pixels exercises the
@@ -80,6 +80,17 @@ export function householdFixture(kind='established', now=Date.now()) {
     versions:{'borrowed-coffin':{base:3,'a-second-telling':2},'snoring-wall':{base:2}},recent:['borrowed-coffin','snoring-wall','stolen-slot'],seats:{qa0:30,qa1:29,qa2:12},
     stars:52,rank:4,flawless:1,flawlessBest:3,summonsDay:localDayKey(now),summonsHeard:3,summonsVerdicts:0,summonsPaid:[],
     summonsOwed:[{id:'00000000-0000-4000-8000-000000000001',kind:'heard'}]};
+  // A friend's mischief under way: a hex in the tray, one waiting for room, a ghost on the shelf and a help received.
+  if(kind==='hexed') {
+    const bea={userId:'00000000-0000-4000-8000-0000000000bb',name:'Bea'}, grubbs={id:'friend-r1',name:'Grubbs',traits:['spiteful'],mood:'fine',bond:3,art:{body:'',stamps:[]}};
+    const hex=(n,card)=>({kind:'hex',ref:'11111111-1111-4111-8111-00000000000'+n,card,from:bea,culprit:grubbs,arrived:now-3600000,expires:now+40*3600000,rebound:false,trick:false});
+    s.mayhem.queue=[{uid:41,id:'x:unsolicited-accordion',a:'qa0',at:now-1800000,ext:hex(1,'unsolicited-accordion')}]; s.mayhem.serial=41; s.mayhem.nextAt=now+600000;
+    s.mischief={v:1,user:'00000000-0000-4000-8000-0000000000aa',hexes:[hex(1,'unsolicited-accordion'),hex(2,'damp-invitation')],
+      outbox:[{op:'ack',ref:'11111111-1111-4111-8111-000000000009',user:'00000000-0000-4000-8000-0000000000aa',at:now-60000}],
+      helps:[{id:'11111111-1111-4111-8111-000000000008',from:bea,petId:'qa1',petName:names[1],need:'food',amount:25,at:now-7200000,applied:now-3600000}],
+      haunt:{ref:'11111111-1111-4111-8111-000000000007',from:bea,ghost:grubbs,arrived:now-3600000,ends:now+20*3600000,shooed:false,paid:false},
+      done:['11111111-1111-4111-8111-000000000008'],paid:{day:localDayKey(now),help:1,knock:0,shoo:0}};
+  }
   if(kind==='legacy') { s.v=3; delete s.life; s.pets.forEach(p=>{p.img=drawing();delete p.art;delete p.names;delete p.slotHist;}); return s; }
   return normalizeState(s);
 }

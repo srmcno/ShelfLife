@@ -88,7 +88,7 @@ export function readStatus(raw) {
   const r = record(raw) ? raw : {};
   return {
     day: typeof r.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.day) ? r.day : '', now: time(r.now),
-    hand: [...new Set((Array.isArray(r.hand) ? r.hand.slice(0, 3) : []).filter(c => typeof c === 'string' && HEX_BY_ID[c]))],
+    hand: [...new Set((Array.isArray(r.hand) ? r.hand.slice(0, 10) : []).filter(c => typeof c === 'string' && HEX_BY_ID[c]))].slice(0, 3),
     hexedToday: r.hexed_today === true, hauntReady: r.haunt_ready === true, hauntNextAt: time(r.haunt_next_at),
     helped: uuids(r.helped), helpsGiven: int(r.helps_given, 0, 99, 0), knocked: uuids(r.knocked), season: r.season === true,
     rebounds: list(r.rebounds, 20, x => {

@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { HEX_IDS, TRICK_IDS, BOWLS } from '../src/content/mischief.js';
+import { hexHand, mischiefRoll } from './support/fake-mischief.mjs';
 
 const read = name => readFileSync(new URL('../supabase/migrations/' + name, import.meta.url), 'utf8');
 const ACCOUNTS = read('0001_accounts_and_saves.sql'), SOCIAL = read('0002_social.sql'), MISCHIEF = read('0007_mischief.sql');
@@ -393,6 +394,16 @@ test('trick-or-treat: the server rolls it, the bowl sets the odds, once a friend
   await rejects(call(C, 'public.set_bowl($1)', ['apples']), /rate_limited/);
   assert.equal(await value(`select bowl from public.doorsteps where user_id = '${C}'`), 'apples', 'the refused change was not kept');
   await at(NOW);
+});
+
+test('the in-memory fake deals the same hands and rolls the same knocks as the server', async () => {
+  for (const id of ids) for (const day of ['2026-10-14', '2026-10-31', '2027-01-02']) {
+    assert.deepEqual(await value('select private.hex_hand($1, $2::date)', [id, day]), hexHand(id, day), 'the hand for ' + id + ' on ' + day);
+    for (const tail of [':door', ':curio', ':souls', ':trick', ':who']) {
+      const seed = id + ':' + B + ':' + day + tail;
+      assert.equal(await value('select private.mischief_roll($1)', [seed]), mischiefRoll(seed));
+    }
+  }
 });
 
 test('the bowl shifts the odds across many doors', async () => {
