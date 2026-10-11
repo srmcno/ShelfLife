@@ -129,6 +129,21 @@ export function readRecords(raw) {
   }).filter(Boolean);
 }
 
+// Unlike recent activity, financial receipts may never be silently dropped.
+// One malformed or missing sequence leaves the save's cursor untouched.
+export function readCoopReceipts(raw, owner) {
+  if (!record(raw) || !Array.isArray(raw.receipts) || raw.receipts.length > 100 || typeof raw.more !== 'boolean') throw refuse('unexpected');
+  const receipts = raw.receipts.map(r => {
+    const id = cleanUuid(r?.id), sourceId = cleanUuid(r?.source_id), who = cleanUuid(r?.owner);
+    if (!id || !sourceId || who !== owner || !Number.isSafeInteger(r.seq) || r.seq < 1 || !['stake', 'duel', 'hire'].includes(r.kind)
+      || !Number.isInteger(r.delta) || r.delta < -25 || r.delta > 50 || !Number.isInteger(r.earned) || r.earned < 0 || r.earned > Math.max(0, r.delta)
+      || (r.kind === 'stake' ? r.delta >= 0 || r.earned !== 0 : r.delta < 0)) throw refuse('unexpected');
+    return { id, owner: who, sourceId, seq: r.seq, kind: r.kind, delta: r.delta, earned: r.earned };
+  });
+  if (raw.more && !receipts.length) throw refuse('unexpected');
+  return { receipts, more: raw.more };
+}
+
 /* ---------------- the wrappers ---------------- */
 
 export function createCoop({ cloud, social }) {
@@ -136,7 +151,12 @@ export function createCoop({ cloud, social }) {
   const active = () => !!social?.active?.();
   async function call(name, args) {
     if (!signedIn()) throw refuse('signed_out', 401);
-    try { return await cloud.rpc(name, args); }
+    const owner = cloud.userId();
+    try {
+      const reply = await cloud.rpc(name, args);
+      if (!signedIn() || cloud.userId() !== owner) throw refuse('session_changed', 401);
+      return reply;
+    }
     catch (error) {
       const code = coopCode(error);
       throw Object.assign(refuse(code, error?.status || 0), { offline: code === 'offline' });
@@ -157,10 +177,12 @@ export function createCoop({ cloud, social }) {
   }
   const hireBoard = async () => readBoard(await call('coop_hire_board', {}));
   async function hire(ownerId, petId) {
+    const hirerId = cloud.userId();
     if (typeof petId !== 'string' || !PET_ID.test(petId)) throw refuse('not_for_hire');
     const h = readHire(await call('coop_hire', { p_owner: uuid(ownerId), p_pet: petId }));
     if (!h) throw refuse('unexpected');
-    return h;
+    if (cloud.userId() !== hirerId) throw refuse('session_changed', 401);
+    return { ...h, hirerId };
   }
   async function finishHire(hireId, report) {
     const clean = normalizeTripReport(report);
@@ -202,7 +224,12 @@ export function createCoop({ cloud, social }) {
   const duels = async () => readDuels(await call('coop_duels', {}));
   async function duelClaim(id) { const r = await call('coop_duel_claim', { p_duel: uuid(id) }); return { souls: count(r?.souls, 50) }; }
   const records = async () => readRecords(await call('coop_records', {}));
+  async function receipts(after = 0) {
+    if (!Number.isSafeInteger(after) || after < 0) throw refuse('unexpected');
+    const owner = cloud.userId();
+    return readCoopReceipts(await call('coop_receipts', { p_after: after }), owner);
+  }
 
   return { active, signedIn, userId: () => signedIn() ? cloud.userId() : null, setHires, hireBoard, hire, finishHire, reports, collect,
-    duelCreate, duelPlay, duelSubmit, duelDecline, duelRematch, duels, duelClaim, records, block: id => social.block(id), report: (id, why) => social.report(id, why) };
+    duelCreate, duelPlay, duelSubmit, duelDecline, duelRematch, duels, duelClaim, records, receipts, block: id => social.block(id), report: (id, why) => social.report(id, why) };
 }

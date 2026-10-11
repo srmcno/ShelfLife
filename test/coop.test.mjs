@@ -8,7 +8,7 @@ import { blankCoop, normalizeCoop, coopState, normalizeOutingGuest, COOP_LIMITS 
 import { startOuting, chooseOuting, outingSnapshot, outingPreview, retryOuting, lifeState, finishOuting } from '../src/engine/life.js';
 import {
   hireGuest, guestCrew, guestLine, guestArrival, guestFarewell, tripReport, fieldReport, hireMemory, collectReport, holdStake, payDuel, stakeHeld,
-  duelSummary, duelLapsesAt, markAttempt, attemptFor, reportSent, setListed
+  duelSummary, duelLapsesAt, markAttempt, attemptFor, reportSent, setListed, applyCoopReceipts
 } from '../src/engine/coop.js';
 import { residentMemories } from '../src/engine/resident-memory.js';
 import { mayhemState } from '../src/mayhem-state.js';
@@ -249,13 +249,21 @@ test('the cloud wrappers drive the whole loop against the fake: list, hire, repo
   startOuting(beaShelf, 'cupboard', 'biscuit', ['qa1'], { mission: true, guest: g });
   for (const move of [2, 1, 0]) assert.ok(chooseOuting(beaShelf, move, now), 'move ' + move);
   const queued = coopState(beaShelf).outbox[0];
+  assert.equal(queued.owner, bea.id, 'the hirer owns the queued report across reload');
+  assert.equal(normalizeState(structuredClone(beaShelf)).coop.outbox[0].owner, bea.id);
+  reportSent(beaShelf, queued.hireId, ada.id);
+  assert.equal(coopState(beaShelf).outbox.length, 1, 'a replacement owner cannot consume the other owner’s queued report');
   assert.deepEqual(await beaCoop.finishHire(queued.hireId, queued.report), { wages: queued.report.tier * 3 + 6 });
   const mail = await adaCoop.reports();
   assert.equal(mail.reports.length, 1);
   assert.equal(mail.reports[0].hirerName, 'Bea');
   assert.match(fieldReport(mail.reports[0]), /^Your Agnes|Agnes/);
   assert.deepEqual(await adaCoop.collect(mail.reports[0].id), { wages: queued.report.tier * 3 + 6 });
-  assert.deepEqual(await adaCoop.collect(mail.reports[0].id), { wages: 0 });
+  assert.deepEqual(await adaCoop.collect(mail.reports[0].id), { wages: queued.report.tier * 3 + 6 }, 'retries return the same durable wages, not a consumed zero');
+  const receiptPage = await adaCoop.receipts(), initialSouls = mayhemState(adaShelf).souls;
+  applyCoopReceipts(adaShelf, ada.id, receiptPage.receipts);
+  applyCoopReceipts(adaShelf, ada.id, (await adaCoop.receipts()).receipts);
+  assert.equal(mayhemState(adaShelf).souls, initialSouls + queued.report.tier * 3 + 6, 'the same receipt never pays twice');
   // A duel, with a stake and a ghost.
   const made = await adaCoop.duelCreate(bea.id, 'stack', 5);
   assert.ok(made.seed >= 1);

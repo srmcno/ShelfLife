@@ -28,7 +28,7 @@ export function loadBoard(force = false) {
   const user = cloud.userId();
   paintPlanner();
   return coop.hireBoard().then(b => { if (cloud.userId() === user) { board = b; boardAt = Date.now(); boardUser = user; } return board; },
-    error => { failure = coopText(error); return null; })
+    error => { if (cloud.userId() === user) failure = coopText(error); return null; })
     .finally(() => { loading = false; paintPlanner(); });
 }
 export function plannedListing() {
@@ -60,6 +60,7 @@ export const guestTag = pet => pet?.guest && pet.from ? ' <small class="co-from"
 
 const statLine = stats => STAT_KEYS.filter(k => stats[k] >= SKILLED).map(k => k + ' ' + stats[k]).join(', ') || 'no specialities';
 function plannerBody(state, stops) {
+  if (board && boardUser !== cloud.userId()) { board = null; boardAt = 0; pick = ''; failure = ''; }
   if (!coop.active()) return '<p class="co-hire-note">Hired help comes from friends’ shelves. Turn on cloud save, then open Friends and swap codes with someone.</p>';
   if (!board && loading) return '<p class="co-hire-note" role="status">Asking around the neighbourhood.</p>';
   if (!board) return '<p class="co-hire-note" role="status">' + esc(failure || 'Nobody has been asked yet.') + '</p><div class="fr-actions"><button class="btn btn-sm" type="button" data-co-hire-act="retry">Ask again</button></div>';
@@ -111,9 +112,11 @@ export async function engageHire() {
   const l = plannedListing();
   if (!l) return null;
   if (engaging) throw new Error('Already asking.');
+  const owner = coop.userId();
   engaging = true; notice = ''; paintPlanner();
   try {
     const hire = await coop.hire(l.ownerId, l.petId);
+    if (owner !== coop.userId()) throw new Error('Sign in again before hiring a resident.');
     if (hire.resident.art?.body) pictures.set(hire.id, hire.resident.art);
     if (board) board.hiredToday = true;
     pick = '';
@@ -152,12 +155,19 @@ export function guestHomeLine(state, outing, lead = '') {
 let flushing = null;
 export function flushOutbox(state) {
   if (flushing || !coop.active() || !coopState(state).outbox.length) return flushing || Promise.resolve(0);
+  const owner = coop.userId();
   flushing = (async () => {
     let sent = 0;
-    for (const item of coopState(state).outbox.slice()) {
-      try { await coop.finishHire(item.hireId, item.report); reportSent(state, item.hireId); sent++; }
+    for (const item of coopState(state).outbox.filter(x => x.owner === owner)) {
+      if (owner !== coop.userId()) break;
+      try {
+        await coop.finishHire(item.hireId, item.report);
+        if (owner !== coop.userId()) break;
+        reportSent(state, item.hireId, owner); sent++;
+      }
       catch (error) {
-        if (['not_open', 'not_found', 'bad_report'].includes(error?.code)) reportSent(state, item.hireId);
+        if (owner !== coop.userId()) break;
+        if (['not_open', 'not_found', 'bad_report'].includes(error?.code)) reportSent(state, item.hireId, owner);
         else { item.tries = Math.min(99, (item.tries || 0) + 1); if (error?.offline) break; }
       }
     }

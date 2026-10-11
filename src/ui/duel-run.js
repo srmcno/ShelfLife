@@ -97,7 +97,7 @@ export function createDuelRun(run, duel) {
     window.removeEventListener('pagehide', onHide);
     timers.forEach(clearTimeout); timers.clear();
     window.dispatchEvent(new CustomEvent('shelflife:duel-done', { detail: {
-      id: duel.id, round: duel.round, role: duel.role, game: duel.game, seed: duel.seed, against: name, score: g.score,
+      owner: duel.owner, id: duel.id, round: duel.round, role: duel.role, game: duel.game, seed: duel.seed, against: name, score: g.score,
       log: duel.role === 'first' ? clock.log() : null, abandoned } }));
   }
   // Closing the app in the middle of a duel files the run as it stood.

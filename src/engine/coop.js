@@ -27,7 +27,7 @@ export const STAKES = [0, 5, 10, 25];
 // trip, never added to state.pets.
 export function hireGuest(hire) {
   const r = hire?.resident || {};
-  return normalizeOutingGuest({ hireId: hire?.id, from: { userId: hire?.ownerId, name: hire?.ownerName }, id: r.id, name: r.name, traits: r.traits,
+  return normalizeOutingGuest({ hireId: hire?.id, owner: hire?.hirerId, from: { userId: hire?.ownerId, name: hire?.ownerName }, id: r.id, name: r.name, traits: r.traits,
     stats: r.stats, art: r.art?.creature ? { creature: r.art.creature } : null });
 }
 
@@ -78,13 +78,13 @@ export function tripReport(outing, steps, tier, crewNames = []) {
 export function queueHireReport(state, outing, steps, tier, crewNames, now = Date.now()) {
   const report = tripReport(outing, steps, tier, crewNames), c = coopState(state);
   if (!report || c.outbox.some(x => x.hireId === outing.guest.hireId)) return null;
-  c.outbox.push({ hireId: outing.guest.hireId, report, at: now, tries: 0 });
+  c.outbox.push({ hireId: outing.guest.hireId, ...(outing.guest.owner ? { owner: outing.guest.owner } : {}), report, at: now, tries: 0 });
   if (c.outbox.length > COOP_LIMITS.outbox) c.outbox.splice(0, c.outbox.length - COOP_LIMITS.outbox);
   return report;
 }
-export function reportSent(state, hireId) {
+export function reportSent(state, hireId, owner = '') {
   const c = coopState(state);
-  c.outbox = c.outbox.filter(x => x.hireId !== hireId);
+  c.outbox = c.outbox.filter(x => x.hireId !== hireId || (x.owner || '') !== owner);
 }
 
 /* ---------------- the report the lender reads ---------------- */
@@ -118,8 +118,10 @@ export function hireMemory(item) {
 
 // The lender reads the report: wages paid (once, by the server's say), a note
 // on the board and a memory for the resident, if it still lives here.
-export function collectReport(state, item, wages, now = Date.now()) {
-  const c = coopState(state), mark = 'h:' + item.id;
+export const receiptMark = (kind, id, owner = '') => (owner ? owner + ':' : '') + kind + ':' + id;
+
+export function collectReport(state, item, wages, now = Date.now(), owner = '') {
+  const c = coopState(state), mark = receiptMark('h', item.id, owner);
   if (c.done.includes(mark)) return { souls: 0, text: fieldReport(item), fresh: false };
   c.done.push(mark);
   if (c.done.length > COOP_LIMITS.done) c.done.splice(0, c.done.length - COOP_LIMITS.done);
@@ -141,8 +143,9 @@ export function collectReport(state, item, wages, now = Date.now()) {
 
 /* ---------------- residents up for hire ---------------- */
 
-export function setListed(state, ids) {
+export function setListed(state, ids, owner = '') {
   const c = coopState(state);
+  c.listedOwner = owner;
   c.listed = [...new Set(ids.filter(id => state.pets.some(p => p.id === id)))].slice(0, COOP_LIMITS.listed);
   return c.listed;
 }
@@ -156,50 +159,50 @@ export function listingFor(pet, snapshot) {
 /* ---------------- duels: stakes, attempts, payouts ---------------- */
 
 // The stake leaves the purse once per duel, whatever happens to the network.
-export function holdStake(state, duelId, amount) {
+export function holdStake(state, duelId, amount, owner = '') {
   if (!(amount > 0)) return true;
   const c = coopState(state);
-  if (c.stakes.some(s => s.duelId === duelId)) return true;
+  if (c.stakes.some(s => s.duelId === duelId && (s.owner || '') === owner)) return true;
   const m = mayhemState(state);
   if (m.souls < amount) return false;
   m.souls -= amount;
-  c.stakes.push({ duelId, amount, at: Date.now() });
+  c.stakes.push({ duelId, ...(owner ? { owner } : {}), amount, at: Date.now() });
   if (c.stakes.length > COOP_LIMITS.stakes) c.stakes.splice(0, c.stakes.length - COOP_LIMITS.stakes);
   return true;
 }
-export const stakeHeld = (state, duelId) => coopState(state).stakes.find(s => s.duelId === duelId)?.amount || 0;
+export const stakeHeld = (state, duelId, owner = '') => coopState(state).stakes.find(s => s.duelId === duelId && (s.owner || '') === owner)?.amount || 0;
 
 // What the server says a settled duel owes. Your own stake comes back as it
 // went; only the other player's counts as souls earned.
-export function payDuel(state, duelId, souls) {
-  const c = coopState(state), mark = 'd:' + duelId;
+export function payDuel(state, duelId, souls, owner = '') {
+  const c = coopState(state), mark = receiptMark('d', duelId, owner);
   if (c.done.includes(mark)) return 0;
   c.done.push(mark);
   if (c.done.length > COOP_LIMITS.done) c.done.splice(0, c.done.length - COOP_LIMITS.done);
   const paid = Math.max(0, Math.min(50, Math.floor(souls || 0)));
-  const own = Math.min(paid, stakeHeld(state, duelId));
+  const own = Math.min(paid, stakeHeld(state, duelId, owner));
   if (own) mayhemState(state).souls += own;
   if (paid - own) addSouls(state, paid - own);
-  c.stakes = c.stakes.filter(s => s.duelId !== duelId);
+  c.stakes = c.stakes.filter(s => s.duelId !== duelId || (s.owner || '') !== owner);
   return paid;
 }
 
-export function attemptFor(state, duelId, round) {
-  return coopState(state).attempts.find(a => a.duelId === duelId && a.round === round) || null;
+export function attemptFor(state, duelId, round, owner = '') {
+  return coopState(state).attempts.find(a => a.duelId === duelId && a.round === round && (a.owner || '') === owner) || null;
 }
 // `extra` carries { game, seed, log } for a run that still has to be filed.
-export function markAttempt(state, duelId, round, status, score = 0, extra = {}, now = Date.now()) {
+export function markAttempt(state, duelId, round, status, score = 0, extra = {}, now = Date.now(), owner = '') {
   const c = coopState(state);
-  const found = attemptFor(state, duelId, round);
+  const found = attemptFor(state, duelId, round, owner);
   const next = { state: status, score: Math.max(found?.score || 0, Math.floor(score || 0)), at: now };
   for (const k of ['game', 'seed']) if (extra[k] !== undefined) next[k] = extra[k];
   if (found) { Object.assign(found, next); if (status === 'played' && extra.log) found.log = extra.log; if (status !== 'played') delete found.log; }
-  else c.attempts.push({ duelId, round, ...next, ...(status === 'played' && extra.log ? { log: extra.log } : {}) });
+  else c.attempts.push({ duelId, ...(owner ? { owner } : {}), round, ...next, ...(status === 'played' && extra.log ? { log: extra.log } : {}) });
   if (c.attempts.length > COOP_LIMITS.attempts) c.attempts.splice(0, c.attempts.length - COOP_LIMITS.attempts);
-  return attemptFor(state, duelId, round);
+  return attemptFor(state, duelId, round, owner);
 }
-export function markSeen(state, duelId, round) {
-  const c = coopState(state), key = duelId + ':' + round;
+export function markSeen(state, duelId, round, owner = '') {
+  const c = coopState(state), key = (owner ? owner + ':' : '') + duelId + ':' + round;
   if (!c.seen.includes(key)) c.seen.push(key);
   if (c.seen.length > COOP_LIMITS.seen) c.seen.splice(0, c.seen.length - COOP_LIMITS.seen);
 }
@@ -232,11 +235,56 @@ export function duelLapsesAt(d) {
   return from ? from + 48 * 3600000 : 0;
 }
 
-export function rememberRecords(state, list, now = Date.now()) {
+export function rememberRecords(state, list, now = Date.now(), owner = '') {
   const c = coopState(state);
+  if (c.recordsOwner !== owner) c.records = {};
+  c.recordsOwner = owner;
   for (const r of list) c.records[r.friend] = { won: r.duelsWon, lost: r.duelsLost, tied: r.duelsTied, roundsWon: r.roundsWon, roundsLost: r.roundsLost,
     streak: r.streak, best: r.bestStreak, trips: r.trips, at: now };
   const keep = Object.entries(c.records).sort(([, a], [, b]) => b.at - a.at).slice(0, COOP_LIMITS.records);
   c.records = Object.fromEntries(keep);
   return c.records;
+}
+
+// A wallet and its per-owner cursor are saved together. Server receipts are
+// immutable and replayable, so a lost response or an old backup can resume
+// from the same cursor. Stake debits always precede their settlement credits.
+export function applyCoopReceipts(state, owner, receipts) {
+  if (!/^[0-9a-f-]{36}$/i.test(owner || '') || !Array.isArray(receipts)) throw new Error('Invalid Co-op receipts');
+  const c = coopState(state), position = c.ledger[owner] || { seq: 0, debt: 0 };
+  const fresh = receipts.filter(r => r.seq > position.seq);
+  let seq = position.seq;
+  for (const r of fresh) {
+    if (r.owner !== owner || r.seq !== ++seq || !['stake', 'duel', 'hire'].includes(r.kind)
+      || !/^[0-9a-f-]{36}$/i.test(r.id || '') || !/^[0-9a-f-]{36}$/i.test(r.sourceId || '')
+      || !Number.isInteger(r.delta) || r.delta < -25 || r.delta > 50 || !Number.isInteger(r.earned)
+      || r.earned < 0 || r.earned > Math.max(0, r.delta) || (r.kind === 'stake' ? r.delta >= 0 || r.earned !== 0 : r.delta < 0)) {
+      throw new Error('Invalid Co-op receipt sequence');
+    }
+  }
+  const m = mayhemState(state);
+  c.ledger[owner] = position;
+  // Another local feature may have earned souls since a debit was deferred.
+  const repayment = Math.min(m.souls, position.debt);
+  m.souls -= repayment; position.debt -= repayment;
+  let paid = 0;
+  for (const r of fresh) {
+    if (r.kind === 'stake') {
+      const held = stakeHeld(state, r.sourceId, owner);
+      const due = Math.max(0, -r.delta - held), debit = Math.min(m.souls, due);
+      m.souls -= debit; position.debt += due - debit;
+      c.stakes = c.stakes.filter(s => s.duelId !== r.sourceId || s.owner !== owner);
+      c.stakes.push({ owner, duelId: r.sourceId, amount: -r.delta, at: Date.now() });
+    } else {
+      const repayment = Math.min(position.debt, r.delta);
+      position.debt -= repayment;
+      const credit = r.delta - repayment;
+      // addSouls raises ranks from earned winnings, never from returned stakes.
+      if (r.earned) { addSouls(state, r.earned); m.souls -= r.earned; }
+      m.souls += credit; paid += credit;
+      if (r.kind === 'duel') c.stakes = c.stakes.filter(s => s.duelId !== r.sourceId || s.owner !== owner);
+    }
+    position.seq = r.seq;
+  }
+  return { paid, applied: fresh.length, seq: position.seq, debt: position.debt };
 }

@@ -17,7 +17,7 @@ const petId = x => typeof x === 'string' && PET.test(x) && !['__proto__', 'const
 const intIn = (x, lo, hi) => Number.isInteger(x) && x >= lo && x <= hi;
 
 export function blankCoop() {
-  return { v: 1, listed: [], outbox: [], memories: [], done: [], stakes: [], attempts: [], seen: [], records: {} };
+  return { v: 2, listed: [], listedOwner: '', outbox: [], memories: [], done: [], stakes: [], attempts: [], seen: [], records: {}, recordsOwner: '', ledger: {} };
 }
 
 // The trip report a hirer sends: ids and numbers only (see 0009_coop.sql).
@@ -39,7 +39,7 @@ export function normalizeOutingGuest(g) {
   const stats = {};
   for (const k of ['cute', 'menace', 'damp', 'mystique']) stats[k] = intIn(g.stats?.[k], 1, 10) ? g.stats[k] : 5;
   const creature = obj(g.art?.creature) && JSON.stringify(g.art.creature).length <= 4000 ? JSON.parse(JSON.stringify(g.art.creature)) : null;
-  return { hireId: uuid(g.hireId), from: { userId: uuid(g.from.userId), name: text(g.from.name, 24) }, id: petId(g.id), name: text(g.name, 22) || 'Someone',
+  return { hireId: uuid(g.hireId), ...(uuid(g.owner) ? { owner: uuid(g.owner) } : {}), from: { userId: uuid(g.from.userId), name: text(g.from.name, 24) }, id: petId(g.id), name: text(g.name, 22) || 'Someone',
     traits: [...new Set((Array.isArray(g.traits) ? g.traits : []).filter(t => typeof t === 'string' && TRAIT.test(t)))].slice(0, 6), stats,
     art: creature ? { creature } : null };
 }
@@ -59,42 +59,51 @@ function record(r) {
 
 export function normalizeCoop(raw) {
   const s = blankCoop(), r = obj(raw) ? raw : {};
+  s.listedOwner = uuid(r.listedOwner); s.recordsOwner = uuid(r.recordsOwner);
   s.listed = [...new Set((Array.isArray(r.listed) ? r.listed : []).map(petId).filter(Boolean))].slice(0, COOP_LIMITS.listed);
   const seenHires = new Set();
   s.outbox = (Array.isArray(r.outbox) ? r.outbox : []).map(x => {
     const report = normalizeTripReport(x?.report), hireId = uuid(x?.hireId);
     if (!report || !hireId || seenHires.has(hireId)) return null;
     seenHires.add(hireId);
-    return { hireId, report, at: num(x.at), tries: num(x.tries, 99) };
+    return { hireId, ...(uuid(x.owner) ? { owner: uuid(x.owner) } : {}), report, at: num(x.at), tries: num(x.tries, 99) };
   }).filter(Boolean).slice(-COOP_LIMITS.outbox);
   // The newest few per resident survive, then the newest overall.
   const perPet = {};
   s.memories = (Array.isArray(r.memories) ? r.memories : []).map(memory).reverse()
     .filter(m => m && (perPet[m.petId] = (perPet[m.petId] || 0) + 1) <= COOP_LIMITS.perPet).reverse()
     .slice(-COOP_LIMITS.memories);
-  s.done = [...new Set((Array.isArray(r.done) ? r.done : []).filter(x => typeof x === 'string' && /^[hd]:[0-9a-f-]{36}$/i.test(x)))].slice(-COOP_LIMITS.done);
+  s.done = [...new Set((Array.isArray(r.done) ? r.done : []).filter(x => typeof x === 'string' && /^(?:[0-9a-f-]{36}:)?[hd]:[0-9a-f-]{36}$/i.test(x)))].slice(-COOP_LIMITS.done);
+  // Cursors are financial bookkeeping, not a recent-activity cache. Never prune
+  // an owner's cursor: losing it would replay already paid receipts.
+  s.ledger = Object.fromEntries(Object.entries(obj(r.ledger) ? r.ledger : {}).filter(([owner, v]) => uuid(owner) && obj(v))
+    .map(([owner, v]) => [uuid(owner), { seq: num(v.seq, Number.MAX_SAFE_INTEGER), debt: num(v.debt) }]));
+  // Unowned v1 prototype records remain quarantined. An owner is never
+  // guessed from whichever account happens to be signed in on load.
   const stakes = new Set();
   s.stakes = (Array.isArray(r.stakes) ? r.stakes : []).map(x => {
-    const duelId = uuid(x?.duelId);
-    if (!duelId || stakes.has(duelId) || !intIn(x.amount, 1, 25)) return null;
-    stakes.add(duelId);
-    return { duelId, amount: x.amount, at: num(x.at) };
+    const duelId = uuid(x?.duelId), owner = uuid(x?.owner);
+    const key = owner + ':' + duelId;
+    if (!duelId || stakes.has(key) || !intIn(x.amount, 1, 25)) return null;
+    stakes.add(key);
+    return { duelId, ...(owner ? { owner } : {}), amount: x.amount, at: num(x.at) };
   }).filter(Boolean).slice(-COOP_LIMITS.stakes);
   // A duel run started, played (its score kept until the server has it, with
   // the first player's log while it fits) or sent. Two logs at most.
   const attempts = new Set();
   let logs = 0;
   s.attempts = (Array.isArray(r.attempts) ? r.attempts : []).map(x => {
-    const duelId = uuid(x?.duelId);
-    if (!duelId || !intIn(x.round, 1, 3) || attempts.has(duelId + ':' + x.round) || !['started', 'played', 'sent'].includes(x.state)) return null;
-    attempts.add(duelId + ':' + x.round);
-    const out = { duelId, round: x.round, state: x.state, score: num(x.score, 3000), at: num(x.at) };
+    const duelId = uuid(x?.duelId), owner = uuid(x?.owner);
+    const key = owner + ':' + duelId + ':' + x?.round;
+    if (!duelId || !intIn(x.round, 1, 3) || attempts.has(key) || !['started', 'played', 'sent'].includes(x.state)) return null;
+    attempts.add(key);
+    const out = { duelId, ...(owner ? { owner } : {}), round: x.round, state: x.state, score: num(x.score, 3000), at: num(x.at) };
     if (DUEL_GAMES.includes(x.game)) out.game = x.game;
     if (intIn(x.seed, 1, 2147483647)) out.seed = x.seed;
     if (x.state === 'played' && obj(x.log) && JSON.stringify(x.log).length <= 30000) out.log = x.log;
     return out;
   }).filter(Boolean).slice(-COOP_LIMITS.attempts).reverse().map(a => { if (a.log && ++logs > 2) delete a.log; return a; }).reverse();
-  s.seen = [...new Set((Array.isArray(r.seen) ? r.seen : []).filter(x => typeof x === 'string' && /^[0-9a-f-]{36}:[1-3]$/i.test(x)))].slice(-COOP_LIMITS.seen);
+  s.seen = [...new Set((Array.isArray(r.seen) ? r.seen : []).filter(x => typeof x === 'string' && /^(?:[0-9a-f-]{36}:)?[0-9a-f-]{36}:[1-3]$/i.test(x)))].slice(-COOP_LIMITS.seen);
   s.records = Object.fromEntries(Object.entries(obj(r.records) ? r.records : {}).filter(([k, v]) => uuid(k) && obj(v))
     .sort(([, a], [, b]) => num(b.at) - num(a.at)).slice(0, COOP_LIMITS.records).map(([k, v]) => [k.toLowerCase(), record(v)]));
   return s;
