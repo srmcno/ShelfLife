@@ -92,7 +92,7 @@ function helpPanel() {
   const list = items => '<ul class="tn-list">' + items.map(item => '<li>' + esc(item) + '</li>').join('') + '</ul>';
   const n = TESTER_NOTES;
   host.innerHTML = '<p class="tn-intro">' + esc(n.intro) + '</p>' +
-    '<h3 class="help-heading">What to try this week <small>' + esc(n.week) + '</small></h3>' + list(n.tryThisWeek) +
+    '<h3 class="help-heading">What to try this week</h3><p class="tn-week">' + esc(n.week) + '</p>' + list(n.tryThisWeek) +
     '<h3 class="help-heading">How to report</h3>' + list(n.howToReport) +
     '<div class="tn-actions"><button class="btn btn-primary" type="button" data-tn-report>Report a problem</button></div>' +
     '<h3 class="help-heading">How to start again</h3>' + list(n.howToReset) +

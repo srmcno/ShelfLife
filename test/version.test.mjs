@@ -53,7 +53,7 @@ test('release notes: this version has some, newest first, short and in the house
     for (const item of release.items) {
       assert.ok(item.title.length <= 40, item.title);
       assert.ok(item.text.length <= 240, item.title + ' is short');
-      assert.doesNotMatch(item.title + item.text, /[–—]/, 'no en or em dashes');
+      assert.doesNotMatch(item.title + item.text, /[\u2013\u2014]/, 'no en or em dashes');
       assert.doesNotMatch(item.title + item.text, /[!]/, 'deadpan, not shouting');
       assert.doesNotMatch(item.text, /'/, 'curly apostrophes');
     }

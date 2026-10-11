@@ -127,10 +127,13 @@ sense.
 | App activity: Other user-generated content | The cloud save: residents, drawings, names, notes; the shelf on show to friends; the reason typed into a report | Yes | No | Yes | App functionality, Fraud prevention, security and compliance (reports) |
 | App activity: Other actions | Game progress in the save, friend requests and blocks, Court summonses, daily arcade scores | Yes | No | Yes | App functionality |
 | Device or other IDs | The random device id the game makes up, such as `android-k2x9q4mz` | Yes | No | Yes | App functionality |
+| App activity: App interactions | Play days: the dates a signed-in player opened the game, nothing else; switchable off in More, which also deletes them | Yes | No | Yes | Analytics |
+| App activity: Other user-generated content (feedback) | Problem reports and "How is it going?" answers the player chooses to send | Yes | No | Yes | App functionality, Analytics |
+| App info and performance: Crash logs, Diagnostics | Only inside a problem report the player sends with "Attach diagnostics" ticked: version, platform, user agent, screen size, settings, save size and the last 20 caught errors | Yes | No | Yes | App functionality, Analytics |
 
 Not collected: location, financial info, health, messages, photos and videos, audio, files, calendar,
-contacts, web browsing, app info and performance (no crash reporting or analytics), and device info
-beyond the made-up id. Nudges are local notifications with no server. Data is not processed
+contacts, web browsing, and device info beyond the made-up id and what a player's own problem report
+carries. There is no automatic crash reporting: errors stay on the device unless the player sends a report. Nudges are local notifications with no server. Data is not processed
 ephemerally; it is kept until the account is deleted.
 
 If the release goes out without cloud save configured, the game makes no network requests at all and the
@@ -138,7 +141,7 @@ answer to the first question is **No**.
 
 ## Release checklist
 
-1. **Before the first upload.** Bump `version` in `package.json`. Make the upload key and
+1. **Before the first upload.** Bump `VERSION` in `src/version.js` (and `version` in `package.json` to match). Make the upload key and
    `android/keystore.properties` (README, "Signing a release"). Run `npm test`, the browser suite and
    `npm run android:bundle`. Try the app on a real phone: Back on every sheet and on the shelf, Back up,
    Move to another device, Restore from a file in Downloads, postcard save and share, the narrator, turning
@@ -151,11 +154,14 @@ answer to the first question is **No**.
    warnings and screenshots at odd sizes.
 5. **Closed testing.** New personal developer accounts must run a closed test with **at least 12 testers
    opted in for 14 consecutive days** before production access can be requested. Invite them by email
-   list or Google Group, ask them to keep the app installed and play most days, and keep a note of what
-   they report. Upload fixes to the same track with a higher `version`.
+   list or Google Group, ask them to keep the app installed and play most days, and point them at
+   **Help → For testers** (edit `src/content/tester-notes.js` each week) and **More → Report a problem**.
+   Read their reports and the retention numbers with the SQL in the README ("Reading feedback and
+   retention in Supabase"). Upload fixes to the same track with a higher `VERSION`: every upload needs a
+   new versionCode, so even a one-line fix is a patch bump.
 6. **Apply for production** once the 14 days are up, answering Play's questions about the test.
 7. **Staged rollout.** Release to a small share first (for example 10%), watch Android vitals (ANRs,
    crashes) and reviews for a few days, then 50%, then everyone. A staged rollout can be halted if
    something is wrong.
-8. **Every later release.** Bump `version`, rebuild, upload, and update the Data safety form and content
+8. **Every later release.** Bump `VERSION`, add its notes to `CHANGES` in `src/version.js`, rebuild, upload, and update the Data safety form and content
    rating if a feature changes what is collected or shared (the friend features do).

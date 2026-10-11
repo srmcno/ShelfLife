@@ -317,6 +317,8 @@ function flushPulse() { if (pulse?.rating) sendPulse(); }
 
 export function maybePulse(now = Date.now()) {
   if (pulseShown || !S || !prompts() || document.querySelector('.veil.open') || document.body.dataset.guide === 'on') return false;
+  // One ask at a time: a backup or cloud save reminder on screen has the floor.
+  if (['cloudNudge', 'backupBanner'].some(id => $(id) && !$(id).hidden)) return false;
   return showPulse(duePulse(S, now));
 }
 
@@ -347,6 +349,9 @@ export function showBroke(entry) {
     });
   }
   notice.__entry = entry;
+  // Inside an open sheet the notice must live in its veil, or the focus boundary makes it inert.
+  const home = document.querySelector('.veil.open') || document.body;
+  if (notice.parentElement !== home) home.appendChild(notice);
   notice.innerHTML = '<span>Something on the shelf broke. Tell us?</span><button class="btn btn-sm btn-primary" type="button" data-broke-tell>Tell us</button><button class="btn btn-sm btn-ghost broke-x" type="button" data-broke-dismiss aria-label="Dismiss">Not now</button>';
   notice.hidden = false;
   setTimeout(() => { notice.hidden = true; }, 15000);
@@ -361,6 +366,9 @@ export function initFeedback({ state, cloud: c, feedback: f, save: s, prompts: p
   wireSheet();
   watchSheets();
   onError(entry => { if (prompts()) showBroke(entry); });
+  // A different sheet (or none) takes over the screen: the notice has said its piece.
+  new MutationObserver(() => { const n = $('brokeNotice'); if (n && !n.hidden && !n.closest('.veil.open')) n.hidden = true; })
+    .observe(document.body, { attributes: true, attributeFilter: ['data-active-dialog'] });
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushPulse(); });
   window.addEventListener('pagehide', flushPulse);
 }

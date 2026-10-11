@@ -3,7 +3,6 @@
    a 320px phone first; every new control is at least 44px tall. */
 
 /* ---- More: feedback and the version line ---------------------------------- */
-.tray-feedback #feedbackBtn{grid-column:1/-1}
 .tray-feedback #playDaysBtn{grid-column:1/-1}
 .tray-version{margin:10px 12px 0;text-align:center}
 .tray-version span{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 10px;font-size:12px;color:var(--ink-3);
@@ -49,8 +48,8 @@
 .fb-queued{margin-top:10px}
 .fb-h{margin:0 0 6px;font:700 16px/1.3 var(--body)}
 .fb-where{margin:0 0 14px;font-size:14px;color:var(--ink-2)}
-.fb-review{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:8px;margin:0 0 12px}
-.fb-review>div{min-width:0;padding:9px 12px;border:1px solid var(--hair);border-radius:var(--r);background:var(--glass)}
+.fb-review{display:grid;grid-auto-flow:row dense;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:6px;margin:0 0 12px}
+.fb-review>div{min-width:0;padding:7px 10px;border:1px solid var(--hair);border-radius:var(--r);background:var(--glass)}
 .fb-review .fb-wide{grid-column:1/-1}
 .fb-review dt{font:700 11px/1.4 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--mint)}
 .fb-review dd{margin:4px 0 0;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
@@ -60,6 +59,9 @@
 .fb-errors small,.tp-errors small{display:block;font-size:12px;color:var(--ink-3)}
 .fb-raw{margin:0 0 4px;border:1px solid var(--hair);border-radius:var(--r)}
 .fb-raw summary{min-height:44px;display:flex;align-items:center;padding:0 12px;cursor:pointer;font-size:14px;color:var(--ink-2)}
+.fb-raw summary::-webkit-details-marker{display:none}
+.fb-raw summary::after{content:'Show';margin-left:auto;padding-left:12px;font-size:12px;font-weight:700;color:var(--mint)}
+.fb-raw[open] summary::after{content:'Hide'}
 .fb-raw pre{margin:0;padding:10px 12px;max-height:280px;overflow:auto;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;
   color:var(--ink-2);border-top:1px solid var(--hair);user-select:text;-webkit-user-select:text}
 .fb-status{margin:12px 0 0;padding:10px 12px;border:1px solid var(--hair-lit);border-radius:var(--r);font-size:14px}
@@ -94,8 +96,8 @@
   width:max-content;max-width:min(calc(100vw - 32px),460px);padding:10px 12px;border:1px solid var(--danger);border-radius:var(--r-lg);background:var(--night-3);
   color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:14px}
 .broke-notice[hidden]{display:none}
-.broke-notice span{flex:1 1 180px}
-.broke-notice .btn{min-height:44px}
+.broke-notice span{flex:1 1 100%;line-height:1.4}
+.broke-notice .btn{flex:1 1 0;min-width:0;min-height:44px;justify-content:center}
 @media (max-width:720px){
   .broke-notice{bottom:calc(var(--tabbar-h) + 14px + var(--sab))}
   body:has(.veil.open) .broke-notice{bottom:calc(22px + var(--sab))}
@@ -138,7 +140,7 @@
 /* ---- Help: For testers ----------------------------------------------------- */
 .help-tabs .help-tab{min-width:0;white-space:normal;line-height:1.2}
 .tn-intro{margin:0 0 6px;font-size:14px;line-height:1.55}
-.help-heading small{font:400 12px var(--body);color:var(--ink-3);margin-left:6px}
+.tn-week{margin:-6px 0 8px;font-size:12px;color:var(--ink-3)}
 .tn-list{margin:0 0 14px;padding-left:20px;font-size:14px;line-height:1.55}
 .tn-list li+li{margin-top:6px}
 .tn-actions{display:flex;margin:0 0 16px}

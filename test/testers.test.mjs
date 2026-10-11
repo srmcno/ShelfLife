@@ -345,7 +345,7 @@ test('the tester notes are there for the owner to edit, in the house style', () 
   assert.ok(TESTER_NOTES.tryThisWeek.length >= 3);
   for (const line of [TESTER_NOTES.intro, TESTER_NOTES.week, ...TESTER_NOTES.tryThisWeek, ...TESTER_NOTES.howToReport, ...TESTER_NOTES.howToReset]) {
     assert.equal(typeof line, 'string');
-    assert.doesNotMatch(line, /[–—<>]/, 'no dashes, no HTML');
+    assert.doesNotMatch(line, /[\u2013\u2014<>]/, 'no dashes, no HTML');
   }
 });
 
