@@ -70,7 +70,8 @@ registerPostboxSource({
 });
 
 registerFriendAction({
-  id: 'serve', label: 'Serve papers', order: 30,
+  // The one-sided summons: you serve, they judge alone. The Joint Bench's sealed version comes first.
+  id: 'serve', label: 'Serve papers without judging', order: 11,
   available(friend, ctx) {
     if (!ctx.online()) return 'No connection. Papers need a postman.';
     if (!ctx.state.pets.length) return 'You need a resident to do the suing.';

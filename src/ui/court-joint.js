@@ -463,7 +463,7 @@ export function initJointBench({ state, social, cloud, stage } = {}) {
 
   /* ---------------- the Friends sheet, through the registry ---------------- */
   const needsResidents = () => (S.pets.length ? true : 'You need a resident on the shelf to stage a case.');
-  registerFriendAction({ id: 'serve', label: 'Serve papers', order: 10, available: needsResidents, run: friend => toCourt({ view: 'serve', friend: friendFrom(friend) }) });
+  registerFriendAction({ id: 'serve-sealed', label: 'Serve papers and judge it too', primary: true, order: 10, available: needsResidents, run: friend => toCourt({ view: 'serve', friend: friendFrom(friend) }) });
   registerFriendAction({ id: 'hear-together', label: 'Hear a case together', order: 12, available: needsResidents, run: friend => toCourt({ view: 'invite', friend: friendFrom(friend) }) });
   registerPostboxSource({
     id: 'joint-bench', order: 12, label: 'The Joint Bench', poll: true,

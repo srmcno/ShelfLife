@@ -256,7 +256,7 @@ test('hear a case together: an invitation from Friends, witnesses from their she
     const { friendActions } = await import('/src/ui/social-registry.js');
     const friend = { userId: id, name };
     const actions = friendActions(friend, {});
-    if (!actions.some(a => a.id === 'serve') || !actions.some(a => a.id === 'hear-together')) throw new Error('actions missing');
+    if (!actions.some(a => a.id === 'serve-sealed') || !actions.some(a => a.id === 'serve') || !actions.some(a => a.id === 'hear-together')) throw new Error('actions missing');
     actions.find(a => a.id === 'hear-together').run(friend, {});
   }, { id: bea.id, name: 'Bea' });
   await expect(page.locator('#courtSheet.jc-invite')).toBeVisible();
