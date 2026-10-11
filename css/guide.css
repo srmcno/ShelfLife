@@ -1,0 +1,240 @@
+/* =============================================================================
+   Onboarding and clarity: the one "do this next" card, the first-session guide's
+   soft ring, the help sheet's First day / Glossary tabs, the tooltip card,
+   earned-souls chips, and Calm mode. Loaded last on purpose: it only adds.
+   ============================================================================= */
+
+/* ---- the one card --------------------------------------------------------- */
+.next-step{--ns-tone:var(--mint);position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center;margin:0 0 30px;padding:13px 15px;
+  border:1px solid color-mix(in srgb,var(--ns-tone) 42%,transparent);border-radius:14px;color:var(--ink);
+  background:radial-gradient(120% 160% at 0% 0%,color-mix(in srgb,var(--ns-tone) 18%,transparent),transparent 62%),linear-gradient(180deg,var(--night-3),var(--night-2));
+  box-shadow:0 12px 30px -20px color-mix(in srgb,var(--ns-tone) 70%,transparent),inset 0 1px 0 var(--glass-2)}
+.next-step[hidden]{display:none}
+.next-step[data-kind="emergency"]{--ns-tone:var(--mh-blood,#C4243C)}
+.next-step[data-kind="omen"]{--ns-tone:var(--mh-violet,#B98BFF)}
+.next-step[data-kind="coffin"],.next-step[data-kind="guide-done"]{--ns-tone:var(--mh-candle,#F6C768)}
+.next-step[data-kind="guide"]{--ns-tone:var(--mh-candle,#F6C768)}
+.ns-main{min-width:0}
+.ns-kicker{display:flex;align-items:center;gap:10px;font:700 11px/1.3 var(--body);letter-spacing:.14em;text-transform:uppercase;color:color-mix(in srgb,var(--ns-tone) 78%,var(--ink))}
+.ns-dots{display:inline-flex;gap:4px}
+.ns-dots i{display:block;width:14px;height:5px;border-radius:3px;background:var(--hair-lit)}
+.ns-dots i.done{background:var(--mh-good,#8FE0B4)}
+.ns-dots i.now{background:var(--mh-candle,#F6C768)}
+.ns-title{margin:3px 0 0;font:400 22px/1.15 var(--display);letter-spacing:-.01em;color:var(--ink);text-wrap:balance}
+.ns-hint{margin:5px 0 0;font:400 13px/1.42 var(--body);color:var(--ink-2)}
+.ns-actions{display:flex;flex-direction:column;align-items:stretch;gap:2px}
+.ns-go{min-width:112px}
+.next-step[data-kind="emergency"] .ns-go{background:linear-gradient(180deg,#ff5a6c,var(--mh-blood,#C4243C));color:#fff}
+.next-step[data-kind="omen"] .ns-go{background:linear-gradient(180deg,#caa6ff,#8a5ad8);color:#12081f}
+.next-step[data-kind="coffin"] .ns-go,.next-step[data-kind="guide"] .ns-go,.next-step[data-kind="guide-done"] .ns-go{background:linear-gradient(180deg,#ffd98a,#d9a13c);color:#2a1a05}
+.ns-skip{min-height:44px;padding:0 6px;border:0;background:none;color:var(--ink-2);font:600 12px/1 var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.ns-skip:hover{color:var(--ink)}
+.ns-skip:focus-visible,.ns-go:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.shelf-vacant .next-step{display:none}
+
+@media (max-width:560px){
+  .next-step{grid-template-columns:minmax(0,1fr);gap:8px;padding:11px 13px}
+  .ns-title{font-size:20px}
+  .ns-hint{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .ns-actions{flex-direction:row;align-items:center;gap:8px}
+  .ns-go{flex:1;min-height:46px}
+  .ns-skip{flex:none}
+  /* The heading is decoration once there are residents; the card is the first thing a phone needs. */
+  body:not(.shelf-vacant) .shelf-heading{margin-bottom:8px}
+  body:not(.shelf-vacant) .shelf-heading .eyebrow,body:not(.shelf-vacant) .room-live{display:none}
+  body:not(.shelf-vacant) .shelf-heading h1{font-size:24px;margin:0}
+}
+
+/* While the first-session guide runs it is the only voice: no second strip, no
+   badges, no extra number systems. The strip returns when the tour ends. */
+body[data-guide="on"] #mayhemAlert{display:none}
+body[data-guide="on"] #shelfBadge,body[data-guide="on"] #notesBadge,body[data-guide="on"] #plotsDot{display:none!important}
+body[data-guide="on"] .shelf-framing .framing-tools,body[data-guide="on"] #paneShelf #actions.actions{display:none}
+
+/* ---- the soft ring on the exact button -------------------------------------- */
+.guide-ring{position:relative;z-index:3;outline:3px solid var(--mh-candle,#F6C768);outline-offset:3px;border-radius:14px;animation:guide-pulse 1.8s ease-in-out infinite}
+.pet.guide-ring{border-radius:20px;outline-offset:-2px}
+.tabbar .tab.guide-ring{outline-offset:-4px;border-radius:12px}
+.guide-ring.btn,.guide-ring.mh-choice{outline-offset:3px}
+@keyframes guide-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--mh-candle,#F6C768) 55%,transparent)}50%{box-shadow:0 0 0 11px transparent}}
+.guide-pop{animation:guide-pop .9s ease-out 1}
+@keyframes guide-pop{0%{transform:scale(1);box-shadow:0 0 0 0 color-mix(in srgb,var(--mh-candle,#F6C768) 70%,transparent)}35%{transform:scale(1.08)}100%{transform:scale(1);box-shadow:0 0 0 18px transparent}}
+
+/* ---- the desk while it is still growing -------------------------------------- */
+.mh-teaser{grid-column:1/-1;margin:0;font:21px/1.3 var(--hand);color:var(--ink-2);text-align:center;border-style:dashed}
+.mh-gloss-link{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;border:0;background:none;color:var(--ink-2);font:600 13px var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.mh-gloss-link:hover{color:var(--ink)}
+
+/* ---- help: First day and Glossary --------------------------------------------- */
+.help-tabs{display:flex;gap:8px;margin:14px 0 12px}
+.help-tab{flex:1;min-height:44px;padding:8px 12px;border-radius:var(--r);border:1px solid var(--hair-lit);background:transparent;color:var(--ink-2);font:700 14px var(--body)}
+.help-tab:hover{color:var(--ink);background:var(--glass)}
+.help-tab[aria-selected="true"]{background:var(--glass-2);color:var(--ink);border-color:var(--key-mid);box-shadow:inset 0 -3px 0 var(--mh-candle,#F6C768)}
+.help-tab:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.help-heading{margin:6px 0 10px;font:400 22px/1.2 var(--display)}
+.gl-tour{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px}
+.gl-tour li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--hair);border-radius:12px;background:var(--glass)}
+.gl-tour li.done{opacity:.78}
+.gl-tour li b{display:block;font-size:15px;color:var(--ink)}
+.gl-tour li small{display:block;margin-top:3px;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.gl-tour li em{font-style:normal;font-size:12px;color:var(--mh-good,#8FE0B4)}
+.gl-check{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--edge);font:700 12px var(--body);color:var(--ink-2)}
+.gl-tour li.done .gl-check{background:var(--mh-good,#8FE0B4);border-color:var(--mh-good,#8FE0B4);color:#12081a}
+.help-more{margin-top:14px;border-top:1px solid var(--hair);padding-top:4px}
+.help-more>summary{display:flex;align-items:center;min-height:48px;cursor:pointer;font:700 14px var(--body);color:var(--ink)}
+.gl-group h3{margin:18px 0 4px;font:700 11px/1.3 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.gl-group dl{margin:0}
+.gl-entry{padding:12px 4px;border-top:1px solid var(--hair);border-radius:8px}
+.gl-entry:focus{outline:none}
+.gl-entry:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.gl-entry dt{font:400 21px/1.2 var(--display);color:var(--ink)}
+.gl-entry dd{margin:4px 0 0}
+.gl-entry dd p{margin:4px 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.gl-entry dd .gl-short{color:var(--ink);font-weight:600}
+.gl-entry dd .btn{margin-top:6px}
+.gl-flash{animation:gl-flash 1.8s ease-out 1}
+@keyframes gl-flash{0%{background:color-mix(in srgb,var(--mh-candle,#F6C768) 28%,transparent)}100%{background:transparent}}
+
+/* ---- the tooltip card ------------------------------------------------------------ */
+.gloss-card{position:fixed;z-index:95;left:max(12px,var(--sal));right:max(12px,var(--sar));bottom:calc(var(--tabbar-h) + var(--sab) + 14px);max-width:440px;margin-inline:auto;
+  padding:13px 15px;border-radius:14px;border:1px solid var(--key-mid);background:linear-gradient(180deg,var(--night-3),var(--night-2));color:var(--ink);box-shadow:0 18px 44px -14px #000}
+.gloss-card[hidden]{display:none}
+.veil>.gloss-card{bottom:calc(14px + var(--sab))}
+.gloss-card.show{animation:gloss-in .18s ease-out 1}
+@keyframes gloss-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.gloss-term{display:block;font:400 21px/1.2 var(--display)}
+.gloss-card p{margin:4px 0 10px;font-size:14px;line-height:1.45;color:var(--ink-2)}
+.gloss-actions{display:flex;flex-wrap:wrap;gap:8px}
+.gloss-actions .btn{flex:1 1 auto}
+
+/* ---- what an act earned, over the thing that earned it -------------------------------- */
+.earn-chip{position:absolute;z-index:9;left:50%;top:10%;white-space:nowrap;padding:3px 9px;border-radius:99px;font:800 14px/1.3 var(--body);color:#2a1a05;background:var(--mh-candle,#F6C768);
+  box-shadow:0 4px 14px -4px #000a;pointer-events:none;animation:earn-rise 1.6s ease-out forwards}
+.earn-chip.earn-trust{background:var(--pink);color:var(--accent-ink)}
+.earn-chip.earn-good{background:var(--mh-good,#8FE0B4);color:#0d2519}
+@keyframes earn-rise{0%{opacity:0;transform:translate(-50%,14px) scale(.8)}18%{opacity:1;transform:translate(-50%,0) scale(1.06)}78%{opacity:1}100%{opacity:0;transform:translate(-50%,-34px)}}
+@media (prefers-reduced-motion:reduce){.guide-ring{animation:none}.guide-pop{animation:none}.gl-flash{animation:none}.gloss-card.show{animation:none}.earn-chip{animation:none;opacity:1}}
+
+/* ---- small fixes that belong with the rest ------------------------------------------------ */
+/* The toast was shrink-wrapped into half the screen width (left:50% leaves 50vw to fit in), so a sentence
+   became a tall narrow strip across the page. It is as wide as its words, up to the screen. */
+#toast{width:max-content;max-width:min(calc(100vw - 32px),460px)}
+/* A sheet's title takes focus so a screen reader starts there; it is not a control and needs no ring. */
+.sheet h2[tabindex="-1"]:focus,.sheet h2[tabindex="-1"]:focus-visible,.pane[tabindex="-1"]:focus-visible{outline:none}
+
+/* ---- Stories before the first memory: progress, and the folders it opens ------------------------ */
+.acquaint{margin:0 0 16px;padding:16px 18px;border:1px solid var(--hair-lit);border-radius:14px;background:linear-gradient(145deg,var(--night-3),var(--night-2))}
+.acquaint[hidden],.locked-folders[hidden]{display:none}
+.acquaint .eyebrow{display:flex;align-items:center;gap:10px;color:var(--mh-candle,#F6C768);font-size:11px;letter-spacing:.14em}
+.acquaint h2{margin:8px 0;font:400 24px/1.18 var(--display)}
+.acquaint p{margin:0 0 12px;color:var(--ink-2);font-size:14px;line-height:1.5}
+.acq-dots{display:inline-flex;gap:4px}
+.acq-dots i{display:block;width:16px;height:5px;border-radius:3px;background:var(--hair-lit)}
+.acq-dots i.done{background:var(--mh-good,#8FE0B4)}
+.acq-dots i.now{background:var(--mh-candle,#F6C768)}
+.locked-folders{display:grid;gap:10px;margin:0 0 18px}
+.folder-locked{display:flex;gap:18px;align-items:flex-start;width:100%;min-height:88px;padding:14px 16px;text-align:left;border:1px dashed var(--edge);border-radius:14px;background:transparent;color:var(--ink-2);cursor:pointer}
+.folder-locked:hover{background:var(--glass);border-color:var(--key-mid)}
+.folder-locked:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.folder-locked .folder-number{font:400 25px var(--display);color:var(--ink-3);opacity:.8}
+.folder-locked b{display:block;font:400 22px/1.2 var(--display);color:var(--ink)}
+.folder-locked small{display:block;margin-top:5px;font-size:13px;line-height:1.4;color:var(--ink-2)}
+.folder-locked em{display:flex;align-items:center;gap:8px;margin-top:8px;font:600 12px/1.4 var(--body);font-style:normal;color:var(--mh-candle,#F6C768)}
+.lock-mark{flex:none;position:relative;width:11px;height:9px;margin-top:5px;border-radius:2px;background:currentColor}
+.lock-mark::before{content:'';position:absolute;left:1.5px;bottom:100%;width:5px;height:5px;border:2px solid currentColor;border-bottom:0;border-radius:5px 5px 0 0}
+
+/* =============================================================================
+   Accessibility floor. Text at or above 11px, tap targets at or above 44px, a name
+   for everything that carries a number, and a ring you can see on every control.
+   ============================================================================= */
+.eyebrow{font-size:11px}
+.status>span,.topbar .status>span{font-size:11px}
+.mh-curio-flag,.mh-rarity,.mh-odds,.mh-drop-kicker{font-size:11px}
+.mh-mini-stamp{font-size:11px}
+.tabbar .tab,.room-nav .tab,.tab{font-size:11px}
+.tab-badge{font-size:11px}
+.filter-count{font-size:11px}
+#actions small,#paneShelf #actions small,.actions small{font-size:11px}
+.mh-chores li small{font-size:11px}
+.mh-season-note{font-size:12px}
+@media (max-width:720px){
+  #cabinet .pet .nameplate,#cabinet .prop .nameplate{font-size:11px;line-height:12px;height:25px;white-space:normal;overflow:hidden;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;top:calc(100% + 6px)}
+  .shelf-framing #shelfFocus{font-size:11px}
+  .shelf-heading .eyebrow{font-size:11px}
+  .room-live{font-size:11px}
+  .souls-count small{font-size:11px}
+  .mh-tile-kicker{font-size:11px}
+  #playroomVeil .activity-top>span:last-child,#playroomVeil .activity-bottom,#playroomVeil .playroom-company label{font-size:11px}
+}
+/* Phones show one number in the top bar: souls. Household trust, the day and the moon live on larger screens and in the Cabinet. */
+@media (max-width:720px){.topbar .status{display:none}}
+.status .trust-chip{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 4px;border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:help}
+.status .trust-chip:hover{color:var(--ink)}
+.status .trust-chip:focus-visible,.pip:focus-visible,.souls-hud:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.help-btn{gap:6px;min-width:44px}
+.help-btn svg{width:18px;height:18px}
+/* Locked props and anything else that says why it cannot be used yet keeps its focus and its explanation. */
+[aria-disabled="true"]{cursor:not-allowed}
+button:focus-visible,a:focus-visible,summary:focus-visible,select:focus-visible,[role="button"]:focus-visible,[role="tab"]:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+
+/* ---- a household's first trip: the words it has not met yet ------------------------------------- */
+.expedition-view.first-trip.phase-planning .expedition-reading-pane>p,.expedition-view.first-trip .trail-wager-settings{display:none}
+.expedition-view [data-gloss][role="button"]{cursor:help;text-decoration:underline dotted;text-underline-offset:3px}
+
+/* ---- game results: stars first, points as the small print ---------------------------------------------- */
+.result-stars{display:inline-flex;gap:6px;color:#ffffff24;font-style:normal}
+.result-stars i{font-style:normal;font-size:22px;line-height:1}
+.result-stars i.on{color:var(--mh-candle,#F6C768);text-shadow:0 0 12px color-mix(in srgb,var(--mh-candle,#F6C768) 60%,transparent)}
+.result-stars.big{display:flex;justify-content:center;margin:0 0 6px}
+.result-stars.big i{font-size:46px}
+.ar-over .ar-final b{font-size:40px}
+.ar-over .ar-final small{font-size:11px}
+@media (max-width:720px){.ar-over .ar-final b{font-size:36px}}
+
+/* ---- studio: what is still locked is shown, greyed, with a lock ------------------------------------------ */
+.sw.sw-locked{position:relative;opacity:.45;filter:saturate(.5);cursor:not-allowed}
+.sw.sw-locked::after{content:'';position:absolute;left:50%;top:50%;width:12px;height:9px;margin:-2px 0 0 -6px;border-radius:2px;background:#fffa;box-shadow:0 0 0 1px #0008}
+.sw.sw-locked::before{content:'';position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-9px 0 0 -3px;border:2px solid #fffa;border-bottom:0;border-radius:5px 5px 0 0;box-shadow:0 0 0 1px #0008}
+.chip.chip-locked{opacity:.55;border-style:dashed;cursor:not-allowed}
+.chip.chip-locked::before{content:'';display:inline-block;width:9px;height:7px;margin-right:7px;border-radius:2px;background:currentColor}
+.unlock-hint{min-height:1.5em;margin:8px 0 0;color:var(--ink-2)}
+@media (max-width:720px){#paneShelf #actions #roundsBtn small{display:block;font-size:11px}}
+
+/* ---- Calm mode: the same rules as the device's reduced-motion setting, switched on from inside the game -------- */
+body.calm *,body.calm *::before,body.calm *::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+body.calm .sprite.sl2,body.calm .sl2 .sprite-act,body.calm .sl2 .sprite-figure,body.calm .sl2 .stamp-art,body.calm .sl2 .sl-part{animation:none!important;transform:none!important;rotate:none!important;translate:none!important;scale:none!important}
+body.calm .sl2 .sprite-stamp{transform:translate(-50%,-50%)!important}
+body.calm .sl2 .sprite-creature{transform:translateY(var(--sl-foot,8%))!important}
+body.calm .sl2.sl-asleep .sl-part[data-part="eye"]{scale:1 .12!important}
+body.calm .sl-bubble,body.calm .sl-zzz,body.calm .care-motes,body.calm #wall::before,body.calm .haze-fog{display:none}
+body.calm .candle i,body.calm .souls-icon{animation:none!important}
+body.calm .guide-ring{animation:none}
+body.calm .earn-chip{opacity:1}
+
+/* Locked furniture explains itself, so its words must stay readable: dim the picture, not the sentence. */
+.prop-card.locked{opacity:1}
+.prop-card.locked b{color:var(--ink-2)}
+.prop-card.locked small{color:var(--warn)}
+/* A count inside a filter chip is read like any other number. */
+.filter-count{opacity:1;border-color:var(--edge)}
+/* A finished tour step is quieter, not fainter. */
+.gl-tour li.done{opacity:1}
+.gl-tour li.done b{color:var(--ink-2)}
+/* A coffin you cannot afford yet still says how many souls short you are, in readable type. */
+.mh-coffin-tile[aria-disabled="true"]{opacity:1}
+
+/* Once the tour is over the card is a single line of advice, not a poster: it sits beside the omen strip for
+   returning players and must not push the shelf down the screen. */
+.gl-entry{scroll-margin-top:110px}
+.next-step:not([data-kind="guide"]):not([data-kind="guide-done"]){margin-bottom:26px;padding:9px 12px;gap:6px 10px}
+.next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-title{font-size:18px;margin-top:1px}
+.next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-hint{margin-top:2px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-kicker{font-size:11px}
+@media (max-width:560px){
+  .next-step:not([data-kind="guide"]):not([data-kind="guide-done"]){grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  .next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-go{flex:none;min-width:96px;min-height:44px;padding-inline:12px}
+  .next-step:not([data-kind="guide"]):not([data-kind="guide-done"]) .ns-title{font-size:17px}
+}
+/* Inside a sheet the result is at the bottom of the screen, so the toast goes to the top instead of covering it. */
+body.dialog-open[data-active-dialog] #toast{top:calc(10px + var(--sat));bottom:auto;transform:translateX(-50%) translateY(-16px)}
+body.dialog-open[data-active-dialog] #toast.show{transform:translateX(-50%) translateY(0)}

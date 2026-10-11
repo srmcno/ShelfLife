@@ -1,3 +1,4 @@
+import './ui/calm.js';
 import { initLife } from './ui/life.js';
 import { initWelcome } from './ui/welcome.js';
 import { initEscapades } from './ui/escapades.js';
@@ -13,6 +14,10 @@ import { lifeState, welcomeBack } from './engine/life.js';
 import { artPersonality } from './engine/personality.js';
 import { initStories } from './ui/stories.js';
 import { initMayhem } from './ui/mayhem.js';
+import { initNextStep } from './ui/nextstep.js';
+import './ui/nextstep-extras.js';
+import { initHelp } from './ui/glossary.js';
+import { initCalm } from './ui/calm.js';
 import { initArcade } from './ui/arcade.js';
 import { initCourt } from './ui/court.js';
 import { accrueMayhem } from './engine/mayhem.js';
@@ -429,6 +434,8 @@ initAlmanac(state, () => renderAll(state));
 initCollections(state, () => renderAll(state));
 initReturns(state, () => renderAll(state));
 initNudgeSettings(state);
+initNextStep(state, () => renderAll(state));
+initCalm(state, { save, onChange: () => renderAll(state) });
 initArcade(state, () => renderAll(state), { social });
 initCourt(state, () => renderAll(state), { social, cloud });
 initSocialInbox({ cloud, social });
@@ -474,15 +481,9 @@ document.addEventListener('keydown', e => {
 function syncStorageWarning() { document.getElementById('storageWarn').hidden = Store.persistent; }
 window.addEventListener('shelflife:storage', syncStorageWarning);
 syncStorageWarning();
-const helpVeil = document.getElementById('helpVeil');
-document.getElementById('quickHelp').addEventListener('click', () => helpVeil.classList.add('open'));
-document.getElementById('helpBtn').addEventListener('click', () => helpVeil.classList.add('open'));
-document.getElementById('helpClose').addEventListener('click', () => helpVeil.classList.remove('open'));
-document.getElementById('helpPlayroom').addEventListener('click', () => {
-  helpVeil.classList.remove('open');
-  document.getElementById('playroomBtn').click();
-});
-helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.classList.remove('open'); });
+// Help: the labelled button, the More entry and every "what is this?" link open
+// the same sheet (ui/glossary.js) and focus comes back to whichever asked.
+initHelp(state);
 
 // Coming back to a pile of disasters is the point; say so once, briefly.
 function announceMayhem(added) {

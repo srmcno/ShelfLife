@@ -1,5 +1,6 @@
 import { save } from '../state.js';
 import { initFx } from './fx.js';
+import { applyCalm } from './calm.js';
 import './celebrate.js';   // the celebration hooks start themselves
 import { BENCH_KEY, BENCH_FRAMES, classifyFrames, nextVerdict, effectsMode } from './effects-model.js';
 export { BENCH_KEY, FULL_MEDIAN_MS, FULL_P90_MS, BENCH_FRAMES, classifyFrames, nextVerdict, effectsMode } from './effects-model.js';
@@ -44,6 +45,7 @@ function writeVerdict(next, stats) {
 
 export function syncEffects(state) {
   currentState = state;
+  applyCalm(state.settings.calm === true);
   const mode = effectsMode(state.settings, {
     coarse: preference.matches, memory: navigator.deviceMemory || 8, residents: state.pets.length, tier: sessionTier
   });
@@ -52,7 +54,7 @@ export function syncEffects(state) {
   if (picker && picker.value !== (state.settings.effects || 'auto')) picker.value = state.settings.effects || 'auto';
   const note = document.getElementById('effectsHint');
   const auto = (state.settings.effects || 'auto') === 'auto';
-  const text = mode === 'light'
+  const text = state.settings.calm === true ? 'Calm mode is on: nothing moves and effects stay light.' : mode === 'light'
     ? (auto ? 'Automatic chose Light effects for this device. Creatures and controls stay animated.' : 'Light effects active. Creatures and controls stay animated.')
     : (auto ? 'Automatic chose Full effects for this device. Choose Light if it ever feels sluggish.' : 'Full effects active. Choose Light if this device feels sluggish.');
   if (note && note.textContent !== text) note.textContent = text;

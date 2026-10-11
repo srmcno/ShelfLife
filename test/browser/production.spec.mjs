@@ -229,6 +229,8 @@ test('a finished arcade run saves its best, pays souls and offers another go', a
   expect(shelf.mayhem.souls).toBeGreaterThan(0);
   expect(shelf.pets[0].arcadeRuns).toBe(1);
   await expect(page.locator('#arcadeSheet .ar-again')).toBeFocused();
+  // Every finished game is graded in zero to three skulls next to the points.
+  await expect(page.locator('#arcadeSheet .ar-tier')).toHaveAttribute('aria-label', /^[0-3] of 3$/);
   await noHorizontalOverflow(page);
   await page.reload();
   expect((await savedShelf(page)).arcade.best.stack).toBe(shelf.arcade.best.stack);

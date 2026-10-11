@@ -29,6 +29,7 @@ export function nextVerdict(previous, reading) {
 }
 
 export function effectsMode(settings, { coarse = false, memory = 8, residents = 0, tier = null } = {}) {
+  if (settings?.calm === true) return 'light';
   const mode = settings?.effects || 'auto';
   if (mode === 'light' || mode === 'full') return mode;
   if (memory <= 2) return 'light';

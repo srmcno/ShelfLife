@@ -10,7 +10,7 @@
 .mh-glyph{display:block;width:100%;height:100%}
 
 /* ---- the souls counter ----------------------------------------------------- */
-.souls-hud{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:4px 12px 4px 6px;border-radius:999px;cursor:pointer;
+.souls-hud{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:4px 12px 4px 6px;border-radius:999px;cursor:pointer;
   color:var(--ink);font:inherit;border:1px solid color-mix(in srgb,var(--mh-candle) 34%,transparent);
   background:radial-gradient(circle at 18px 50%,color-mix(in srgb,var(--mh-candle) 26%,transparent),transparent 36px),linear-gradient(180deg,#221726,#140d18);
   box-shadow:0 0 0 1px #0006 inset,0 6px 18px -10px color-mix(in srgb,var(--mh-candle) 60%,transparent)}
@@ -20,7 +20,7 @@
 .souls-icon{width:28px;height:28px;color:var(--mh-candle);filter:drop-shadow(0 0 6px color-mix(in srgb,var(--mh-candle) 70%,transparent));animation:mh-flicker 3.2s steps(16) infinite}
 .souls-count{display:flex;flex-direction:column;line-height:1;text-align:left}
 .souls-count b{font:19px/1 var(--display);color:var(--mh-wax)}
-.souls-count small{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:2px}
+.souls-count small{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:2px}
 .souls-rank{display:flex;flex-direction:column;gap:5px;min-width:0;max-width:150px}
 .souls-rank em{font-style:normal;font-size:11px;font-weight:600;color:var(--mh-candle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .souls-bar{display:block;height:4px;width:110px;border-radius:9px;background:#ffffff14;overflow:hidden}
@@ -81,7 +81,7 @@ button.mh-tile{cursor:pointer;transition:transform .15s ease,border-color .15s e
 button.mh-tile:hover{transform:translateY(-2px);border-color:var(--edge)}
 .mh-tile b{font:22px/1.1 var(--display);color:var(--ink)}
 .mh-tile small{font-size:12px;line-height:1.35;color:var(--ink-2)}
-.mh-tile-kicker{font:700 9.5px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.mh-tile-kicker{font:700 11px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
 .mh-omen-tile .mh-tile-kicker{color:var(--mh-violet)}
 .mh-omen-tile.pending{border-color:color-mix(in srgb,var(--mh-violet) 55%,transparent);background:radial-gradient(circle at 85% 20%,color-mix(in srgb,var(--mh-violet) 30%,transparent),transparent 60%),linear-gradient(180deg,#221537,#140c1f);box-shadow:0 0 22px -6px color-mix(in srgb,var(--mh-violet) 55%,transparent)}
 @keyframes mh-omen-glow{50%{box-shadow:0 0 22px -4px color-mix(in srgb,var(--mh-violet) 60%,transparent)}}
@@ -271,7 +271,7 @@ button.mh-shelf-item:hover{border-color:var(--rc);transform:translateY(-2px)}
   .mh-cabinet-tile{grid-column:1 / -1}
 }
 @media (max-width:720px){
-  .souls-hud{min-height:36px;padding:3px 10px 3px 4px;gap:6px}
+  .souls-hud{min-height:44px;padding:3px 10px 3px 4px;gap:6px}
   .souls-rank{display:none}
   .souls-icon{width:24px;height:24px}
   .souls-count b{font-size:16px}

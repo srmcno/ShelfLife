@@ -30,6 +30,14 @@ Missing a particular curio? A **special order** buys it outright, priced by rari
 coffins without anything cursed ends in one, and the coffin gets heavy when it is due. Doing the rounds
 pays for the first five each day.
 
+### Your first day
+
+A new household gets a six-step tour on the Shelf, one real action each, with a soft ring on the exact
+button: say hello, feed someone, clear the first emergency, turn over the omen, read a note and open the first
+coffin. Each step pays a few souls. **Skip the tour** is always there, and **Help** brings it back. One card
+above the shelf says what to do next; the desk grows over the first days; **Help → Glossary** explains every
+number in plain words. Established households never see any of it.
+
 ### Coming back tomorrow
 
 The shelf desk lists **today in the Playroom**. **The daily challenge** puts one arcade game in a
@@ -185,7 +193,7 @@ explain what belongs there and how to add it.
 On desktop, **P** opens the Playroom. Frenzy uses ← → or A/D, Coffin Stack uses Space, the Séance uses 1 to 4 and
 Grave Whack uses 1 to 9. In Shelf Court, Enter or Space advances dialogue. P pauses any run; a long stall or a hidden tab pauses it for you.
 **Escape** closes the current sheet and returns focus to its opener; the Back button does the same on a phone. Motion follows your system
-preference; More also offers Automatic, Light and Full effects. The narrator is off until enabled.
+preference; More also offers Automatic, Light and Full effects, and a Calm mode that stills everything. The narrator is off until enabled.
 Light retains brief gameplay reactions and scene movement while simplifying decoration.
 See [the expedition and paperwork design notes](docs/hearings-and-expeditions.md).
 

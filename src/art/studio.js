@@ -596,6 +596,11 @@ export function initStudio({ onSave }) {
   // already have a fresh totalBond(state) on hand), but since `state` is imported live
   // here, rebuilding straight from `state` is always correct and avoids a second,
   // possibly-stale source of truth. See report for this judgment call.
+  // What is still locked is shown, greyed and marked, with what opens it. A tap says so.
+  const bondNow = () => state.pets.reduce((n, p) => n + p.bond, 0);
+  const unlockLine = u => 'Opens at household trust ' + u.at + ': ' + u.label + '. You have ' + bondNow() + '.';
+  const sayUnlock = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  const nextLine = list => { const next = list.find(u => bondNow() < u.at); return next ? 'Next: ' + next.label + ' at household trust ' + next.at + '. You have ' + bondNow() + '. Care for residents to raise it.' : ''; };
   function rebuildPalette(unlockedBond) {
     swatchesWrap.innerHTML = '';
     unlockedColors(state).forEach(c => {
@@ -615,6 +620,17 @@ export function initStudio({ onSave }) {
       });
       swatchesWrap.appendChild(b);
     });
+    UNLOCK_COLORS.filter(u => bondNow() < u.at).forEach(u => u.colors.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'sw sw-locked';
+      b.type = 'button';
+      b.style.background = c;
+      b.setAttribute('aria-disabled', 'true');
+      b.setAttribute('aria-label', 'Locked colour. ' + unlockLine(u));
+      b.addEventListener('click', () => sayUnlock('swatchUnlock', unlockLine(u)));
+      swatchesWrap.appendChild(b);
+    }));
+    sayUnlock('swatchUnlock', nextLine(UNLOCK_COLORS));
   }
 
   function rebuildStamps(unlockedBond) {
@@ -632,6 +648,17 @@ export function initStudio({ onSave }) {
       });
       stampPickerWrap.appendChild(b);
     });
+    UNLOCK_STAMPS.filter(u => bondNow() < u.at).forEach(u => u.stamps.forEach(key => {
+      const b = document.createElement('button');
+      b.className = 'chip chip-locked';
+      b.type = 'button';
+      b.textContent = STAMP_LABELS[key];
+      b.setAttribute('aria-disabled', 'true');
+      b.setAttribute('aria-label', 'Locked stamp: ' + STAMP_LABELS[key] + '. ' + unlockLine(u));
+      b.addEventListener('click', () => sayUnlock('stampUnlock', unlockLine(u)));
+      stampPickerWrap.appendChild(b);
+    }));
+    sayUnlock('stampUnlock', nextLine(UNLOCK_STAMPS));
   }
 
   function open(unlockedBond, existing=null, draft=null) {

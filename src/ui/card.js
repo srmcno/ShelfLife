@@ -138,20 +138,20 @@ export function openCard(state, id, keepScroll) {
     '<button class="btn btn-ghost btn-sm" id="cardClose">Close</button></div>';
   html += '<div class="card-hero"><div class="portrait-stage"><div class="card-portrait" id="cardPortraitHost"></div><button class="btn btn-ghost btn-sm motion-preview" id="petMotion" aria-label="See this resident move">See it move</button></div><div class="needs">' +
     needRow(pet, 'food', 'Fed') + needRow(pet, 'fuss', 'Fussed') + needRow(pet, 'clean', 'Clean') +
-    '<div class="bondline"><b>Trust ' + pet.bond + ' of 25.</b> ' + grievanceLine(pet) +
+    '<div class="bondline"><b>Bond ' + pet.bond + ' of 25.</b> ' + grievanceLine(pet) +
     (stage ? ' Grudge stage ' + stage + ' of ' + GRUDGE_STAGE_AT.length + '.' : '') +
     '<span class="bond-bar"><span style="width:' + (pet.bond / 25 * 100) + '%"></span></span>' + grievanceReasons(pet) + '</div>' +
     '</div></div>';
   const careNames = { food: 'Feed it', fuss: 'Fuss over it', clean: 'Clean it up' };
   const adventure = escapadeView(state).active;
   const ourAdventure = adventure?.petId === pet.id ? adventure : null;
-  if (ourAdventure) html += '<div class="escapade-care-note"><p><b>' + escapeHtml(ourAdventure.episode.title) + '</b>' + escapeHtml(ourAdventure.ready ? 'Our story is ready for its ending.' : ourAdventure.careDone ? 'Our personal moment is saved. Next, a game together.' : ourAdventure.episode.care.label + ' — a personal moment for our adventure.') + '</p><button type="button" class="btn btn-ghost" data-escapade="open">' + (ourAdventure.ready ? 'Choose the ending' : 'Our adventure') + ' ↗</button></div>';
+  if (ourAdventure) html += '<div class="escapade-care-note"><p><b>' + escapeHtml(ourAdventure.episode.title) + '</b>' + escapeHtml(ourAdventure.ready ? 'Our story is ready for its ending.' : ourAdventure.careDone ? 'Our personal moment is saved. Next, a game together.' : ourAdventure.episode.care.label + ': a personal moment for our adventure.') + '</p><button type="button" class="btn btn-ghost" data-escapade="open">' + (ourAdventure.ready ? 'Choose the ending' : 'Our adventure') + ' ↗</button></div>';
   html += '<div class="care-row">' + Object.keys(careNames).map(need => {
     const preview = previewCare(pet, need);
     const storyMoment = ourAdventure && !ourAdventure.careDone && ourAdventure.episode.care.need === need;
     return '<button class="btn care-' + need + (storyMoment ? ' escapade-care-action' : '') + '" data-care="' + need + '"' + (preview.gain <= .01 && !storyMoment ? ' disabled' : '') + '>' + careNames[need] + '<small>' + (storyMoment && preview.gain <= .01 ? 'A moment together' : '+' + Math.round(preview.gain) + ' · ' + (preview.useful ? 'trust care' : asleep ? 'sleepy' : 'top-up')) + '</small></button>';
   }).join('') + '</div>';
-  html += '<p class="care-explainer">' + (pet.bond >= 25 ? 'Trust is full. The attachment is permanent.' : (3 - (pet.cared % 3)) + ' useful care actions until +1 trust. Care below 72 counts.') + (asleep ? ' Asleep: care has half effect.' : '') + '</p>';
+  html += '<p class="care-explainer">' + (pet.bond >= 25 ? 'Bond is full. The attachment is permanent.' : (3 - (pet.cared % 3)) + ' useful care actions until +1 bond. Care below 72 counts.') + (asleep ? ' Asleep: care has half effect.' : '') + '</p>';
   html += '<button class="play-invite" id="playPet"><span><b>Play together</b><small>Feeding Frenzy, Coffin Stack, the Séance or Grave Whack</small></span><span aria-hidden="true">↗</span></button>';
   html += '<details class="care-record" id="careRecord"><summary id="careRecordSummary">Care & games together</summary><p>Fed ' + (pet.careLog?.food || 0) + ' · Fussed ' + (pet.careLog?.fuss || 0) + ' · Cleaned ' + (pet.careLog?.clean || 0) + '</p><p>Arcade runs together: ' + (pet.arcadeRuns || 0) + ' · Court appearances: ' + (pet.courtCases || 0) + '.</p></details>';
   html += positionControl(state, pet.id);
@@ -243,7 +243,7 @@ export function openCard(state, id, keepScroll) {
       reactTo(pet.id, need);
       const feedback = document.createElement('span');
       feedback.className = 'care-float ' + need;
-      feedback.textContent = '+' + Math.round(result.gain) + (result.bondGained ? ' · +1 trust' : '');
+      feedback.textContent = '+' + Math.round(result.gain) + (result.bondGained ? ' · +1 bond' : '') + (result.souls ? ' · +' + result.souls + ' souls' : '');
       document.getElementById('cardPortraitHost')?.appendChild(feedback);
       setTimeout(() => feedback.remove(), 1400);
     });
