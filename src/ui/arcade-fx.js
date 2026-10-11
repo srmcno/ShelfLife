@@ -197,6 +197,11 @@ export function createFx(host, { level = 0, world = null, haptics = () => true }
       particles.setCaps(caps);
       if (!caps.particles) { particles.clear(); canvas.hidden = true; }
       if (!caps.shake && world) world.style.transform = '';
+      // A lower level can also cap the canvas resolution: redraw it at the new DPR.
+      if (caps.particles && w && h) {
+        const nextDpr = Math.min(caps.dpr, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1);
+        if (nextDpr !== dpr) { dpr = nextDpr; particles.resize(w, h, dpr); }
+      }
     },
     // x, y are fractions of the field.
     burst(kind, x, y, scale = 1) { if (caps.particles) particles.emit(kind, x * w, y * h, scale); },

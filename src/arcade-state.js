@@ -49,7 +49,9 @@ export function nextUnlock(a) {
   return { theme, kind: runs ? 'runs' : 'medals', have, need, left: Math.max(0, need - have) };
 }
 
-export function normalizeArcade(raw) {
+// `pets` are the household's residents, already normalized: their own arcadeRuns
+// counts help an old save that predates `runs` keep the arenas it had earned.
+export function normalizeArcade(raw, pets = []) {
   const out = blankArcade();
   if (!raw || typeof raw !== 'object') return out;
   for (const id of Object.keys(ARCADE_BY_ID)) {
@@ -75,6 +77,12 @@ export function normalizeArcade(raw) {
   // Lifetime runs: never fewer than the plays already on record.
   const runs = Number.isFinite(raw.runs) && raw.runs > 0 ? Math.floor(Math.min(raw.runs, 1e8)) : 0;
   out.runs = Math.max(runs, Object.values(out.plays).reduce((n, v) => n + v, 0));
+  // A save from before `runs` kept challenge runs in daily.plays and in each
+  // resident's arcadeRuns, not in plays, so plays alone undercounts them.
+  if (!('runs' in raw)) {
+    const residents = (Array.isArray(pets) ? pets : []).reduce((n, p) => n + (Number.isFinite(p?.arcadeRuns) && p.arcadeRuns > 0 ? Math.floor(p.arcadeRuns) : 0), 0);
+    out.runs = Math.max(out.runs, Math.min(residents, 1e8), Math.min(out.runs + (out.daily?.plays || 0), 1e8));
+  }
   // The fortnight of challenge days: one entry per day, newest last.
   if (Array.isArray(raw.history)) {
     const seen = new Map();

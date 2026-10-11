@@ -263,6 +263,8 @@ function applyRestoredState(normalized) {
   syncNight();
   renderAll(state);
   syncAudioButtons();
+  // Settings switches that live outside renderAll repaint from the new save.
+  window.dispatchEvent(new CustomEvent('shelflife:replaced'));
 }
 document.getElementById('restoreConfirm').addEventListener('click', () => {
   if (!pendingRestore) return;

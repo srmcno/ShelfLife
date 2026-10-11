@@ -1,6 +1,6 @@
 import {
   accrueMayhem, nextEmergencyIn, describeEmergency, resolveEmergency, openCoffin, coffinCost, drawOmen,
-  omenPending, todaysOmen, ensureChores, choreInfo, rankInfo, curioCount, onMayhem, CURIO_BY_ID, RARITY_BY_ID,
+  omenPending, todaysOmen, ensureChores, choreInfo, rankInfo, curioCount, ownedCurioTotal, onMayhem, CURIO_BY_ID, RARITY_BY_ID,
   queueCap, pokeDrawer, POKE_COST, commissionCost, commissionCurio, pityActive
 } from '../engine/mayhem.js';
 import { mayhemState } from '../mayhem-state.js';
@@ -363,7 +363,7 @@ function showCabinet(state) {
     '<button class="mh-gloss-link" type="button" data-gloss="souls">What are souls?</button></section>' +
     '<div class="mh-cabinet-actions"><button class="btn btn-primary" type="button" data-mh="coffin">Open a coffin · ' + coffinCost(state) + '</button>' + (m.queue.length ? '<button class="btn" type="button" data-mh="emergency">' + plural(m.queue.length, 'emergency', 'emergencies') + ' waiting</button>' : '') + '</div>' +
     '<div class="mh-curio-detail" id="mhCurioDetail" hidden></div>' +
-    (curioCount(state) ? '' : emptyState({ kind: 'cabinet', compact: true, title: 'Not one curio.', line: 'Every coffin holds something. The undertaker calls this a feature.' })) +
+    (ownedCurioTotal(state) ? '' : emptyState({ kind: 'cabinet', compact: true, title: 'Not one curio.', line: 'Every coffin holds something. The undertaker calls this a feature.' })) +
     groups + seasonGroups + cabinetExtrasHTML(state) +
     (log ? '<section class="mh-log"><h3>The incident reports</h3><ul>' + log + '</ul></section>' : '');
   open();

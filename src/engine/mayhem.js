@@ -165,6 +165,8 @@ export function commissionCurio(state, curioId) {
   return { curio, rarity: RARITY_BY_ID[curio.rarity], cost };
 }
 export function curioCount(state) { const m = mayhemState(state); return CURIOS.filter(c => m.curios[c.id]).length; }
+// Every kind of curio the player owns: base, seasonal and Almanac editions.
+export function ownedCurioTotal(state) { const m = mayhemState(state); return Object.keys(m.curios).filter(id => CURIO_BY_ID[id] && m.curios[id] > 0).length; }
 
 export function coffinCost(state, now = Date.now()) { return omenEffect(state, 'coffin', now) ? COFFIN_COST / 2 : COFFIN_COST; }
 export function openCoffin(state, now = Date.now(), rnd = Math.random) {

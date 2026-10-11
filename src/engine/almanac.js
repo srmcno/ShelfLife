@@ -36,7 +36,9 @@ function shifted(c, years, y) {
   const [fy, fm, fd] = isoParts(c.from), [ty, tm, td] = isoParts(c.to);
   const toDay = tm === 2 && td === 28 && daysInMonth(ty + years, 2) === 29 ? 29 : td;
   const fromNo = Math.floor(Date.UTC(fy + years, fm - 1, fd) / 86400000), toNo = Math.floor(Date.UTC(ty + years, tm - 1, toDay) / 86400000);
-  return { ...c, key: c.id + '~' + y, encore: true, fromNo, toNo, days: toNo - fromNo + 1 };
+  // The label names the year it runs in, not the year it was written for.
+  const month = String(c.month).replace(String(fy), String(fy + years));
+  return { ...c, key: c.id + '~' + y, encore: true, month, fromNo, toNo, days: toNo - fromNo + 1 };
 }
 
 // The chapter running on this date. Before the first chapter there is none. After

@@ -378,6 +378,8 @@ export function whackStep(g, dt) {
 }
 export function whackHit(g, i) {
   if (g.over) return { ignored: true };
+  // A flooded grave cannot be hit by any means: tap, click or number key.
+  if (g.mod?.blocked?.includes(i)) return { ignored: true };
   const hole = g.holes[i];
   if (!hole) { g.combo = 0; return { empty: true }; }
   g.holes[i] = null;

@@ -185,6 +185,8 @@ export function openAlmanac(state = S, now = Date.now()) {
 
 function afterClaim(results, kind = 'tier') {
   lastResults = results;
+  // A curio just claimed can finish a weekly challenge: count it before drawing the sheet.
+  syncRetention(S);
   checkAchievements(S);
   save();
   renderSheet(S);

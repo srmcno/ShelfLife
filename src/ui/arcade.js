@@ -359,8 +359,12 @@ function stop() {
   // A run that is over still counts if the sheet is closed during the slow-motion beat.
   if (run?.dying && !run.settled) {
     run.settled = true;
-    finishRun(S, run.id, run.game.score, run.petId, Date.now(), Math.random, { daily: run.daily });
+    const result = finishRun(S, run.id, run.game.score, run.petId, Date.now(), Math.random, { daily: run.daily });
     save(); refresh();
+    // gameOver() would have posted today's score; closing early must not lose it.
+    if (run.daily && result.daily && result.score > 0 && arcadeSocial?.active()) {
+      arcadeSocial.submitScore({ game: run.id, day: result.day, score: result.score, mod: result.daily.mod }).catch(() => { /* the next intro posts today's best again */ });
+    }
   }
   if (run) {
     if (run.raf) cancelAnimationFrame(run.raf);
@@ -468,6 +472,7 @@ function dropCoffin() {
 }
 function tapGrave(i) {
   if (!inRun() || run.paused || run.id !== 'whack' || run.phase === 'ready') return;
+  if (run.game.mod?.blocked?.includes(i)) return; // flooded: keys skip it just as taps do
   run.view.hit(run.A, i);
 }
 function aim(field, e) {
@@ -572,6 +577,8 @@ function initHapticsButton() {
     if (small) small.textContent = on ? 'Small buzzes in the arcade' : 'The arcade stays still';
   };
   paint();
+  // A restored backup or a cloud copy can bring a different setting.
+  window.addEventListener('shelflife:replaced', paint);
   btn.addEventListener('click', () => {
     S.settings.haptics = !hapticsOn();
     save(); paint();
