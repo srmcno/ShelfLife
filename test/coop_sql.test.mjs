@@ -647,38 +647,69 @@ test('the fake in test/support/fake-coop.mjs keeps the same ledger: one receipt 
 // ---------------------------------------------------------------------------
 
 const OPS = Array.from({ length: 12 }, (_, i) => '20000000-0000-4000-8000-0000000000' + String(10 + i));
+const game = (id, delta, earned, detail) => detail === undefined ? { id, delta, earned } : { id, delta, earned, detail };
 const adjust = (who, ops) => call(who, 'public.coop_adjust($1::jsonb)', [JSON.stringify(ops)]);
+const { currencyId } = await import('./support/fake-coop.mjs');
 
-test('an adjustment needs an opening, is idempotent per operation, and a bad batch changes nothing', async () => {
+test('an adjustment needs an opening, is idempotent per id and payload, and a bad batch changes nothing', async () => {
   await friends(L, M);
-  await rejects(adjust(L, [{ op: OPS[0], delta: 5, reason: 'income' }]), /needs_opening/);
+  await rejects(adjust(L, [game(OPS[0], 5, 5)]), /needs_opening/);
   await call(L, 'public.coop_open($1, $2)', [10, 0]);
   await call(M, 'public.coop_open($1, $2)', [500, 0]);
-  const first = await adjust(L, [{ op: OPS[0], delta: 100, reason: 'Income' }]);
+  const first = await adjust(L, [game(OPS[0], 100, 100, { reason: 'income' })]);
   assert.equal(first.balance, 110);
-  assert.deepEqual([first.receipts[0].kind, first.receipts[0].delta, first.receipts[0].earned, first.receipts[0].source_id, first.receipts[0].detail],
-    ['adjust', 100, 0, OPS[0], { reason: 'income' }]);
-  // A lost reply, retried: the same receipt, and the balance does not move twice.
-  const again = await adjust(L, [{ op: OPS[0], delta: 100, reason: 'income' }]);
+  const r = first.receipts[0];
+  assert.deepEqual([r.kind, r.delta, r.earned, r.source_id, r.detail], ['game', 100, 100, OPS[0], { reason: 'income' }]);
+  // A lost reply, retried: the same immutable receipt, and the balance does not move twice.
+  const again = await adjust(L, [game(OPS[0], 100, 100, { reason: 'income' })]);
   assert.deepEqual(again.receipts, first.receipts);
   assert.equal(again.balance, 110);
-  await rejects(adjust(L, [{ op: OPS[0], delta: 99, reason: 'income' }]), /bad_op/);
+  // A changed delta, earned or detail is refused, and nothing rewrites the receipt.
+  await rejects(adjust(L, [game(OPS[0], 99, 100, { reason: 'income' })]), /bad_op/);
+  await rejects(adjust(L, [game(OPS[0], 100, 99, { reason: 'income' })]), /bad_op/);
+  await rejects(adjust(L, [game(OPS[0], 100, 100, { reason: 'other' })]), /bad_op/);
+  await rejects(adjust(L, [game(OPS[0], 100, 100)]), /bad_op/);
+  assert.deepEqual((await adjust(L, [game(OPS[0], 100, 100, { reason: 'income' })])).receipts, first.receipts);
   // A batch is atomic: the second op is bad, so the first is not written either.
-  await rejects(adjust(L, [{ op: OPS[1], delta: 7, reason: 'spend' }, { op: OPS[2], delta: 0 }]), /bad_op/);
+  await rejects(adjust(L, [game(OPS[1], -7, 0), { id: OPS[2], delta: 1 }]), /bad_op/);
   assert.equal((await wallet(L)).balance, 110);
-  for (const bad of [[], 'x', [{ op: 'nope', delta: 1 }], [{ op: OPS[3], delta: 'many' }], [{ op: OPS[3], delta: 2001 }], [{ op: OPS[3], delta: -1000001 }]]) {
-    await rejects(adjust(L, bad), /bad_op|22P02/, JSON.stringify(bad));
-  }
+  const bad = [[], 'x', [{ id: 'nope', delta: 1, earned: 0 }], [game(OPS[3], 'many', 0)], [game(OPS[3], 1.5, 0)], [game(OPS[3], 100000001, 0)], [game(OPS[3], -100000001, 0)],
+    [game(OPS[3], 1, -1)], [game(OPS[3], 1, 100000001)], [{ ...game(OPS[3], 1, 1), extra: true }], [game(OPS[3], 1, 1, 'text')], [game(OPS[3], 1, 1, { pad: 'x'.repeat(5000) })],
+    Array.from({ length: 101 }, (_, i) => game('21000000-0000-4000-8000-' + String(i).padStart(12, '0'), 1, 1))];
+  for (const b of bad) await rejects(adjust(L, b), /bad_op|22P02/, JSON.stringify(b).slice(0, 80));
   assert.equal((await wallet(L)).balance, 110);
-  // Opened at 10, earned 100 elsewhere in the game: a 25 stake is fine.
+  // A hundred ops are fine; the same id twice in one batch with one payload is one receipt.
+  const hundred = await adjust(L, Array.from({ length: 100 }, (_, i) => game('22000000-0000-4000-8000-' + String(i).padStart(12, '0'), 0, 0)));
+  assert.equal(hundred.receipts.length, 100);
+  const dup = await adjust(L, [game(OPS[8], 3, 3), game(OPS[8], 3, 3)]);
+  assert.equal(dup.receipts[0].id, dup.receipts[1].id);
+  assert.equal(dup.balance, 113 + 0);
+  await rejects(adjust(L, [game(OPS[9], 3, 3), game(OPS[9], 4, 3)]), /bad_op/);
+  assert.equal((await wallet(L)).balance, 113);
+  // Opened at 10, earned 103 elsewhere in the game: a 25 stake is fine.
   const made = await create(L, M, 'stack', 25);
   assert.equal(made.receipt.delta, -25);
-  assert.equal((await wallet(L)).balance, 85);
+  assert.equal((await wallet(L)).balance, 88);
 });
 
-test('a spend goes through and may leave debt: debt blocks new stakes but never a payout', async () => {
-  // L has 85. It spends 90 elsewhere, offline, and the ledger hears of it later.
-  const spent = await adjust(L, [{ op: OPS[4], delta: -90, reason: 'spend' }]);
+test('delta 0 is valid and earned is not tied to delta: earn 100 and spend 100 before one save', async () => {
+  const before = await wallet(L);
+  const net0 = await adjust(L, [game(OPS[4], 0, 100, { reason: 'earn-and-spend' })]);
+  assert.deepEqual([net0.receipts[0].delta, net0.receipts[0].earned], [0, 100]);
+  assert.equal(net0.balance, before.balance);
+  const spendOnly = await adjust(L, [game(OPS[5], -30, 0), game(OPS[6], 20, 50)]);
+  assert.deepEqual(spendOnly.receipts.map(x => [x.delta, x.earned]), [[-30, 0], [20, 50]]);
+  assert.equal(spendOnly.balance, before.balance - 10);
+  // A big real-economy earning is not capped: there are no invented limits.
+  const big = await adjust(M, [game(OPS[7], 50000000, 50000000), game(OPS[10], 50000000, 50000000)]);
+  assert.equal(big.balance, 100000500);
+  const back = await adjust(M, [game(OPS[11], -100000000, 0)]);
+  assert.equal(back.balance, 500);
+});
+
+test('a spend may leave debt: debt blocks new stakes but never a payout', async () => {
+  const have = (await wallet(L)).balance;
+  const spent = await adjust(L, [game('23000000-0000-4000-8000-000000000001', -(have + 5), 0, { reason: 'spend' })]);
   assert.equal(spent.balance, -5, 'debt is allowed');
   await rejects(create(L, M, 'stack', 1), /insufficient_souls/);
   // Winning the open duel still pays out, and lifts the debt.
@@ -692,36 +723,67 @@ test('a spend goes through and may leave debt: debt blocks new stakes but never 
   assert.equal(recovered.receipt.delta, -25, 'recovered, staking again');
 });
 
-test('two devices, an old backup and a stale opening cannot mint: adjustments add, an opening never moves', async () => {
-  const before = await wallet(L);
-  // The old backup declares a higher opening: ignored.
+test('an older backup or a second device replays the feed: receipts it never applied are all there, in order, once', async () => {
+  const feed = [];
+  for (let page = await receipts(L, 0); ; page = await receipts(L, feed.at(-1).seq)) {
+    feed.push(...page.receipts);
+    if (!page.has_more) break;
+  }
+  const games = feed.filter(x => x.kind === 'game');
+  assert.ok(games.length > 100);
+  // The feed is the whole story: a device with a stale save sums it from its opening.
+  const total = feed.reduce((n, x) => n + x.delta, 0);
+  assert.equal((await wallet(L)).balance, 10 + total);
+  assert.deepEqual(feed.map(x => x.seq), feed.map((_, i) => i + 1));
   const reopen = await call(L, 'public.coop_open($1, $2)', [5000, 0]);
-  assert.deepEqual([reopen.accepted, reopen.opening], [false, 10]);
-  // Device one earned, device two spent, each with its own operations, in any order.
-  const one = await adjust(L, [{ op: OPS[5], delta: 40, reason: 'income' }]);
-  const two = await adjust(L, [{ op: OPS[6], delta: -30, reason: 'spend' }, { op: OPS[7], delta: 15, reason: 'income' }]);
-  assert.equal(two.balance, before.balance + 40 - 30 + 15);
-  // The restored device resends everything it once sent: nothing is counted twice.
-  const resend = await adjust(L, [{ op: OPS[5], delta: 40, reason: 'income' }, { op: OPS[6], delta: -30, reason: 'spend' }, { op: OPS[7], delta: 15, reason: 'income' }]);
-  assert.equal(resend.balance, two.balance);
-  assert.deepEqual(resend.receipts.map(r => r.id), [one.receipts[0].id, ...two.receipts.map(r => r.id)]);
-  // The feed carries every adjustment once, in order.
-  const kinds = (await receipts(L, 0)).receipts.map(r => r.kind);
-  assert.equal(kinds.filter(k => k === 'adjust').length, 5);
+  assert.deepEqual([reopen.accepted, reopen.opening], [false, 10], 'a stale opening never moves');
+  // The restored device resends what it once sent: every receipt comes back as it was, nothing counts twice.
+  const sent = games.slice(0, 5).map(x => game(x.source_id, x.delta, x.earned, x.detail ?? undefined));
+  const before = (await wallet(L)).balance;
+  const resend = await adjust(L, sent);
+  assert.deepEqual(resend.receipts.map(x => x.id), games.slice(0, 5).map(x => x.id));
+  assert.equal(resend.balance, before);
 });
 
-test('earnings are capped per operation and per UTC day, spending never is', async () => {
-  const ops = n => Array.from({ length: n }, (_, i) => ({ op: '30000000-0000-4000-8000-0000000000' + String(10 + i), delta: 2000, reason: 'income' }));
-  await db.query(`delete from public.coop_receipts where owner = '${M}' and kind = 'adjust'`);
-  const room = 6000 - Number(await value(`select coalesce(sum(delta), 0) from public.coop_receipts where owner = '${M}' and kind = 'adjust' and delta > 0`));
-  assert.equal(room, 6000);
-  await adjust(M, ops(3));
-  await rejects(adjust(M, [{ op: '30000000-0000-4000-8000-000000000099', delta: 1, reason: 'income' }]), /cap_reached/);
-  const spend = await adjust(M, [{ op: '30000000-0000-4000-8000-000000000098', delta: -999999, reason: 'spend' }]);
-  assert.ok(spend.balance < 0);
+test('a known reward has one canonical semantic id: derived from sha256, validated, retried, and restored without a second credit', async () => {
+  const OWNER = '00000000-0000-4000-8000-000000000001';
+  assert.equal(currencyId(OWNER, 'coven_chest:42:1'), 'fe25c6f7-6082-81c7-b76b-e46285558523', 'the golden id');
+  // The SQL derives the same id from native sha256, no extension.
+  assert.equal(await value(`select private.currency_id('${OWNER}', 'coven_chest:42:1')`), 'fe25c6f7-6082-81c7-b76b-e46285558523');
+  assert.equal(await value(`select private.currency_id('${OWNER.toUpperCase()}'::uuid, 'coven_chest:42:1')`), 'fe25c6f7-6082-81c7-b76b-e46285558523');
+  const chest = { reward: 'coven_chest', week: 42, tier: 1, curio: 'moth-wing', frame: null };
+  const id = currencyId(L, 'coven_chest:42:1');
+  const first = await adjust(L, [game(id, 15, 15, chest)]);
+  assert.deepEqual(first.receipts[0].detail, chest);
+  // The same reward under a fresh random id is refused: that is the second credit a restore would make.
+  await rejects(adjust(L, [game(OPS[0].replace('2000', '2999'), 15, 15, chest)]), /bad_op/);
+  // A lost reply: the retry is the same receipt. A changed award is refused and the original detail stands.
+  assert.deepEqual((await adjust(L, [game(id, 15, 15, chest)])).receipts, first.receipts);
+  await rejects(adjust(L, [game(id, 15, 15, { ...chest, curio: 'other' })]), /bad_op/);
+  assert.deepEqual((await adjust(L, [game(id, 15, 15, chest)])).receipts[0].detail, chest);
+  // Another week or tier is another id; the id of one owner does not fit another.
+  await rejects(adjust(L, [game(currencyId(L, 'coven_chest:42:2'), 15, 15, chest)]), /bad_op/);
+  await rejects(adjust(M, [game(id, 15, 15, chest)]), /bad_op/);
+  await adjust(L, [game(currencyId(L, 'coven_chest:43:1'), 15, 15, { ...chest, week: 43 })]);
+  // Invites key on the referred player; joint benches on the hearing.
+  const friend = M;
+  const invite = { reward: 'coven_invite', userId: friend, curio: null };
+  await adjust(L, [game(currencyId(L, 'coven_invite:' + friend), 5, 5, invite)]);
+  await rejects(adjust(L, [game(currencyId(L, 'coven_invite:' + A), 5, 5, invite)]), /bad_op/);
+  await rejects(adjust(L, [game(currencyId(L, 'coven_invite:' + friend), 5, 5, { ...invite, userId: 'nope' })]), /bad_op/);
+  const hearing = '24000000-0000-4000-8000-000000000001';
+  const joint = { reward: 'joint_bench', hearing, curio: null, frame: 'gilt', fame: 2, paid: true };
+  const jr = await adjust(L, [game(currencyId(L, 'joint_bench:' + hearing), 20, 20, joint)]);
+  assert.deepEqual(jr.receipts[0].detail, joint, 'the effects ride in the immutable detail');
+  await rejects(adjust(L, [game(currencyId(L, 'joint_bench:' + hearing), 20, 20, { ...joint, hearing: '24000000-0000-4000-8000-000000000002' })]), /bad_op/);
+  await rejects(adjust(L, [game(currencyId(L, 'coven_chest:50:1'), 1, 1, { reward: 'coven_chest', week: 'x', tier: 1 })]), /bad_op/);
+  await rejects(adjust(L, [game(currencyId(L, 'coven_chest:50:1'), 1, 1, { reward: 'coven_chest', week: 50, tier: 1, curio: 7 })]), /bad_op/);
+  // Other details are kept as sent, with any reward name the client invents for itself.
+  const free = await adjust(L, [game('25000000-0000-4000-8000-000000000001', 1, 1, { reward: 'something-else', n: 3 })]);
+  assert.deepEqual(free.receipts[0].detail, { reward: 'something-else', n: 3 });
 });
 
-test('the fake mirrors adjustments: idempotent, atomic, debt blocks stakes', async () => {
+test('the fake mirrors the game receipts: idempotent, atomic, semantic ids, debt blocks stakes', async () => {
   const { createFakeCoop } = await import('./support/fake-coop.mjs');
   let n = 0;
   const fake = createFakeCoop({ profiles: new Map([[A, { display_name: 'Ada' }], [B, { display_name: 'Bea' }]]), now: () => Date.parse('2026-10-11T12:00:00Z'),
@@ -729,12 +791,21 @@ test('the fake mirrors adjustments: idempotent, atomic, debt blocks stakes', asy
     uuid: () => '00000000-0000-4000-8000-' + String(++n).padStart(12, '0'),
     friendships: [{ requester: A, addressee: B, status: 'accepted' }], blocks: [] });
   const rpc = (who, name, args) => { const r = fake.RPC[name]({ id: who }, args); return r.status === 200 ? r.body : r.body?.message ?? r; };
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[0], 1, 1)] }), 'needs_opening');
   rpc(A, 'coop_open', { p_souls: 10, p_after: 0 });
-  assert.equal(rpc(A, 'coop_adjust', { p_ops: [{ op: OPS[0], delta: 100, reason: 'income' }] }).balance, 110);
-  assert.equal(rpc(A, 'coop_adjust', { p_ops: [{ op: OPS[0], delta: 100, reason: 'income' }] }).balance, 110);
-  assert.equal(rpc(A, 'coop_adjust', { p_ops: [{ op: OPS[0], delta: 5, reason: 'income' }] }), 'bad_op');
-  assert.equal(rpc(A, 'coop_adjust', { p_ops: [{ op: OPS[1], delta: -200, reason: 'spend' }, { op: OPS[2], delta: 0 }] }), 'bad_op');
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[0], 100, 100, { reason: 'income' })] }).balance, 110);
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[0], 100, 100, { reason: 'income' })] }).balance, 110);
+  for (const changed of [game(OPS[0], 5, 100, { reason: 'income' }), game(OPS[0], 100, 5, { reason: 'income' }), game(OPS[0], 100, 100, { reason: 'x' }), game(OPS[0], 100, 100)]) {
+    assert.equal(rpc(A, 'coop_adjust', { p_ops: [changed] }), 'bad_op');
+  }
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[1], -200, 0), { id: OPS[2], delta: 1 }] }), 'bad_op');
   assert.equal(rpc(A, 'coop_wallet', {}).balance, 110, 'a bad batch left nothing behind');
-  assert.equal(rpc(A, 'coop_adjust', { p_ops: [{ op: OPS[1], delta: -200, reason: 'spend' }] }).balance, -90);
+  const zero = rpc(A, 'coop_adjust', { p_ops: [game(OPS[3], 0, 100)] });
+  assert.deepEqual([zero.receipts[0].delta, zero.receipts[0].earned, zero.balance], [0, 100, 110]);
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[4], -200, 0)] }).balance, -90);
   assert.equal(rpc(A, 'coop_duel_create', { p_to: B, p_game: 'stack', p_stake: 1 }), 'insufficient_souls');
+  const chest = { reward: 'coven_chest', week: 42, tier: 1, curio: null, frame: null };
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[5], 5, 5, chest)] }), 'bad_op');
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(currencyId(A, 'coven_chest:42:1'), 5, 5, chest)] }).balance, -85);
+  assert.equal(rpc(A, 'coop_adjust', { p_ops: [game(OPS[6], 3, 3), game(OPS[6], 3, 3)] }).receipts.length, 2);
 });

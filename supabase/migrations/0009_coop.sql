@@ -47,7 +47,7 @@
 -- { id, owner, seq, kind, source_id, delta, earned, created_at, detail }. seq counts 1, 2, 3...
 -- per owner with no gaps; kind is 'stake' (a duel stake leaving the purse,
 -- delta negative), 'duel' (a refund or winnings, delta positive) or 'hire'
--- (wages). earned is the profit part only: 0 for stakes and refunds, the
+-- (wages) or 'game' (souls earned or spent elsewhere, see coop_adjust). earned is the profit part only: 0 for stakes and refunds, the
 -- other player's stake for winnings, the whole wage for wages. A stake is
 -- written in the same transaction that holds it (coop_duel_create for the
 -- challenger, the opponent's first coop_duel_play), and a payout in the
@@ -214,22 +214,24 @@ alter table public.coop_receipts add column if not exists detail jsonb;
 -- A stake is negative and earns nothing; a duel payout is positive and earns
 -- at most itself; wages earn all of themselves and may be 0 (the day's cap
 -- was spent), so every collected report has a receipt.
--- 'adjust' mirrors souls the player earned or spent elsewhere in the game (the
--- souls are one shared purse), so the server's balance stays honest; it never
--- moves souls on a device, and its source_id is the client's operation id.
+-- 'game' mirrors souls the player earned or spent elsewhere in the game (the
+-- souls are one shared purse), so the server's balance stays honest. Its
+-- source_id is the client's operation id (or a semantic id for a known reward),
+-- delta is signed and may be 0 (earned 100 and spent 100 before the save), and
+-- earned is NOT tied to delta: it is what the lifetime counter gained.
 alter table public.coop_receipts drop constraint if exists coop_receipts_kind;
-alter table public.coop_receipts add constraint coop_receipts_kind check (kind in ('stake', 'duel', 'hire', 'adjust'));
+alter table public.coop_receipts add constraint coop_receipts_kind check (kind in ('stake', 'duel', 'hire', 'game'));
 -- A stake is negative and earns nothing; a duel settlement is zero or positive
 -- and earns at most itself (a loser's or a stakeless duel's is 0, so every
 -- settlement leaves a receipt); wages earn all of themselves and may be 0 (the
--- day's cap was spent), so every collected report has a receipt; an adjustment
--- is signed, bounded, and earns nothing.
+-- day's cap was spent), so every collected report has a receipt; a game
+-- receipt is signed and bounded both ways.
 alter table public.coop_receipts drop constraint if exists coop_receipts_sign;
 alter table public.coop_receipts add constraint coop_receipts_sign check (
   (kind = 'stake' and delta between -25 and -1 and earned = 0)
   or (kind = 'duel' and delta between 0 and 50 and earned between 0 and delta)
   or (kind = 'hire' and delta between 0 and 50 and earned = delta)
-  or (kind = 'adjust' and delta between -1000000 and 2000 and earned = 0));
+  or (kind = 'game' and delta between -100000000 and 100000000 and earned between 0 and 100000000));
 alter table public.coop_receipts drop constraint if exists coop_receipts_detail_size;
 alter table public.coop_receipts add constraint coop_receipts_detail_size
   check (detail is null or octet_length(detail::text) < 4000);
@@ -1401,17 +1403,45 @@ as $$
   select private.coop_wallet_json(private.require_user());
 $$;
 
--- Mirrors souls the player earned or spent elsewhere in the game, so the
--- balance a stake is checked against follows the one shared purse. p_ops is
--- [{ op uuid, delta int, reason text }], at most 50, applied together or not at
--- all. Each op is idempotent by (account, op): a repeat answers the receipt
--- already written, and the same op with a different delta is refused bad_op.
--- A spend (negative) is never capped and may take the balance below zero (debt
--- from offline play): that only blocks new stakes. Earnings are capped at 2000
--- an op and 6000 a UTC day, the one control on what the server cannot see.
+-- The shared purse. Souls the player earns or spends outside Co-op still count
+-- toward the balance a stake is checked against, and the lifetime counter.
+-- p_ops is [{ id uuid, delta int, earned int, detail? object }], at most 100,
+-- applied together or not at all. delta is signed (+/-100000000) and may be 0;
+-- earned (0..100000000) is what the lifetime counter gained and is NOT tied to
+-- delta (earn 100 and spend 100 before one save is delta 0, earned 100).
+-- Each op is idempotent by (account, id): a repeat with the same payload
+-- answers the receipt already written, a changed delta, earned or detail is
+-- refused bad_op. Receipts are kind 'game', source_id = id, immutable.
+-- There are no earning caps here: the server cannot see the game economy, and
+-- inventing limits would lose real earnings. A spend may take the balance below
+-- zero (offline debt); only atomic stakes need funds. Needs coop_open first.
 -- Answers { ok, receipts: [one per op, in order], balance, last_seq }. The
--- client does NOT apply these receipts to its souls: they mirror what it
--- already did. Needs coop_open first (needs_opening).
+-- client skips only receipts matching an operation it already applied; a
+-- receipt it never applied (an older backup, a second device) it replays.
+--
+-- Known idempotent rewards use a semantic id, so a restored save cannot grant
+-- the reward twice under a fresh random id: id = UUIDv8 of
+-- sha256('shelflife.currency.v1:' || lower(owner) || ':' || key), first 128
+-- bits with the version nibble 8 and the variant bits 10. detail.reward names
+-- the reward and the keys are
+--   coven_chest  coven_chest:<week>:<tier>      detail.week, detail.tier (integers)
+--   coven_invite coven_invite:<userId>          detail.userId (the referred uuid)
+--   joint_bench  joint_bench:<hearingUuid>      detail.hearing (uuid)
+-- and the id must equal the derived one (bad_op otherwise). curio and frame are
+-- the actual award ids or null. Other detail fields are kept as sent.
+create or replace function private.currency_id(p_owner uuid, p_key text)
+returns uuid
+language sql
+immutable
+set search_path = public
+as $f$
+  select encode(
+    set_byte(set_byte(substring(sha256(convert_to('shelflife.currency.v1:' || lower(p_owner::text) || ':' || p_key, 'UTF8')) from 1 for 16),
+      6, (get_byte(sha256(convert_to('shelflife.currency.v1:' || lower(p_owner::text) || ':' || p_key, 'UTF8')), 6) & 15) | 128),
+      8, (get_byte(sha256(convert_to('shelflife.currency.v1:' || lower(p_owner::text) || ':' || p_key, 'UTF8')), 8) & 63) | 128),
+    'hex')::uuid;
+$f$;
+
 create or replace function public.coop_adjust(p_ops jsonb)
 returns jsonb
 language plpgsql
@@ -1421,42 +1451,78 @@ as $$
 declare
   uid uuid := private.require_user();
   item jsonb;
-  v_op uuid;
-  v_delta int;
-  v_reason text;
+  v_id uuid;
+  v_delta bigint;
+  v_earned bigint;
+  v_detail jsonb;
+  v_reward text;
+  v_key text;
   rc public.coop_receipts%rowtype;
   out jsonb := '[]'::jsonb;
-  today_in bigint;
 begin
-  if p_ops is null or jsonb_typeof(p_ops) <> 'array' or jsonb_array_length(p_ops) not between 1 and 50 then
+  if p_ops is null or jsonb_typeof(p_ops) <> 'array' or jsonb_array_length(p_ops) not between 1 and 100 then
     perform private.refuse('bad_op');
   end if;
   perform private.lock_account(uid);
   if not exists (select 1 from public.coop_wallets where owner = uid and opening is not null) then
     perform private.refuse('needs_opening');
   end if;
-  select coalesce(sum(delta), 0) into today_in from public.coop_receipts
-   where owner = uid and kind = 'adjust' and delta > 0 and created_at >= date_trunc('day', now() at time zone 'utc') at time zone 'utc';
   for item in select value from jsonb_array_elements(p_ops) loop
-    if jsonb_typeof(item) <> 'object' or jsonb_typeof(item -> 'op') is distinct from 'string'
-       or (item ->> 'op') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-       or jsonb_typeof(item -> 'delta') is distinct from 'number' or (item ->> 'delta') !~ '^-?[0-9]{1,7}$' then
+    if jsonb_typeof(item) <> 'object' or jsonb_typeof(item -> 'id') is distinct from 'string'
+       or (item ->> 'id') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+       or jsonb_typeof(item -> 'delta') is distinct from 'number' or (item ->> 'delta') !~ '^-?[0-9]{1,9}$'
+       or jsonb_typeof(item -> 'earned') is distinct from 'number' or (item ->> 'earned') !~ '^[0-9]{1,9}$'
+       or (item ? 'detail' and jsonb_typeof(item -> 'detail') not in ('object', 'null'))
+       or exists (select 1 from jsonb_object_keys(item) k where k not in ('id', 'delta', 'earned', 'detail')) then
       perform private.refuse('bad_op');
     end if;
-    v_op := (item ->> 'op')::uuid;
-    v_delta := (item ->> 'delta')::int;
-    v_reason := lower(coalesce(item ->> 'reason', ''));
-    if v_reason !~ '^[a-z0-9-]{0,24}$' then v_reason := ''; end if;
-    if v_delta = 0 or v_delta < -1000000 or v_delta > 2000 then perform private.refuse('bad_op'); end if;
-    select * into rc from public.coop_receipts where owner = uid and kind = 'adjust' and source_id = v_op;
-    if found then
-      if rc.delta <> v_delta then perform private.refuse('bad_op'); end if;
-    else
-      if v_delta > 0 then
-        today_in := today_in + v_delta;
-        if today_in > 6000 then perform private.refuse('cap_reached'); end if;
+    v_id := (item ->> 'id')::uuid;
+    v_delta := (item ->> 'delta')::bigint;
+    v_earned := (item ->> 'earned')::bigint;
+    if v_delta not between -100000000 and 100000000 or v_earned not between 0 and 100000000 then
+      perform private.refuse('bad_op');
+    end if;
+    v_detail := case when jsonb_typeof(item -> 'detail') = 'object' then item -> 'detail' else null end;
+    if v_detail is not null and length(v_detail::text) > 4096 then perform private.refuse('bad_op'); end if;
+    v_reward := v_detail ->> 'reward';
+    if v_reward is not null then
+      v_key := null;
+      if v_reward = 'coven_chest' then
+        if jsonb_typeof(v_detail -> 'week') is distinct from 'number' or (v_detail ->> 'week') !~ '^[0-9]{1,9}$'
+           or jsonb_typeof(v_detail -> 'tier') is distinct from 'number' or (v_detail ->> 'tier') !~ '^[0-9]{1,9}$' then
+          perform private.refuse('bad_op');
+        end if;
+        v_key := 'coven_chest:' || (v_detail ->> 'week')::bigint || ':' || (v_detail ->> 'tier')::bigint;
+      elsif v_reward = 'coven_invite' then
+        if jsonb_typeof(v_detail -> 'userId') is distinct from 'string'
+           or (v_detail ->> 'userId') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
+          perform private.refuse('bad_op');
+        end if;
+        v_key := 'coven_invite:' || lower(v_detail ->> 'userId');
+      elsif v_reward = 'joint_bench' then
+        if jsonb_typeof(v_detail -> 'hearing') is distinct from 'string'
+           or (v_detail ->> 'hearing') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
+          perform private.refuse('bad_op');
+        end if;
+        v_key := 'joint_bench:' || lower(v_detail ->> 'hearing');
       end if;
-      rc := private.coop_append(uid, 'adjust', v_op, v_delta, 0, jsonb_build_object('reason', v_reason));
+      if v_key is not null then
+        if v_id <> private.currency_id(uid, v_key) then perform private.refuse('bad_op'); end if;
+        -- The actual award ids are text or null, and short.
+        if (v_detail ? 'curio' and jsonb_typeof(v_detail -> 'curio') not in ('string', 'null'))
+           or (v_detail ? 'frame' and jsonb_typeof(v_detail -> 'frame') not in ('string', 'null'))
+           or length(coalesce(v_detail ->> 'curio', '')) > 64 or length(coalesce(v_detail ->> 'frame', '')) > 64 then
+          perform private.refuse('bad_op');
+        end if;
+      end if;
+    end if;
+    select * into rc from public.coop_receipts where owner = uid and kind = 'game' and source_id = v_id;
+    if found then
+      if rc.delta <> v_delta or rc.earned <> v_earned or rc.detail is distinct from v_detail then
+        perform private.refuse('bad_op');
+      end if;
+    else
+      rc := private.coop_append(uid, 'game', v_id, v_delta::int, v_earned::int, v_detail);
     end if;
     out := out || jsonb_build_array(private.coop_receipt_json(rc));
   end loop;
@@ -1542,6 +1608,7 @@ grant execute on function public.coop_records() to authenticated;
 revoke all on function public.coop_open(int, bigint) from public, anon, authenticated;
 revoke all on function public.coop_wallet() from public, anon, authenticated;
 revoke all on function public.coop_receipts(bigint) from public, anon, authenticated;
+revoke all on function private.currency_id(uuid, text) from public, anon, authenticated;
 revoke all on function public.coop_adjust(jsonb) from public, anon, authenticated;
 
 grant execute on function public.coop_open(int, bigint) to authenticated;

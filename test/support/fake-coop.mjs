@@ -14,9 +14,42 @@
 // insufficient_souls is enforced either way. Raw state: wallets, receipts,
 // holds.
 
+import { createHash } from 'node:crypto';
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PET = /^[A-Za-z0-9_-]{1,100}$/;
 const TRAIT = /^[a-z0-9-]{1,24}$/;
+// UUIDv8 from sha256('shelflife.currency.v1:' + lowercase owner + ':' + key), mirroring private.currency_id.
+export function currencyId(owner, key) {
+  const h = createHash('sha256').update('shelflife.currency.v1:' + String(owner).toLowerCase() + ':' + key, 'utf8').digest().subarray(0, 16);
+  h[6] = (h[6] & 0x0f) | 0x80;
+  h[8] = (h[8] & 0x3f) | 0x80;
+  const x = h.toString('hex');
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
+}
+const canon = v => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, canon(v[k])])) : v;
+const UINT = v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 999999999;
+function checkSemantic(owner, id, detail, stop) {
+  const reward = detail?.reward;
+  let key = null;
+  if (reward === 'coven_chest') {
+    if (!UINT(detail.week) || !UINT(detail.tier)) stop('bad_op');
+    key = `coven_chest:${detail.week}:${detail.tier}`;
+  } else if (reward === 'coven_invite') {
+    if (typeof detail.userId !== 'string' || !UUID.test(detail.userId)) stop('bad_op');
+    key = 'coven_invite:' + detail.userId.toLowerCase();
+  } else if (reward === 'joint_bench') {
+    if (typeof detail.hearing !== 'string' || !UUID.test(detail.hearing)) stop('bad_op');
+    key = 'joint_bench:' + detail.hearing.toLowerCase();
+  }
+  if (key === null) return;
+  if (id !== currencyId(owner, key)) stop('bad_op');
+  for (const f of ['curio', 'frame']) {
+    if (f in detail && detail[f] !== null && typeof detail[f] !== 'string') stop('bad_op');
+    if (typeof detail[f] === 'string' && detail[f].length > 64) stop('bad_op');
+  }
+}
+
 export const COOP_CAPS = { frenzy: 3000, stack: 500, seance: 150, whack: 2500 };
 const HOUR = 3600000, DAY = 24 * HOUR;
 const size = value => new TextEncoder().encode(JSON.stringify(value)).length;
@@ -404,24 +437,34 @@ export function createFakeCoop({ profiles, now, json, rest, uuid, friendships, b
       return { ...walletJson(user.id), accepted };
     },
     coop_wallet(user) { return walletJson(user.id); },
-    // Mirrors souls earned or spent elsewhere (one shared purse). Idempotent per op; a spend may leave debt.
+    // Mirrors souls earned or spent elsewhere (one shared purse). Idempotent per id and payload; a spend may leave debt.
     coop_adjust(user, { p_ops }) {
-      if (!Array.isArray(p_ops) || p_ops.length < 1 || p_ops.length > 50) stop('bad_op');
+      if (!Array.isArray(p_ops) || p_ops.length < 1 || p_ops.length > 100) stop('bad_op');
       const w = walletOf(user.id);
       if (w.opening === null) stop('needs_opening');
-      const day = new Date(now()).toISOString().slice(0, 10);
-      let today = receipts.filter(r => r.owner === user.id && r.kind === 'adjust' && r.delta > 0 && new Date(r.created_at).toISOString().slice(0, 10) === day)
-        .reduce((n, r) => n + r.delta, 0);
       const staged = [];
+      const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
       for (const item of p_ops) {
-        if (!item || typeof item !== 'object' || !UUID.test(item.op || '') || !Number.isInteger(item.delta) || Math.abs(item.delta) > 9999999) stop('bad_op');
-        if (item.delta === 0 || item.delta < -1000000 || item.delta > 2000) stop('bad_op');
-        const had = receiptOf(user.id, 'adjust', item.op) || staged.find(x => x.op === item.op)?.had;
-        if (had) { if (had.delta !== item.delta) stop('bad_op'); staged.push({ op: item.op, had }); continue; }
-        if (item.delta > 0) { today += item.delta; if (today > 6000) stop('cap_reached'); }
-        staged.push({ op: item.op, delta: item.delta, reason: /^[a-z0-9-]{0,24}$/.test(String(item.reason || '').toLowerCase()) ? String(item.reason || '').toLowerCase() : '' });
+        if (!item || typeof item !== 'object' || Array.isArray(item) || Object.keys(item).some(k => !['id', 'delta', 'earned', 'detail'].includes(k))) stop('bad_op');
+        if (typeof item.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(item.id)) stop('bad_op');
+        if (!Number.isInteger(item.delta) || Math.abs(item.delta) > 100000000) stop('bad_op');
+        if (!Number.isInteger(item.earned) || item.earned < 0 || item.earned > 100000000) stop('bad_op');
+        const detail = item.detail === undefined || item.detail === null ? null : item.detail;
+        if (detail !== null && (typeof detail !== 'object' || Array.isArray(detail) || JSON.stringify(detail).length > 4096)) stop('bad_op');
+        checkSemantic(user.id, item.id, detail, stop);
+        const had = receiptOf(user.id, 'game', item.id) || staged.find(x => x.id === item.id);
+        if (had) {
+          if (had.delta !== item.delta || had.earned !== item.earned || !same(had.detail ?? null, detail)) stop('bad_op');
+          staged.push({ id: item.id, same: true, delta: had.delta, earned: had.earned, detail: had.detail ?? null });
+          continue;
+        }
+        staged.push({ id: item.id, delta: item.delta, earned: item.earned, detail });
       }
-      const out = staged.map(x => x.had || append(user.id, 'adjust', x.op, x.delta, 0, { reason: x.reason }));
+      const made = new Map();
+      const out = staged.map(x => {
+        if (!x.same) { const r = append(user.id, 'game', x.id, x.delta, x.earned, x.detail); made.set(x.id, r); return r; }
+        return receiptOf(user.id, 'game', x.id);
+      });
       return { ok: true, receipts: out.map(receiptJson), balance: available(user.id), last_seq: w.last_seq };
     },
     coop_receipts(user, { p_after = 0 } = {}) {
