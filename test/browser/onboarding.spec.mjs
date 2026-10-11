@@ -224,6 +224,9 @@ test('a need mark explains itself, and the glossary opens at the right entry', a
   await expect(page.locator('#gl-needs')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.locator('#helpVeil')).not.toHaveClass(/open/);
+  // Focus comes back to the resident whose mark asked, not to the tooltip's hidden button.
+  const back = await page.evaluate(() => !!document.activeElement?.closest('#cabinet .piece'));
+  expect(back).toBe(true);
 });
 
 test('Help is a labelled button with First day and Glossary, and focus comes back to it', async ({ page }) => {

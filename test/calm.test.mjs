@@ -97,3 +97,24 @@ test('the Calm switch repaints when a restored backup or cloud copy replaces the
   assert.equal(name.textContent, calm.calmLabels(true).label);
   calm.applyCalm(false);
 });
+
+test('a listener added with an AbortSignal or once stops hearing Calm changes, and is never heard twice', async () => {
+  const { real } = stage();
+  const calm = await import('../src/ui/calm.js?signals');
+  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const heard = { aborted: 0, once: 0, twice: 0 };
+  const controller = new AbortController();
+  const aborted = () => { heard.aborted++; };
+  const once = () => { heard.once++; };
+  const twice = () => { heard.twice++; };
+  motion.addEventListener('change', aborted, { signal: controller.signal });
+  motion.addEventListener('change', once, { once: true });
+  motion.addEventListener('change', twice);
+  motion.addEventListener('change', twice);
+  calm.applyCalm(true);
+  assert.deepEqual(heard, { aborted: 1, once: 1, twice: 1 });
+  controller.abort();
+  calm.applyCalm(false);
+  assert.deepEqual(heard, { aborted: 1, once: 1, twice: 2 }, 'the aborted and once listeners stay quiet');
+  assert.ok(real.size >= 1);
+});

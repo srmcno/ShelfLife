@@ -142,7 +142,14 @@ function ensureCard() {
     const action = event.target.closest('[data-gl-more],[data-gl-act],[data-gl-close]');
     if (!action) return;
     const id = card.dataset.id;
-    if (action.hasAttribute('data-gl-more')) { hideGloss(false); openHelp({ entry: id }); }
+    if (action.hasAttribute('data-gl-more')) {
+      // Focus goes back to the term that asked, so Help returns there when it closes, not to
+      // this card's hidden button. Help opens once this click is over, when the dialog
+      // controller has stopped treating the card's button as the opener.
+      const anchor = cardAnchor;
+      hideGloss(true);
+      setTimeout(() => openHelp({ entry: id, from: anchor }), 0);
+    }
     else if (action.hasAttribute('data-gl-act')) { hideGloss(false); window.dispatchEvent(new CustomEvent('shelflife:mayhem', { detail: { open: GLOSSARY_BY_ID[id]?.action?.mh } })); }
     else hideGloss(true);
   });
@@ -170,7 +177,9 @@ export function showGloss(id, anchor = null) {
 export function hideGloss(restoreFocus = false) {
   if (!card || card.hidden) return;
   card.hidden = true; card.classList.remove('show');
-  if (restoreFocus && cardAnchor?.isConnected) cardAnchor.focus?.({ preventScroll: true });
+  // A mark that is not itself focusable (a need pip) hands focus to the control around it.
+  const home = cardAnchor?.closest?.('button,a[href],[tabindex]:not([tabindex="-1"]),[role="button"]');
+  if (restoreFocus && home?.isConnected) home.focus?.({ preventScroll: true });
   cardAnchor = null;
 }
 
