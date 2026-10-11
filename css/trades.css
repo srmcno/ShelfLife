@@ -1,0 +1,167 @@
+/* Trading with friends: the compose and review views, the bill of sale, the
+   postbox rows, friend profile sections, the packing marker on the shelf and
+   framed portraits in the Memory museum. Built for a 320px phone first. */
+
+.tr-view{display:grid;gap:16px;min-width:0}
+.tr-view h3,.tr-section h3,.tr-portraits h3{margin:0 0 8px;font:700 16px/1.3 var(--body);color:var(--ink)}
+.tr-view h3 small,.tr-section h3 small,.tr-portraits h3 small{margin-left:6px;font-weight:600;font-size:13px;color:var(--ink-3)}
+.tr-section h4{margin:12px 0 6px;font:700 13px/1.3 var(--body);color:var(--ink-2);letter-spacing:.02em}
+.tr-part{min-width:0}
+.tr-hint,.tr-empty{margin:0;color:var(--ink-2);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.tr-empty{padding:10px 12px;border:1px dashed var(--hair-lit);border-radius:var(--r)}
+.tr-note{margin:0;padding:10px 12px;border:1px solid var(--hair-lit);border-radius:var(--r);color:var(--ink);font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.tr-why{margin:-6px 0 0;color:var(--warn);font-size:13.5px;line-height:1.45;overflow-wrap:anywhere}
+.tr-actions{display:flex;flex-wrap:wrap;gap:8px}
+.tr-actions .btn{flex:1 1 140px;min-width:0;min-height:44px;white-space:normal;text-align:center}
+.tr-danger,.tr-danger:hover{background:var(--blood);color:#FFF3EE;border-color:transparent;box-shadow:0 8px 22px -12px var(--blood)}
+
+/* What kind of trade */
+.tr-modes{display:flex;gap:8px}
+.tr-modes .btn{flex:1 1 0;min-width:0}
+
+/* Curio rows with a stepper */
+.tr-picks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.tr-pick{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:10px;min-width:0;padding:8px 10px;border:1px solid var(--hair);border-radius:var(--r);background:var(--glass)}
+.tr-pick.is-picked{border-color:color-mix(in srgb,var(--mint) 55%,transparent);background:color-mix(in srgb,var(--mint) 8%,transparent)}
+.tr-pick-name{display:grid;gap:2px;min-width:0}
+.tr-pick-name b{font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.tr-pick-name small{font-size:12px;color:var(--ink-3)}
+.tr-curio-art{display:block;width:40px;height:40px;flex:none;color:var(--bone);padding:4px;border-radius:9px;background:var(--glass-2)}
+.tr-curio-art.rarity-uncommon{color:var(--mint)}
+.tr-curio-art.rarity-rare{color:var(--amber)}
+.tr-curio-art.rarity-cursed,.tr-curio-art.rarity-unholy{color:var(--pink)}
+.tr-curio-art.rarity-season,.tr-curio-art.rarity-edition{color:var(--room-key)}
+.tr-step{display:flex;align-items:center;gap:2px}
+.tr-step .btn{width:44px;min-width:44px;min-height:44px;padding:0;font-size:20px;line-height:1}
+.tr-step output{min-width:24px;text-align:center;font:700 16px/1 var(--body);font-variant-numeric:tabular-nums}
+.tr-tag{display:inline-block;justify-self:start;margin-top:3px;padding:2px 7px;border-radius:999px;font:700 11px/1.4 var(--body);font-style:normal;letter-spacing:.02em}
+.tr-tag-want,.tr-tag-wish{color:#1A0F14;background:var(--amber)}
+.tr-tag-new{color:var(--ink);background:var(--glass-2);border:1px solid var(--hair-lit)}
+
+/* Residents to pick */
+.tr-res-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:8px}
+.tr-res{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;padding:8px 6px 10px;text-align:center;
+  color:var(--ink);border:1px solid var(--hair);border-radius:var(--r);background:var(--glass);font:inherit}
+button.tr-res{cursor:pointer}
+.tr-res.is-picked{border-color:var(--pink);box-shadow:0 0 0 1px var(--pink) inset;background:color-mix(in srgb,var(--pink) 9%,transparent)}
+.tr-res.is-blocked{opacity:.55}
+.tr-res b{font-size:14px;line-height:1.2;max-width:100%;overflow-wrap:anywhere}
+.tr-res small{font-size:11.5px;color:var(--ink-3);line-height:1.3;overflow-wrap:anywhere}
+.tr-res em{font-size:11.5px;font-style:normal;color:var(--warn);line-height:1.3}
+.tr-res-art{display:flex;align-items:flex-end;justify-content:center;width:76px;height:76px;max-width:100%}
+.tr-res-art .sprite{width:100%;height:100%;--pet-h:72px}
+.tr-res-art .tr-missing,.tr-res-art>svg{width:56px;height:56px;color:var(--ink-3)}
+
+/* Canned lines, report reasons and wishlist chips */
+.tr-lines{margin:0;padding:0;border:0;min-width:0}
+.tr-lines legend{padding:0;margin:0 0 8px;font:700 16px/1.3 var(--body)}
+.tr-line-list,.tr-reasons{display:flex;flex-wrap:wrap;gap:6px}
+.tr-line{min-height:44px;padding:8px 12px;border-radius:12px;border:1px solid var(--hair-lit);background:var(--glass);color:var(--ink-2);
+  font:500 13.5px/1.35 var(--body);text-align:left;cursor:pointer;max-width:100%;overflow-wrap:anywhere}
+.tr-line.is-picked{color:var(--ink);border-color:var(--mint);background:color-mix(in srgb,var(--mint) 10%,transparent)}
+.tr-line:focus-visible,.tr-res:focus-visible,.tr-wish:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+
+/* The bill of sale: the shelf undertaker's paperwork */
+.tr-bill{position:relative;overflow:hidden;min-width:0;padding:18px 16px 16px;border-radius:6px;color:#2B1A20;
+  background:radial-gradient(120% 90% at 30% 0%,#F7EEDC 0%,var(--paper) 55%,#DCCBAE 100%);
+  border:1px solid #BCA27F;box-shadow:0 0 0 4px rgba(0,0,0,.18),0 0 0 5px #8C7354,0 18px 40px -18px rgba(0,0,0,.8)}
+.tr-bill::before{content:"";position:absolute;inset:6px;border:1px solid rgba(70,40,30,.28);border-radius:3px;pointer-events:none}
+.tr-bill-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;padding-bottom:8px;border-bottom:2px double rgba(70,40,30,.45)}
+.tr-bill-kicker{font:400 clamp(22px,7vw,28px)/1.05 var(--display);letter-spacing:.02em}
+.tr-bill-no{font:700 12px/1.2 var(--body);letter-spacing:.12em;color:#6B4B3E;font-variant-numeric:tabular-nums}
+.tr-bill-firm{margin:8px 0 0;font:400 17px/1.3 var(--hand);color:#5A3B33}
+.tr-bill-parties{margin:8px 0 12px;font-size:14px;line-height:1.45}
+.tr-bill-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px}
+.tr-bill-cols section{min-width:0;padding:10px;border:1px dashed rgba(70,40,30,.4);border-radius:4px;background:rgba(255,250,240,.35)}
+.tr-bill-cols h4{margin:0 0 8px;font:700 12px/1.3 var(--body);letter-spacing:.1em;text-transform:uppercase;color:#6B4B3E;overflow-wrap:anywhere}
+.tr-items{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.tr-item{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:10px}
+.tr-item b{display:block;font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.tr-item small{display:block;font-size:12px;color:#6B4B3E;line-height:1.3}
+.tr-bill .tr-curio-art{color:#3A2228;background:rgba(70,40,30,.1)}
+.tr-item-res{grid-template-columns:64px minmax(0,1fr)}
+.tr-item-res .tr-res-art{width:64px;height:64px}
+.tr-item-res .sprite{--pet-h:60px}
+.tr-nothing{margin:0;font:400 17px/1.3 var(--hand);color:#5A3B33}
+.tr-bill-line{margin:14px 0 0;padding:8px 12px;border-left:3px solid #A32C3C;font:italic 400 14px/1.45 var(--body);color:#3A2228}
+.tr-bill-line cite{display:block;margin-top:2px;font:400 16px/1.2 var(--hand);font-style:normal;color:#6B4B3E}
+.tr-bill-words{margin:10px 0 0;font-size:14px;line-height:1.45;font-style:italic}
+.tr-bill-words span{display:block;font:700 11px/1.4 var(--body);font-style:normal;letter-spacing:.1em;text-transform:uppercase;color:#6B4B3E}
+.tr-bill-terms{margin:12px 0 0;font-size:12.5px;line-height:1.5;color:#4A3029}
+.tr-bill-sign{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+.tr-bill-sign span{padding-top:4px;border-top:1px solid rgba(70,40,30,.55);font:400 19px/1.1 var(--hand);color:#2B1A20;overflow-wrap:anywhere;min-width:0}
+.tr-stamp{position:absolute;right:10px;top:46%;padding:6px 14px;border:3px double currentColor;border-radius:6px;color:#A32C3C;
+  font:400 clamp(22px,8vw,30px)/1 var(--display);letter-spacing:.14em;text-transform:uppercase;transform:rotate(-14deg);opacity:.82;
+  mix-blend-mode:multiply;pointer-events:none;animation:tr-stamp .5s cubic-bezier(.2,1.4,.4,1) both}
+.tr-bill.is-declined .tr-stamp,.tr-bill.is-cancelled .tr-stamp,.tr-bill.is-expired .tr-stamp,.tr-bill.is-countered .tr-stamp{color:#5A4A44}
+@keyframes tr-stamp{from{transform:rotate(-14deg) scale(1.8);opacity:0}to{transform:rotate(-14deg) scale(1);opacity:.82}}
+@media (prefers-reduced-motion:reduce){.tr-stamp{animation:none}}
+body[data-effects="light"] .tr-stamp{animation:none}
+
+/* Two-step confirmations */
+.tr-confirm{display:grid;gap:10px;padding:14px;border:1px solid color-mix(in srgb,var(--blood) 70%,transparent);border-radius:var(--r);
+  background:color-mix(in srgb,var(--blood) 14%,transparent)}
+.tr-confirm p{margin:0;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.tr-moderate{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.tr-moderate .btn{min-height:44px}
+
+/* The postbox and profile sections */
+.tr-mail{display:grid;gap:8px;min-width:0}
+.tr-mail p{margin:0;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.tr-mail-quote{padding-left:10px;border-left:2px solid var(--hair-lit);color:var(--ink-2);font-style:italic}
+.tr-mail .tr-actions .btn{flex:1 1 120px;min-height:44px}
+.tr-section{min-width:0;padding:14px;border:1px solid var(--hair-lit);border-radius:var(--r-lg);background:var(--glass)}
+.tr-section .tr-actions{margin-top:12px}
+.tr-chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.tr-chip{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;padding:4px 10px 4px 4px;border:1px solid var(--hair);border-radius:999px;background:var(--glass)}
+.tr-chip .tr-curio-art{width:28px;height:28px;padding:3px;border-radius:50%}
+.tr-chip span{display:grid;font-size:13px;line-height:1.25;overflow-wrap:anywhere;min-width:0}
+.tr-chip.is-marked{border-color:color-mix(in srgb,var(--amber) 60%,transparent)}
+.tr-mark{font:700 11px/1.3 var(--body);font-style:normal;color:var(--amber)}
+.tr-open{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+.tr-open li{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;font-size:13.5px;line-height:1.4}
+.tr-open li span{min-width:0;overflow-wrap:anywhere}
+.tr-open .btn{flex:none;min-height:44px}
+
+/* The wishlist */
+.tr-rarity{margin:12px 0 6px;font:700 12px/1.3 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.tr-wishes{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:6px}
+.tr-wish{display:flex;align-items:center;gap:8px;width:100%;min-height:48px;padding:4px 8px 4px 4px;text-align:left;color:var(--ink);
+  border:1px solid var(--hair);border-radius:var(--r);background:var(--glass);font:inherit;cursor:pointer}
+.tr-wish span{display:grid;min-width:0}
+.tr-wish b{font-size:13.5px;line-height:1.25;overflow-wrap:anywhere}
+.tr-wish small{font-size:11.5px;color:var(--ink-3)}
+.tr-wish.is-picked{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 12%,transparent)}
+.tr-wish.is-picked small{color:var(--amber)}
+details.tr-part summary{min-height:44px;display:flex;align-items:center;gap:6px;cursor:pointer;font:700 16px/1.3 var(--body)}
+details.tr-part summary small{font-weight:600;font-size:13px;color:var(--ink-3)}
+
+/* On the shelf: bags by the door */
+.pip.packing{width:auto;height:auto;background:none;box-shadow:none;font:700 11px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--amber)}
+.pet.packing .sprite-figure{opacity:.86}
+@media (max-width:720px){
+  .pip.packing{width:5.5px;height:5.5px;font-size:0;letter-spacing:0;border-radius:1px;background:var(--amber);box-shadow:0 0 0 1px rgba(0,0,0,.6);transform:rotate(45deg)}
+}
+.tr-card-note{margin:12px 0 0;padding:10px 12px;border:1px solid color-mix(in srgb,var(--amber) 45%,transparent);border-radius:var(--r);
+  background:color-mix(in srgb,var(--amber) 9%,transparent);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+
+/* The Memory museum: framed portraits */
+.tr-portraits{margin:18px 0}
+.tr-frames{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:14px}
+.tr-frame{margin:0;display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:start;min-width:0;padding:12px;border-radius:8px;
+  background:linear-gradient(160deg,var(--surface-hi),var(--surface));border:1px solid var(--hair-lit)}
+.tr-frame-art{display:flex;align-items:flex-end;justify-content:center;width:96px;height:112px;padding:8px;border-radius:48px 48px 6px 6px;
+  background:radial-gradient(80% 70% at 50% 35%,color-mix(in srgb,var(--paper) 22%,transparent),transparent),var(--case-mid);
+  border:4px double color-mix(in srgb,var(--amber) 70%,#5C3A47);box-shadow:inset 0 0 18px rgba(0,0,0,.7)}
+.tr-frame-art .sprite{width:100%;height:100%;--pet-h:80px}
+.tr-frame figcaption{display:grid;gap:4px;min-width:0}
+.tr-frame figcaption b{font:400 19px/1.15 var(--display);overflow-wrap:anywhere}
+.tr-frame figcaption small{font-size:12.5px;color:var(--ink-3)}
+.tr-frame q{font-size:13.5px;line-height:1.45;font-style:italic;color:var(--ink-2)}
+.tr-frame ul{margin:2px 0 0;padding-left:16px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+@media (max-width:380px){
+  .tr-frame{grid-template-columns:1fr;justify-items:start}
+  .tr-pick{grid-template-columns:36px minmax(0,1fr);row-gap:6px}
+  .tr-pick .tr-curio-art{width:36px;height:36px}
+  .tr-pick .tr-step{grid-column:1/-1;justify-self:end}
+}
