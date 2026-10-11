@@ -877,38 +877,38 @@ export const DIRECT_LINES = [
    real: {mtg} is how many times the shelf has convened, {carr} how many times Item 4
    has been carried forward, {food}/{fuss}/{clean} the actual care counts. */
 export const MINUTES_DOCS = [
-  'MINUTES OF THE SHELF — MEETING {mtg}\nItem 1. The bowl. Unresolved.\nItem 2. Slot {slot}. Deferred.\nItem 3. {a} says it said "after you." {b} says it heard "if you must."\nItem 4. You.\nCarried forward {carr} times.',
-  'MINUTES — MEETING {mtg}\nItem 1. The dust. Noted.\nItem 2. The gap in the middle of the shelf. Left as is.\nItem 3. Whether anything here ends. Tabled again.\nItem 4. You.\nCarried forward {carr} times.',
-  'MINUTES — MEETING {mtg}, HELD UNDER THE SHELF\nPresent: {a}, {b}.\nItem 1. The bowl.\nItem 2. Slot {slot}, and who is nearer the front of it.\nItem 3. The tooth.\nItem 4. You. Carried forward {carr} times.',
+  'MINUTES OF THE SHELF: MEETING {mtg}\nItem 1. The bowl. Unresolved.\nItem 2. Slot {slot}. Deferred.\nItem 3. {a} says it said "after you." {b} says it heard "if you must."\nItem 4. You.\nCarried forward {carr} times.',
+  'MINUTES: MEETING {mtg}\nItem 1. The dust. Noted.\nItem 2. The gap in the middle of the shelf. Left as is.\nItem 3. Whether anything here ends. Tabled again.\nItem 4. You.\nCarried forward {carr} times.',
+  'MINUTES: MEETING {mtg}, HELD UNDER THE SHELF\nPresent: {a}, {b}.\nItem 1. The bowl.\nItem 2. Slot {slot}, and who is nearer the front of it.\nItem 3. The tooth.\nItem 4. You. Carried forward {carr} times.',
   'MINUTES, MEETING {mtg}\nPresent: {a}, {b}, the dust.\nItem 1. The crack in the bowl. Widening.\nItem 2. Slot {slot}. {a} says it is draughty. {b} says {a} is draughty.\nItem 4. You.\nCarried forward {carr} times.',
   'MINUTES OF THE SHELF, MEETING {mtg}\nItem 1. The raisin. {a} moved that it be eaten. {b} moved that it be kept. Kept.\nItem 2. Slot {slot}. Cold. Noted again.\nItem 3. The noise at 3am. {b} denies it.\nItem 4. You.\nCarried forward {carr} times.'
 ];
 
 export const SOLO_MINUTES_DOCS = [
-  'MINUTES — MEETING {mtg}\nPresent: {p}.\nApologies: none received.\nItem 1. The bowl. Unresolved.\nItem 2. Slot {slot}. Unresolved.\nItem 3. You. Carried forward {carr} times.',
-  'MINUTES — MEETING {mtg}\nHeld at 3am. Attendance one. Quorum reached.\nItem 1. The dust.\nItem 2. You.\nCarried forward {carr} times.',
+  'MINUTES: MEETING {mtg}\nPresent: {p}.\nApologies: none received.\nItem 1. The bowl. Unresolved.\nItem 2. Slot {slot}. Unresolved.\nItem 3. You. Carried forward {carr} times.',
+  'MINUTES: MEETING {mtg}\nHeld at 3am. Attendance one. Quorum reached.\nItem 1. The dust.\nItem 2. You.\nCarried forward {carr} times.',
   'MINUTES, MEETING {mtg}\nPresent: {p}. Also the bowl.\nItem 1. The bowl. Empty. Present.\nItem 2. Slot {slot}. Draughty on the left.\nItem 3. You.\nCarried forward {carr} times.\nMeeting closed. Nobody left.',
   'MINUTES, MEETING {mtg}, HELD IN SLOT {slot}\nPresent: {p}.\nItem 1. The crumb. Eaten during the reading of Item 1.\nItem 2. You.\nCarried forward {carr} times. Seconded by the bowl.'
 ];
 
 export const CARE_RECORD_DOCS = [
-  'CARE RECORD — {p}\nFed {food}. Fussed {fuss}. Cleaned {clean}.\nGone to first: {selfN} of your last {tot} visits.\nThe record is not in your handwriting.',
-  'CARE RECORD — {p}\nFed {food}.\nFussed {fuss}.\nCleaned {clean}.\nFirst: {selfN}.\nKept under the shelf, at four inches, in pencil.',
+  'CARE RECORD: {p}\nFed {food}. Fussed {fuss}. Cleaned {clean}.\nGone to first: {selfN} of your last {tot} visits.\nThe record is not in your handwriting.',
+  'CARE RECORD: {p}\nFed {food}.\nFussed {fuss}.\nCleaned {clean}.\nFirst: {selfN}.\nKept under the shelf, at four inches, in pencil.',
   'CARE RECORD, {p}\nFed {food}. Fussed {fuss}. Cleaned {clean}.\nGone to first: {selfN} of {tot}.\nThe figures are correct. {p} checked them against yours.\nYou do not keep figures.',
   'CARE RECORD, {p}, SECOND COPY\nFed {food}.\nFussed {fuss}.\nCleaned {clean}.\nFirst: {selfN} of your last {tot}.\nThe first copy is where you will find it.'
 ];
 
 export const ROTA_DOCS = [
-  'ROTA — WHILE YOU WERE OUT\nFeeding: covered.\nFussing: covered.\nCleaning: covered.\nHours worked: {h}. Complaints: none.\nThe rota is four inches long and your name is at the bottom.',
-  'ROTA — {h} HOURS\nMonday to Sunday, and an eighth column headed AFTER.\nEvery box ticked.\nThe ticks are all the same size.\nNobody has said what the eighth column is for.',
+  'ROTA: WHILE YOU WERE OUT\nFeeding: covered.\nFussing: covered.\nCleaning: covered.\nHours worked: {h}. Complaints: none.\nThe rota is four inches long and your name is at the bottom.',
+  'ROTA: {h} HOURS\nMonday to Sunday, and an eighth column headed AFTER.\nEvery box ticked.\nThe ticks are all the same size.\nNobody has said what the eighth column is for.',
   'ROTA, {h} HOURS, WHILE YOU WERE OUT\nDoor: watched.\nBowl: watched.\nDust: counted.\nYou: expected.\nEvery hour initialled in the same hand.\nThe last column is headed BACK. It is empty.',
   'ROTA, COVERING {h} HOURS\nFront edge: manned.\nBack wall: leaned on.\nThe crumb: guarded.\nThe door: faced.\nSigned at four inches. Countersigned at four inches.'
 ];
 
 // 4a's payoff. Fires once per pet, at grudge stage 3, and then that pet goes quiet.
 export const STRIKE_DOCS = [
-  'ITEM 4 — ANY OTHER BUSINESS\nCarried forward from meetings 1 to {mtg}.\nMoved that the matter be closed. Seconded by {b}.\nItem 4 has been struck from all future agendas.',
-  'ITEM 4 — ANY OTHER BUSINESS\nCarried forward from meetings 1 to {mtg}.\nMoved, by {p}, that the matter be closed.\nItem 4 has been struck from all future agendas.',
+  'ITEM 4: ANY OTHER BUSINESS\nCarried forward from meetings 1 to {mtg}.\nMoved that the matter be closed. Seconded by {b}.\nItem 4 has been struck from all future agendas.',
+  'ITEM 4: ANY OTHER BUSINESS\nCarried forward from meetings 1 to {mtg}.\nMoved, by {p}, that the matter be closed.\nItem 4 has been struck from all future agendas.',
   'ITEM 4, ANY OTHER BUSINESS\nRaised at meeting 1. Carried to meeting {mtg}.\n{p} moved that the matter be closed. {b} seconded without looking up.\nStruck. The pencil has been put away.',
   'ITEM 4, MEETING {mtg}\nMoved by {p}. Seconded by {b}.\nThat the matter be closed and the page turned.\nCarried. The page has been turned. It was the last page.'
 ];

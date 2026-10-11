@@ -13,6 +13,10 @@
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <!-- First frame: dark before any stylesheet arrives, so nothing flashes white. -->
 <style>html,body{background:#0B0812;color-scheme:dark}</style>
+<!-- The heading face and the body text, fetched alongside the stylesheets so the first frame is set in them rather than swapping a moment later. -->
+<link rel="preload" href="assets/fonts/gloock-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/karla-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/karla-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/life.css">
@@ -40,6 +44,7 @@
 <link rel="stylesheet" href="css/almanac.css">
 <link rel="stylesheet" href="css/fx.css">
 <link rel="stylesheet" href="css/guide.css">
+<link rel="stylesheet" href="css/polish.css">
 </head>
 <body data-tab="shelf">
 <a class="skip-link" href="#cabinet">Skip to the shelf</a>
@@ -260,7 +265,7 @@
 </div>
 <div class="veil" id="playroomVeil">
   <div class="sheet sheet-playroom">
-    <div class="sheet-head"><div><span class="eyebrow">Open at all unreasonable hours</span><h2>The playroom</h2></div><button class="btn btn-ghost btn-sm" id="playroomClose">Close</button></div>
+    <div class="sheet-head"><div><span class="eyebrow">Open at all unreasonable hours</span><h2>The Playroom</h2></div><button class="btn btn-ghost btn-sm" id="playroomClose">Close</button></div>
     <div class="playroom-workspace">
     <div class="playroom-company" id="playroomCompany"><div id="playroomPortrait" aria-hidden="true"></div><label for="playroomResident">Playing with<select id="playroomResident"></select></label></div>
     <div id="playroomEmpty" class="playroom-empty"><p>A resident makes an excellent accomplice. Qualifications are not checked.</p><button class="btn btn-primary" id="playroomCreate">Make your first resident</button></div>

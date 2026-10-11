@@ -254,7 +254,7 @@ export function initStudio({ onSave }) {
       if (!trait) { info.textContent = 'Two quirks make a complete personality.'; return; }
       const effects = Object.entries(trait.care || {}).map(([need, multiplier]) =>
         `${needNames[need]} falls ${Math.round(Math.abs(multiplier - 1) * 100)}% ${multiplier < 1 ? 'slower' : 'faster'}`);
-      if (trait.nocturnal) effects.push('Sleeps 7am–8pm: care has half effect and games are practice');
+      if (trait.nocturnal) effects.push('Sleeps 7am to 8pm: care has half effect and games are practice');
       info.textContent = trait.blurb + ' ' + (effects.length ? effects.join(' · ') + '.' : 'No direct change to need loss.');
     });
     const stats = personalityEditor.querySelector('.personality-stats');

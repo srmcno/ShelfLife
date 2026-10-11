@@ -1,0 +1,173 @@
+/* =============================================================================
+   polish.css: the finishing pass. Loaded last, after fx.css and guide.css.
+   -----------------------------------------------------------------------------
+   Nothing here adds a feature. It makes the screens agree with each other:
+   one type scale for the small print, one pressed state, hover that never
+   sticks under a finger, button rows that line up, and a handful of screens
+   that a picky player would have noticed. The scale itself (spacing, radii,
+   type, elevation, motion) lives on :root in style.css.
+
+     1. text that wraps like a person set it
+     2. the small print: nothing a player reads is under 11px
+     3. touch: pressed states everywhere, hover only where there is a mouse
+     4. the More tray: no orphaned half-width tiles
+     5. button rows: one height per row, stacked when they would wrap badly
+     6. screen by screen
+     7. motion: the same quick curve, and none at all when asked
+   ============================================================================= */
+
+/* ---- 1. text that wraps like a person set it ------------------------------- */
+/* Headings and the spaced capitals over them balance their lines, so a title
+   never leaves one word hanging; running text avoids a lonely last word. */
+h1,h2,h3,h4,.btn,button,.eyebrow,.mh-tile-kicker,.fx-banner-kicker,.fx-banner b,.sc-kicker,.tool-label,.card-section-title{text-wrap:balance}
+p,li,dd,.hint,.card-meta,small,.note-text{text-wrap:pretty}
+
+/* ---- 2. the small print -------------------------------------------------------
+   The scale has one size for small print (--text-xs, 11px). Labels that had
+   drifted to 9, 9.5, 10 and 10.5px are moved onto it. Engraved shelf labels and
+   the painted signs on the Shelf Court set are artwork and keep their sizes. */
+.eyebrow,.tool-label,.decor-section h3,.door-kicker,.card-section-title,.shelf-progress .eyebrow,
+#incidentsSheet .incident-group h3,.note-time,.file-stamp,.mh-ladder li small,.bondline,.bondline b,
+.relationship-tag,.arrival-footer p,.care-row .btn small,.tabbar .tab,.room-nav .tab,
+.collection-grid small,.album small,.memory-timeline small,.effects-setting small{font-size:var(--text-xs)}
+.tabbar .tab,.room-nav .tab{letter-spacing:.02em}
+.care-row .btn small{letter-spacing:.02em}
+.arrival-line{font-size:max(var(--text-xs),min(2.4vw,12px))}
+.drawing-live .tool-label{font-size:var(--text-xs);letter-spacing:.06em;white-space:normal}
+/* The expedition shell is dense by design; its readable labels still meet the
+   floor. The painted tickets and drawing labels on the stage are artwork. */
+.expedition-heading .eyebrow,.expedition-field-report .eyebrow,.expedition-dock-note,.expedition-hud small,.expedition-hud small>b,
+.expedition-destinations.mission-picker .btn small,.expedition-route-map b,.expedition-route-map small,.expedition-packing small,
+.expedition-objective small,.expedition-objective strong small,.expedition-rewards small,
+#lifeVeil .expedition-option-copy small,#lifeVeil .expedition-option-copy .expedition-option-cost{font-size:var(--text-xs)}
+@media (max-width:720px),(max-height:500px){
+  .expedition-heading .eyebrow{letter-spacing:.06em}
+  .expedition-route-map b,.expedition-route-map small,.expedition-destinations.mission-picker .btn small,.expedition-hud small{letter-spacing:0;line-height:1.3}
+}
+/* An eyebrow that is a whole sentence (the cabinet's climb to the next rank)
+   reads as a line of small print, not three lines of spaced capitals. */
+#mayhemSheet .sheet-head:has(+ .mh-rank-card) .eyebrow{text-transform:none;letter-spacing:.01em;font-size:12.5px;font-weight:600;line-height:1.35}
+/* On a phone the rank card right under it says the same thing in full. */
+@media (max-width:720px){#mayhemSheet .sheet-head:has(+ .mh-rank-card) .eyebrow{display:none}}
+.escapade-eyebrow{color:#b08657}
+
+/* ---- 3. touch -------------------------------------------------------------- */
+/* Every control a finger can press gives under it. fx.css covers the shared
+   pieces; these are the ones it did not know about. */
+:is(.need-chip,.folder-locked,.help-tab,.studio-step,.shelf-teaser,.prop-card:not(.locked),.ar-menu-card,.mh-today-row,.escapade-choice,.escapade-album-item,.sc-ep,.sc-q,.sc-obj-opt,.scheme-choice,.door,.alm-tile,.ns-go):not(:disabled){
+  transition-property:scale,background-color,border-color,color,box-shadow,opacity;
+  transition-duration:var(--dur-spring),var(--dur-quick),var(--dur-quick),var(--dur-quick),var(--dur-quick),var(--dur-quick);
+  transition-timing-function:var(--fx-spring),ease,ease,ease,ease,ease}
+:is(.need-chip,.folder-locked,.help-tab,.studio-step,.shelf-teaser,.prop-card:not(.locked),.ar-menu-card,.mh-today-row,.escapade-choice,.escapade-album-item,.sc-ep,.sc-q,.sc-obj-opt,.scheme-choice,.door,.alm-tile,.ns-go):not(:disabled):active{
+  scale:.97;transition-duration:var(--dur-press)}
+/* Hover lifts and tints stay on a touch screen after the finger has gone, so a
+   tile you just tapped looked raised until you tapped something else. On a
+   screen without hover they are switched off; the pressed state does the work. */
+@media (hover:none){
+  .btn:hover{background:var(--glass);border-color:var(--hair-lit)}
+  .btn-ghost:hover{background:transparent;color:var(--ink-2);border-color:var(--hair)}
+  .btn-ghost[aria-pressed="true"]:hover{color:var(--ink);background:var(--glass);border-color:var(--hair-lit)}
+  .btn-primary:hover{background:var(--pink);border-color:transparent;filter:none}
+  .btn-danger:hover{background:transparent;border-color:color-mix(in srgb,var(--blood) 45%,transparent)}
+  .btn-check:hover{border-color:var(--key-mid);background:linear-gradient(180deg,var(--key-soft),transparent),var(--glass)}
+  .tray-item:hover{background:transparent;border-color:var(--hair)}
+  .tray-item[aria-pressed="true"]:hover{background:var(--key-soft);border-color:var(--key-mid)}
+  .chip:not([aria-pressed="true"]):hover,.opt:hover{background:var(--glass);border-color:var(--hair-lit)}
+  .filter-chip:not([aria-pressed="true"]):hover{background:var(--glass);color:var(--ink-2)}
+  button.mh-tile:hover,.mh-choice:hover,button.mh-shelf-item:hover,.ar-menu-card:hover,.prop-card:hover,#lifeVeil .expedition-option.btn:not(:disabled):hover{transform:none}
+  .activity-card:hover:not(:disabled){translate:none}
+  .door:hover,.needs-you .need-chip:hover,.studio-tab:hover,.help-tab:hover,.story-folder>summary:hover{background:transparent}
+}
+/* The filter chips on the note board were 40px tall; the arcade pause button 36px. */
+.note-filters .filter-chip,.ar-hud .ar-pause{min-height:44px}
+.ar-hud .ar-pause{min-width:44px}
+
+/* ---- 4. the More tray ---------------------------------------------------------
+   Two columns, and an odd tile out spans the row instead of sitting beside a
+   hole. Your save keeps its pairs together: Back up beside Restore, then the
+   longer jobs across the full width. */
+.tray-section:not([aria-labelledby="traySaves"]) .tray-grid>.tray-item{grid-column:auto}
+.tray-section:not([aria-labelledby="traySaves"]) .tray-grid>.tray-item:nth-last-child(1 of .tray-item:not([hidden])):nth-child(odd of .tray-item:not([hidden])){grid-column:1/-1}
+.tray-section[aria-labelledby="traySaves"] #cloudBtn{grid-column:1/-1;order:0}
+.tray-section[aria-labelledby="traySaves"] #exportBtn{order:1}
+.tray-section[aria-labelledby="traySaves"] #importBtn{order:2}
+.tray-section[aria-labelledby="traySaves"] #transferBtn{grid-column:1/-1;order:3}
+.tray-section[aria-labelledby="traySaves"] #recoveryBtn{grid-column:1/-1;order:4}
+.tray{border-radius:var(--radius-lg)}
+@media (max-width:720px){.tray{border-radius:var(--radius-sheet) var(--radius-sheet) 0 0}}
+
+/* A select with no styling of its own (the Shelf Court cast pickers, among
+   others) fell back to the browser's grey box with square corners. This is the
+   house default; anything that styles its own select still wins. */
+:where(select:not([multiple]):not([size])){background-color:var(--case-mid);color:var(--ink);border:1px solid var(--hair-lit);border-radius:var(--radius-sm);padding-left:12px}
+
+/* ---- 5. button rows ---------------------------------------------------------- */
+/* Buttons that share a row share a height. */
+.notes-tools .btn,.notes-tools .btn-sm{min-height:44px}
+.transfer-actions .btn,.cloud-actions .btn,.mh-cabinet-actions .btn,.voice-hint-actions .btn{min-height:44px}
+/* Three choices that would wrap into two uneven rows on a phone stack instead,
+   the one you came for on top and the way out at the bottom. */
+@media (max-width:480px){
+  .veil:not(#studioVeil) .studio-actions{flex-direction:column-reverse;align-items:stretch}
+  .veil:not(#studioVeil) .studio-actions .btn{width:100%}
+}
+
+/* ---- 6. screen by screen -------------------------------------------------------- */
+/* The shelf. The "plotting" line under a resident at the end of a row hung off
+   the edge of the cabinet; it now keeps to the inside. */
+@media (max-width:720px){
+  .slot:first-child .pips{justify-content:flex-start}
+  .slot:last-child .pips{justify-content:flex-end}
+}
+/* Under the shelf on a phone, "Focus occupied shelves" was squeezed into a
+   90px column three lines deep. The line and the tools now share the row when
+   they fit and the tools drop beneath, still on the right, when they do not. */
+@media (max-width:720px){
+  .shelf-framing{flex-wrap:wrap;row-gap:4px}
+  .shelf-framing>span{flex:1 1 170px;max-width:none}
+  .framing-tools{margin-left:auto}
+  .shelf-framing #shelfFocus{max-width:none;white-space:nowrap;font-size:var(--text-xs);line-height:1.2;padding:7px 12px}
+}
+/* The arcade's Again and Play are the tall ones; the buttons beside them match. */
+.ar-actions .btn{min-height:50px}
+/* The desk on a small phone: the coffin tile stacks like its neighbour, the
+   omen, so their headings line up and the copy is not squeezed into a column. */
+@media (max-width:420px){
+  .mh-coffin-tile{flex-direction:column;align-items:flex-start;gap:6px}
+  .mh-coffin-tile .mh-coffin-art{width:30px;height:38px}
+}
+/* Cloud save: the explanation, the status and the first step were stacked with
+   no room between them. */
+.sheet-cloud>.hint{margin:0 0 var(--space-4)}
+.cloud-part>p+p{margin-top:var(--space-2)}
+.cloud-part>p:first-child:not(.hint){font-size:var(--text-body)}
+/* The expedition planner put two paragraphs of rules above its own title. The
+   title and the choice come first; the rules follow as small print. */
+.expedition-view.phase-planning .expedition-reading-pane{display:flex;flex-direction:column}
+.expedition-view.phase-planning .expedition-reading-pane>*{order:1;flex:none}
+.expedition-view.phase-planning .expedition-reading-pane>p{order:2;font-size:12.5px;line-height:1.55;color:var(--exp-muted,var(--ink-2));margin:var(--space-2) 0 0}
+.expedition-view.phase-planning .expedition-reading-pane>p:first-of-type{margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--hair)}
+/* The resident card has three kinds of fold-out; they now look like one kind. */
+#cardSheet :is(.resident-personality,.care-record,.resident-memories,.resident-habits)>summary{
+  display:list-item;min-height:44px;padding:11px 0;font:500 var(--text-md)/22px var(--body);color:var(--mint);cursor:pointer}
+#cardSheet .resident-habits>summary{padding-inline:2px}
+/* A phone on its side: plain sheets fill the height, so they start below the
+   status bar the Android app draws over (the game shells already do this). */
+@media (orientation:landscape) and (max-height:520px){
+  .veil{padding-top:var(--sat)}
+  .veil .sheet{max-height:calc(100dvh - var(--sat))}
+}
+/* Sheets arrive on one curve and one duration at every width. */
+.veil.open .sheet{animation-duration:var(--dur-sheet)}
+
+/* ---- 7. motion ---------------------------------------------------------------
+   Press feedback is a transition, so reduced motion and Calm mode (which stop
+   every transition) still show the pressed state, just without the spring. The
+   timings above come from the motion tokens on :root. */
+
+/* ---- 8. the first frame ---------------------------------------------------------
+   Before the modules have run, the page is the room, the empty case and its
+   candle. The shelf's buttons and the line under it are left out of that frame:
+   they do nothing until the game is awake, and on a new household they are about
+   to be replaced by the arrival. main.js adds body.booted at the end of boot. */
+body:not(.booted) :is(#actions,.shelf-framing,#shelfTeaser){visibility:hidden}

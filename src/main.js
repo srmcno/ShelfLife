@@ -519,6 +519,9 @@ function announceMayhem(added) {
   syncAudioButtons();
   syncBackupBanner();
   clearAwayNudges(); // opened: the way-back notes are for someone who is not here
+  // The static page shows the room and a candle while the modules load; the
+  // controls that only work once the game is running wait for this (css/polish.css).
+  document.body.classList.add('booted');
 })();
 
 setInterval(() => {
