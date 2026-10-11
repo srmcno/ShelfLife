@@ -600,3 +600,28 @@ test('a report collected with no wages left that day still gets a receipt, with 
   const feed = (await receipts(G, got.receipt.seq - 1)).receipts;
   assert.deepEqual(feed, [got.receipt], 'and the feed carries it');
 });
+
+test('the fake in test/support/fake-coop.mjs keeps the same ledger: one receipt per claim, no stake past the balance', async () => {
+  const { createFakeCoop } = await import('./support/fake-coop.mjs');
+  let n = 0, t = Date.parse('2026-10-11T12:00:00Z');
+  const fake = createFakeCoop({ profiles: new Map([[A, { display_name: 'Ada' }], [B, { display_name: 'Bea' }]]), now: () => t,
+    json: (status, body) => ({ status, body }), rest: (status, code, message) => ({ status, body: { code, message } }),
+    uuid: () => '00000000-0000-4000-8000-' + String(++n).padStart(12, '0'),
+    friendships: [{ requester: A, addressee: B, status: 'accepted' }], blocks: [] });
+  fake.setStrictFunds(true);
+  const rpc = (who, name, args) => fake.RPC[name]({ id: who }, args).body;
+  assert.equal(rpc(A, 'coop_duel_create', { p_to: B, p_game: 'stack', p_stake: 25 }).message, 'needs_opening');
+  assert.equal(rpc(A, 'coop_open', { p_souls: 100, p_after: 0 }).accepted, true);
+  const made = rpc(A, 'coop_duel_create', { p_to: B, p_game: 'stack', p_stake: 25 });
+  assert.deepEqual([made.receipt.kind, made.receipt.delta, made.receipt.seq], ['stake', -25, 1]);
+  rpc(A, 'coop_duel_decline', { p_duel: made.id });
+  const first = rpc(A, 'coop_duel_claim', { p_duel: made.id }), again = rpc(A, 'coop_duel_claim', { p_duel: made.id });
+  assert.deepEqual([first.souls, again.souls, again.receipt], [25, 0, first.receipt]);
+  assert.deepEqual(rpc(B, 'coop_duel_claim', { p_duel: made.id }), { ok: true, souls: 0, receipt: null });
+  assert.equal(100 + rpc(A, 'coop_receipts', { p_after: 0 }).receipts.reduce((s, r) => s + r.delta, 0), 100);
+  assert.equal(rpc(A, 'coop_open', { p_souls: 125, p_after: 0 }).opening, 100);
+  rpc(A, 'coop_open', { p_souls: 100, p_after: 0 });
+  assert.equal(rpc(B, 'coop_open', { p_souls: 10, p_after: 0 }).balance, 10);
+  assert.equal(rpc(B, 'coop_duel_create', { p_to: A, p_game: 'stack', p_stake: 11 }).message, 'insufficient_souls');
+  assert.deepEqual(rpc(A, 'coop_wallet'), { ok: true, opening: 100, opening_seq: 0, balance: 100, last_seq: 2 });
+});
