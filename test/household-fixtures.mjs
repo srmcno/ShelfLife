@@ -119,6 +119,6 @@ export function firstDayHousehold(now=Date.now()) {
 export function visitingGuestsFixture(now=Date.now()) {
   const guest=(visitId,userId,from,id,name,traits)=>({ visitId, from:{userId,name:from},
     resident:{ id,name,traits,mood:'fine',bond:6,art:{creature:generateCreature({seed:'visiting-'+id})} }, arrived:now-3600000, leaves:now+2*86400000 });
-  return [guest('visit-mabel','00000000-0000-4000-8000-0000000000b0','Bea','mabel','Mabel',['nocturnal']),
-    guest('visit-crumb','00000000-0000-4000-8000-0000000000c0','Cat','crumb','Crumb',['damp'])];
+  return [guest('00000000-0000-4000-8000-0000000000e1','00000000-0000-4000-8000-0000000000b0','Bea','mabel','Mabel',['nocturnal']),
+    guest('00000000-0000-4000-8000-0000000000e2','00000000-0000-4000-8000-0000000000c0','Cat','crumb','Crumb',['damp'])];
 }

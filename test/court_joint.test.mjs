@@ -157,6 +157,9 @@ test('visiting guests sit on the jury, or give evidence when the box is full; an
   const said = episodeWitnesses(crowded, beatRandom(2, 'w'));
   assert.deepEqual(said.map(l => [l.s, l.who]), [['w', 0], ['w', 1], ['judge', null]]);
 
+  // Where the postbox actually keeps them, after the save normalizer has run.
+  const kept = normalizeState({ ...ada(), friendVisits: { guests: visitingGuestsFixture(NOW) } });
+  assert.deepEqual(visitingGuests(kept, NOW).map(g => g.name), ['Mabel', 'Crumb'], 'guests in state.friendVisits survive normalizeState and are seated');
   for (const visits of [undefined, null, [], [{ at: 1 }], { guests: 'many' }, { guests: [null, 4, { visitId: '../x', resident: {} }] },
     { guests: [{ visitId: 'v1', from: { name: 'Bea' }, resident: { id: 'r1', name: 'Gone' }, arrived: NOW - 10, leaves: NOW - 1 }] },
     { guests: [{ visitId: 'v2', from: { name: 'Bea' }, resident: { id: 'r2', name: 'Early' }, arrived: NOW + 1000, leaves: NOW + 9000 }] },

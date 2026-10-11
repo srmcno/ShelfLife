@@ -350,10 +350,10 @@ test('a guest visiting the shelf is seated on the jury with where it came from',
   await page.addInitScript(saved => { if (!sessionStorage.getItem('guest.fixture')) { localStorage.setItem('shelflife.v4', saved); sessionStorage.setItem('guest.fixture', '1'); } }, JSON.stringify(s));
   await page.goto('/');
   await expect(page.locator('#cabinet .piece.pet')).toHaveCount(3);
-  // The Friends postbox writes guests to state.visits.guests; here they are put there directly.
+  // The Friends postbox keeps guests in state.friendVisits.guests; here they are put there directly.
   await page.evaluate(async guests => {
     const { state } = await import('/src/state.js');
-    state.visits.guests = guests;
+    state.friendVisits.guests = guests;
     window.dispatchEvent(new CustomEvent('shelflife:court'));
   }, visitingGuestsFixture(Date.now()));
   await expect(page.locator('#courtVeil')).toHaveClass(/open/);
