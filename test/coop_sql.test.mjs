@@ -9,7 +9,7 @@ import { PGlite } from '@electric-sql/pglite';
 
 const read = name => readFileSync(new URL('../supabase/migrations/' + name, import.meta.url), 'utf8');
 const ACCOUNTS = read('0001_accounts_and_saves.sql'), SOCIAL = read('0002_social.sql'), COOP = read('0009_coop.sql');
-const [A, B, C, D, E, F] = ['a', 'b', 'c', 'd', 'e', 'f'].map(x => '00000000-0000-4000-8000-00000000000' + x);
+const [A, B, C, D, E, F, G, H, K] = ['a', 'b', 'c', 'd', 'e', 'f', '1', '2', '3'].map(x => '00000000-0000-4000-8000-00000000000' + x);
 const BOOTSTRAP = `
   create role anon nologin;
   create role authenticated nologin;
@@ -21,11 +21,13 @@ const BOOTSTRAP = `
   grant usage on schema public to anon, authenticated, service_role;
   alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
   alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
-  insert into auth.users (id) values ('${A}'), ('${B}'), ('${C}'), ('${D}'), ('${E}'), ('${F}');
+  insert into auth.users (id) values ('${A}'), ('${B}'), ('${C}'), ('${D}'), ('${E}'), ('${F}'), ('${G}'), ('${H}'), ('${K}');
 `;
-const TABLES = ['coop_duels', 'coop_hires', 'coop_listings', 'coop_records', 'coop_rounds'];
+const TABLES = ['coop_duels', 'coop_hires', 'coop_holds', 'coop_listings', 'coop_receipts', 'coop_records', 'coop_rounds', 'coop_wallets'];
+const PRIVATE_TABLES = ['coop_attempts', 'coop_wage_days'];
 const FUNCTIONS = ['coop_collect', 'coop_duel_claim', 'coop_duel_create', 'coop_duel_decline', 'coop_duel_play', 'coop_duel_rematch',
-  'coop_duel_submit', 'coop_duels', 'coop_finish_hire', 'coop_hire', 'coop_hire_board', 'coop_records', 'coop_reports', 'coop_set_hires'];
+  'coop_duel_submit', 'coop_duels', 'coop_finish_hire', 'coop_hire', 'coop_hire_board', 'coop_open', 'coop_receipts', 'coop_records',
+  'coop_reports', 'coop_set_hires', 'coop_wallet'];
 
 let db;
 const code = {};
@@ -33,10 +35,12 @@ before(async () => {
   db = new PGlite();
   await db.exec(BOOTSTRAP);
   for (let i = 0; i < 2; i++) { await db.exec(ACCOUNTS); await db.exec(SOCIAL); await db.exec(COOP); }
-  for (const [id, name] of [[A, 'Ada'], [B, 'Bea'], [C, 'Cat'], [D, 'Dan'], [E, 'Eve'], [F, 'Fay']]) {
+  for (const [id, name] of [[A, 'Ada'], [B, 'Bea'], [C, 'Cat'], [D, 'Dan'], [E, 'Eve'], [F, 'Fay'], [G, 'Gus'], [H, 'Hal'], [K, 'Kit']]) {
     code[id] = (await as(id, () => value('select public.ensure_profile($1)', [name]))).friend_code;
   }
   for (const [x, y] of [[A, B], [A, C], [A, D], [A, E], [B, C]]) await friends(x, y);
+  // Every player but Fay declares a co-op opening balance, so stakes can leave it.
+  for (const id of [A, B, C, D, E]) await call(id, 'public.coop_open($1, $2)', [1000, 0]);
 });
 
 async function as(sub, work, role = 'authenticated') {
@@ -67,7 +71,7 @@ const age = (table, where, column, hours) => db.query(`update public.${table} se
 test('the migration is idempotent on top of 0001 and 0002, and every new table is locked down', async () => {
   const rls = (await db.query(`select c.relname, c.relrowsecurity from pg_class c where c.relkind = 'r'
     and c.relnamespace in ('public'::regnamespace, 'private'::regnamespace) and c.relname like 'coop_%' order by c.relname`)).rows;
-  assert.deepEqual(rls.map(r => r.relname), ['coop_attempts', ...TABLES]);
+  assert.deepEqual(rls.map(r => r.relname), [...TABLES, ...PRIVATE_TABLES].sort());
   assert.ok(rls.every(r => r.relrowsecurity), 'row level security on every table');
   const policies = (await db.query("select tablename, count(*)::int as n from pg_policies where schemaname = 'public' and tablename like 'coop_%' group by tablename order by tablename")).rows;
   assert.deepEqual(policies, TABLES.map(tablename => ({ tablename, n: 1 })), 'one policy each after two runs');
@@ -188,8 +192,12 @@ test('a finished trip pays the lender wages the server decides, capped at 30 a d
   assert.deepEqual(fromBea.report, { v: 1, route: 'drawer', gear: 'thread', edition: 2, rev: 2, score: 7, tier: 2, returned: 0, built: false,
     choices: [1, 2, 0], helped: [0], crew: ['Gladys', 'Snag'] });
   await rejects(call(B, 'public.coop_collect($1)', [fromBea.id]), /not_found/);
-  assert.deepEqual(await call(A, 'public.coop_collect($1)', [fromBea.id]), { ok: true, wages: 12 });
-  assert.deepEqual(await call(A, 'public.coop_collect($1)', [fromBea.id]), { ok: true, wages: 0 }, 'never paid twice');
+  const paid = await call(A, 'public.coop_collect($1)', [fromBea.id]);
+  assert.deepEqual([paid.wages, paid.receipt.kind, paid.receipt.delta, paid.receipt.earned, paid.receipt.source_id, paid.receipt.owner],
+    [12, 'hire', 12, 12, fromBea.id, A]);
+  const again = await call(A, 'public.coop_collect($1)', [fromBea.id]);
+  assert.equal(again.wages, 0, 'never paid twice');
+  assert.deepEqual(again.receipt, paid.receipt, 'a retry answers the same receipt');
   assert.equal((await call(A, 'public.coop_reports()')).reports.length, 2);
   const records = await call(A, 'public.coop_records()');
   assert.deepEqual(records.filter(r => r.trips).map(r => r.trips), [1, 1, 1]);
@@ -199,7 +207,7 @@ test('a finished trip pays the lender wages the server decides, capped at 30 a d
   const dan = (await call(A, 'public.coop_reports()')).reports.find(r => r.hirer === D);
   assert.equal(dan.hirer_name, '');
   assert.equal(dan.report.crew, undefined);
-  assert.deepEqual(await call(A, 'public.coop_collect($1)', [dan.id]), { ok: true, wages: 9 });
+  assert.equal((await call(A, 'public.coop_collect($1)', [dan.id])).wages, 9);
   await db.query(`delete from public.blocks where blocker = '${A}' and blocked = '${D}'`);
   await friends(A, D);
 });
@@ -208,14 +216,20 @@ test('a hire nobody finishes comes home after 72 hours with the smallest wage, a
   const hire = await call(E, 'public.coop_hire($1, $2)', [A, 'a2']);
   await db.query(`update public.coop_hires set day = day - 4, created_at = created_at - interval '73 hours' where id = '${hire.id}'`);
   await db.query(`update public.coop_hires set wage_day = wage_day - 4 where owner = '${A}' and id <> '${hire.id}'`);
+  await db.query(`update private.coop_wage_days set day = day - 4 where owner = '${A}'`);
   const reports = await call(A, 'public.coop_reports()');
   const back = reports.reports.find(r => r.id === hire.id);
   assert.equal(back.report, null);
   assert.equal(back.wages, 6);
   await rejects(call(E, 'public.coop_finish_hire($1, $2)', [hire.id, json(report())]), /not_open/);
+  // Sixty days on, an uncollected wage keeps its hire; once collected it goes.
   await age('coop_hires', `id = '${hire.id}'`, 'created_at', 61 * 24);
   await call(A, 'public.coop_reports()');
+  assert.equal(await value(`select count(*)::int from public.coop_hires where id = '${hire.id}'`), 1, 'still owed, still kept');
+  assert.equal((await call(A, 'public.coop_collect($1)', [hire.id])).receipt.delta, 6);
+  await call(A, 'public.coop_reports()');
   assert.equal(await value(`select count(*)::int from public.coop_hires where id = '${hire.id}'`), 0);
+  assert.equal(await value(`select count(*)::int from public.coop_receipts where source_id = '${hire.id}'`), 1, 'the receipt outlives the hire');
 });
 
 // ---------------------------------------------------------------------------
@@ -284,9 +298,11 @@ test('a challenge: server seeds, sealed first score, a ghost for the second play
   // The winner collects both stakes, once; the loser collects nothing.
   const won = await duel(B, made.id);
   assert.deepEqual([won.status, won.payout, won.claimed], ['settled', 20, false]);
-  assert.deepEqual(await call(B, 'public.coop_duel_claim($1)', [made.id]), { ok: true, souls: 20 });
-  assert.deepEqual(await call(B, 'public.coop_duel_claim($1)', [made.id]), { ok: true, souls: 0 });
-  assert.deepEqual(await call(A, 'public.coop_duel_claim($1)', [made.id]), { ok: true, souls: 0 });
+  const prize = await call(B, 'public.coop_duel_claim($1)', [made.id]);
+  assert.deepEqual([prize.souls, prize.receipt.kind, prize.receipt.delta, prize.receipt.earned], [20, 'duel', 20, 10], 'only the 10 won is earned');
+  const retry = await call(B, 'public.coop_duel_claim($1)', [made.id]);
+  assert.deepEqual([retry.souls, retry.receipt], [0, prize.receipt], 'a retry answers the same receipt');
+  assert.deepEqual(await call(A, 'public.coop_duel_claim($1)', [made.id]), { ok: true, souls: 0, receipt: null });
   assert.equal(await duel(B, made.id), undefined, 'a collected series leaves the list');
   const records = (await call(B, 'public.coop_records()')).find(r => r.friend === A);
   assert.deepEqual([records.duels_won, records.duels_lost, records.rounds_won, records.rounds_lost, records.best_streak, records.streak], [1, 0, 2, 1, 1, 1]);
@@ -302,7 +318,8 @@ test('an unplayed challenge expires after 48 hours and the challenger wins the s
   assert.deepEqual([gone.status, gone.outcome, gone.payout], ['settled', 'void', 25]);
   assert.equal((await duel(C, made.id)).payout, 0, 'the opponent never staked');
   await rejects(play(C, made.id), /not_open/);
-  assert.deepEqual(await call(A, 'public.coop_duel_claim($1)', [made.id]), { ok: true, souls: 25 });
+  const refund = await call(A, 'public.coop_duel_claim($1)', [made.id]);
+  assert.deepEqual([refund.souls, refund.receipt.delta, refund.receipt.earned], [25, 25, 0], 'a refund earns nothing');
   // A challenge the challenger never played lapses the same way.
   const unplayed = await create(A, C, 'seance', 5);
   await age('coop_rounds', `duel_id = '${unplayed.id}'`, 'created_at', 49);
@@ -375,4 +392,189 @@ test('friendship points are bumped only when the postbox migration provides them
   await submit(B, made.id, 1, 9, ghost({ game: 'seance' }));
   assert.deepEqual((await db.query('select kind from private.bumps order by kind')).rows.map(r => r.kind), ['duel', 'hire']);
   await db.exec('drop function private.bump_friendship(uuid, uuid, text); drop table private.bumps;');
+});
+
+// ---------------------------------------------------------------------------
+// The money ledger
+// ---------------------------------------------------------------------------
+
+const wallet = who => call(who, 'public.coop_wallet()');
+const receipts = (who, after = 0) => call(who, 'public.coop_receipts($1)', [after]);
+const claim = (who, id) => call(who, 'public.coop_duel_claim($1)', [id]);
+// What a save holding `souls` that already includes every receipt up to
+// `seq` holds once it applies the rest.
+async function replay(who, souls, seq) {
+  let after = seq, page;
+  do {
+    page = await receipts(who, after);
+    for (const r of page.receipts) { souls += r.delta; after = r.seq; }
+  } while (page.has_more);
+  return souls;
+}
+
+test('the opening balance is declared once, clamped downwards only, and no stake leaves before it', async () => {
+  await friends(G, H); await friends(G, K); await friends(H, K);
+  assert.deepEqual(await wallet(G), { ok: true, opening: null, opening_seq: 0, balance: null, last_seq: 0 });
+  await rejects(create(G, H, 'stack', 5), /needs_opening/);
+  assert.equal(await value(`select count(*)::int from public.coop_duels where challenger = '${G}'`), 0, 'the refused challenge left nothing behind');
+  assert.equal((await create(G, H, 'stack', 0)).receipt, null, 'a free challenge needs no opening and writes no receipt');
+  await rejects(call(G, 'public.coop_open($1, $2)', [null, 0]), /bad_balance/);
+  await rejects(call(G, 'public.coop_open($1, $2)', [100, -1]), /bad_seq/);
+  await rejects(call(G, 'public.coop_open($1, $2)', [100, null]), /bad_seq/);
+  assert.deepEqual(await call(G, 'public.coop_open($1, $2)', [100, 7]),
+    { ok: true, opening: 100, opening_seq: 0, balance: 100, last_seq: 0, accepted: true }, 'a seq past the last one clamps down to it');
+  assert.deepEqual(await call(G, 'public.coop_open($1, $2)', [125, 0]),
+    { ok: true, opening: 100, opening_seq: 0, balance: 100, last_seq: 0, accepted: false }, 'a second opening changes nothing');
+  assert.equal((await call(K, 'public.coop_open($1, $2)', [-50, 0])).opening, 0, 'a negative opening clamps to 0');
+  assert.equal((await call(H, 'public.coop_open($1, $2)', [2000000000, 0])).opening, 100000000);
+  await rejects(create(K, H, 'stack', 1), /insufficient_souls/);
+});
+
+test('a stake leaves the balance in the same call that holds it, and a retry of claim answers the same receipt', async () => {
+  const before = await wallet(G);
+  const made = await create(G, H, 'stack', 25);
+  assert.deepEqual([made.receipt.kind, made.receipt.delta, made.receipt.earned, made.receipt.source_id, made.receipt.owner, made.receipt.seq],
+    ['stake', -25, 0, made.id, G, before.last_seq + 1]);
+  assert.deepEqual(await one(`select amount, stake_receipt from public.coop_holds where duel_id = '${made.id}' and owner = '${G}'`),
+    { amount: 25, stake_receipt: made.receipt.id });
+  assert.equal((await wallet(G)).balance, 75);
+  assert.deepEqual((await play(G, made.id)).receipt, made.receipt, 'play answers the stake receipt again');
+  await submit(G, made.id, 1, 9, ghost());
+  // The opponent's stake leaves when they first play, and only then.
+  assert.equal((await wallet(H)).last_seq, 0);
+  const turn = await play(H, made.id);
+  assert.deepEqual([turn.receipt.kind, turn.receipt.delta, turn.receipt.owner, turn.receipt.seq], ['stake', -25, H, 1]);
+  assert.deepEqual((await play(H, made.id)).receipt, turn.receipt, 'playing again holds nothing more');
+  assert.equal(await value(`select count(*)::int from public.coop_receipts where source_id = '${made.id}' and kind = 'stake'`), 2);
+  await submit(H, made.id, 1, 3);
+  await call(G, 'public.coop_duel_rematch($1)', [made.id]);
+  await submit(G, made.id, 2, 9, ghost());
+  await play(H, made.id);
+  assert.equal((await submit(H, made.id, 2, 3)).outcome, 'challenger');
+  // The answer to the first claim is lost; every retry gets the same receipt.
+  const first = await claim(G, made.id);
+  assert.deepEqual([first.souls, first.receipt.delta, first.receipt.earned], [50, 50, 25]);
+  for (let i = 0; i < 3; i++) assert.deepEqual((await claim(G, made.id)).receipt, first.receipt);
+  assert.deepEqual((await receipts(G, made.receipt.seq)).receipts, [first.receipt], 'and the feed has it once');
+  assert.equal((await wallet(G)).balance, 125);
+  assert.deepEqual(await claim(H, made.id), { ok: true, souls: 0, receipt: null }, 'the loser is owed nothing');
+});
+
+test('a restored backup replays the receipts it missed: a refunded 25 stays 100, never 125', async () => {
+  // Fay's save holds 100 souls and has seen no receipts; that is her backup.
+  await friends(F, K);
+  assert.equal((await call(F, 'public.coop_open($1, $2)', [100, 0])).balance, 100);
+  const backup = { souls: 100, seq: 0 };
+  const made = await create(F, K, 'stack', 25);
+  assert.equal((await wallet(F)).balance, 75);
+  await call(F, 'public.coop_duel_decline($1)', [made.id]);
+  const refund = await claim(F, made.id);
+  assert.deepEqual([refund.receipt.delta, refund.receipt.earned, refund.receipt.seq], [25, 0, made.receipt.seq + 1]);
+  // The device restores the old save, claims again (answered by the same receipt) and replays.
+  const retry = await claim(F, made.id);
+  assert.deepEqual([retry.souls, retry.receipt], [0, refund.receipt]);
+  assert.equal(await replay(F, backup.souls, backup.seq), 100, 'the debit and the refund cancel out: 100, not 125');
+  // A save from between the stake and the refund comes out the same.
+  assert.equal(await replay(F, 75, made.receipt.seq), 100);
+  assert.equal((await call(F, 'public.coop_open($1, $2)', [125, 0])).accepted, false, 'the restored save cannot re-declare');
+  assert.equal((await wallet(F)).balance, 100);
+  assert.equal(await value(`select 100 + sum(delta)::int from public.coop_receipts where owner = '${F}'`), 100);
+});
+
+test('every hold, receipt and claim belongs to one account: nobody consumes or sees another player’s', async () => {
+  const tie = await create(G, H, 'stack', 10);
+  await submit(G, tie.id, 1, 5, ghost());
+  await play(H, tie.id);
+  await submit(H, tie.id, 1, 5);
+  await call(H, 'public.coop_duel_rematch($1)', [tie.id]);
+  await call(H, 'public.coop_duel_decline($1)', [tie.id]);
+  assert.equal((await duel(G, tie.id)).outcome, 'tie');
+  await rejects(claim(K, tie.id), /not_found/, 'a stranger to the series cannot claim it');
+  // Hal claims first, twice; Gus's refund is untouched and comes from his own hold.
+  const hal = await claim(H, tie.id);
+  assert.deepEqual([hal.receipt.owner, hal.receipt.delta], [H, 10]);
+  assert.equal((await claim(H, tie.id)).receipt.id, hal.receipt.id);
+  const gus = await claim(G, tie.id);
+  assert.deepEqual([gus.receipt.owner, gus.receipt.delta, gus.receipt.source_id], [G, 10, tie.id]);
+  assert.notEqual(gus.receipt.id, hal.receipt.id);
+  const holds = (await db.query(`select owner, released_to from public.coop_holds where duel_id = '${tie.id}' order by owner`)).rows;
+  assert.deepEqual(holds.map(h => h.owner === h.released_to), [true, true], 'each hold went back to its own owner');
+  // Each feed holds only its owner's receipts.
+  assert.ok((await receipts(H)).receipts.every(r => r.owner === H));
+  assert.ok((await receipts(G)).receipts.every(r => r.owner === G));
+  await as(H, async () => {
+    await rejects(db.query('select * from public.coop_receipts'), /permission denied/);
+    await rejects(db.query('select * from public.coop_holds'), /permission denied/);
+    await rejects(db.query(`update public.coop_wallets set opening = 999 where owner = '${H}'`), /permission denied/);
+  });
+  // Seqs run 1, 2, 3... per owner with no gaps.
+  for (const who of [G, H]) {
+    const seqs = (await receipts(who)).receipts.map(r => Number(r.seq));
+    assert.deepEqual(seqs, seqs.map((_, i) => i + 1));
+  }
+});
+
+test('a block or an unfriending refunds each held stake once, and an absent or paid hold refunds nothing', async () => {
+  const made = await create(G, H, 'frenzy', 20);
+  await submit(G, made.id, 1, 30, ghost({ game: 'frenzy' }));
+  await play(H, made.id);
+  await call(H, 'public.block_user($1)', [G]);
+  for (const who of [G, H]) {
+    const one = await claim(who, made.id);
+    assert.deepEqual([one.receipt.delta, one.receipt.earned], [20, 0]);
+    assert.deepEqual((await claim(who, made.id)).receipt, one.receipt);
+  }
+  assert.equal(await value(`select count(*)::int from public.coop_receipts where source_id = '${made.id}' and kind = 'duel'`), 2);
+  await db.query(`delete from public.blocks where blocker = '${H}' and blocked = '${G}'`);
+  await friends(G, H);
+  const parted = await create(G, H, 'stack', 15);
+  await call(G, 'public.remove_friend($1)', [H]);
+  assert.deepEqual([(await duel(G, parted.id)).outcome, (await claim(G, parted.id)).souls, (await claim(G, parted.id)).souls], ['void', 15, 0]);
+  await friends(G, H);
+  // A series whose holds are gone (or were paid) pays nothing, whatever pay_* says.
+  const forged = await create(G, H, 'stack', 5);
+  await db.query(`delete from public.coop_holds where duel_id = '${forged.id}'`);
+  await call(G, 'public.coop_duel_decline($1)', [forged.id]);
+  await db.query(`update public.coop_duels set pay_challenger = 50 where id = '${forged.id}'`);
+  assert.deepEqual(await claim(G, forged.id), { ok: true, souls: 0, receipt: null });
+});
+
+test('rows from before the ledger: held stakes become holds once, already-paid ones stay paid', async () => {
+  const legacy = async (extra) => (await one(`insert into public.coop_duels (challenger, opponent, game, stake, opponent_staked, status, outcome,
+      wins_challenger, wins_opponent, pay_challenger, pay_opponent, claimed_challenger, claimed_opponent, settled_at)
+    values ('${K}', '${H}', 'stack', ${extra.stake}, ${extra.staked}, '${extra.status}', ${extra.outcome ? `'${extra.outcome}'` : 'null'},
+      0, 0, ${extra.payC || 0}, ${extra.payO || 0}, ${!!extra.claimedC}, ${!!extra.claimedO}, ${extra.status === 'settled' ? 'now()' : 'null'}) returning id`)).id;
+  const open = await legacy({ stake: 25, staked: false, status: 'open' });
+  await db.query(`insert into public.coop_rounds (duel_id, n, first_player, seed) values ('${open}', 1, '${K}', 42)`);
+  const paidWin = await legacy({ stake: 10, staked: true, status: 'settled', outcome: 'opponent', payO: 20, claimedO: true });
+  const unpaidVoid = await legacy({ stake: 7, staked: true, status: 'settled', outcome: 'void', payC: 7, payO: 7, claimedC: true });
+  await db.exec(COOP);
+  await db.exec(COOP);
+  const holds = async id => (await db.query(`select owner, amount, stake_receipt, released_to from public.coop_holds where duel_id = '${id}' order by owner`)).rows;
+  assert.deepEqual(await holds(open), [{ owner: K, amount: 25, stake_receipt: null, released_to: null }], 'the challenger’s stake, held by the old save');
+  assert.deepEqual((await holds(paidWin)).map(h => h.released_to), [H, H], 'the winner already took both');
+  assert.deepEqual((await holds(unpaidVoid)).map(h => [h.owner, h.released_to]), [[H, null], [K, K]].sort());
+  assert.deepEqual(await claim(H, paidWin), { ok: true, souls: 0, receipt: null }, 'never paid twice across the upgrade');
+  const late = await claim(H, unpaidVoid);
+  assert.deepEqual([late.souls, late.receipt.delta, late.receipt.earned], [7, 7, 0], 'a stake the old save took comes back once');
+  assert.equal((await claim(K, unpaidVoid)).souls, 0);
+  await call(K, 'public.coop_duel_decline($1)', [open]);
+  assert.equal((await claim(K, open)).receipt.delta, 25);
+  assert.equal(await value(`select count(*)::int from public.coop_holds where duel_id in ('${open}', '${paidWin}', '${unpaidVoid}')`), 5, 'a third load adds nothing');
+});
+
+test('the receipt feed pages 100 at a time in seq order and says when there is more', async () => {
+  // Dan has no receipts yet.
+  assert.equal((await wallet(D)).last_seq, 0);
+  await db.query(`select private.coop_append('${D}', 'hire', gen_random_uuid(), 1, 1) from generate_series(1, 230)`);
+  const first = await receipts(D, 0);
+  assert.equal(first.receipts.length, 100);
+  assert.equal(first.has_more, true);
+  assert.equal(first.last_seq, 230);
+  const all = [];
+  let after = 0, page;
+  do { page = await receipts(D, after); all.push(...page.receipts); after = page.receipts.at(-1)?.seq ?? after; } while (page.has_more);
+  assert.deepEqual(all.map(r => Number(r.seq)), Array.from({ length: 230 }, (_, i) => i + 1));
+  assert.deepEqual(await receipts(D, 230), { ok: true, receipts: [], has_more: false, last_seq: 230 });
+  assert.equal((await receipts(D, -5)).receipts[0].seq, 1, 'a negative cursor reads from the start');
 });

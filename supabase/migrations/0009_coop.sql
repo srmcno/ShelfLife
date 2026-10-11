@@ -11,7 +11,8 @@
 --   * refusals raise errcode P0001 with a short token as the message:
 --     not_friends, dnd, not_for_hire, hired_today, fully_booked, bad_resident,
 --     too_large, bad_report, not_found, not_open, not_your_turn, bad_game,
---     bad_stake, bad_score, bad_log, too_many_open, rate_limited.
+--     bad_stake, bad_score, bad_log, too_many_open, rate_limited,
+--     needs_opening, insufficient_souls, bad_balance, bad_seq.
 --     src/cloud/coop.js turns them into copy.
 --
 -- Hired help. A player puts up to two residents up for hire (coop_set_hires).
@@ -41,9 +42,36 @@
 -- it is void (the challenger's stake comes back), started and abandoned it
 -- counts as a score of 0.
 --
+-- The money ledger. Souls live in the save, so every soul co-op moves is
+-- written down as a receipt that belongs to one account:
+-- { id, owner, seq, kind, source_id, delta, earned }. seq counts 1, 2, 3...
+-- per owner with no gaps; kind is 'stake' (a duel stake leaving the purse,
+-- delta negative), 'duel' (a refund or winnings, delta positive) or 'hire'
+-- (wages). earned is the profit part only: 0 for stakes and refunds, the
+-- other player's stake for winnings, the whole wage for wages. A stake is
+-- written in the same transaction that holds it (coop_duel_create for the
+-- challenger, the opponent's first coop_duel_play), and a payout in the
+-- transaction that collects it (coop_duel_claim, coop_collect). One receipt
+-- per (owner, kind, source), so a retry answers the receipt already written.
+-- A device reads what it missed with coop_receipts(after); receipts are kept
+-- for as long as the account exists.
+--
+-- Funds. The server keeps a co-op balance per account: an opening balance
+-- the client declares once (coop_open, with the last seq its souls already
+-- include) plus every receipt after that seq. A stake that would take it
+-- below zero is refused (insufficient_souls), and so is any stake before an
+-- opening is declared (needs_opening). A payout comes only out of holds that
+-- exist and have not been paid out, so a series pays out at most what was
+-- staked into it.
+--
 -- Housekeeping runs in private.coop_tidy(uid) at the start of every call, so
 -- nothing needs a scheduler. It also deletes settled duels and hires older
--- than 60 days, for the rows that player is in.
+-- than 60 days, for the rows that player is in, once nothing in them is
+-- still owed to anyone.
+--
+-- Locks. Every count-then-insert cap and every receipt first takes the
+-- account's advisory lock (private.lock_account), which works before a
+-- profile row exists; two accounts are locked in a fixed order.
 --
 -- Optional hooks from other migrations, used only when they exist:
 -- private.bump_friendship(uuid, uuid, text) (kinds 'hire' and 'duel') and
@@ -149,6 +177,63 @@ create table if not exists private.coop_attempts (
 );
 create index if not exists coop_attempts_recent on private.coop_attempts (user_id, kind, at);
 
+-- One row per account that has touched the ledger. total is the sum of every
+-- receipt's delta; the co-op balance is opening + (total - opening_base),
+-- where opening_base is the sum of the receipts up to opening_seq, which the
+-- declared opening already includes. opening stays null until declared.
+create table if not exists public.coop_wallets (
+  owner uuid primary key references auth.users (id) on delete cascade,
+  opening int check (opening between 0 and 100000000),
+  opening_seq bigint not null default 0 check (opening_seq >= 0),
+  opening_base bigint not null default 0,
+  last_seq bigint not null default 0 check (last_seq >= 0),
+  total bigint not null default 0,
+  opened_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- Every soul co-op moves, per owner, never deleted while the account exists.
+-- source_id is the duel or the hire; there is no foreign key on it, so a
+-- receipt outlives the row it came from.
+create table if not exists public.coop_receipts (
+  id uuid primary key default gen_random_uuid(),
+  owner uuid not null references auth.users (id) on delete cascade,
+  seq bigint not null check (seq > 0),
+  kind text not null check (kind in ('stake', 'duel', 'hire')),
+  source_id uuid not null,
+  delta int not null check (delta between -25 and 50 and delta <> 0),
+  earned int not null default 0 check (earned >= 0),
+  created_at timestamptz not null default now(),
+  constraint coop_receipts_seq unique (owner, seq),
+  constraint coop_receipts_once unique (owner, kind, source_id),
+  constraint coop_receipts_sign check ((kind = 'stake' and delta < 0 and earned = 0)
+    or (kind <> 'stake' and delta > 0 and earned <= delta))
+);
+
+-- A stake held on a duel, per player. stake_receipt is null for a stake held
+-- before the ledger existed (the save took it then). released_at is set when
+-- it is paid out, to its owner (a refund) or to the winner.
+create table if not exists public.coop_holds (
+  duel_id uuid not null references public.coop_duels (id) on delete cascade,
+  owner uuid not null references auth.users (id) on delete cascade,
+  amount int not null check (amount between 1 and 25),
+  stake_receipt uuid,
+  released_at timestamptz,
+  released_to uuid references auth.users (id) on delete cascade,
+  release_receipt uuid,
+  created_at timestamptz not null default now(),
+  primary key (duel_id, owner)
+);
+create index if not exists coop_holds_owner on public.coop_holds (owner);
+
+-- Wages paid per lender per UTC day, so the 30 a day cap is one locked row.
+create table if not exists private.coop_wage_days (
+  owner uuid not null references auth.users (id) on delete cascade,
+  day date not null,
+  paid int not null default 0 check (paid between 0 and 30),
+  primary key (owner, day)
+);
+
 -- ---------------------------------------------------------------------------
 -- Row level security. Nothing is granted: the functions below do every read
 -- and write. The policies say who a row belongs to in case that ever changes.
@@ -160,10 +245,57 @@ alter table public.coop_duels enable row level security;
 alter table public.coop_rounds enable row level security;
 alter table public.coop_records enable row level security;
 alter table private.coop_attempts enable row level security;
+alter table public.coop_wallets enable row level security;
+alter table public.coop_receipts enable row level security;
+alter table public.coop_holds enable row level security;
+alter table private.coop_wage_days enable row level security;
 
-revoke all on table public.coop_listings, public.coop_hires, public.coop_duels, public.coop_rounds, public.coop_records
+revoke all on table public.coop_listings, public.coop_hires, public.coop_duels, public.coop_rounds, public.coop_records,
+  public.coop_wallets, public.coop_receipts, public.coop_holds
   from public, anon, authenticated;
-revoke all on table private.coop_attempts from public;
+revoke all on table private.coop_attempts, private.coop_wage_days from public;
+
+drop policy if exists "wallets are for their owner" on public.coop_wallets;
+create policy "wallets are for their owner" on public.coop_wallets
+  for select to authenticated using ((select auth.uid()) = owner);
+
+drop policy if exists "receipts are for their owner" on public.coop_receipts;
+create policy "receipts are for their owner" on public.coop_receipts
+  for select to authenticated using ((select auth.uid()) = owner);
+
+drop policy if exists "holds are for their owner" on public.coop_holds;
+create policy "holds are for their owner" on public.coop_holds
+  for select to authenticated using ((select auth.uid()) = owner);
+
+-- ---------------------------------------------------------------------------
+-- Rows from before the ledger. Safe to run again: it only adds what is
+-- missing, and a duel made since already has its holds.
+-- ---------------------------------------------------------------------------
+
+-- Stakes the save already took: the challenger's from the start, the
+-- opponent's once they played. No receipt (the souls left the save before
+-- there was a ledger), so the co-op balance the client declares already
+-- excludes them, and the refund or winnings collected later add them back.
+-- A hold already paid out under the old rules is marked released: in a void
+-- or tied series when its owner claimed, in a won series when the winner did.
+insert into public.coop_holds (duel_id, owner, amount, released_at, released_to)
+select d.id, x.owner, d.stake,
+       case when d.status = 'settled' and d.outcome in ('void', 'tie') and x.claimed then coalesce(d.settled_at, now())
+            when d.status = 'settled' and d.outcome = 'challenger' and d.claimed_challenger then coalesce(d.settled_at, now())
+            when d.status = 'settled' and d.outcome = 'opponent' and d.claimed_opponent then coalesce(d.settled_at, now()) end,
+       case when d.status = 'settled' and d.outcome in ('void', 'tie') and x.claimed then x.owner
+            when d.status = 'settled' and d.outcome = 'challenger' and d.claimed_challenger then d.challenger
+            when d.status = 'settled' and d.outcome = 'opponent' and d.claimed_opponent then d.opponent end
+  from public.coop_duels d
+ cross join lateral (values (d.challenger, d.claimed_challenger, true), (d.opponent, d.claimed_opponent, d.opponent_staked)) x(owner, claimed, staked)
+ where d.stake > 0 and x.staked
+   and not exists (select 1 from public.coop_receipts r where r.owner = x.owner and r.kind = 'stake' and r.source_id = d.id)
+on conflict do nothing;
+
+-- The wages already paid each lender per day, for the 30 a day cap.
+insert into private.coop_wage_days (owner, day, paid)
+select owner, wage_day, least(30, sum(wages))::int from public.coop_hires where wage_day is not null group by owner, wage_day
+on conflict (owner, day) do update set paid = greatest(private.coop_wage_days.paid, excluded.paid);
 
 drop policy if exists "listings are for their owner" on public.coop_listings;
 create policy "listings are for their owner" on public.coop_listings
@@ -198,6 +330,33 @@ set search_path = public
 as $$
   select (now() at time zone 'utc')::date;
 $$;
+
+-- Serialises one account's capped writes (count then insert), even before it
+-- has a profile row. The same helper, byte for byte, is in every migration
+-- that needs it, so each file loads on its own and the combined load agrees.
+create or replace function private.lock_account(p_user uuid)
+returns void
+language sql
+volatile
+set search_path = public
+as $$
+  select pg_advisory_xact_lock(hashtextextended('shelf-account:' || coalesce(p_user::text, ''), 0));
+$$;
+
+-- Two accounts, always in the same order, so two callers cannot deadlock.
+create or replace function private.lock_accounts(a uuid, b uuid)
+returns void
+language plpgsql
+volatile
+set search_path = public
+as $$
+begin
+  perform private.lock_account(least(a, b));
+  if a is distinct from b then perform private.lock_account(greatest(a, b)); end if;
+end;
+$$;
+revoke all on function private.lock_account(uuid) from public;
+revoke all on function private.lock_accounts(uuid, uuid) from public;
 
 create or replace function private.coop_blocked(a uuid, b uuid)
 returns boolean
@@ -265,6 +424,7 @@ language plpgsql
 set search_path = public
 as $$
 begin
+  perform private.lock_account(uid);
   if (select count(*) from private.coop_attempts where user_id = uid and kind = p_kind and at > now() - p_window) >= p_max then
     perform private.refuse('rate_limited');
   end if;
@@ -367,15 +527,109 @@ begin
 end;
 $$;
 
--- Wages for a finished trip, within the lender's 30 a day.
-create or replace function private.coop_wages(p_owner uuid, p_tier int)
+-- Wages for a finished trip, within the lender's 30 a day. The day's total is
+-- one row, locked while it is read and raised, so two trips finishing at once
+-- cannot both take the last of it.
+drop function if exists private.coop_wages(uuid, int);
+create or replace function private.coop_grant_wages(p_owner uuid, p_tier int)
 returns int
+language plpgsql
+set search_path = public
+as $$
+declare
+  today date := private.coop_day();
+  old int;
+  got int;
+begin
+  insert into private.coop_wage_days (owner, day) values (p_owner, today) on conflict do nothing;
+  select paid into old from private.coop_wage_days where owner = p_owner and day = today for update;
+  got := greatest(0, least(6 + 3 * coalesce(p_tier, 0), 30 - old));
+  update private.coop_wage_days set paid = old + got where owner = p_owner and day = today;
+  return got;
+end;
+$$;
+
+-- A receipt as the API answers it.
+create or replace function private.coop_receipt_json(r public.coop_receipts)
+returns jsonb
+language sql
+immutable
+set search_path = public
+as $$
+  select case when r.id is null then null else jsonb_build_object('id', r.id, 'owner', r.owner, 'seq', r.seq, 'kind', r.kind,
+    'source_id', r.source_id, 'delta', r.delta, 'earned', r.earned, 'created_at', r.created_at) end;
+$$;
+
+-- Writes the owner's receipt for (kind, source) once and answers it; a second
+-- call answers the one already written. seq comes from the owner's wallet row
+-- under the owner's lock, so it has no gaps and only goes up.
+create or replace function private.coop_append(p_owner uuid, p_kind text, p_source uuid, p_delta int, p_earned int)
+returns public.coop_receipts
+language plpgsql
+set search_path = public
+as $$
+declare
+  rc public.coop_receipts%rowtype;
+  v_seq bigint;
+begin
+  perform private.lock_account(p_owner);
+  select * into rc from public.coop_receipts where owner = p_owner and kind = p_kind and source_id = p_source;
+  if found then return rc; end if;
+  insert into public.coop_wallets (owner) values (p_owner) on conflict do nothing;
+  update public.coop_wallets set last_seq = last_seq + 1, total = total + p_delta where owner = p_owner
+  returning last_seq into v_seq;
+  insert into public.coop_receipts (owner, seq, kind, source_id, delta, earned)
+  values (p_owner, v_seq, p_kind, p_source, p_delta, p_earned)
+  returning * into rc;
+  return rc;
+end;
+$$;
+
+-- The owner's co-op balance, or null before an opening is declared.
+create or replace function private.coop_available(p_owner uuid)
+returns bigint
 language sql
 stable
 set search_path = public
 as $$
-  select greatest(0, least(6 + 3 * coalesce(p_tier, 0),
-    30 - coalesce((select sum(wages)::int from public.coop_hires where owner = p_owner and wage_day = private.coop_day()), 0)));
+  select w.opening + (w.total - w.opening_base) from public.coop_wallets w where w.owner = p_owner and w.opening is not null;
+$$;
+
+-- Takes a stake out of the owner's balance and holds it on the duel, in the
+-- caller's transaction: { the stake receipt }, or null for no stake.
+create or replace function private.coop_stake(p_owner uuid, p_duel uuid, p_amount int)
+returns public.coop_receipts
+language plpgsql
+set search_path = public
+as $$
+declare
+  rc public.coop_receipts%rowtype;
+  have bigint;
+begin
+  if coalesce(p_amount, 0) <= 0 then return rc; end if;
+  perform private.lock_account(p_owner);
+  if not exists (select 1 from public.coop_wallets where owner = p_owner and opening is not null) then
+    perform private.refuse('needs_opening');
+  end if;
+  have := private.coop_available(p_owner);
+  if have < p_amount then perform private.refuse('insufficient_souls'); end if;
+  rc := private.coop_append(p_owner, 'stake', p_duel, -p_amount, 0);
+  insert into public.coop_holds (duel_id, owner, amount, stake_receipt) values (p_duel, p_owner, p_amount, rc.id)
+  on conflict do nothing;
+  return rc;
+end;
+$$;
+
+-- The wallet as the API answers it.
+create or replace function private.coop_wallet_json(p_owner uuid)
+returns jsonb
+language sql
+stable
+set search_path = public
+as $$
+  select jsonb_build_object('ok', true, 'opening', w.opening, 'opening_seq', coalesce(w.opening_seq, 0),
+    'balance', private.coop_available(p_owner), 'last_seq', coalesce(w.last_seq, 0))
+    from (select 1) one left join public.coop_wallets w on w.owner = p_owner;
 $$;
 
 create or replace function private.coop_touch_record(a uuid, b uuid)
@@ -422,9 +676,11 @@ begin
 end;
 $$;
 
--- Closes a series and writes down what each player is owed. A void series
--- (nobody finished a round, or the two are no longer friends) returns every
--- stake that was held.
+-- Closes a series and writes down what each player is owed, from the stakes
+-- actually held on it. A void series (nobody finished a round, or the two are
+-- no longer friends) and a tie return each held stake to its owner; the
+-- winner is owed every held stake. Nothing is paid here: each player
+-- collects with coop_duel_claim.
 create or replace function private.coop_settle(p_duel uuid, p_void boolean)
 returns void
 language plpgsql
@@ -433,9 +689,13 @@ as $$
 declare
   d public.coop_duels%rowtype;
   v_outcome text;
+  h_c int;
+  h_o int;
 begin
   select * into d from public.coop_duels where id = p_duel for update;
   if not found or d.status <> 'open' then return; end if;
+  select coalesce(sum(amount) filter (where owner = d.challenger), 0)::int, coalesce(sum(amount) filter (where owner = d.opponent), 0)::int
+    into h_c, h_o from public.coop_holds where duel_id = p_duel;
   update public.coop_rounds set status = 'void' where duel_id = p_duel and status in ('first', 'second');
   if p_void or not d.opponent_staked or not exists (select 1 from public.coop_rounds where duel_id = p_duel and status = 'done') then
     v_outcome := 'void';
@@ -444,9 +704,8 @@ begin
   else v_outcome := 'tie';
   end if;
   update public.coop_duels set status = 'settled', outcome = v_outcome, settled_at = now(), updated_at = now(),
-         pay_challenger = case v_outcome when 'challenger' then 2 * d.stake when 'opponent' then 0 else d.stake end,
-         pay_opponent = case when not d.opponent_staked then 0 when v_outcome = 'opponent' then 2 * d.stake
-                             when v_outcome = 'challenger' then 0 else d.stake end
+         pay_challenger = case v_outcome when 'challenger' then h_c + h_o when 'opponent' then 0 else h_c end,
+         pay_opponent = case v_outcome when 'opponent' then h_c + h_o when 'challenger' then 0 else h_o end
    where id = p_duel;
   if v_outcome <> 'void' then
     perform private.coop_series_record(d.challenger, d.opponent,
@@ -497,12 +756,15 @@ declare
   last_round public.coop_rounds%rowtype;
 begin
   -- A hire nobody finished comes home after 72 hours, with the smallest wage.
+  -- In lender order, so two players tidying at once take the wage rows in the
+  -- same order.
   for r in select h.id, h.owner from public.coop_hires h
             where h.status = 'out' and h.created_at <= now() - interval '72 hours' and uid in (h.owner, h.hirer)
+            order by h.owner, h.id
             for update loop
     update public.coop_hires set status = 'back', finished_at = now(), wage_day = private.coop_day(),
-           wages = private.coop_wages(r.owner, 0)
-     where id = r.id;
+           wages = private.coop_grant_wages(r.owner, 0)
+     where id = r.id and status = 'out';
   end loop;
   -- Rounds that waited 48 hours for a move.
   for r in select x.duel_id, x.n, x.status, x.second_started_at from public.coop_rounds x
@@ -526,9 +788,15 @@ begin
       perform private.coop_settle(d.id, false);
     end if;
   end loop;
-  delete from public.coop_duels where status = 'settled' and settled_at < now() - interval '60 days' and uid in (challenger, opponent);
-  delete from public.coop_hires where created_at < now() - interval '60 days' and uid in (owner, hirer);
+  -- Old rows go once nothing in them is owed: a duel with a stake nobody has
+  -- collected, or wages nobody has collected, stays until it is.
+  delete from public.coop_duels gone where gone.status = 'settled' and gone.settled_at < now() - interval '60 days'
+     and uid in (gone.challenger, gone.opponent)
+     and not exists (select 1 from public.coop_holds h where h.duel_id = gone.id and h.released_at is null);
+  delete from public.coop_hires where created_at < now() - interval '60 days' and uid in (owner, hirer)
+     and status = 'back' and (collected_at is not null or wages = 0);
   delete from private.coop_attempts where user_id = uid and at < now() - interval '1 day';
+  delete from private.coop_wage_days where owner = uid and day < private.coop_day() - 2;
 end;
 $$;
 
@@ -541,7 +809,12 @@ revoke all on function private.coop_limit(uuid, text, int, interval) from public
 revoke all on function private.coop_int(jsonb, int, int) from public;
 revoke all on function private.coop_clean_resident(jsonb) from public;
 revoke all on function private.coop_clean_report(jsonb) from public;
-revoke all on function private.coop_wages(uuid, int) from public;
+revoke all on function private.coop_grant_wages(uuid, int) from public;
+revoke all on function private.coop_receipt_json(public.coop_receipts) from public;
+revoke all on function private.coop_append(uuid, text, uuid, int, int) from public;
+revoke all on function private.coop_available(uuid) from public;
+revoke all on function private.coop_stake(uuid, uuid, int) from public;
+revoke all on function private.coop_wallet_json(uuid) from public;
 revoke all on function private.coop_touch_record(uuid, uuid) from public;
 revoke all on function private.coop_round_record(uuid, uuid) from public;
 revoke all on function private.coop_series_record(uuid, uuid, text) from public;
@@ -570,8 +843,8 @@ begin
   if p_residents is null or jsonb_typeof(p_residents) <> 'array' or jsonb_array_length(p_residents) > 2 then
     perform private.refuse('bad_resident');
   end if;
+  perform private.lock_account(uid);
   perform private.coop_limit(uid, 'list', 30, interval '1 hour');
-  perform 1 from public.profiles where user_id = uid for update;
   delete from public.coop_listings where owner = uid;
   for item in select value from jsonb_array_elements(p_residents) loop
     clean := private.coop_clean_resident(item);
@@ -628,8 +901,9 @@ declare
 begin
   perform private.coop_require_friend(uid, p_owner);
   if private.coop_dnd(p_owner) then perform private.refuse('dnd'); end if;
-  -- One hire at a time per hirer, so two taps cannot both get through.
-  perform 1 from public.profiles where user_id = uid for update;
+  -- One hire at a time per hirer and per lender, so two taps (or two hirers
+  -- after the last trip of the day) cannot both get through.
+  perform private.lock_accounts(uid, p_owner);
   select * into l from public.coop_listings where owner = p_owner and pet_id = p_pet for update;
   if not found then perform private.refuse('not_for_hire'); end if;
   if exists (select 1 from public.coop_hires where hirer = uid and day = today) then perform private.refuse('hired_today'); end if;
@@ -660,7 +934,7 @@ begin
   select * into h from public.coop_hires where id = p_hire and hirer = uid for update;
   if not found then perform private.refuse('not_found'); end if;
   if h.status <> 'out' then perform private.refuse('not_open'); end if;
-  pay := private.coop_wages(h.owner, (clean ->> 'tier')::int);
+  pay := private.coop_grant_wages(h.owner, (clean ->> 'tier')::int);
   update public.coop_hires set status = 'back', report = clean, wages = pay, finished_at = now(), wage_day = private.coop_day()
    where id = p_hire;
   perform private.coop_touch_record(h.owner, uid);
@@ -707,8 +981,12 @@ begin
 end;
 $$;
 
--- Reads a report and pays its wages, once: { ok, wages }. A second call
--- answers wages 0. A report from someone the lender blocked still pays.
+-- Reads a report and pays its wages into the ledger, once:
+-- { ok, wages, receipt }. receipt is the lender's 'hire' receipt, the same one
+-- on every call (null when the wages were 0, or were collected before the
+-- ledger existed). wages is what this call newly paid: the receipt's delta
+-- the first time, 0 after, kept for older clients. A report from someone the
+-- lender blocked still pays.
 create or replace function public.coop_collect(p_hire uuid)
 returns jsonb
 language plpgsql
@@ -718,13 +996,19 @@ as $$
 declare
   uid uuid := private.require_user();
   h public.coop_hires%rowtype;
+  rc public.coop_receipts%rowtype;
 begin
+  perform private.lock_account(uid);
   select * into h from public.coop_hires where id = p_hire and owner = uid for update;
   if not found then perform private.refuse('not_found'); end if;
   if h.status <> 'back' then perform private.refuse('not_open'); end if;
-  if h.collected_at is not null then return jsonb_build_object('ok', true, 'wages', 0); end if;
+  select * into rc from public.coop_receipts where owner = uid and kind = 'hire' and source_id = p_hire;
+  if found or h.collected_at is not null then
+    return jsonb_build_object('ok', true, 'wages', 0, 'receipt', private.coop_receipt_json(rc));
+  end if;
+  if h.wages > 0 then rc := private.coop_append(uid, 'hire', p_hire, h.wages, h.wages); end if;
   update public.coop_hires set collected_at = now() where id = p_hire;
-  return jsonb_build_object('ok', true, 'wages', h.wages);
+  return jsonb_build_object('ok', true, 'wages', h.wages, 'receipt', private.coop_receipt_json(rc));
 end;
 $$;
 
@@ -732,6 +1016,10 @@ $$;
 -- Duels
 -- ---------------------------------------------------------------------------
 
+-- A new challenge: { ok, id, game, stake, round, seed, receipt }. A stake
+-- leaves the challenger's co-op balance in this transaction, as the 'stake'
+-- receipt answered here (null for no stake), or the challenge is refused
+-- (needs_opening, insufficient_souls).
 create or replace function public.coop_duel_create(p_to uuid, p_game text, p_stake int)
 returns jsonb
 language plpgsql
@@ -741,14 +1029,16 @@ as $$
 declare
   uid uuid := private.require_user();
   d public.coop_duels%rowtype;
+  rc public.coop_receipts%rowtype;
   v_seed bigint := 1 + floor(random() * 2147483646)::bigint;
 begin
   perform private.coop_require_friend(uid, p_to);
   if private.coop_dnd(p_to) then perform private.refuse('dnd'); end if;
   perform private.check_game(p_game);
   if p_stake is null or p_stake < 0 or p_stake > 25 then perform private.refuse('bad_stake'); end if;
+  -- Both accounts: the twelve open is counted from either side.
+  perform private.lock_accounts(uid, p_to);
   perform private.coop_tidy(uid);
-  perform 1 from public.profiles where user_id = uid for update;
   if (select count(*) from public.coop_duels where status = 'open' and challenger = uid and opponent = p_to) >= 3
      or (select count(*) from public.coop_duels where status = 'open' and uid in (challenger, opponent)) >= 12 then
     perform private.refuse('too_many_open');
@@ -756,14 +1046,18 @@ begin
   perform private.coop_limit(uid, 'duel', 10, interval '1 day');
   insert into public.coop_duels (challenger, opponent, game, stake) values (uid, p_to, p_game, p_stake) returning * into d;
   insert into public.coop_rounds (duel_id, n, first_player, seed) values (d.id, 1, uid, v_seed);
-  return jsonb_build_object('ok', true, 'id', d.id, 'game', d.game, 'stake', d.stake, 'round', 1, 'seed', v_seed);
+  rc := private.coop_stake(uid, d.id, d.stake);
+  return jsonb_build_object('ok', true, 'id', d.id, 'game', d.game, 'stake', d.stake, 'round', 1, 'seed', v_seed,
+    'receipt', private.coop_receipt_json(rc));
 end;
 $$;
 
 -- The caller's turn in the current round: { round, seed, role, game, stake,
 -- ghost, against }. The second player gets the first player's input log as
 -- `ghost`, never their score. Playing the first round as the opponent puts
--- up the stake.
+-- up the stake, in this transaction, or the play is refused (needs_opening,
+-- insufficient_souls). `receipt` is the caller's 'stake' receipt for this
+-- duel whenever one exists (the same one on every call), else null.
 create or replace function public.coop_duel_play(p_duel uuid)
 returns jsonb
 language plpgsql
@@ -774,7 +1068,9 @@ declare
   uid uuid := private.require_user();
   d public.coop_duels%rowtype;
   r public.coop_rounds%rowtype;
+  rc public.coop_receipts%rowtype;
 begin
+  perform private.lock_account(uid);
   perform private.coop_tidy(uid);
   select * into d from public.coop_duels where id = p_duel and uid in (challenger, opponent) for update;
   if not found then perform private.refuse('not_found'); end if;
@@ -782,18 +1078,22 @@ begin
   perform private.coop_require_friend(uid, case when uid = d.challenger then d.opponent else d.challenger end);
   select * into r from public.coop_rounds where duel_id = p_duel order by n desc limit 1 for update;
   if r.status = 'first' and r.first_player = uid then
+    select * into rc from public.coop_receipts where owner = uid and kind = 'stake' and source_id = p_duel;
     return jsonb_build_object('ok', true, 'round', r.n, 'seed', r.seed, 'role', 'first', 'game', d.game, 'stake', d.stake,
-      'ghost', null, 'against', '');
+      'ghost', null, 'against', '', 'receipt', private.coop_receipt_json(rc));
   end if;
   if r.status <> 'second' or r.first_player = uid then perform private.refuse('not_your_turn'); end if;
   if uid = d.opponent and not d.opponent_staked then
+    perform private.coop_stake(uid, p_duel, d.stake);
     update public.coop_duels set opponent_staked = true, updated_at = now() where id = p_duel;
   end if;
   if r.second_started_at is null then
     update public.coop_rounds set second_started_at = now() where duel_id = p_duel and n = r.n;
   end if;
+  select * into rc from public.coop_receipts where owner = uid and kind = 'stake' and source_id = p_duel;
   return jsonb_build_object('ok', true, 'round', r.n, 'seed', r.seed, 'role', 'second', 'game', d.game, 'stake', d.stake,
-    'ghost', r.first_log, 'against', coalesce((select display_name from public.profiles where user_id = r.first_player), ''));
+    'ghost', r.first_log, 'against', coalesce((select display_name from public.profiles where user_id = r.first_player), ''),
+    'receipt', private.coop_receipt_json(rc));
 end;
 $$;
 
@@ -922,15 +1222,21 @@ begin
       left join public.profiles pc on pc.user_id = d.challenger
       left join public.profiles po on po.user_id = d.opponent
      where uid in (d.challenger, d.opponent)
-       and (d.status = 'open' or (d.settled_at > now() - interval '14 days'
+       and (d.status = 'open' or ((d.settled_at > now() - interval '14 days'
+              or (case when uid = d.challenger then d.pay_challenger else d.pay_opponent end) > 0)
             and not (case when uid = d.challenger then d.claimed_challenger else d.claimed_opponent end)))
        and (d.status <> 'open' or not private.coop_blocked(d.challenger, d.opponent))
      order by d.updated_at desc limit 30) x), '[]'::jsonb);
 end;
 $$;
 
--- Collects what a settled series owes the caller and marks it seen, once:
--- { ok, souls }. A second call answers souls 0.
+-- Collects what a settled series owes the caller into the ledger and marks it
+-- seen: { ok, souls, receipt }. receipt is the caller's 'duel' receipt, the
+-- same one on every call (null when nothing was owed). souls is what this
+-- call newly paid: the receipt's delta the first time, 0 after, kept for
+-- older clients. The payout comes only from stakes held on this series and
+-- not yet paid out: a void or tied series returns the caller's own, the
+-- winner takes every one. earned is the other player's stake, if any.
 create or replace function public.coop_duel_claim(p_duel uuid)
 returns jsonb
 language plpgsql
@@ -940,20 +1246,114 @@ as $$
 declare
   uid uuid := private.require_user();
   d public.coop_duels%rowtype;
+  rc public.coop_receipts%rowtype;
+  won boolean;
   owed int;
+  own int;
 begin
+  perform private.lock_account(uid);
   perform private.coop_tidy(uid);
   select * into d from public.coop_duels where id = p_duel and uid in (challenger, opponent) for update;
   if not found then perform private.refuse('not_found'); end if;
   if d.status <> 'settled' then perform private.refuse('not_open'); end if;
+  select * into rc from public.coop_receipts where owner = uid and kind = 'duel' and source_id = p_duel;
+  if found then
+    return jsonb_build_object('ok', true, 'souls', 0, 'receipt', private.coop_receipt_json(rc));
+  end if;
+  won := d.outcome = case when uid = d.challenger then 'challenger' else 'opponent' end;
+  select coalesce(sum(h.amount), 0)::int, coalesce(sum(h.amount) filter (where h.owner = uid), 0)::int into owed, own
+    from public.coop_holds h
+   where h.duel_id = p_duel and h.released_at is null
+     and (won or (h.owner = uid and d.outcome in ('void', 'tie')));
+  if owed > 0 then
+    rc := private.coop_append(uid, 'duel', p_duel, owed, owed - own);
+    update public.coop_holds h set released_at = now(), released_to = uid, release_receipt = rc.id
+     where h.duel_id = p_duel and h.released_at is null
+       and (won or (h.owner = uid and d.outcome in ('void', 'tie')));
+  end if;
   if uid = d.challenger then
-    owed := case when d.claimed_challenger then 0 else d.pay_challenger end;
     update public.coop_duels set claimed_challenger = true where id = p_duel;
   else
-    owed := case when d.claimed_opponent then 0 else d.pay_opponent end;
     update public.coop_duels set claimed_opponent = true where id = p_duel;
   end if;
-  return jsonb_build_object('ok', true, 'souls', owed);
+  return jsonb_build_object('ok', true, 'souls', owed, 'receipt', private.coop_receipt_json(rc));
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- The ledger
+-- ---------------------------------------------------------------------------
+
+-- Declares the caller's opening co-op balance, once per account: p_souls is
+-- the souls in the save now, p_after the last receipt seq those souls
+-- already include (0 for none). Later calls change nothing. p_souls is
+-- clamped to 0..100000000 and p_after to the last seq written, both of which
+-- only ever lower the balance. Answers the wallet (see coop_wallet) with
+-- accepted: true when this call set the opening.
+create or replace function public.coop_open(p_souls int, p_after bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := private.require_user();
+  w public.coop_wallets%rowtype;
+  v_seq bigint;
+  accepted boolean := false;
+begin
+  if p_souls is null then perform private.refuse('bad_balance'); end if;
+  if p_after is null or p_after < 0 then perform private.refuse('bad_seq'); end if;
+  perform private.lock_account(uid);
+  insert into public.coop_wallets (owner) values (uid) on conflict do nothing;
+  select * into w from public.coop_wallets where owner = uid for update;
+  if w.opening is null then
+    v_seq := least(p_after, w.last_seq);
+    update public.coop_wallets set opening = least(greatest(p_souls, 0), 100000000), opening_seq = v_seq,
+           opening_base = coalesce((select sum(delta) from public.coop_receipts where owner = uid and seq <= v_seq), 0),
+           opened_at = now()
+     where owner = uid;
+    accepted := true;
+  end if;
+  return private.coop_wallet_json(uid) || jsonb_build_object('accepted', accepted);
+end;
+$$;
+
+-- The caller's wallet: { ok, opening, opening_seq, balance, last_seq }.
+-- opening and balance are null until coop_open; balance is the co-op balance
+-- a stake is checked against; last_seq is the newest receipt's seq (0 for none).
+create or replace function public.coop_wallet()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select private.coop_wallet_json(private.require_user());
+$$;
+
+-- The caller's receipts with seq > p_after, oldest first, 100 at a time:
+-- { ok, receipts: [{ id, owner, seq, kind, source_id, delta, earned, created_at }],
+--   has_more, last_seq }. has_more says to ask again after the last seq in
+-- this page; last_seq is the newest seq the caller has.
+create or replace function public.coop_receipts(p_after bigint)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := private.require_user();
+  v_rows jsonb;
+  n int;
+begin
+  select coalesce(jsonb_agg(private.coop_receipt_json(x.r) order by x.seq), '[]'::jsonb), count(*)::int into v_rows, n
+    from (select r, r.seq from public.coop_receipts r where r.owner = uid and r.seq > greatest(coalesce(p_after, 0), 0)
+           order by r.seq limit 101) x;
+  if n > 100 then v_rows := v_rows - 100; end if;
+  return jsonb_build_object('ok', true, 'receipts', v_rows, 'has_more', n > 100,
+    'last_seq', coalesce((select last_seq from public.coop_wallets where owner = uid), 0));
 end;
 $$;
 
@@ -1005,3 +1405,11 @@ grant execute on function public.coop_duel_rematch(uuid) to authenticated;
 grant execute on function public.coop_duels() to authenticated;
 grant execute on function public.coop_duel_claim(uuid) to authenticated;
 grant execute on function public.coop_records() to authenticated;
+
+revoke all on function public.coop_open(int, bigint) from public, anon, authenticated;
+revoke all on function public.coop_wallet() from public, anon, authenticated;
+revoke all on function public.coop_receipts(bigint) from public, anon, authenticated;
+
+grant execute on function public.coop_open(int, bigint) to authenticated;
+grant execute on function public.coop_wallet() to authenticated;
+grant execute on function public.coop_receipts(bigint) to authenticated;
