@@ -19,7 +19,7 @@
 /* ---- 1. text that wraps like a person set it ------------------------------- */
 /* Headings and the spaced capitals over them balance their lines, so a title
    never leaves one word hanging; running text avoids a lonely last word. */
-h1,h2,h3,h4,.eyebrow,.mh-tile-kicker,.fx-banner-kicker,.fx-banner b,.sc-kicker,.tool-label,.card-section-title{text-wrap:balance}
+h1,h2,h3,h4,.btn,button,.eyebrow,.mh-tile-kicker,.fx-banner-kicker,.fx-banner b,.sc-kicker,.tool-label,.card-section-title{text-wrap:balance}
 p,li,dd,.hint,.card-meta,small,.note-text{text-wrap:pretty}
 
 /* ---- 2. the small print -------------------------------------------------------
@@ -96,6 +96,11 @@ p,li,dd,.hint,.card-meta,small,.note-text{text-wrap:pretty}
 .tray{border-radius:var(--radius-lg)}
 @media (max-width:720px){.tray{border-radius:var(--radius-sheet) var(--radius-sheet) 0 0}}
 
+/* A select with no styling of its own (the Shelf Court cast pickers, among
+   others) fell back to the browser's grey box with square corners. This is the
+   house default; anything that styles its own select still wins. */
+:where(select:not([multiple]):not([size])){background-color:var(--case-mid);color:var(--ink);border:1px solid var(--hair-lit);border-radius:var(--radius-sm);padding-left:12px}
+
 /* ---- 5. button rows ---------------------------------------------------------- */
 /* Buttons that share a row share a height. */
 .notes-tools .btn,.notes-tools .btn-sm{min-height:44px}
@@ -114,6 +119,17 @@ p,li,dd,.hint,.card-meta,small,.note-text{text-wrap:pretty}
   .slot:first-child .pips{justify-content:flex-start}
   .slot:last-child .pips{justify-content:flex-end}
 }
+/* Under the shelf on a phone, "Focus occupied shelves" was squeezed into a
+   90px column three lines deep. The line and the tools now share the row when
+   they fit and the tools drop beneath, still on the right, when they do not. */
+@media (max-width:720px){
+  .shelf-framing{flex-wrap:wrap;row-gap:4px}
+  .shelf-framing>span{flex:1 1 170px;max-width:none}
+  .framing-tools{margin-left:auto}
+  .shelf-framing #shelfFocus{max-width:none;white-space:nowrap;font-size:var(--text-xs);line-height:1.2;padding:7px 12px}
+}
+/* The arcade's Again and Play are the tall ones; the buttons beside them match. */
+.ar-actions .btn{min-height:50px}
 /* The desk on a small phone: the coffin tile stacks like its neighbour, the
    omen, so their headings line up and the copy is not squeezed into a column. */
 @media (max-width:420px){
@@ -135,6 +151,14 @@ p,li,dd,.hint,.card-meta,small,.note-text{text-wrap:pretty}
 #cardSheet :is(.resident-personality,.care-record,.resident-memories,.resident-habits)>summary{
   display:list-item;min-height:44px;padding:11px 0;font:500 var(--text-md)/22px var(--body);color:var(--mint);cursor:pointer}
 #cardSheet .resident-habits>summary{padding-inline:2px}
+/* A phone on its side: plain sheets fill the height, so they start below the
+   status bar the Android app draws over (the game shells already do this). */
+@media (orientation:landscape) and (max-height:520px){
+  .veil{padding-top:var(--sat)}
+  .veil .sheet{max-height:calc(100dvh - var(--sat))}
+}
+/* Sheets arrive on one curve and one duration at every width. */
+.veil.open .sheet{animation-duration:var(--dur-sheet)}
 
 /* ---- 7. motion ---------------------------------------------------------------
    Press feedback is a transition, so reduced motion and Calm mode (which stop
