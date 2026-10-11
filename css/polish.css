@@ -28,7 +28,7 @@ p,li,dd,.hint,.card-meta,small,.note-text{text-wrap:pretty}
    the painted signs on the Shelf Court set are artwork and keep their sizes. */
 .eyebrow,.tool-label,.decor-section h3,.door-kicker,.card-section-title,.shelf-progress .eyebrow,
 #incidentsSheet .incident-group h3,.note-time,.file-stamp,.mh-ladder li small,.bondline,.bondline b,
-.relationship-tag,.arrival-footer p,.care-row .btn small,.tabbar .tab,.room-nav .tab,
+.relationship-tag,.pair-saga-heading,.arrival-footer p,.care-row .btn small,.tabbar .tab,.room-nav .tab,
 .collection-grid small,.album small,.memory-timeline small,.effects-setting small{font-size:var(--text-xs)}
 .tabbar .tab,.room-nav .tab{letter-spacing:.02em}
 .care-row .btn small{letter-spacing:.02em}
@@ -38,7 +38,7 @@ p,li,dd,.hint,.card-meta,small,.note-text{text-wrap:pretty}
    floor. The painted tickets and drawing labels on the stage are artwork. */
 .expedition-heading .eyebrow,.expedition-field-report .eyebrow,.expedition-dock-note,.expedition-hud small,.expedition-hud small>b,
 .expedition-destinations.mission-picker .btn small,.expedition-route-map b,.expedition-route-map small,.expedition-packing small,
-.expedition-objective small,.expedition-objective strong small,.expedition-rewards small,
+.expedition-objective small,.expedition-objective strong small,.expedition-rewards small,.mission-crew-brief small,
 #lifeVeil .expedition-option-copy small,#lifeVeil .expedition-option-copy .expedition-option-cost{font-size:var(--text-xs)}
 @media (max-width:720px),(max-height:500px){
   .expedition-heading .eyebrow{letter-spacing:.06em}

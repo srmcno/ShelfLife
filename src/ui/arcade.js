@@ -552,7 +552,7 @@ export function initArcade(state, onRefresh, { social } = {}) {
     else if (action === 'play') { if (e.target.closest('.ar-again')) again(false); else startRun(false); }
     else if (action === 'challenge') { if (e.target.closest('.ar-again')) again(true); else startRun(true); }
     else if (action === 'menu') showMenu();
-    else if (action === 'pause') pause(!run?.paused);
+    else if (action === 'pause') pause(true);
     else if (action === 'resume') pause(false);
     else if (action === 'drop') dropCoffin();
   });
