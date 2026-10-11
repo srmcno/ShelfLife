@@ -181,9 +181,9 @@ export function createSync({
   }
 
   // ---- explicit recovery and financial household provenance ----
-  async function readCopyChoice(uid, remote = null, origin = null) {
+  async function readCopyChoice(uid, remote = null, origin = null, { keepalive = false } = {}) {
     const domain = origin?.coop;
-    remote ||= await cloud.rpc('pull_save');
+    remote ||= await cloud.rpc('pull_save', {}, { keepalive });
     if (!cloud.signedIn() || cloud.userId() !== uid) throw new CloudError('Your account changed.', { code: 'session_changed' });
     if (origin && (getState() !== origin || getState().coop !== domain)) throw new CloudError('Your shelf changed.', { code: 'session_changed' });
     if (!remote?.data) throw new CloudError('Sync the original device first; no complete cloud household was found.', { code: 'missing_remote' });
@@ -199,7 +199,7 @@ export function createSync({
     if (!cloud.signedIn()) return Promise.resolve(info());
     return exclusive(() => readCopyChoice(cloud.userId())).catch(fail).then(info);
   }
-  async function financialPreflight(uid, snapshot, origin, { chosenLocal = false } = {}) {
+  async function financialPreflight(uid, snapshot, origin, { chosenLocal = false, keepalive = false } = {}) {
     const domain = origin.coop;
     const current = () => cloud.signedIn() && cloud.userId() === uid && getState() === origin && getState().coop === domain;
     if (!snapshot.coop?.money?.openings?.[uid]) {
@@ -207,23 +207,23 @@ export function createSync({
       // Read the complete account copy before allowing even a current-CAS
       // upload to replace it. Never-used Co-op accounts need no Co-op RPC.
       if (chosenLocal) return;
-      const remote = await cloud.rpc('pull_save');
+      const remote = await cloud.rpc('pull_save', {}, { keepalive });
       if (!current()) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
       if (remote?.data?.coop?.money?.openings?.[uid]) {
-        await readCopyChoice(uid, remote, origin);
+        await readCopyChoice(uid, remote, origin, { keepalive });
         throw new CloudError('Open Cloud save and use this account’s complete household before using Co-op.', { code: 'cloud_copy_required' });
       }
       return;
     }
     let after = snapshot.coop.ledger?.[uid]?.seq || 0;
     for (;;) {
-      const page = readCoopReceipts(await cloud.rpc('coop_receipts', { p_after: after }), uid);
+      const page = readCoopReceipts(await cloud.rpc('coop_receipts', { p_after: after }, { keepalive }), uid);
       if (!current()) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
       let next = after;
       for (const receipt of page.receipts) if (receipt.seq !== ++next) throw new CloudError('A financial receipt was missing.', { code: 'bad_reply' });
       try { assertCoopGameOwnership(snapshot, uid, page.receipts); }
       catch (error) {
-        if (error.code === 'cloud_copy_required') { await readCopyChoice(uid, null, origin); throw new CloudError(error.message, { code: error.code }); }
+        if (error.code === 'cloud_copy_required') { await readCopyChoice(uid, null, origin, { keepalive }); throw new CloudError(error.message, { code: error.code }); }
         throw error;
       }
       if (!page.more) {
@@ -254,7 +254,7 @@ export function createSync({
     lastPushAt = now();
     let result;
     try {
-      await financialPreflight(uid, snapshot, origin, { chosenLocal });
+      await financialPreflight(uid, snapshot, origin, { chosenLocal, keepalive });
       if (!cloud.signedIn() || cloud.userId() !== uid || getState() !== origin || getState().coop !== domain) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
       result = await cloud.rpc('push_save', { p_base_rev: rev, p_data: snapshot, p_device: deviceId() },
         { keepalive: keepalive && text.length < KEEPALIVE_LIMIT });
@@ -266,7 +266,7 @@ export function createSync({
       // this write, so its refusal must lead to the same explicit recovery.
       if (e.code === 'P0001' && e.message === 'cloud_copy_required') {
         if (!cloud.signedIn() || cloud.userId() !== uid || getState() !== origin || getState().coop !== domain) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
-        await readCopyChoice(uid, null, origin);
+        await readCopyChoice(uid, null, origin, { keepalive });
         throw new CloudError('Open Cloud save and choose this account’s complete household before continuing.', { code: 'cloud_copy_required' });
       }
       throw e;
@@ -279,7 +279,9 @@ export function createSync({
     if (result?.conflict) {
       // Someone else wrote first. Look at what they wrote before deciding anything.
       if (wasDirty) cloud.setMeta({ dirty: true });
-      return decide(await cloud.rpc('pull_save'), { depth: depth + 1 });
+      const remote = await cloud.rpc('pull_save', {}, { keepalive });
+      if (!cloud.signedIn() || cloud.userId() !== uid || getState() !== origin || getState().coop !== domain) throw new CloudError('Your shelf or account changed.', { code: 'session_changed' });
+      return decide(remote, { depth: depth + 1, keepalive });
     }
     throw new CloudError('The cloud gave an unexpected answer.', { code: 'bad_reply' });
   }
@@ -312,28 +314,28 @@ export function createSync({
     return settle();
   }
 
-  async function decide(remote, { depth = 0, manual = false } = {}) {
+  async function decide(remote, { depth = 0, manual = false, keepalive = false } = {}) {
     if (depth > 3) throw new CloudError('The cloud copy keeps changing. Try again in a minute.', { code: 'busy' });
     const m = cloud.meta(), uid = cloud.userId();
     const state = getState();
     needsCheck = false;
-    if (!remote) return pushNow({ base: 0, force: true, depth });                                   // (a) nothing there yet
+    if (!remote) return pushNow({ base: 0, force: true, depth, keepalive });                        // (a) nothing there yet
     const rev = Number(remote.rev) || 0;
     const known = m.syncUser === uid && m.baseRev > 0 && rev >= m.baseRev;
     if (known && rev === m.baseRev) {
       cloud.setMeta({ lastSyncedAt: now() });
-      return pushNow({ base: rev, requireDirty: !manual, depth });
+      return pushNow({ base: rev, requireDirty: !manual, depth, keepalive });
     }
     if (known && remote.device === deviceId()) {                                                     // our own last write
       cloud.setMeta({ baseRev: rev, lastPushHash: '', lastSyncedAt: now() });
-      return pushNow({ base: rev, requireDirty: !manual, depth });
+      return pushNow({ base: rev, requireDirty: !manual, depth, keepalive });
     }
     const normalized = normalize(remote.data);
     if (!normalized) return refuse(rev);
     const here = shelfSummary(state), there = shelfSummary(normalized);
     if (known && !m.dirty) return adopt(normalized, remote, 'newer');                               // another device moved on
     if (!here.residents && there.residents) return adopt(normalized, remote, 'arrived');            // (b)
-    if (!there.residents) return pushNow({ base: rev, force: true, depth });
+    if (!there.residents) return pushNow({ base: rev, force: true, depth, keepalive });
     if (canonical(state) === canonical(remote.data)) {
       clean({ syncUser: uid, baseRev: rev, lastPushHash: saveHash(exportState(state)), lastSyncedAt: now() });
       return settle();

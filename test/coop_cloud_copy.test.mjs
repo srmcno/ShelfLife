@@ -144,6 +144,32 @@ test('a trusted push refusal after preflight opens read-only recovery and does n
   assert.equal(d.local.mayhem.souls, 120);
 });
 
+for (const keepalive of [false, true]) for (const path of ['matching source', 'missing opening', 'unknown generic receipt', 'server refusal', 'CAS conflict'])
+  test((keepalive ? 'background' : 'foreground') + ' financial transport preserves keepalive through ' + path, async () => {
+    const d = await setup(household(0));
+    await d.sync.check(); await d.sync.resolve('cloud');
+    if (path === 'missing opening') d.replaceLocal(household(0));
+    if (path === 'unknown generic receipt') {
+      await d.server.adjustMoney(d.owned.coop.money.pending);
+      d.local.coop.money.pending = [];
+    }
+    const rpc = d.cloud.rpc.bind(d.cloud), calls = []; let conflictOnce = path === 'CAS conflict';
+    d.cloud.rpc = (name, args, options) => {
+      calls.push({ name, keepalive: options?.keepalive });
+      if (path === 'server refusal' && name === 'push_save') throw new CloudError('cloud_copy_required', { code: 'P0001', status: 400 });
+      if (conflictOnce && name === 'push_save') { conflictOnce = false; return { ok: false, conflict: true }; }
+      return rpc(name, args, options);
+    };
+    d.sync.markDirty(); const result = await d.sync.push({ force: true, keepalive });
+    assert.equal(result.status, path === 'matching source' || path === 'CAS conflict' ? 'idle' : 'conflict');
+    const transport = calls.filter(c => ['coop_receipts', 'pull_save', 'push_save'].includes(c.name));
+    assert.ok(transport.length > 0);
+    assert.ok(transport.every(c => c.keepalive === keepalive), JSON.stringify(transport));
+    assert.ok(transport.some(c => c.name === (path === 'missing opening' ? 'pull_save' : 'coop_receipts')));
+    if (path !== 'matching source') assert.ok(transport.some(c => c.name === 'pull_save'), 'recovery is read through the same transport');
+    if (path === 'missing opening' || path === 'unknown generic receipt') assert.ok(!transport.some(c => c.name === 'push_save'), 'financial preflight still refuses the unsafe upload');
+  });
+
 
 for (const action of ['weekly reward', 'curio purchase']) test('an old backup cannot replay a ' + action + ' without its complete cloud business state', async t => {
   const { almanacState } = await import('../src/almanac-state.js');
