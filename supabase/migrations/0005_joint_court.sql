@@ -278,6 +278,25 @@ create trigger hearings_on_unfriend after delete on public.friendships
 -- The Joint Bench
 -- ---------------------------------------------------------------------------
 
+-- Do not disturb, if the postbox migration (0003) is there. Checked dynamically
+-- so this file still loads on its own.
+create or replace function private.hearing_dnd(p_user uuid)
+returns boolean
+language plpgsql
+stable
+set search_path = public
+as $$
+declare
+  quiet boolean := false;
+begin
+  if to_regprocedure('private.dnd_on(uuid)') is not null then
+    execute 'select private.dnd_on($1)' into quiet using p_user;
+  end if;
+  return coalesce(quiet, false);
+end;
+$$;
+revoke all on function private.hearing_dnd(uuid) from public;
+
 -- The first judge has watched and ruled. Answers { ok, id, created_at, expires_at }.
 -- Twenty a day per player, five open between any pair (either way round).
 create or replace function public.open_hearing(p_to uuid, p_kind text, p_case text, p_twist text, p_seed int,
@@ -296,6 +315,8 @@ begin
     perform private.refuse('not_friends');
   end if;
   if p_kind is null or p_kind not in ('served', 'invite') then perform private.refuse('bad_hearing'); end if;
+  -- A new invitation, served or not, does not reach a player who asked for quiet.
+  if private.hearing_dnd(p_to) then perform private.refuse('dnd'); end if;
   if p_case is null or p_case !~ '^[a-z0-9-]{1,40}$' then perform private.refuse('bad_case'); end if;
   if nullif(p_twist, '') is not null and p_twist !~ '^[a-z0-9-]{1,40}$' then perform private.refuse('bad_hearing'); end if;
   if p_seed is null or p_seed < 1 then perform private.refuse('bad_hearing'); end if;

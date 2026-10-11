@@ -167,6 +167,11 @@ declare
   v boolean := false;
 begin
   begin
+    -- The postbox migration (0003) keeps the switch in social_prefs behind private.dnd_on.
+    if to_regprocedure('private.dnd_on(uuid)') is not null then
+      execute 'select private.dnd_on($1)' into v using target;
+      return coalesce(v, false);
+    end if;
     if exists (select 1 from pg_attribute where attrelid = 'public.profiles'::regclass and attname = 'dnd_until' and not attisdropped) then
       execute 'select coalesce(dnd_until > now(), false) from public.profiles where user_id = $1' into v using target;
     elsif exists (select 1 from pg_attribute where attrelid = 'public.profiles'::regclass and attname = 'dnd' and not attisdropped) then

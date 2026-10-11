@@ -113,8 +113,9 @@ as $$
   select exists (select 1 from public.blocks where (blocker = a and blocked = b) or (blocker = b and blocked = a));
 $$;
 
--- Do not disturb, if the postbox migration added one. Checked by column so
--- this file never depends on it: a boolean `dnd` or a timestamp `dnd_until`.
+-- Do not disturb, if the postbox migration added one: private.dnd_on when it
+-- exists, otherwise a profiles column (a boolean `dnd` or a timestamp `dnd_until`).
+-- Checked dynamically so this file never depends on 0003.
 create or replace function private.trade_dnd(p_user uuid)
 returns boolean
 language plpgsql
@@ -124,6 +125,11 @@ as $$
 declare
   quiet boolean := false;
 begin
+  -- The postbox migration (0003) keeps the switch in social_prefs behind private.dnd_on.
+  if to_regprocedure('private.dnd_on(uuid)') is not null then
+    execute 'select private.dnd_on($1)' into quiet using p_user;
+    return coalesce(quiet, false);
+  end if;
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles'
              and column_name = 'dnd' and data_type = 'boolean') then
     execute 'select coalesce(dnd, false) from public.profiles where user_id = $1' into quiet using p_user;
