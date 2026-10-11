@@ -62,11 +62,16 @@ test.describe('on a small phone', () => {
       const rows = new Map();
       for (const el of items) { const top = Math.round(el.getBoundingClientRect().top); rows.set(top, [...(rows.get(top) || []), el]); }
       return [...rows.values()].filter(row => row.length === 1 && row[0].getBoundingClientRect().width < gridBox.width - 4)
-        .map(row => row[0].textContent.trim().slice(0, 30));
+        .map(row => ({ id: row[0].id, label: row[0].textContent.trim().slice(0, 30),
+          column: getComputedStyle(row[0]).gridColumn, width: row[0].getBoundingClientRect().width, gridWidth: gridBox.width }));
     }));
     expect(lonely).toEqual([]);
     // Back up and Restore sit side by side; the longer job takes the row below.
-    const [backup, restore, move] = await Promise.all(['#exportBtn', '#importBtn', '#transferBtn'].map(id => page.locator(id).boundingBox()));
+    // Measure the row in one frame while the phone tray slides into view.
+    const [backup, restore, move] = await page.evaluate(() => ['exportBtn', 'importBtn', 'transferBtn'].map(id => {
+      const { y, height } = document.getElementById(id).getBoundingClientRect();
+      return { y, height };
+    }));
     expect(Math.abs(backup.y - restore.y)).toBeLessThan(2);
     expect(move.y).toBeGreaterThan(backup.y + backup.height - 1);
     expect(await smallPrint(page, '#moreTray')).toEqual([]);

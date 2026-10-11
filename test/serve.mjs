@@ -11,7 +11,6 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Inv
 // hands out an empty cloud config unless SHELF_REAL_CLOUD_CONFIG=1. Tests that
 // want a cloud inject a fake one through SHELFLIFE_CLOUD_CONFIG.
 const realCloud = process.env.SHELF_REAL_CLOUD_CONFIG === '1';
-const CLOUD_CONFIG_LINE = /export const CLOUD_CONFIG = \{[^}]*\};/;
 const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -29,8 +28,10 @@ const server = http.createServer(async (req, res) => {
     if (!info.isFile()) { res.writeHead(404); res.end(); return; }
     let bytes = req.method === 'HEAD' ? null : await readFile(filename);
     let length = bytes?.byteLength ?? info.size;
-    if (!realCloud && pathname === '/src/cloud/config.js') {
-      const source = (await readFile(filename, 'utf8')).replace(CLOUD_CONFIG_LINE, "export const CLOUD_CONFIG = { url: '', anonKey: '' };");
+    if (!realCloud && pathname === '/src/cloud/deployment-config.js') {
+      // Override configuration data at its module boundary. Rewriting the
+      // caller's source would silently fail when its implementation changes.
+      const source = "export const DEPLOYED_CLOUD_CONFIG = { url: '', anonKey: '' };\nexport const DEPLOYED_PUBLIC_URL = null;\n";
       bytes = req.method === 'HEAD' ? null : Buffer.from(source);
       length = Buffer.byteLength(source);
     }

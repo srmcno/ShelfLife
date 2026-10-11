@@ -86,8 +86,9 @@ p,li,dd,.hint,.card-meta,small,.note-text{text-wrap:pretty}
    Two columns, and an odd tile out spans the row instead of sitting beside a
    hole. Your save keeps its pairs together: Back up beside Restore, then the
    longer jobs across the full width. */
-.tray-section:not([aria-labelledby="traySaves"]) .tray-grid>.tray-item{grid-column:auto}
-.tray-section:not([aria-labelledby="traySaves"]) .tray-grid>.tray-item:nth-last-child(1 of .tray-item:not([hidden])):nth-child(odd of .tray-item:not([hidden])){grid-column:1/-1}
+/* Override earlier control ID rules so Voice pairs with Narrator. */
+#moreTray .tray-section:not([aria-labelledby="traySaves"]) .tray-grid>.tray-item{grid-column:auto}
+#moreTray .tray-section:not([aria-labelledby="traySaves"]) .tray-grid>.tray-item:nth-last-child(1 of .tray-item:not([hidden])):nth-child(odd of .tray-item:not([hidden])){grid-column:1/-1}
 .tray-section[aria-labelledby="traySaves"] #cloudBtn{grid-column:1/-1;order:0}
 .tray-section[aria-labelledby="traySaves"] #exportBtn{order:1}
 .tray-section[aria-labelledby="traySaves"] #importBtn{order:2}
