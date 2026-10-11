@@ -116,7 +116,18 @@ test('weeks start on Monday at midnight UTC, and the goal pool matches the game'
   assert.equal(await wk('2026-10-12'), (await wk('2026-10-11')) + 1, 'Monday starts a new week');
   assert.equal(await value('select private.coven_week_start($1)::text', [await wk('2026-10-14')]), '2026-10-12');
   assert.equal(await value("select extract(dow from private.coven_week_start(private.coven_week_of(current_date)))::int"), 1);
-  assert.equal(await value('select private.coven_week_at($1)::text', [await wk('2026-10-12')]), '2026-10-12 00:00:00+00');
+  const monday = await wk('2026-10-12');
+  const originalZone = await value("select current_setting('TimeZone')");
+  try {
+    for (const zone of ['UTC', 'America/Chicago', 'Pacific/Auckland']) {
+      await db.query("select set_config('TimeZone', $1, false)", [zone]);
+      assert.equal(await value('select extract(epoch from private.coven_week_at($1))::double precision', [monday]),
+        Date.UTC(2026, 9, 12) / 1000, 'week starts at the same UTC instant in ' + zone);
+      const at = stamp => value("select private.coven_week_of(($1::timestamptz at time zone 'UTC')::date)", [stamp]);
+      assert.equal(await at('2026-10-11T23:59:59Z'), monday - 1, 'the last second of Sunday in ' + zone);
+      assert.equal(await at('2026-10-12T00:00:00Z'), monday, 'the first second of Monday in ' + zone);
+    }
+  } finally { await db.query("select set_config('TimeZone', $1, false)", [originalZone]); }
   const pool = (await db.query('select goal, counter, per from private.coven_goals()')).rows;
   assert.ok(pool.length >= 20, 'twenty goals at least');
   assert.deepEqual(pool.map(g => [g.goal, g.counter, g.per]), GOALS.map(g => [g.id, g.counter, g.per]), 'SQL and src/content/coven.js agree');
