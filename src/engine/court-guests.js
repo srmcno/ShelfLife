@@ -13,7 +13,9 @@ const record = value => !!value && typeof value === 'object' && !Array.isArray(v
 
 export function visitingGuests(state, now = Date.now()) {
   const visits = state?.visits;
-  const list = record(visits) && Array.isArray(visits.guests) ? visits.guests : [];
+  // `visits` was once (and may still be, in this edition) the array of the
+  // player's own sessions; only a `guests` list on it means anything here.
+  const list = visits && typeof visits === 'object' && Array.isArray(visits.guests) ? visits.guests : [];
   const out = [], seen = new Set();
   for (const g of list.slice(0, 12)) {
     if (!record(g) || typeof g.visitId !== 'string' || !VISIT_ID.test(g.visitId) || seen.has(g.visitId)) continue;
