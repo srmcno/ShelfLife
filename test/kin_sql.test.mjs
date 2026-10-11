@@ -23,8 +23,8 @@ const BOOTSTRAP = `
   alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
   insert into auth.users (id) values ${IDS.map(id => `('${id}')`).join(', ')};
 `;
-const TABLES = ['kin_baskets', 'kin_letters', 'kin_pals'];
-const FUNCTIONS = ['kin_answer_basket', 'kin_collect', 'kin_end', 'kin_introduce', 'kin_leave_basket', 'kin_mail', 'kin_read', 'kin_reply', 'kin_withdraw_basket'];
+const TABLES = ['kin_baskets', 'kin_letters', 'kin_pals', 'kin_receipts'];
+const FUNCTIONS = ['kin_answer_basket', 'kin_collect', 'kin_end', 'kin_introduce', 'kin_leave_basket', 'kin_mail', 'kin_read', 'kin_receipts_get', 'kin_recover', 'kin_reply', 'kin_withdraw_basket'];
 
 let db;
 const code = {};
@@ -158,15 +158,26 @@ test('accepting makes a foundling for both, pen pals of the parents and twins, a
   assert.equal(born.name_roll, 3);
   assert.ok(Number.isInteger(born.seed));
   const row = await one('select * from public.kin_baskets where id = $1', [made.id]);
-  assert.ok(row.to_collected_at && !row.from_collected_at, 'the recipient took theirs in when they agreed');
-  const [step] = (await mail(A)).baskets;
+  assert.ok(!row.to_collected_at && !row.from_collected_at, 'accepting marks nothing taken in; each device claims its own receipt after saving');
+  const receipts = (await db.query('select owner, side, claimed_at from public.kin_receipts where basket_id = $1 order by side', [made.id])).rows;
+  assert.deepEqual(receipts.map(r => [r.owner, r.side, r.claimed_at]), [[A, 'from', null], [B, 'to', null]], 'one unclaimed receipt per player');
+  const bBirths = (await mail(B)).births;
+  assert.deepEqual(bBirths.map(b => [b.id, b.direction, b.status, b.collected]), [[made.id, 'in', 'born', false]], 'the recipient finds theirs in the mail if the reply was lost');
+  const mailA = await mail(A);
+  const [step] = mailA.births;
   assert.deepEqual([step.direction, step.status, step.collected, step.seed, step.name_roll], ['out', 'born', false, born.seed, 3]);
   assert.equal(step.to_parent.name, 'Grubbs');
   assert.equal(step.from_parent.name, 'Mabel');
-  assert.deepEqual(await call(A, 'public.kin_collect($1)', [made.id]), { ok: true });
-  assert.deepEqual(await call(A, 'public.kin_collect($1)', [made.id]), { ok: true }, 'collecting twice is harmless');
-  await rejects(call(B, 'public.kin_collect($1)', [made.id]), /not_found/);
-  assert.equal((await mail(A)).baskets.filter(b => b.status === 'born').length, 0);
+  assert.equal(mailA.baskets.filter(b => b.status === 'born').length, 0, 'a born basket is a receipt, not a basket');
+  const claimed = await call(A, 'public.kin_collect($1)', [made.id]);
+  assert.equal(claimed.ok, true);
+  assert.deepEqual(await call(A, 'public.kin_collect($1)', [made.id]), claimed, 'collecting twice is harmless and keeps the first time');
+  await rejects(call(B, 'public.kin_collect($1)', [made.id.replace(/.$/, c => c === '0' ? '1' : '0')]), /not_found/);
+  const beaClaim = await call(B, 'public.kin_collect($1)', [made.id]);
+  assert.deepEqual([beaClaim.ok, beaClaim.id], [true, made.id]);
+  assert.deepEqual(await call(B, 'public.kin_collect($1)', [made.id]), beaClaim, 'and hers is hers: the same answer again');
+  assert.equal((await mail(A)).births.length, 0);
+  assert.equal(await value('select count(*)::int from public.kin_receipts where basket_id = $1 and claimed_at is not null', [made.id]), 2);
   const pals = (await mail(A)).pals.map(p => [p.history, p.mine.id, p.theirs.id]);
   const twin = 'kin' + made.id.replace(/-/g, '').slice(0, 12);
   assert.deepEqual(pals.sort(), [['foundling', 'a0', 'b0'], ['twin', twin, twin]], 'the parents and the twins write to each other (the hearing was never ruled)');
@@ -325,7 +336,7 @@ test('blocking ends the correspondence and takes in waiting baskets, but a born 
   const box = await mail(E);
   assert.equal(box.letters.length, 0);
   assert.equal(box.pals.length, 0);
-  const step = box.baskets.find(b => b.id === born.id);
+  const step = box.births.find(b => b.id === born.id);
   assert.equal(step.status, 'born', 'nothing earned is taken away');
   assert.equal(step.to_name, '', 'the blocker is not named');
   await call(E, 'public.kin_collect($1)', [born.id]);
@@ -341,7 +352,92 @@ test('removing a friend withdraws waiting baskets both ways, and deleting an acc
   assert.equal(await value('select count(*)::int from public.kin_baskets where id = $1', [waiting.id]), 0);
   await as(C, () => db.query('select public.delete_my_account()'));
   for (const table of TABLES) {
-    const column = table === 'kin_pals' ? `'${C}' in (user_a, user_b)` : `'${C}' in (from_user, to_user)`;
+    const column = table === 'kin_pals' ? `'${C}' in (user_a, user_b)` : table === 'kin_receipts' ? `owner = '${C}'` : `'${C}' in (from_user, to_user)`;
     assert.equal(await value(`select count(*)::int from public.${table} where ${column}`), 0, table);
   }
+});
+
+test('a birth receipt outlives housekeeping and the basket row, and only its owner can read it', async () => {
+  await publish(E, [resident('e0', 'Eel')]);
+  await publish(F, [resident('f0', 'Fen')]);
+  await db.query(`delete from public.kin_baskets where from_user = $1 or to_user = $1`, [E]);
+  await db.query(`delete from public.kin_receipts where owner in ($1, $2)`, [E, F]);
+  await db.query('delete from public.blocks where blocker in ($1, $2)', [E, F]);
+  await friends(E, F, { daysAgo: 8 });
+  const made = await leave(E, F, resident('e0', 'Eel'), 'f0');
+  await answer(F, made.id, true, resident('f0', 'Fen'), 7);
+  // Ninety days and a bit later the basket row is housekeeping's, the receipt is not.
+  await age('kin_baskets', made.id, 'answered_at', 91 * 24);
+  await age('kin_baskets', made.id, 'created_at', 91 * 24);
+  await mail(E); await mail(F);
+  assert.equal(await value('select count(*)::int from public.kin_baskets where id = $1', [made.id]), 0, 'the basket row is pruned');
+  assert.equal(await value('select count(*)::int from public.kin_receipts where basket_id = $1', [made.id]), 2, 'the receipts are not');
+  const [again] = (await mail(E)).births;
+  assert.deepEqual([again.id, again.seed, again.name_roll, again.from_parent.name, again.to_parent.name, again.collected], [made.id, again.seed, 7, 'Eel', 'Fen', false]);
+  // Claiming is a bookmark: the receipt is still listed, still fetchable, and still says what it did.
+  await call(E, 'public.kin_collect($1)', [made.id]);
+  assert.equal((await mail(E)).births.length, 0);
+  const index = await call(E, 'public.kin_recover()');
+  assert.deepEqual(index.items.map(i => [i.id, i.claimed]), [[made.id, true]]);
+  assert.equal(index.next, null);
+  const full = await call(E, 'public.kin_receipts_get($1::uuid[])', [[made.id]]);
+  assert.deepEqual(full.items.map(i => [i.id, i.direction, i.collected, i.to_parent.name]), [[made.id, 'out', true, 'Fen']]);
+  // The other side's receipt is its own, and no one else can see either.
+  assert.deepEqual((await call(F, 'public.kin_recover()')).items.map(i => [i.id, i.claimed]), [[made.id, false]]);
+  assert.deepEqual((await call(G, 'public.kin_recover()')).items, []);
+  assert.deepEqual((await call(G, 'public.kin_receipts_get($1::uuid[])', [[made.id]])).items, [], 'someone else asking for it gets nothing, not a refusal that tells them it exists');
+  await as(E, () => rejects(db.query('select * from public.kin_receipts'), /permission denied/));
+  await rejects(call(E, 'public.kin_receipts_get($1::uuid[])', [[]]), /bad_basket/);
+  await rejects(call(E, 'public.kin_receipts_get($1::uuid[])', [Array(5).fill(made.id)]), /bad_basket/);
+  await rejects(call(E, 'public.kin_receipts_get($1::uuid[])', [null]), /bad_basket/);
+});
+
+test('the recovery index pages through every receipt in order, and a receipt survives the other account going', async () => {
+  await db.query(`delete from public.kin_receipts where owner in ($1, $2)`, [E, F]);
+  const bornAt = new Date(Date.UTC(2026, 0, 1));
+  for (let i = 0; i < 7; i++) {
+    const id = '00000000-0000-4000-8000-0000000001' + String(i).padStart(2, '0');
+    await db.query(`insert into public.kin_receipts (owner, basket_id, other, side, from_parent, to_parent, to_parent_id, seed, history, created_at, born_at, claimed_at)
+      values ($1, $2, $3, 'from', '{"id":"e0","name":"Eel"}', '{"id":"f0","name":"Fen"}', 'f0', $4, 'friends', $5, $5, $6)`,
+      [E, id, F, i, new Date(bornAt.getTime() + (i % 3) * 1000).toISOString(), i % 2 ? new Date().toISOString() : null]);
+  }
+  const seen = [];
+  let after = null, pages = 0;
+  do {
+    const page = await call(E, 'public.kin_recover($1::timestamptz, $2::uuid, 3)', [after && after.born_at, after && after.id]);
+    seen.push(...page.items.map(i => i.id));
+    after = page.next; pages++;
+  } while (after && pages < 10);
+  assert.equal(pages, 3, 'seven receipts in pages of three');
+  assert.equal(new Set(seen).size, 7, 'none twice, none missed');
+  assert.deepEqual(seen, (await db.query('select basket_id from public.kin_receipts where owner = $1 order by born_at, basket_id', [E])).rows.map(r => r.basket_id), 'oldest first, ties by id');
+  const clamped = await call(E, 'public.kin_recover(null, null, 0)');
+  assert.equal(clamped.items.length, 1, 'a limit below one is one');
+  assert.notEqual(clamped.next, null);
+  // F's account goes: E keeps every receipt, with the other player blanked.
+  await as(F, () => db.query('select public.delete_my_account()'));
+  assert.equal(await value('select count(*)::int from public.kin_receipts where owner = $1', [E]), 7);
+  assert.equal(await value('select count(*)::int from public.kin_receipts where owner = $1 and other is null', [E]), 7);
+  const [lone] = (await call(E, 'public.kin_receipts_get($1::uuid[])', [[seen[0]]])).items;
+  assert.equal(lone.to_user, '00000000-0000-0000-0000-000000000000');
+  assert.equal(lone.from_user, E);
+  assert.equal(lone.to_name, '');
+});
+
+test('loading the migration again leaves receipts exactly as they are, and old births are backfilled once', async () => {
+  const before = await value('select count(*)::int from public.kin_receipts');
+  const sample = await one('select owner, basket_id, claimed_at from public.kin_receipts order by born_at, basket_id limit 1');
+  await db.exec(KIN);
+  assert.equal(await value('select count(*)::int from public.kin_receipts'), before);
+  assert.deepEqual(await one('select owner, basket_id, claimed_at from public.kin_receipts order by born_at, basket_id limit 1'), sample);
+  // A birth from before receipts: a born basket and nothing else.
+  const old = '00000000-0000-4000-8000-0000000002aa';
+  await db.query(`insert into public.kin_baskets (id, from_user, to_user, from_parent, to_parent, to_parent_id, to_parent_name, seed, history, status, created_at, answered_at, to_collected_at)
+    values ($1, $2, $3, '{"id":"a0","name":"Mabel"}', '{"id":"b0","name":"Grubbs"}', 'b0', 'Grubbs', 99, 'friends', 'born', now(), now(), now())`, [old, A, B]);
+  await db.exec(KIN);
+  await db.exec(KIN);
+  const rows = (await db.query('select owner, side, claimed_at is not null as claimed from public.kin_receipts where basket_id = $1 order by side', [old])).rows;
+  assert.deepEqual(rows, [{ owner: A, side: 'from', claimed: false }, { owner: B, side: 'to', claimed: true }], 'the leaver still has theirs to collect, the recipient already did');
+  await db.query('delete from public.kin_receipts where basket_id = $1', [old]);
+  await db.query('delete from public.kin_baskets where id = $1', [old]);
 });

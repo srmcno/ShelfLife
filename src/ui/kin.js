@@ -10,7 +10,7 @@
 import { registerFriendAction, registerPostboxSource, registerFriendsSection, registerSocialView } from './social-registry.js';
 import { createKin, kinText, parentSnapshot, BASKET_HOURS } from '../cloud/kin.js';
 import { readResident } from '../cloud/social.js';
-import { kinState } from '../kin-state.js';
+import { kinState, KIN_STEP_MAX, KIN_COLLECTED_MAX } from '../kin-state.js';
 import { realizeFoundling, portraitHTML, envelopeSVG } from '../art/kin-art.js';
 import { foundlingPet, foundlingId, foundlingName, hasRoom, FULL_SHELF, NAME_ROLLS } from '../engine/kin.js';
 import { writeLetter, replyOptions } from '../engine/kin-letters.js';
@@ -37,7 +37,9 @@ function kinFor(ctx) {
   if (!k) { k = createKin({ cloud }); clients.set(cloud, k); }
   return k;
 }
-const cache = { user: null, mail: null, offset: 0, loading: null };
+// `loading` is one request per signed-in owner, so a look for one account is
+// never served to, or held up for, another.
+const cache = { user: null, mail: null, offset: 0, loading: new Map() };
 function mailFor(ctx) {
   const uid = kinFor(ctx)?.userId();
   return uid && cache.user === uid ? cache.mail : null;
@@ -45,23 +47,69 @@ function mailFor(ctx) {
 const serverNow = () => Date.now() + cache.offset;
 const nameFor = (ctx, userId, fallback = '') => friendLabel(ctx?.friend?.(userId)) !== 'A friend' ? ctx.friend(userId).name : fallback;
 
+/* ---------------- fences ----------------
+   Everything that waits on the cloud and then writes to the save checks, after
+   each wait, that it is still talking about the same account and the same
+   household. A restore (a backup, or a chosen cloud copy) swaps the contents of
+   the live state in place, under the same account, so the household is told
+   apart by its Kin record: normalizeState makes a new one every time, and the
+   window events below say so too. */
+let epoch = 0;
+export function noteStateReplaced() { epoch++; cache.mail = null; }
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('shelflife:state-replaced', noteStateReplaced);
+  window.addEventListener('shelflife:restored', noteStateReplaced);
+}
+export function stateFence(state, client, user) {
+  const kin = kinState(state), at = epoch;
+  return () => state.kin === kin && epoch === at && (!client?.userId || client.userId() === user);
+}
+const saved = ctx => ctx?.save?.() !== false;
+
 // One look at the server, then whatever it brought is kept in the save:
-// letters are written down, and foundlings born of our baskets move in.
+// letters are written down, and foundlings born of our baskets move in. A
+// look is only ever for one account and one household; if either changes
+// while it waits, what it found is dropped and the next look starts again.
 export function refreshKin(ctx) {
   const k = kinFor(ctx);
   if (!k || !k.signedIn()) { cache.mail = null; cache.user = null; return Promise.resolve(null); }
-  if (cache.loading) return cache.loading;
-  const request = k.mail().then(async mail => {
-    if (k.userId() !== mail.user) return null;
-    cache.user = mail.user; cache.mail = mail;
-    if (mail.now) cache.offset = mail.now - Date.now();
-    const result = await absorbMail({ state: ctx.state, mail, kin: k, shelfName: id => nameFor(ctx, id) });
-    if (result.changed) { ctx.save?.(); ctx.renderAll?.(); }
-    if (result.adopted.length) ctx.toast?.(result.adopted.length === 1 ? result.adopted[0].name + ' was found on the step.' : result.adopted.length + ' foundlings were found on the step.');
-    return mail;
-  }).finally(() => { if (cache.loading === request) cache.loading = null; });
-  cache.loading = request;
-  return request;
+  const uid = k.userId(), state = ctx.state;
+  const running = cache.loading.get(uid);
+  if (running && running.state === state && running.current()) return running.promise;
+  const current = stateFence(state, k, uid);
+  const entry = { state, current, promise: null };
+  entry.promise = (async () => {
+    let last = null;
+    for (let round = 0; round < MAX_ROUNDS; round++) {
+      let mail;
+      try { mail = await k.mail(); }
+      catch (error) { if (!current()) return null; throw error; }
+      if (!current()) return null;
+      cache.user = mail.user; cache.mail = mail;
+      if (mail.now) cache.offset = mail.now - Date.now();
+      const result = await absorbMail({ state, mail, kin: k, shelfName: id => nameFor(ctx, id), save: () => saved(ctx), current });
+      if (result.stale || !current()) return null;
+      mail.waiting = result.waiting + (mail.birthsMore ? 1 : 0);
+      last = mail;
+      announce(ctx, result);
+      if (!(mail.birthsMore && result.claimed.length)) break;
+    }
+    // Once per household and account: any foundling this save has never heard of.
+    try {
+      const found = await recoverBirths({ state, kin: k, user: uid, shelfName: id => nameFor(ctx, id), save: () => saved(ctx), current });
+      if (found.stale || !current()) return null;
+      if (last) last.waiting = Math.max(last.waiting || 0, found.waiting);
+      announce(ctx, found);
+    } catch { /* tried again on the next look; nothing is lost */ }
+    return last;
+  })().finally(() => { if (cache.loading.get(uid) === entry) cache.loading.delete(uid); });
+  cache.loading.set(uid, entry);
+  return entry.promise;
+}
+const MAX_ROUNDS = 6;
+function announce(ctx, result) {
+  if (result.changed) ctx.renderAll?.();
+  if (result.adopted.length) ctx.toast?.(result.adopted.length === 1 ? result.adopted[0].name + ' was found on the step.' : result.adopted.length + ' foundlings were found on the step.');
 }
 
 /* ---------------- keeping what arrives ---------------- */
@@ -98,7 +146,10 @@ export function foundlingRecord(basket, pet, side, shelf = '') {
 // Into a free space, with a note on the board. 'full' leaves it for the step.
 export function adopt(state, pet, record, note) {
   const kin = kinState(state);
-  if (state.pets.some(p => p.id === pet.id)) return 'here';
+  if (state.pets.some(p => p.id === pet.id)) {
+    if (!kin.foundlings.some(f => f.basket === record.basket)) kin.foundlings.push(record);
+    return 'here';
+  }
   if (!hasRoom(state)) return 'full';
   state.pets.push(pet);
   state.slots[state.slots.indexOf(null)] = pet.id;
@@ -115,33 +166,126 @@ function trimLetters(kin) {
     if (n > KEEP_PER_PAL) kin.letters.splice(i, 1);
   }
 }
-export async function absorbMail({ state, mail, kin: client, shelfName = () => '', realize = realizeFoundling, now = Date.now() }) {
-  const kin = kinState(state), result = { changed: false, adopted: [], stepped: [] };
-  for (const letter of mail.letters) {
+// Has this household already dealt with this birth? Here, waiting on the step,
+// written in its record, rehomed since (state.gone is never pruned) or already
+// taken in once. A save from before the birth knows none of these.
+export function knownBirth(state, basketId) {
+  const kin = kinState(state), pet = foundlingId(basketId);
+  return state.pets.some(p => p.id === pet) || kin.foundlings.some(f => f.basket === basketId) || kin.step.some(s => s.basket === basketId) ||
+    kin.collected.includes(basketId) || (Array.isArray(state.gone) && state.gone.some(g => g?.id === pet));
+}
+// Room on the step. A foundling goes straight to the shelf only when nobody is
+// already waiting; otherwise it queues behind them, so older arrivals get the
+// first free space. With the step full, a birth stays on the server, unclaimed,
+// until there is room.
+export const canKeep = state => kinState(state).step.length < KIN_STEP_MAX;
+
+// Marks births as taken in on this device and saves. If the save fails the
+// marks come off again: nothing counts as collected until it is durable.
+function commit(state, ids, save) {
+  const kin = kinState(state), added = ids.filter(id => !kin.collected.includes(id));
+  kin.collected.push(...added);
+  let ok = false;
+  try { ok = save() !== false; } catch { ok = false; }
+  if (!ok) kin.collected = kin.collected.filter(id => !added.includes(id));
+  else if (kin.collected.length > KIN_COLLECTED_MAX) kin.collected.splice(0, kin.collected.length - KIN_COLLECTED_MAX);
+  return ok;
+}
+async function takeBirths({ state, births, shelfName, realize, now, current, result }) {
+  const kin = kinState(state), take = [];
+  for (const b of births) {
+    if (!current()) { result.stale = true; return take; }
+    if (!knownBirth(state, b.id)) {
+      if (!canKeep(state)) { result.waiting++; continue; }
+      const plan = await realize({ a: b.fromParent, b: b.toParent, seed: b.seed });
+      if (!current()) { result.stale = true; return take; }
+      // Taken in by someone else while the drawing was being made, or no room after all.
+      if (!knownBirth(state, b.id)) {
+        if (!canKeep(state)) { result.waiting++; continue; }
+        plan.name = foundlingName(b.fromParent.name, b.toParent.name, b.seed, b.nameRoll);
+        const side = b.direction === 'out' ? 'out' : 'in';
+        const pet = foundlingPet(plan, { basketId: b.id, born: b.answeredAt || now });
+        const record = foundlingRecord(b, pet, side, shelfName(side === 'out' ? b.toUser : b.fromUser) || (side === 'out' ? b.toName : b.fromName));
+        const where = kin.step.length ? 'full' : adopt(state, pet, record, plan.birth);
+        if (where === 'full') { kin.step.push({ basket: b.id, at: now, pet, record, note: plan.birth }); result.stepped.push(pet); }
+        if (where === 'adopted') { kin.notices.push({ basket: b.id, pet: pet.id, at: now, text: plan.birth }); result.adopted.push(pet); }
+        result.changed = true;
+      }
+    }
+    take.push(b);
+  }
+  return take;
+}
+// Letters are written down; births are taken in, saved, and only then claimed
+// on the server. `current` says whether the account and household this mail was
+// fetched for are still the live ones; it is asked before anything is written
+// and again after every wait.
+export async function absorbMail({ state, mail, kin: client, shelfName = () => '', realize = realizeFoundling, now = Date.now(), save = () => true, current = null }) {
+  const result = { changed: false, adopted: [], stepped: [], claimed: [], waiting: 0, saved: true, stale: false };
+  const alive = current || stateFence(state, client, mail.user);
+  if (!alive()) { result.stale = true; return result; }
+  const kin = kinState(state);
+  let letters = false;
+  for (const letter of mail.letters || []) {
     if (kin.letters.some(l => l.id === letter.id)) continue;
     const pal = mail.pals.find(p => p.id === letter.pal);
     const kept = keepLetter(state, mail, letter, shelfName(pal?.friend) || '');
-    if (kept) { kin.letters.push(kept); result.changed = true; }
+    if (kept) { kin.letters.push(kept); result.changed = letters = true; }
   }
-  trimLetters(kin);
-  for (const b of mail.baskets) {
-    if (b.direction !== 'out' || b.status !== 'born' || b.collected) continue;
-    if (!kin.collected.includes(b.id)) {
-      const plan = await realize({ a: b.fromParent, b: b.toParent, seed: b.seed });
-      if (client?.userId && client.userId() !== mail.user) return result;
-      plan.name = foundlingName(b.fromParent.name, b.toParent.name, b.seed, b.nameRoll);
-      const pet = foundlingPet(plan, { basketId: b.id, born: now });
-      const record = foundlingRecord(b, pet, 'out', shelfName(b.toUser) || b.toName);
-      const where = adopt(state, pet, record, plan.birth);
-      if (where === 'full') { kin.step.push({ basket: b.id, at: now, pet, record, note: plan.birth }); result.stepped.push(pet); }
-      if (where === 'adopted') { kin.notices.push({ basket: b.id, pet: pet.id, at: now, text: plan.birth }); result.adopted.push(pet); }
-      kin.collected.push(b.id);
-      result.changed = true;
-    }
-    client?.collect?.(b.id).catch(() => { /* asked again on the next look */ });
+  if (letters) trimLetters(kin);
+  // A letter kept before the friends list was in hand (a background check) has no shelf name yet; the name is filled in once it is known.
+  for (const l of kin.letters) if (!l.shelf && l.friend) { const name = shelfName(l.friend); if (name) { l.shelf = name.slice(0, 24); result.changed = true; } }
+  const taken = await takeBirths({ state, births: mail.births || [], shelfName, realize, now, current: alive, result });
+  if (result.stale) return result;
+  if (result.changed || taken.length) {
+    result.saved = commit(state, taken.map(b => b.id), save);
+    // Nothing is claimed until the save is safe. The next look finds the same births and reaches the same shelf.
+    if (!result.saved) return result;
+  }
+  for (const b of taken) {
+    if (!alive()) { result.stale = true; return result; }
+    if (b.collected) { result.claimed.push(b.id); continue; }
+    try { await client?.collect?.(b.id); result.claimed.push(b.id); }
+    catch { /* asked again on the next look; the receipt is still there */ }
   }
   return result;
 }
+// Every birth this account has ever had, listed by the server and checked against
+// this household: a save restored from before a birth, or lost with a device,
+// is given its foundlings back, as many as there is room for, each once.
+const scanned = new WeakMap(); // a household's Kin record -> accounts already checked
+export async function recoverBirths({ state, kin: client, user, shelfName = () => '', realize = realizeFoundling, now = Date.now(), save = () => true, current = null }) {
+  const result = { changed: false, adopted: [], stepped: [], claimed: [], waiting: 0, saved: true, stale: false, scanned: false };
+  const alive = current || stateFence(state, client, user);
+  const kin = kinState(state);
+  if (scanned.get(kin)?.has(user)) return result;
+  const missing = [];
+  let cursor = null;
+  for (let page = 0; page < MAX_INDEX_PAGES; page++) {
+    const index = await client.recover(cursor);
+    if (!alive()) { result.stale = true; return result; }
+    for (const item of index.items) if (!knownBirth(state, item.id)) missing.push(item.id);
+    cursor = index.next;
+    if (!cursor) break;
+  }
+  while (missing.length && canKeep(state)) {
+    const births = await client.receipts(missing.splice(0, 4));
+    if (!alive()) { result.stale = true; return result; }
+    const part = await absorbMail({ state, mail: { user, letters: [], pals: [], baskets: [], births }, kin: client, shelfName, realize, now, save, current: alive });
+    for (const key of ['adopted', 'stepped', 'claimed']) result[key].push(...part[key]);
+    result.changed ||= part.changed; result.waiting += part.waiting;
+    if (part.stale) { result.stale = true; return result; }
+    if (!part.saved) { result.saved = false; return result; }
+  }
+  result.waiting += missing.length;
+  if (!cursor && !missing.length && !result.waiting) {
+    const mine = scanned.get(kin) || new Set();
+    scanned.set(kin, mine.add(user));
+    result.scanned = true;
+  }
+  return result;
+}
+const MAX_INDEX_PAGES = 50;
 export function takeInFromStep(state, basketId) {
   const kin = kinState(state);
   const i = kin.step.findIndex(s => s.basket === basketId);
@@ -174,15 +318,15 @@ async function guard(action, ctx, friend, after) {
   if (action === 'block-yes') {
     await ctx.social.block(friend.userId);
     cache.mail = null;
-    ctx.say?.('Blocked. They will not find you again.');
     after?.();
+    ctx.say?.('Blocked. They will not find you again.');
     return true;
   }
   if (action === 'report-yes') {
     const reason = document.querySelector('input[name="kinReason"]:checked')?.value || REPORT_REASONS[3];
     await ctx.social.report(friend.userId, reason + ': kin');
-    ctx.say?.('Reported. Block them too if you would rather not hear from them.');
     after?.();
+    ctx.say?.('Reported. Block them too if you would rather not hear from them.');
     return true;
   }
   return false;
@@ -241,11 +385,12 @@ registerSocialView('kin-basket', {
     try {
       await kinFor(ctx).leaveBasket({ to: basket.friend.userId, pet, theirs: basket.their });
       const theirs = basket.theirs.find(r => r.id === basket.their);
-      ctx.say?.('A basket is on ' + friendLabel(basket.friend) + '’s step, with ' + pet.name + ' and ' + (theirs?.name || 'theirs') + ' in mind. It keeps for ' + BASKET_HOURS + ' hours.');
+      const said = 'A basket is on ' + friendLabel(basket.friend) + '’s step, with ' + pet.name + ' and ' + (theirs?.name || 'theirs') + ' in mind. It keeps for ' + BASKET_HOURS + ' hours.';
       basket = null;
       cache.mail = null;
       refreshKin(ctx).catch(() => {});
       ctx.back?.();
+      ctx.say?.(said);
     } catch (error) {
       basket.busy = false; basket.error = kinText(error); basketView(ctx);
     }
@@ -307,27 +452,38 @@ async function openOffer(basketId, ctx) {
   offerView(ctx);
 }
 async function answer(ctx, accept) {
-  const b = offer.basket, k = kinFor(ctx);
+  const b = offer.basket, k = kinFor(ctx), state = ctx.state;
+  const current = stateFence(state, k, k.userId());
+  let said = '';
   offer.busy = true; offer.error = ''; offerView(ctx);
   try {
-    if (accept && !hasRoom(ctx.state)) throw Object.assign(new Error(FULL_SHELF), { code: 'shelf_full' });
+    if (accept && !hasRoom(state)) throw Object.assign(new Error(FULL_SHELF), { code: 'shelf_full' });
     const r = await k.answerBasket(b.id, { accept, parent: offer.snapshot, nameRoll: offer.roll });
+    // The account or the household changed while the cloud was answering. The
+    // birth is on the server as a receipt and finds its way to whichever shelf is live.
+    if (!current()) { offer = null; cache.mail = null; refreshKin(ctx).catch(() => {}); ctx.back?.(); return; }
     if (accept && r.status === 'born') {
       const plan = { ...offer.plan, name: offerName() };
-      const pet = foundlingPet(plan, { basketId: b.id, born: Date.now() });
+      const pet = foundlingPet(plan, { basketId: b.id, born: r.answeredAt || Date.now() });
       const friend = ctx.friend?.(b.fromUser);
       const record = foundlingRecord({ ...b, toParent: offer.parent }, pet, 'in', friend?.name || b.fromName);
-      const where = adopt(ctx.state, pet, record, plan.birth);
-      if (where === 'full') kinState(ctx.state).step.push({ basket: b.id, at: Date.now(), pet, record, note: plan.birth });
-      kinState(ctx.state).collected.push(b.id);
-      ctx.save?.(); ctx.renderAll?.();
-      ctx.say?.(pet.name + ' has moved in. ' + shelfLabel(friend?.name || b.fromName).replace(/^./, c => c.toUpperCase()) + ' has one too, which will live its own life.');
-    } else ctx.say?.('The basket stays on the step until it is taken back in. ' + friendLabel(ctx.friend?.(b.fromUser)) + ' is not told why.');
+      const where = adopt(state, pet, record, plan.birth);
+      if (where === 'full') kinState(state).step.push({ basket: b.id, at: Date.now(), pet, record, note: plan.birth });
+      // Saved first, claimed after: if the save fails nothing is claimed, and the next look at the mail finishes the job.
+      const durable = commit(state, [b.id], () => saved(ctx));
+      ctx.renderAll?.();
+      if (durable) k.collect(b.id).catch(() => { /* claimed on the next look */ });
+      said = durable ? pet.name + ' has moved in. ' + shelfLabel(friend?.name || b.fromName).replace(/^./, c => c.toUpperCase()) + ' has one too, which will live its own life.'
+        : pet.name + ' has moved in, but the shelf could not be saved just now. It will be saved with the next change.';
+    } else said = 'The basket stays on the step until it is taken back in. ' + friendLabel(ctx.friend?.(b.fromUser)) + ' is not told why.';
     offer = null; cache.mail = null;
     refreshKin(ctx).catch(() => {});
     ctx.back?.();
+    ctx.say?.(said);
   } catch (error) {
-    offer.busy = false; offer.error = error.code === 'shelf_full' ? FULL_SHELF : kinText(error); offerView(ctx);
+    // A reply that never came back may still have been a birth; the mail knows.
+    if (accept && error.code !== 'shelf_full') { cache.mail = null; refreshKin(ctx).catch(() => {}); }
+    if (offer) { offer.busy = false; offer.error = error.code === 'shelf_full' ? FULL_SHELF : kinText(error); offerView(ctx); }
   }
 }
 registerSocialView('kin-offer', {
@@ -385,7 +541,7 @@ registerSocialView('kin-letter', {
     const l = keptLetter(ctx, reading.id);
     if (!l) return;
     const friend = ctx.friend?.(l.friend) || { userId: l.friend, name: l.shelf };
-    if (action === 'drawer') { reading = null; ctx.say?.('Put away. It is on the resident card, under Correspondence.'); ctx.back?.(); return; }
+    if (action === 'drawer') { reading = null; ctx.back?.(); ctx.say?.('Put away. It is on the resident card, under Correspondence.'); return; }
     if (action === 'stop' || action === 'block' || action === 'report') { reading.confirm = action; letterView(ctx); return; }
     if (action === 'guard-cancel') { reading.confirm = ''; letterView(ctx); return; }
     reading.busy = true; reading.error = ''; letterView(ctx);
@@ -399,15 +555,15 @@ registerSocialView('kin-letter', {
           friend: l.friend, shelf: l.shelf, text: option.text, read: true, replied: false });
         trimLetters(kinState(ctx.state));
         ctx.save?.();
-        ctx.say?.('Sent. ' + l.theirs + ' will have it by the next post.');
         reading = null; ctx.back?.();
+        ctx.say?.('Sent. ' + l.theirs + ' will have it by the next post.');
         return;
       }
       if (action === 'stop-yes') {
         await kinFor(ctx).end(l.pal);
         cache.mail = null;
-        ctx.say?.('Stopped. The letters already kept stay on the resident card.');
         reading = null; ctx.back?.();
+        ctx.say?.('Stopped. The letters already kept stay on the resident card.');
         return;
       }
       if (!(await guard(action, ctx, friend, () => { reading = null; ctx.back?.(); }))) { reading.busy = false; letterView(ctx); }
@@ -464,10 +620,10 @@ registerSocialView('kin-introduce', {
     intro.busy = true; intro.error = ''; introView(ctx);
     try {
       await kinFor(ctx).introduce({ to: intro.friend.userId, mine: intro.mine, theirs: intro.their });
-      ctx.say?.('Introduced. The first letters go out with the next post.');
       intro = null; cache.mail = null;
       refreshKin(ctx).catch(() => {});
       ctx.back?.();
+      ctx.say?.('Introduced. The first letters go out with the next post.');
     } catch (error) { intro.busy = false; intro.error = kinText(error); introView(ctx); }
   }
 });
@@ -552,16 +708,21 @@ registerPostboxSource({
 
 registerPostboxSource({
   id: 'kin-births', order: 31, label: 'Births', poll: true,
-  count(ctx) { const kin = kinState(ctx.state); return kin.notices.length + kin.step.length; },
+  count(ctx) { const kin = kinState(ctx.state); return kin.notices.length + kin.step.length + (mailFor(ctx)?.waiting ? 1 : 0); },
   async load(ctx) {
     await refreshKin(ctx).catch(() => null);
-    const kin = kinState(ctx.state);
+    const kin = kinState(ctx.state), waiting = mailFor(ctx)?.waiting || 0;
     return [
+      ...(waiting ? [{ id: 'kin-waiting', at: Date.now(), title: 'More foundlings are waiting', line: '', waiting }] : []),
       ...kin.step.map(s => ({ id: s.basket, at: s.at, title: 'A foundling is waiting on the step', line: s.note, step: s })),
       ...kin.notices.map(n => ({ id: n.basket, at: n.at, title: 'Found on the step', line: n.text, notice: n }))
     ];
   },
   render(item, ctx) {
+    if (item.waiting) {
+      return '<div class="kin-row kin-row-quiet" data-kin-waiting><div class="kin-row-text"><b>' + esc(plural(item.waiting, 'more foundling is', 'more foundlings are') + ' waiting at the door.') + '</b><p>' +
+        esc('There is no room on the shelf or the step. Take one in, or make some room, and the next comes in.') + '</p></div></div>';
+    }
     if (item.step) {
       const room = hasRoom(ctx.state);
       return '<div class="kin-row" data-kin-step="' + esc(item.id) + '"><span class="kin-row-art">' + portraitHTML(item.step.pet.art) + '</span><div class="kin-row-text"><b>' + esc(item.step.pet.name + ' is waiting on the step.') + '</b><p>' +

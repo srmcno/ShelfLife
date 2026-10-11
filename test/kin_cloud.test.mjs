@@ -76,7 +76,7 @@ test('a basket, accepted, gives both shelves the same foundling with the right p
   assert.equal(adopt(bea.shelf, beaPet, foundlingRecord({ ...basket, toParent: readResident(snapshot) }, beaPet, 'in', 'Ada'), preview.birth), 'adopted');
   // Ada's device finds the birth and takes her copy in.
   const mail = await ada.kin.mail();
-  const step = mail.baskets.find(b => b.status === 'born');
+  const [step] = mail.births;
   assert.equal(step.seed, basket.seed);
   const result = await absorbMail({ state: ada.shelf, mail, kin: ada.kin, shelfName: () => 'Bea', now: w.now });
   assert.equal(result.adopted.length, 1);
@@ -86,8 +86,8 @@ test('a basket, accepted, gives both shelves the same foundling with the right p
   assert.deepEqual(ada.shelf.kin.foundlings[0].parents.map(p => [p.name, p.home, p.shelf]), [['Mabel', true, ''], ['Grubbs', false, 'Bea']]);
   assert.deepEqual(bea.shelf.kin.foundlings[0].parents.map(p => [p.name, p.home, p.shelf]), [['Mabel', false, 'Ada'], ['Grubbs', true, '']]);
   await new Promise(resolve => setTimeout(resolve, 0));
-  assert.ok(w.fake.kin.baskets.get(basket.id).from_collected_at, 'collected on the server');
-  assert.equal((await ada.kin.mail()).baskets.filter(b => b.status === 'born').length, 0);
+  assert.ok(w.fake.kin.receipts.get(ada.id + '|' + basket.id).claimed_at, 'claimed on the server');
+  assert.equal((await ada.kin.mail()).births.length, 0);
   // Both saves stay valid.
   assert.ok(normalizeState(JSON.parse(JSON.stringify(ada.shelf))));
   assert.ok(normalizeState(JSON.parse(JSON.stringify(bea.shelf))));
@@ -184,4 +184,48 @@ test('readers drop what they do not recognise', () => {
   assert.equal(mail.baskets.length, 1, 'duplicates and the overflow are dropped');
   assert.deepEqual(mail.friends[0].hearings, [['a', 'b']]);
   assert.deepEqual([mail.pals, mail.letters], [[], []]);
+});
+
+test('birth receipts: the mail carries unclaimed ones, the index pages, and ids that are not ours come back empty', async () => {
+  const w = world();
+  const ada = await w.player('Ada', household(['Mabel', 'Pip'], 'a'));
+  const bea = await w.player('Bea', household(['Grubbs', 'Snag'], 'b'));
+  const cat = await w.player('Cat', household(['Clod'], 'c'));
+  await friends(w, ada, bea);
+  const left = await ada.kin.leaveBasket({ to: bea.id, pet: ada.shelf.pets[0], theirs: 'b0' });
+  await bea.kin.answerBasket(left.id, { accept: true, parent: parentSnapshot(bea.shelf.pets[0]) });
+  const [mine] = (await ada.kin.mail()).births;
+  assert.deepEqual([mine.id, mine.direction, mine.status, mine.collected, mine.fromParent.name, mine.toParent.name], [left.id, 'out', 'born', false, 'Mabel', 'Grubbs']);
+  const [theirs] = (await bea.kin.mail()).births;
+  assert.deepEqual([theirs.direction, theirs.fromName, theirs.toName], ['in', 'Ada', 'Bea'], 'the recipient has one too, from her side');
+  assert.equal(theirs.seed, mine.seed);
+  const index = await ada.kin.recover();
+  assert.deepEqual(index.items.map(i => [i.id, i.claimed]), [[left.id, false]]);
+  assert.equal(index.next, null);
+  assert.deepEqual((await ada.kin.receipts([left.id, left.id])).map(b => b.id), [left.id], 'asked twice, answered once');
+  assert.deepEqual(await cat.kin.receipts([left.id]), [], 'someone else’s receipt is not theirs to read');
+  assert.deepEqual((await cat.kin.recover()).items, []);
+  const claim = await ada.kin.collect(left.id);
+  assert.equal(claim.id, left.id);
+  assert.ok(claim.claimedAt >= w.now - 1);
+  assert.equal((await ada.kin.collect(left.id)).claimedAt, claim.claimedAt, 'claiming twice keeps the first time');
+  assert.deepEqual((await ada.kin.mail()).births, []);
+  assert.equal((await ada.kin.recover()).items[0].claimed, true, 'a claim is a bookmark: the receipt stays');
+  await assert.rejects(cat.kin.collect(left.id), refused('not_found'));
+  assert.deepEqual(await ada.kin.receipts(['not-a-uuid']), [], 'a malformed id is dropped before asking');
+  // Many ids go four to a call.
+  const ids = Array.from({ length: 9 }, (_, i) => '00000000-0000-4000-8000-0000000003' + String(10 + i));
+  assert.deepEqual(await ada.kin.receipts(ids), []);
+});
+
+test('a server from before receipts: its uncollected outgoing births ride in the baskets', () => {
+  const me = '00000000-0000-4000-8000-00000000000a', other = '00000000-0000-4000-8000-00000000000b', id = '00000000-0000-4000-8000-0000000000aa';
+  const parent = { id: 'p0', name: 'Mabel', traits: [], art: { creature: { body: 'pear', palette: 'mint', parts: {} } } };
+  const born = { id, direction: 'out', status: 'born', from_user: me, to_user: other, from_parent: parent, to_parent_id: 'b0', to_parent: { ...parent, id: 'b0' }, seed: 5, collected: false };
+  assert.deepEqual(readKinMail({ baskets: [born] }, me).births.map(b => b.id), [id]);
+  assert.deepEqual(readKinMail({ baskets: [born], births: [] }, me).births, [], 'a server that sends births is believed');
+  assert.deepEqual(readKinMail({ baskets: [{ ...born, collected: true }] }, me).births, []);
+  assert.equal(readKinMail({ baskets: [born], births: [born, { ...born, id: 'junk' }], births_more: true }, me).birthsMore, true);
+  assert.equal(readKinMail({ baskets: [born], births: [born, { ...born, id: 'junk' }] }, me).births.length, 1, 'a birth that does not read is dropped');
+  assert.equal(readKinMail({ baskets: [born] }, me).baskets.length, 0, 'a born basket is never listed as a basket');
 });

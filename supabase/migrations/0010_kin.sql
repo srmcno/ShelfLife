@@ -37,11 +37,23 @@
 -- (timestamptz) or public.profiles.dnd (boolean) when either column exists,
 -- and is false otherwise. Nothing here creates them.
 --
+-- Birth receipts. A born foundling is written down twice, once for each
+-- player, in public.kin_receipts: the two parents' snapshots, the seed, the
+-- name roll and when it was born. A receipt belongs to its owner alone, is
+-- never pruned and is never deleted by anything but the owner's account. A
+-- device takes a foundling in, saves it, and only then claims the receipt
+-- (kin_collect). Claiming is a bookmark, not a deletion, so a lost reply, a
+-- failed save or a backup restored over a newer shelf loses nothing: the
+-- device lists its receipts (kin_recover), asks for the ones it does not
+-- know (kin_receipts_get) and takes them in again, idempotently, because the
+-- foundling's id is derived from the basket id.
+--
 -- Housekeeping runs inside kin_mail() for the caller's own rows. For the SQL
 -- editor now and then:
 --   delete from public.kin_letters where created_at < now() - interval '60 days';
 --   delete from public.kin_baskets where status <> 'born' and created_at < now() - interval '30 days';
 --   delete from public.kin_baskets where status = 'born' and answered_at < now() - interval '90 days';
+-- Receipts are the durable record of a birth and are left alone.
 
 -- ---------------------------------------------------------------------------
 -- Tables
@@ -114,6 +126,48 @@ create unique index if not exists kin_letters_one_reply on public.kin_letters (r
 create index if not exists kin_letters_to on public.kin_letters (to_user, read_at);
 create index if not exists kin_letters_from on public.kin_letters (from_user, created_at);
 
+-- One row per player per birth. The basket row it came from is housekeeping's
+-- to delete; the receipt carries everything both devices need to blend the
+-- same child again. The other player's account going away blanks `other`, it
+-- does not take the foundling with it.
+create table if not exists public.kin_receipts (
+  owner uuid not null references auth.users (id) on delete cascade,
+  basket_id uuid not null,
+  other uuid references auth.users (id) on delete set null,
+  side text not null check (side in ('from', 'to')),
+  from_parent jsonb not null,
+  to_parent jsonb not null,
+  to_parent_id text not null check (to_parent_id ~ '^[a-zA-Z0-9_-]{1,100}$'),
+  to_parent_name text not null default '' check (char_length(to_parent_name) <= 22),
+  seed bigint not null check (seed between 0 and 2147483647),
+  name_roll int not null default 0 check (name_roll between 0 and 49),
+  history text not null check (history in ('hearing', 'letters', 'foundling', 'friends')),
+  created_at timestamptz not null,
+  born_at timestamptz not null,
+  claimed_at timestamptz,
+  constraint kin_receipts_pk primary key (owner, basket_id),
+  constraint kin_receipts_size check (octet_length(from_parent::text) < 150000 and octet_length(to_parent::text) < 150000)
+);
+create index if not exists kin_receipts_owner on public.kin_receipts (owner, born_at, basket_id);
+create index if not exists kin_receipts_pending on public.kin_receipts (owner, born_at, basket_id) where claimed_at is null;
+
+-- Births from before receipts existed. Safe to run again: a receipt that is
+-- there is left exactly as it is. The recipient's copy was marked taken in
+-- when they agreed, so it starts claimed; the leaver's is claimed when they
+-- collected it.
+insert into public.kin_receipts (owner, basket_id, other, side, from_parent, to_parent, to_parent_id, to_parent_name, seed, name_roll, history, created_at, born_at, claimed_at)
+select k.from_user, k.id, k.to_user, 'from', k.from_parent, k.to_parent, k.to_parent_id, k.to_parent_name, k.seed, k.name_roll, k.history,
+       k.created_at, coalesce(k.answered_at, k.created_at), k.from_collected_at
+  from public.kin_baskets k
+ where k.status = 'born' and k.to_parent is not null
+on conflict (owner, basket_id) do nothing;
+insert into public.kin_receipts (owner, basket_id, other, side, from_parent, to_parent, to_parent_id, to_parent_name, seed, name_roll, history, created_at, born_at, claimed_at)
+select k.to_user, k.id, k.from_user, 'to', k.from_parent, k.to_parent, k.to_parent_id, k.to_parent_name, k.seed, k.name_roll, k.history,
+       k.created_at, coalesce(k.answered_at, k.created_at), coalesce(k.to_collected_at, k.answered_at, k.created_at)
+  from public.kin_baskets k
+ where k.status = 'born' and k.to_parent is not null
+on conflict (owner, basket_id) do nothing;
+
 -- ---------------------------------------------------------------------------
 -- Row level security. Nothing is granted: the client only calls functions.
 -- ---------------------------------------------------------------------------
@@ -121,7 +175,8 @@ create index if not exists kin_letters_from on public.kin_letters (from_user, cr
 alter table public.kin_baskets enable row level security;
 alter table public.kin_pals enable row level security;
 alter table public.kin_letters enable row level security;
-revoke all on table public.kin_baskets, public.kin_pals, public.kin_letters from public, anon, authenticated;
+alter table public.kin_receipts enable row level security;
+revoke all on table public.kin_baskets, public.kin_pals, public.kin_letters, public.kin_receipts from public, anon, authenticated;
 
 drop policy if exists "baskets are for the two players in them" on public.kin_baskets;
 create policy "baskets are for the two players in them" on public.kin_baskets
@@ -129,6 +184,9 @@ create policy "baskets are for the two players in them" on public.kin_baskets
 drop policy if exists "pen pals are for the two players in them" on public.kin_pals;
 create policy "pen pals are for the two players in them" on public.kin_pals
   for select to authenticated using ((select auth.uid()) in (user_a, user_b));
+drop policy if exists "receipts are for their owner" on public.kin_receipts;
+create policy "receipts are for their owner" on public.kin_receipts
+  for select to authenticated using ((select auth.uid()) = owner);
 drop policy if exists "letters are for the two players in them" on public.kin_letters;
 create policy "letters are for the two players in them" on public.kin_letters
   for select to authenticated using ((select auth.uid()) in (from_user, to_user));
@@ -332,6 +390,36 @@ begin
 end;
 $$;
 
+-- One birth receipt as the mail shows a born basket, from its owner's side:
+-- the same keys kin_mail gives a basket, so the client reads both alike.
+-- `collected` is whether the owner has claimed it. Null when it is not theirs.
+create or replace function private.kin_receipt_json(p_owner uuid, p_basket uuid)
+returns jsonb
+language sql
+stable
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'id', r.basket_id,
+    'direction', case when r.side = 'from' then 'out' else 'in' end,
+    'status', 'born',
+    'from_user', case when r.side = 'from' then r.owner else coalesce(r.other, '00000000-0000-0000-0000-000000000000'::uuid) end,
+    'to_user', case when r.side = 'to' then r.owner else coalesce(r.other, '00000000-0000-0000-0000-000000000000'::uuid) end,
+    'from_name', case when r.other is null or private.kin_blocked(r.owner, r.other) then ''
+                      when r.side = 'from' then coalesce((select p.display_name from public.profiles p where p.user_id = r.owner), '')
+                      else coalesce((select p.display_name from public.profiles p where p.user_id = r.other), '') end,
+    'to_name', case when r.other is null or private.kin_blocked(r.owner, r.other) then ''
+                    when r.side = 'to' then coalesce((select p.display_name from public.profiles p where p.user_id = r.owner), '')
+                    else coalesce((select p.display_name from public.profiles p where p.user_id = r.other), '') end,
+    'from_parent', r.from_parent,
+    'to_parent_id', r.to_parent_id, 'to_parent_name', r.to_parent_name, 'to_parent', r.to_parent,
+    'seed', r.seed, 'name_roll', r.name_roll, 'history', r.history,
+    'created_at', r.created_at, 'expires_at', r.created_at + interval '48 hours', 'answered_at', r.born_at,
+    'collected', r.claimed_at is not null)
+  from public.kin_receipts r
+ where r.owner = p_owner and r.basket_id = p_basket;
+$$;
+
 -- Another feature's friendship levels, when that migration is present.
 create or replace function private.kin_bump(a uuid, b uuid, kind text)
 returns void
@@ -378,6 +466,7 @@ revoke all on function private.kin_shelf_card(uuid, text) from public;
 revoke all on function private.kin_history(uuid, text, uuid, text) from public;
 revoke all on function private.kin_pal(uuid, text, text, uuid, text, text, text, text, uuid) from public;
 revoke all on function private.kin_deliver(uuid, int) from public;
+revoke all on function private.kin_receipt_json(uuid, uuid) from public;
 revoke all on function private.kin_bump(uuid, uuid, text) from public;
 revoke all on function private.kin_unfriended() from public;
 
@@ -441,6 +530,9 @@ $$;
 
 -- Accept with the caller's own resident snapshot and the name they settled on,
 -- or decline. { ok, id, status, seed, name_roll, answered_at }
+-- Accepting writes both players' birth receipts and marks nothing taken in:
+-- the caller's device claims theirs with kin_collect once it has saved the
+-- foundling. If the reply is lost, the receipt is waiting in kin_mail().
 create or replace function public.kin_answer_basket(p_id uuid, p_accept boolean, p_parent jsonb default null, p_name_roll int default 0)
 returns jsonb
 language plpgsql
@@ -480,9 +572,13 @@ begin
     perform private.refuse('too_soon');
   end if;
   update public.kin_baskets
-     set status = 'born', to_parent = p_parent, name_roll = p_name_roll, answered_at = now(), to_collected_at = now()
+     set status = 'born', to_parent = p_parent, name_roll = p_name_roll, answered_at = now()
    where id = p_id
   returning * into b;
+  insert into public.kin_receipts (owner, basket_id, other, side, from_parent, to_parent, to_parent_id, to_parent_name, seed, name_roll, history, created_at, born_at)
+  select v.owner, b.id, v.other, v.side, b.from_parent, b.to_parent, b.to_parent_id, b.to_parent_name, b.seed, b.name_roll, b.history, b.created_at, b.answered_at
+    from (values (b.from_user, b.to_user, 'from'::text), (b.to_user, b.from_user, 'to'::text)) as v(owner, other, side)
+  on conflict (owner, basket_id) do nothing;
   -- The parents write to each other, and so do the two copies of the child.
   perform private.kin_pal(b.from_user, b.from_parent ->> 'id', b.from_parent ->> 'name', uid, b.to_parent_id, p_parent ->> 'name', 'foundling', null, b.id);
   perform private.kin_pal(b.from_user, 'kin' || left(replace(b.id::text, '-', ''), 12), '', uid, 'kin' || left(replace(b.id::text, '-', ''), 12), '', 'twin', null, b.id);
@@ -507,7 +603,10 @@ begin
 end;
 $$;
 
--- The leaver's copy has been taken in on their device. Idempotent.
+-- The caller's device has taken this foundling in and saved it: claim the
+-- receipt. Idempotent, and a claim is only a bookmark; the receipt stays, so
+-- a shelf restored from an older backup can still be given the foundling back
+-- (kin_recover). { ok, id, claimed_at }
 create or replace function public.kin_collect(p_id uuid)
 returns jsonb
 language plpgsql
@@ -516,11 +615,79 @@ set search_path = public
 as $$
 declare
   uid uuid := private.require_user();
+  at timestamptz;
 begin
-  update public.kin_baskets set from_collected_at = coalesce(from_collected_at, now())
-   where id = p_id and from_user = uid and status = 'born';
+  -- Account lock first, then any row lock.
+  perform private.lock_account(uid);
+  update public.kin_receipts set claimed_at = coalesce(claimed_at, now())
+   where owner = uid and basket_id = p_id
+  returning claimed_at into at;
   if not found then perform private.refuse('not_found'); end if;
-  return jsonb_build_object('ok', true);
+  -- Keep the basket row's own bookmarks in step while it is still there.
+  update public.kin_baskets
+     set from_collected_at = case when from_user = uid then coalesce(from_collected_at, at) else from_collected_at end,
+         to_collected_at = case when to_user = uid then coalesce(to_collected_at, at) else to_collected_at end
+   where id = p_id and uid in (from_user, to_user);
+  return jsonb_build_object('ok', true, 'id', p_id, 'claimed_at', at);
+end;
+$$;
+
+-- Every birth receipt the caller owns, claimed or not, oldest first, as a
+-- compact index a device can walk without carrying any art:
+--   { ok, items: [{ id, claimed, born_at }], next: { born_at, id } | null }
+-- Pass `next` back as p_after_born / p_after_id for the following page.
+-- p_limit is clamped to 1..500.
+create or replace function public.kin_recover(p_after_born timestamptz default null, p_after_id uuid default null, p_limit int default 200)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare
+  uid uuid := private.require_user();
+  n int := least(greatest(coalesce(p_limit, 200), 1), 500);
+  items jsonb;
+  more boolean;
+  last_born timestamptz;
+  last_id uuid;
+begin
+  with page as (
+    select r.basket_id, r.claimed_at, r.born_at, row_number() over (order by r.born_at, r.basket_id) as rn
+      from public.kin_receipts r
+     where r.owner = uid
+       and (p_after_born is null or (r.born_at, r.basket_id) > (p_after_born, coalesce(p_after_id, '00000000-0000-0000-0000-000000000000'::uuid)))
+     order by r.born_at, r.basket_id
+     limit n + 1)
+  select coalesce(jsonb_agg(jsonb_build_object('id', basket_id, 'claimed', claimed_at is not null, 'born_at', born_at) order by rn) filter (where rn <= n), '[]'::jsonb),
+         coalesce(max(rn) > n, false),
+         (array_agg(born_at order by rn) filter (where rn = n))[1],
+         (array_agg(basket_id order by rn) filter (where rn = n))[1]
+    into items, more, last_born, last_id
+    from page;
+  return jsonb_build_object('ok', true, 'items', items,
+    'next', case when more then jsonb_build_object('born_at', last_born, 'id', last_id) end);
+end;
+$$;
+
+-- The full receipts for up to four of the caller's own baskets (the art makes
+-- them heavy), in the shape of a born basket in kin_mail. Ids that are not
+-- the caller's are left out, not refused. { ok, items }
+create or replace function public.kin_receipts_get(p_ids uuid[])
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare
+  uid uuid := private.require_user();
+begin
+  if p_ids is null or coalesce(array_length(p_ids, 1), 0) not between 1 and 4 then perform private.refuse('bad_basket'); end if;
+  return jsonb_build_object('ok', true, 'items', coalesce((
+    select jsonb_agg(private.kin_receipt_json(uid, r.basket_id) order by r.born_at, r.basket_id)
+      from public.kin_receipts r
+     where r.owner = uid and r.basket_id = any (p_ids)), '[]'::jsonb));
 end;
 $$;
 
@@ -657,7 +824,12 @@ $$;
 --                 history, created_at, expires_at, answered_at, collected }],
 --     pals: [{ id, friend, mine: { id, name }, theirs: { id, name }, history, case_id, basket_id, seed, created_at }],
 --     letters: [{ id, pal_id, from_user, kind, week, reply_to, choice, writer, reader, created_at }],   unread, to the caller
---     friends: [{ user_id, since, week_old, open_basket, next_basket_at, hearings: [[mine, theirs], ...] }] }
+--     friends: [{ user_id, since, week_old, open_basket, next_basket_at, hearings: [[mine, theirs], ...] }],
+--     births: [the caller's unclaimed birth receipts, oldest first, at most three, each shaped like a born basket
+--              with status 'born' and the whole of both parents],
+--     births_more: true when more unclaimed receipts are waiting behind those three }
+-- Born baskets are not in `baskets`: a birth is a receipt, and it stays in
+-- `births` until the device claims it with kin_collect.
 -- An incoming basket's seed is shown so the recipient can see what they are
 -- agreeing to; the leaver sees it only once the foundling is born.
 create or replace function public.kin_mail()
@@ -707,7 +879,6 @@ begin
        where (k.to_user = uid and k.status = 'offered' and k.created_at > now() - interval '48 hours'
               and private.are_friends(k.from_user, uid) and not private.kin_blocked(k.from_user, uid))
           or (k.from_user = uid and k.status = 'offered' and k.created_at > now() - interval '48 hours')
-          or (k.from_user = uid and k.status = 'born' and k.from_collected_at is null)
           or (k.from_user = uid and k.status <> 'born' and coalesce(k.answered_at, k.created_at + interval '48 hours') > now() - interval '3 days'
               and (k.status <> 'offered' or k.created_at <= now() - interval '48 hours'))
        order by k.created_at desc limit 12) x), '[]'::jsonb),
@@ -752,7 +923,11 @@ begin
         from (select case when f.requester = uid then f.addressee else f.requester end as other, f.created_at
                 from public.friendships f
                where f.status = 'accepted' and uid in (f.requester, f.addressee)
-               limit 200) fr), '[]'::jsonb));
+               limit 200) fr), '[]'::jsonb),
+    'births', coalesce((select jsonb_agg(private.kin_receipt_json(uid, x.basket_id) order by x.born_at, x.basket_id)
+        from (select r.basket_id, r.born_at from public.kin_receipts r
+               where r.owner = uid and r.claimed_at is null order by r.born_at, r.basket_id limit 3) x), '[]'::jsonb),
+    'births_more', (select count(*) from public.kin_receipts r where r.owner = uid and r.claimed_at is null) > 3);
 end;
 $$;
 
@@ -769,6 +944,8 @@ revoke all on function public.kin_end(uuid) from public, anon, authenticated;
 revoke all on function public.kin_reply(uuid, int) from public, anon, authenticated;
 revoke all on function public.kin_read(uuid) from public, anon, authenticated;
 revoke all on function public.kin_mail() from public, anon, authenticated;
+revoke all on function public.kin_recover(timestamptz, uuid, int) from public, anon, authenticated;
+revoke all on function public.kin_receipts_get(uuid[]) from public, anon, authenticated;
 
 grant execute on function public.kin_leave_basket(uuid, jsonb, text) to authenticated;
 grant execute on function public.kin_answer_basket(uuid, boolean, jsonb, int) to authenticated;
@@ -779,3 +956,5 @@ grant execute on function public.kin_end(uuid) to authenticated;
 grant execute on function public.kin_reply(uuid, int) to authenticated;
 grant execute on function public.kin_read(uuid) to authenticated;
 grant execute on function public.kin_mail() to authenticated;
+grant execute on function public.kin_recover(timestamptz, uuid, int) to authenticated;
+grant execute on function public.kin_receipts_get(uuid[]) to authenticated;
