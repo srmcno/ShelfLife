@@ -20,6 +20,8 @@ import { startNotes, addNote } from './court-notes.js';
 import { seatOf, partyRoles, exaggerated, questionSource, showmanBonus, startingRatings, voteJury } from './court-traits.js';
 import { careerStars, rankIndexFor, benchPromotion } from './court-career.js';
 import { canBridge, spendFreeze, earnFreeze } from './streaks.js';
+import { visitingGuests } from './court-guests.js';
+import { WITNESS_LINES, WITNESS_THANKS } from '../content/court-joint.js';
 
 /* Shelf Court as a pure state machine. The UI owns an `episode` and feeds it
    choices; every call returns the lines to play next and nudges two meters:
@@ -196,11 +198,13 @@ export function episodePlan(k, rnd) {
 
 // The residents' own lives, as the podium and the jury box need them. A juror
 // has a quarrel with a party when their traits feud or they have recently fallen out.
-function castSeats(state, parties, jury, now) {
+// A visiting guest brings its traits to the jury box, and no bond with you.
+export function castSeats(state, parties, jury, now) {
   const quarrel = (juror, side) => !!(juror && parties[side] && (petsFeud(juror, parties[side]) || frictionBetween(state, juror.id, parties[side].id, now) >= 0.5));
   return {
     p: seatOf(parties.p), d: seatOf(parties.d),
     jury: jury.map(j => {
+      if (j.kind === 'visitor') return seatOf({ traits: j.resident?.traits || [] });
       const pet = j.kind === 'pet' ? petById(state, j.id) : null;
       return seatOf(pet, pet ? ['p', 'd'].filter(side => quarrel(pet, side)) : []);
     })
@@ -243,7 +247,24 @@ export function castEpisode(state, { caseId, plaintiffId, defendantId, standInSa
   const anywhere = witnessesAnywhere(k);
   const d = defendantPet ? person(defendantPet) : extra(Number.isFinite(standInSalt) ? standInFor(k.id, standInSalt) : pick(STAND_INS.filter(id => !anywhere.has(id)), rnd));
   const jury = pets.filter(p => p.id !== plaintiff.id && p.id !== d.id).slice(0, JURY_SEATS).map(person);
-  return seatEpisode(state, k, { p: person(plaintiff), d, jury, parties: { p: plaintiff, d: defendantPet }, requested: twist, guest: null, now: when }, rnd);
+  // Friends' residents visiting this shelf take free seats before the
+  // neighbours do; one with no seat left is called as a character witness.
+  const guests = visitingGuests(state, when), seated = guests.slice(0, Math.max(0, JURY_SEATS - jury.length));
+  jury.push(...seated);
+  const ep = seatEpisode(state, k, { p: person(plaintiff), d, jury, parties: { p: plaintiff, d: defendantPet }, requested: twist, guest: null, now: when }, rnd);
+  ep.witnesses = guests.slice(seated.length);
+  return ep;
+}
+
+/* Character witnesses (a visiting guest with no seat, or on a Joint Bench
+   invitation a resident of the friend's shelf) say one thing each after the
+   opening statements, and the bench thanks them for it. A witness line is
+   spoken by 'w', with `who` the witness's place in ep.witnesses. */
+export function episodeWitnesses(ep, rnd = Math.random) {
+  const list = Array.isArray(ep.witnesses) ? ep.witnesses : [];
+  if (!list.length) return [];
+  const lines = shuffled(WITNESS_LINES, rnd).slice(0, list.length).map((t, i) => ({ s: 'w', t: fill(ep, t), who: i }));
+  return [...lines, { s: 'judge', t: pick(WITNESS_THANKS, rnd), who: null }];
 }
 
 // A summons from a friend: their resident (guest.pet, from cloud/social.js
@@ -424,7 +445,8 @@ export const dissent = ep => (Number.isFinite(ep.disagree) ? ep.disagree : ep.ju
 // sat where, the lifetime stars and any promotion on the bench.
 export function courtFinish(state, ep, now = Date.now()) {
   if (!ep?.done || ep.settled) return null;
-  if (ep.guest) return guestFinish(state, ep, now);
+  // A friend's summons and a Joint Bench hearing are not this courtroom's own.
+  if (ep.guest || ep.joint) return guestFinish(state, ep, now);
   ep.settled = true;
   const c = courtroomState(state), k = episodeCase(ep);
   const correct = ep.ruling === k.truth;
