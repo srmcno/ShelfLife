@@ -97,8 +97,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
       return json(200, { friend_code: p.friend_code, display_name: p.display_name });
     },
     delete_my_account(user) {
-      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); feedback.forget(user.id);
-      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); coop.forget(user.id);
+      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); feedback.forget(user.id); coop.forget(user.id);
       for (const [token, entry] of access) if (entry.userId === user.id) access.delete(token);
       for (const [token, entry] of refresh) if (entry.userId === user.id) refresh.delete(token);
       return { status: 204, body: '', headers: {} };

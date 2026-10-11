@@ -414,8 +414,7 @@ function stop() {
 /* ---------------- game over ---------------- */
 function gameOver() {
   if (!run) return;
-  const { id, game, socialUser } = run, wasDaily = run.daily, stats = runStats(game);
-  const { id, game, duel } = run, wasDaily = run.daily, stats = runStats(game);
+  const { id, game, socialUser, duel } = run, wasDaily = run.daily, stats = runStats(game);
   run.settled = true;
   const result = finishRun(S, id, game.score, run.petId, Date.now(), Math.random, { daily: wasDaily });
   const submission = wasDaily ? queueDailyScore(id, result, socialUser) : null;
@@ -474,7 +473,6 @@ function gameOver() {
   // not start another one by accident.
   const again = sheet.querySelector('.ar-again');
   later(() => { if (again?.isConnected && veil.classList.contains('open')) { again.disabled = false; again.focus({ preventScroll: true }); } }, 650);
-  setTimeout(() => { if (again?.isConnected) { again.disabled = false; again.focus({ preventScroll: true }); } }, 650);
   duel?.over(sheet, result);
   refresh();
   if (wasDaily && result.daily && arcadeSocial?.active()) loadBoard({ game: id, day: result.day, mod: result.daily.mod }, submission?.score || 0, submission?.user || arcadeSocial.userId());
@@ -503,17 +501,11 @@ function press(pad) {
 function dropCoffin() {
   if (!inRun() || run.paused || run.id !== 'stack') return;
   if (run.phase === 'ready') { beginPlay(); return; }
-  run.view.drop(run.A);
-}
-function tapGrave(i) {
-  if (!inRun() || run.paused || run.id !== 'whack' || run.phase === 'ready') return;
-  if (run.game.mod?.blocked?.includes(i)) return;
-  run.view.hit(run.A, i);
-  beginPlay();
   if (run.duel) run.duel.drop(); else run.view.drop(run.A);
 }
 function tapGrave(i) {
   if (!inRun() || run.paused || run.id !== 'whack' || run.phase === 'ready') return;
+  if (run.game.mod?.blocked?.includes(i)) return;
   if (run.duel) run.duel.hit(i); else run.view.hit(run.A, i);
 }
 function aim(field, e) {
