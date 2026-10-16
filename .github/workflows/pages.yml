@@ -20,11 +20,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: Package playable files
-        # Set the repository variable SHELFLIFE_MOVE_TO to the new address
-        # (for example https://shelf-life.vercel.app/) and this site hands every
-        # shelf over and redirects there. Unset, the site stays as it is.
+        # This site hands every shelf to the game's home on Vercel and then
+        # redirects there (src/move.js). The repository variable
+        # SHELFLIFE_MOVE_TO overrides the address for a later move.
         env:
-          SHELFLIFE_MOVE_TO: ${{ vars.SHELFLIFE_MOVE_TO }}
+          SHELFLIFE_MOVE_TO: ${{ vars.SHELFLIFE_MOVE_TO || 'https://shelflife-game.vercel.app/' }}
         run: python3 scripts/build_site.py
       - uses: actions/upload-pages-artifact@v5.0.0
         with:
