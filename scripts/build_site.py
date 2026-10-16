@@ -92,8 +92,8 @@ def build(output=None, *, require_cloud=False, env=None):
     version.write_text(re.sub(r"export const COMMIT = '[^']*';", f"export const COMMIT = '{revision[:7]}';", version.read_text()))
     # Moving house (src/move.js): the old address's build names the new home,
     # the new address's build names the old ones it takes shelves from.
-    move_to = os.environ.get("SHELFLIFE_MOVE_TO", "").strip()
-    move_from = [u.strip() for u in os.environ.get("SHELFLIFE_MOVE_FROM", "").split(",") if u.strip()]
+    move_to = env.get("SHELFLIFE_MOVE_TO", "").strip()
+    move_from = [u.strip() for u in env.get("SHELFLIFE_MOVE_FROM", "").split(",") if u.strip()]
     for url in [move_to, *move_from]:
         if url and not re.fullmatch(r"https://[^\s/?#@]+(/[^\s?#@]*)?/", url) and not re.fullmatch(r"http://(localhost|127\.0\.0\.1)(:\d+)?(/[^\s?#@]*)?/", url):
             raise ValueError(f"Move address must be an https base URL ending in /: {url}")
