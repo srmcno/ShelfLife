@@ -6,7 +6,8 @@
 //
 // It reads the social fake's shelves, friendships, blocks and summonses, and
 // wraps remove_friend, block_user and delete_my_account the way the SQL's
-// trigger and foreign keys do. Do not disturb is a `dnd_until` (ISO time) or
+// trigger and foreign keys do. Births are receipts: two per accepted basket,
+// one per player, that housekeeping never prunes and a claim never deletes. Do not disturb is a `dnd_until` (ISO time) or
 // `dnd` (boolean) on a profile, as a later migration may add.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -25,6 +26,22 @@ export function kinWeek(ms) {
 
 export function createFakeKin({ social, users, profiles, now, json, rest, uuid, rpc }) {
   const baskets = new Map(), pals = new Map(), letters = new Map();
+  const receipts = new Map(); // `${owner}|${basket}` -> row
+  const NIL = '00000000-0000-0000-0000-000000000000';
+  const receiptOf = (owner, basket) => receipts.get(owner + '|' + basket) || null;
+  const ownedReceipts = owner => [...receipts.values()].filter(r => r.owner === owner).sort((x, y) => x.born_at.localeCompare(y.born_at) || x.basket_id.localeCompare(y.basket_id));
+  function receiptJson(r) {
+    const hidden = !r.other || blocked(r.owner, r.other);
+    const mine = nameOf(r.owner), theirs = r.other ? nameOf(r.other) : '';
+    return {
+      id: r.basket_id, direction: r.side === 'from' ? 'out' : 'in', status: 'born',
+      from_user: r.side === 'from' ? r.owner : (r.other || NIL), to_user: r.side === 'to' ? r.owner : (r.other || NIL),
+      from_name: hidden ? '' : (r.side === 'from' ? mine : theirs), to_name: hidden ? '' : (r.side === 'to' ? mine : theirs),
+      from_parent: copy(r.from_parent), to_parent_id: r.to_parent_id, to_parent_name: r.to_parent_name, to_parent: copy(r.to_parent),
+      seed: r.seed, name_roll: r.name_roll, history: r.history, created_at: r.created_at, expires_at: iso(ms(r.created_at) + 48 * HOUR),
+      answered_at: r.born_at, collected: !!r.claimed_at
+    };
+  }
   let seeds = 0;
   const t = () => now();
   const iso = (ms = t()) => new Date(ms).toISOString();
@@ -32,6 +49,9 @@ export function createFakeKin({ social, users, profiles, now, json, rest, uuid, 
   const refuse = token => rest(400, 'P0001', token);
   const badType = type => rest(400, '22P02', 'invalid input syntax for type ' + type);
   const seed = () => (Math.imul(++seeds, 2654435761) >>> 1) % 2147483647;
+  // A foundling's id comes from the first twelve hex digits of its basket's id, so (as with real random uuids) those must differ.
+  let baskets_made = 0;
+  const basketId = () => (Math.imul(++baskets_made + 7, 2654435761) >>> 0).toString(16).padStart(8, '0') + uuid().slice(8);
   const pairKey = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
   const samePair = (x1, x2, a, b) => pairKey(x1, x2) === pairKey(a, b);
   const friendship = (a, b) => social.friendships.find(f => samePair(f.requester, f.addressee, a, b)) || null;
@@ -108,6 +128,7 @@ export function createFakeKin({ social, users, profiles, now, json, rest, uuid, 
   function dropLetters(test) { for (const [id, l] of letters) if (test(l)) letters.delete(id); }
   function forget(userId) {
     for (const [id, k] of baskets) if (k.from_user === userId || k.to_user === userId) baskets.delete(id);
+    for (const [key, r] of receipts) { if (r.owner === userId) receipts.delete(key); else if (r.other === userId) r.other = null; }
     for (const [id, p] of pals) {
       if (p.user_a === userId || p.user_b === userId) { pals.delete(id); dropLetters(l => l.pal_id === id); }
       else if (p.ended_by === userId) p.ended_by = null;
@@ -129,7 +150,7 @@ export function createFakeKin({ social, users, profiles, now, json, rest, uuid, 
       if (pairBaskets(user.id, p_to).some(open)) return refuse('basket_waiting');
       if (bornRecently(user.id, p_to)) return refuse('too_soon');
       if ([...baskets.values()].filter(k => k.from_user === user.id && ms(k.created_at) > t() - DAY).length >= 6) return refuse('rate_limited');
-      const row = { id: uuid(), from_user: user.id, to_user: p_to, from_parent: copy(p_parent), to_parent_id: p_theirs, to_parent_name: theirs.name,
+      const row = { id: basketId(), from_user: user.id, to_user: p_to, from_parent: copy(p_parent), to_parent_id: p_theirs, to_parent_name: theirs.name,
         to_parent: null, seed: seed(), name_roll: 0, history: why, status: 'offered', created_at: iso(), answered_at: null, from_collected_at: null, to_collected_at: null };
       baskets.set(row.id, row);
       return json(200, { ok: true, id: row.id, expires_at: iso(ms(row.created_at) + 48 * HOUR) });
@@ -148,7 +169,12 @@ export function createFakeKin({ social, users, profiles, now, json, rest, uuid, 
       const shown = social.shelves.get(user.id)?.snapshot?.residents;
       if ((Array.isArray(shown) ? shown.length : 0) >= 18) return refuse('shelf_full');
       if (bornRecently(user.id, b.from_user)) return refuse('too_soon');
-      Object.assign(b, { status: 'born', to_parent: copy(p_parent), name_roll: p_name_roll, answered_at: iso(), to_collected_at: iso() });
+      Object.assign(b, { status: 'born', to_parent: copy(p_parent), name_roll: p_name_roll, answered_at: iso() });
+      for (const [owner, other, side] of [[b.from_user, b.to_user, 'from'], [user.id, b.from_user, 'to']]) {
+        if (receiptOf(owner, b.id)) continue;
+        receipts.set(owner + '|' + b.id, { owner, basket_id: b.id, other, side, from_parent: copy(b.from_parent), to_parent: copy(b.to_parent), to_parent_id: b.to_parent_id,
+          to_parent_name: b.to_parent_name, seed: b.seed, name_roll: b.name_roll, history: b.history, created_at: b.created_at, born_at: b.answered_at, claimed_at: null });
+      }
       makePal(b.from_user, b.from_parent.id, b.from_parent.name, user.id, b.to_parent_id, p_parent.name, 'foundling', null, b.id);
       const twin = 'kin' + b.id.replace(/-/g, '').slice(0, 12);
       makePal(b.from_user, twin, '', user.id, twin, '', 'twin', null, b.id);
@@ -163,10 +189,28 @@ export function createFakeKin({ social, users, profiles, now, json, rest, uuid, 
     },
     kin_collect(user, { p_id }) {
       if (!UUID.test(p_id || '')) return badType('uuid');
+      const r = receiptOf(user.id, p_id);
+      if (!r) return refuse('not_found');
+      r.claimed_at ||= iso();
       const b = baskets.get(p_id);
-      if (!b || b.from_user !== user.id || b.status !== 'born') return refuse('not_found');
-      b.from_collected_at ||= iso();
-      return json(200, { ok: true });
+      if (b) { if (b.from_user === user.id) b.from_collected_at ||= r.claimed_at; if (b.to_user === user.id) b.to_collected_at ||= r.claimed_at; }
+      return json(200, { ok: true, id: p_id, claimed_at: r.claimed_at });
+    },
+    kin_recover(user, { p_after_born = null, p_after_id = null, p_limit = 200 } = {}) {
+      if (p_after_id !== null && p_after_id !== undefined && !UUID.test(p_after_id)) return badType('uuid');
+      if (p_after_born !== null && p_after_born !== undefined && Number.isNaN(Date.parse(p_after_born))) return badType('timestamp with time zone');
+      const n = Math.min(Math.max(Number.isInteger(p_limit) ? p_limit : 200, 1), 500);
+      const after = p_after_born ? iso(Date.parse(p_after_born)) : null;
+      const rows = ownedReceipts(user.id).filter(r => !after || r.born_at > after || (r.born_at === after && r.basket_id > (p_after_id || NIL)));
+      const page = rows.slice(0, n);
+      const last = page[page.length - 1];
+      return json(200, { ok: true, items: page.map(r => ({ id: r.basket_id, claimed: !!r.claimed_at, born_at: r.born_at })),
+        next: rows.length > n ? { born_at: last.born_at, id: last.basket_id } : null });
+    },
+    kin_receipts_get(user, { p_ids }) {
+      if (!Array.isArray(p_ids) || p_ids.some(id => !UUID.test(id || ''))) return badType('uuid');
+      if (p_ids.length < 1 || p_ids.length > 4) return refuse('bad_basket');
+      return json(200, { ok: true, items: ownedReceipts(user.id).filter(r => p_ids.includes(r.basket_id)).map(receiptJson) });
     },
     kin_introduce(user, { p_friend, p_mine, p_theirs }) {
       if (!UUID.test(p_friend || '')) return badType('uuid');
@@ -236,7 +280,6 @@ export function createFakeKin({ social, users, profiles, now, json, rest, uuid, 
       const visible = [...baskets.values()].filter(k =>
         (k.to_user === uid && open(k) && areFriends(k.from_user, uid) && !blocked(k.from_user, uid)) ||
         (k.from_user === uid && open(k)) ||
-        (k.from_user === uid && k.status === 'born' && !k.from_collected_at) ||
         (k.from_user === uid && k.status !== 'born' && (k.answered_at ? ms(k.answered_at) : ms(k.created_at) + 48 * HOUR) > at - 3 * DAY &&
           (k.status !== 'offered' || ms(k.created_at) <= at - 48 * HOUR)))
         .sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 12);
@@ -277,7 +320,8 @@ export function createFakeKin({ social, users, profiles, now, json, rest, uuid, 
         return { user_id: other, since: f.created_at, week_old: ms(f.created_at) <= at - 7 * DAY, open_basket: pairBaskets(uid, other).some(open),
           next_basket_at: born.length ? iso(Math.max(...born) + 14 * DAY) : null, hearings };
       });
-      return json(200, { now: iso(at), week, baskets: out, pals: shownPals, letters: unread, friends });
+      const pending = ownedReceipts(uid).filter(r => !r.claimed_at);
+      return json(200, { now: iso(at), week, baskets: out, pals: shownPals, letters: unread, friends, births: pending.slice(0, 3).map(receiptJson), births_more: pending.length > 3 });
     }
   };
   // What 0010's trigger does when 0002 deletes a friendship, and what the
@@ -295,5 +339,5 @@ export function createFakeKin({ social, users, profiles, now, json, rest, uuid, 
     RPC.delete_my_account = (user, args) => { forget(user.id); return leaving(user, args); };
   }
 
-  return { RPC, baskets, pals, letters, deliver, forget, week: () => kinWeek(t()) };
+  return { RPC, baskets, pals, letters, receipts, deliver, forget, week: () => kinWeek(t()) };
 }

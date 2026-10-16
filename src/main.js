@@ -56,6 +56,7 @@ import { applyDecor, initDecorUI } from './ui/decorUI.js';
 import { initDrag } from './ui/drag.js';
 import { renderAll, renderStatus, renderShelf, renderNotes, escapeHtml } from './ui/render.js';
 import { toast, dismissToast } from './ui/toast.js';
+import { watchArrivals } from './move.js';
 import { nudgesAvailable, enableNudges, syncNudges, clearAwayNudges } from './notify.js';
 import { initAlmanac } from './ui/almanac.js';
 import { initCollections } from './ui/collections.js';
@@ -301,6 +302,8 @@ initFriends({ state, cloud, sync, social, postbox, openCloud: () => cloudUI?.ope
 initGuests({ state, postbox, social, save });
 initTrades({ state, cloud, social, save, renderAll: () => renderAll(state), toast });
 initMischief({ state, cloud, social, refresh: () => renderAll(state) });
+// A shelf that just moved here from the old address says so, once.
+watchArrivals(window, line => setTimeout(() => toast(line), 1200));
 connectCloud({
   applyRemote: (next, { reason } = {}) => {
     applyRestoredState(next);

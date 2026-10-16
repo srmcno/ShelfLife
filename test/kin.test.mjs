@@ -16,7 +16,7 @@ import { generateCreature, BODIES, PALETTES } from '../src/art/creatures.js';
 import { TRAIT_BY_ID } from '../src/content/traits.js';
 import { householdFixture } from './household-fixtures.mjs';
 
-const NODASH = /[–—]/;
+const NODASH = /[\u2013\u2014]/;
 const NOW = Date.UTC(2026, 9, 11, 12);
 const BASKET = '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
 // A small real PNG, as the fixtures build one.
@@ -236,7 +236,7 @@ test('absorbing mail keeps letters, adopts our foundling once and writes the sam
   const a = made('Agnes', 'abs-a'), b = made('Grubbs', 'abs-b', ['litigious']);
   const basket = { id: BASKET, direction: 'out', status: 'born', fromUser: A, toUser: B, fromName: 'Ada', toName: 'Bea', fromParent: a, toParentId: b.id, toParentName: 'Grubbs',
     toParent: b, seed: 31337, nameRoll: 2, collected: false };
-  const mail = { user: A, baskets: [basket], pals: [{ id: PAL, friend: B, mine: { id: 'qa0', name: 'Agnes' }, theirs: { id: b.id, name: 'Grubbs' }, history: 'foundling', basket: BASKET, seed: 99 }],
+  const mail = { user: A, baskets: [], births: [basket], pals: [{ id: PAL, friend: B, mine: { id: 'qa0', name: 'Agnes' }, theirs: { id: b.id, name: 'Grubbs' }, history: 'foundling', basket: BASKET, seed: 99 }],
     letters: [{ id: '00000000-0000-4000-8000-0000000000bb', pal: PAL, from: B, kind: 'weekly', week: 150, writer: { id: b.id, name: 'Grubbs', traits: ['litigious'], mood: 'fine' },
       reader: { id: 'qa0', name: 'Agnes', traits: [], mood: 'fine' }, createdAt: NOW }] };
   const state = householdFixture('established', NOW);
@@ -250,6 +250,7 @@ test('absorbing mail keeps letters, adopts our foundling once and writes the sam
   assert.deepEqual(child.traits, theirs.traits);
   assert.deepEqual(child.art.creature, theirs.art.creature);
   assert.deepEqual(collected, [BASKET]);
+  assert.deepEqual(state.kin.collected, [BASKET]);
   assert.equal(state.kin.letters.length, 1);
   assert.match(state.kin.letters[0].text, /^Dear Agnes,/);
   assert.ok(state.kin.letters[0].cards);

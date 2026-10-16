@@ -109,7 +109,8 @@ test('Ada leaves a basket out, Bea takes it in, and both shelves get the same fo
   await expect(page.locator('#cabinet .piece.pet')).toHaveCount(4);
   expect(fake.kin.baskets.get(basket.id).from_collected_at).toBeTruthy();
   // Meeting it opens the resident card, which says where it came from.
-  await notice.locator('[data-sx="meet"]').click();
+  // (The stand-in hub repaints the whole postbox over and over, so the button is not clicked; the event it sends is.)
+  await page.evaluate(id => window.dispatchEvent(new CustomEvent('shelflife:care', { detail: { petId: id } })), foundlingId(basket.id));
   await expect(page.locator('#cardSheet .kin-found')).toHaveText('Found on the step. Parents: Agnes (yours) and Snag (Bea’s shelf).');
   await expect(page.locator('#cardSheet #kinTree')).toContainText('Its twin');
   // Reloading never brings a second copy.

@@ -31,7 +31,7 @@ export const DEBOUNCE_MS = 20000;
 export const MAX_WAIT_MS = 120000;
 export const MIN_GAP_MS = 60000;
 export const RECHECK_MS = 60000;
-export const SAFETY_MS = 7 * 86400000;
+export const SAFETY_MS = 30 * 86400000;
 // The server refuses 6,000,000 bytes of jsonb text; jsonb adds spaces, so the
 // client stops a little short rather than uploading a copy that will bounce.
 export const MAX_SAVE_CHARS = 5500000;
@@ -309,6 +309,10 @@ export function createSync({
     const later = () => { needsCheck = true; return settle(); };
     if (!canApply()) return later();
     const uid = cloud.userId();
+    // Whatever this device had is kept as a spare before the cloud copy goes on
+    // the shelf, so the Undo in the Cloud sheet can always bring it back.
+    const mine = getState();
+    if (shelfSummary(mine).residents && canonical(mine) !== canonical(remote.data)) keepSafetyCopy(exportState(mine), shelfSummary(mine));
     if (applyRemote(normalized, { reason, device: deviceKind(remote.device || '') }) === false) return later();
     clean({ syncUser: uid, baseRev: Number(remote.rev) || 0, lastPushHash: saveHash(exportState(getState())), lastSyncedAt: now() });
     return settle();
@@ -333,7 +337,9 @@ export function createSync({
     const normalized = normalize(remote.data);
     if (!normalized) return refuse(rev);
     const here = shelfSummary(state), there = shelfSummary(normalized);
-    if (known && !m.dirty) return adopt(normalized, remote, 'newer');                               // another device moved on
+    // Another device moved on. A copy with fewer residents than this shelf is
+    // never swapped in quietly: the player is asked instead.
+    if (known && !m.dirty && there.residents >= here.residents) return adopt(normalized, remote, 'newer');
     if (!here.residents && there.residents) return adopt(normalized, remote, 'arrived');            // (b)
     if (!there.residents) return pushNow({ base: rev, force: true, depth, keepalive });
     if (canonical(state) === canonical(remote.data)) {
