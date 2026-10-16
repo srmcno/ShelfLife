@@ -45,7 +45,8 @@ test('which shelf is played after a move, and which is kept as the spare: nothin
   assert.deepEqual(chooseShelf('not json', old), { take: true, spare: 'not json', reason: 'nobody-here' }, 'an unreadable copy is kept, not overwritten into nothing');
   assert.equal(chooseShelf(startedHere, 'garbage').take, false, 'a broken payload changes nothing');
   // An earlier move left this copy untouched: the old address played on offline, this is its update.
-  assert.deepEqual(chooseShelf(bigHere, old, { hash: fnv(bigHere) }), { take: true, spare: null, reason: 'update' });
+  assert.deepEqual(chooseShelf(bigHere, old, { hash: fnv(bigHere), took: true }), { take: true, spare: null, reason: 'update' });
+  assert.equal(chooseShelf(bigHere, old, { hash: fnv(bigHere), took: false }).reason, 'kept-here', 'a shelf that won here is never quietly replaced');
 });
 
 test('the payload survives compression, base64url and splitting into URL-sized parts', async () => {
@@ -71,7 +72,7 @@ test('applying a move: a fresh address takes the shelf and the extras', () => {
   assert.deepEqual(r, { ok: true, took: true, spare: false, reason: 'empty' });
   assert.equal(s.getItem(SAVE_KEY), keys[SAVE_KEY]);
   assert.equal(s.getItem('shelflife.v4.recovery'), 'rec');
-  assert.deepEqual(JSON.parse(s.getItem(APPLIED_KEY)), { from: 'https://old/', sha: 'a'.repeat(64), at: 7, hash: fnv(keys[SAVE_KEY]) });
+  assert.deepEqual(JSON.parse(s.getItem(APPLIED_KEY)), { from: 'https://old/', sha: 'a'.repeat(64), at: 7, hash: fnv(keys[SAVE_KEY]), took: true });
   assert.match(arrivalLine(JSON.parse(s.getItem(NOTE_KEY))), /Everyone made it/);
   // The same payload again (a lost "done") changes nothing.
   s.setItem(SAVE_KEY, shelf(['Mabel', 'Played here since']));
@@ -144,4 +145,45 @@ test('the gate: the old address hands over, then redirects, keeping invite links
   const stay = fakeWin('https://srmcno.github.io/ShelfLife/?stay=1');
   assert.equal(gate(stay, { to }), false);
   assert.equal(gate(stay, { to }), false, 'a failed move lets this tab play where it is');
+});
+
+test('a shelf that won at the new address survives a later move from the old one', () => {
+  const winner = shelf(['A', 'B', 'C', 'D'], 900);
+  const s = new Storage({ [SAVE_KEY]: winner });
+  const first = applyIncoming(s, { [SAVE_KEY]: shelf(['Mabel'], 100) }, { sha: 'd'.repeat(64) });
+  assert.equal(first.reason, 'kept-here');
+  assert.equal(JSON.parse(s.getItem(APPLIED_KEY)).took, false);
+  // The old address was played offline and hands its newer shelf over again.
+  const again = applyIncoming(s, { [SAVE_KEY]: shelf(['Mabel', 'Pip'], 950) }, { sha: 'e'.repeat(64) });
+  assert.notEqual(again.reason, 'update', 'never the quiet update path for a shelf that won here');
+  assert.ok(s.getItem(SAVE_KEY) === winner || s.getItem(SPARE_KEY) === winner, 'the winner is still playing or kept as the spare');
+  assert.equal(s.getItem(SAVE_KEY), winner, 'four residents still beat two');
+});
+
+test('a move that does not fit leaves no sign-in or extras behind', () => {
+  const here = shelf(['Newbie']);
+  const s = new Storage({ [SAVE_KEY]: here }, here.length + 40);
+  const r = applyIncoming(s, { [SAVE_KEY]: shelf(['Mabel', 'Grubbs', 'Pip']), [CLOUD_KEY]: '{"syncUser":"src"}', 'shelflife.v4.recovery': 'r' }, { sha: 'f'.repeat(64) });
+  assert.equal(r.ok, false);
+  assert.equal(s.getItem(CLOUD_KEY), null);
+  assert.equal(s.getItem('shelflife.v4.recovery'), null);
+});
+
+test('the moved sign-in comes along only with the moved shelf', () => {
+  const kept = new Storage({ [SAVE_KEY]: shelf(['A', 'B', 'C', 'D'], 900) });
+  applyIncoming(kept, { [SAVE_KEY]: shelf(['Mabel']), [CLOUD_KEY]: '{"syncUser":"src","session":{}}' }, { sha: '1'.repeat(64) });
+  assert.equal(JSON.parse(kept.getItem(CLOUD_KEY)).syncUser, undefined, 'the shelf playing here is not signed in as the old one');
+  const took = new Storage({ [SAVE_KEY]: shelf(['Newbie']) });
+  applyIncoming(took, { [SAVE_KEY]: shelf(['Mabel', 'Grubbs']), [CLOUD_KEY]: '{"syncUser":"src"}' }, { sha: '2'.repeat(64) });
+  const cloud = JSON.parse(took.getItem(CLOUD_KEY));
+  assert.equal(cloud.syncUser, 'src');
+  assert.ok(cloud.safetyCopyAt, 'and the spare keeps its Undo');
+});
+
+test('a move to another path on the same site just redirects', () => {
+  const to = 'https://example.com/new/';
+  const old = fakeWin('https://example.com/old/?invite=Z');
+  assert.equal(gate(old, { to }), true);
+  assert.equal(old.went, 'https://example.com/new/?invite=Z');
+  assert.equal(gate(fakeWin('https://example.com/new/'), { to }), false);
 });

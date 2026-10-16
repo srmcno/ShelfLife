@@ -129,7 +129,8 @@ export function chooseShelf(hereRaw, incomingRaw, applied = null) {
   if (hereRaw === incomingRaw) return { take: false, spare: null, reason: 'same' };
   if (!here.present) return { take: true, spare: null, reason: 'empty' };
   // An earlier move left this copy and nobody has touched it since: this is its update.
-  if (applied && applied.hash === fnv(hereRaw)) return { take: true, spare: null, reason: 'update' };
+  // Only when that move put the incoming shelf here: a shelf that won here is never replaced quietly.
+  if (applied && applied.took === true && applied.hash === fnv(hereRaw)) return { take: true, spare: null, reason: 'update' };
   if (!here.valid || here.residents === 0) return { take: true, spare: hereRaw, reason: 'nobody-here' };
   const hereWins = here.residents > there.residents || (here.residents === there.residents && here.lastSaved > there.lastSaved);
   return hereWins ? { take: false, spare: incomingRaw, reason: 'kept-here' } : { take: true, spare: hereRaw, reason: 'bigger' };
@@ -147,12 +148,7 @@ export function applyIncoming(storage, keys, { from = '', sha = '', now = Date.n
   if (applied && sha && applied.sha === sha) return { ok: true, took: false, spare: false, reason: 'already' };
   const hereRaw = storage.getItem(SAVE_KEY);
   const choice = chooseShelf(hereRaw, keys[SAVE_KEY], applied);
-  // Settings, the cloud session and the recovery copy come along wherever this
-  // address has none of its own.
-  for (const [k, v] of Object.entries(keys)) {
-    if (k === SAVE_KEY || typeof v !== 'string') continue;
-    if (storage.getItem(k) === null) { try { storage.setItem(k, v); } catch { /* optional extras; the save matters */ } }
-  }
+  const hadCloud = storage.getItem(CLOUD_KEY) !== null;
   let spareKept = false;
   if (choice.spare) {
     const s = summary(choice.spare);
@@ -175,9 +171,26 @@ export function applyIncoming(storage, keys, { from = '', sha = '', now = Date.n
     const cloud = readJson(storage, CLOUD_KEY);
     if (cloud && cloud.syncUser) { try { storage.setItem(CLOUD_KEY, JSON.stringify({ ...cloud, dirty: true })); } catch { /* the conflict card still guards it */ } }
   }
+  // Settings, the cloud session and the recovery copy come along wherever this
+  // address has none of its own, and only once the shelf itself is safely written,
+  // so a move that does not fit leaves nothing behind.
+  for (const [k, v] of Object.entries(keys)) {
+    if (k === SAVE_KEY || typeof v !== 'string') continue;
+    if (k === CLOUD_KEY) {
+      // The moved sign-in belongs to the moved shelf: it comes along only when that shelf is the
+      // one played here and this address had no cloud bookkeeping of its own.
+      if (hadCloud || !choice.take) continue;
+      let moved = null;
+      try { moved = JSON.parse(v); } catch { moved = null; }
+      const here = readJson(storage, CLOUD_KEY) || {};
+      if (moved && typeof moved === 'object') { try { storage.setItem(CLOUD_KEY, JSON.stringify({ ...moved, ...here })); } catch { /* optional */ } }
+      continue;
+    }
+    if (storage.getItem(k) === null) { try { storage.setItem(k, v); } catch { /* optional extras; the save matters */ } }
+  }
   const finalRaw = storage.getItem(SAVE_KEY) || '';
   try {
-    storage.setItem(APPLIED_KEY, JSON.stringify({ from, sha, at: now, hash: fnv(finalRaw) }));
+    storage.setItem(APPLIED_KEY, JSON.stringify({ from, sha, at: now, hash: fnv(finalRaw), took: choice.take }));
     storage.setItem(NOTE_KEY, JSON.stringify({ took: choice.take, spare: spareKept, reason: choice.reason, at: now }));
   } catch { /* the move happened; only the welcome line is lost */ }
   return { ok: true, took: choice.take, spare: spareKept, reason: choice.reason };
@@ -215,7 +228,15 @@ export function role({ to = MOVE_TO, from = MOVE_FROM, origin } = {}) {
 // Runs before the game on the old address's index page. True means the page is
 // on its way somewhere else.
 export function gate(win = globalThis, { to = MOVE_TO } = {}) {
-  if (role({ to, from: [], origin: win.location.origin }) !== 'old' || isNative(win)) return false;
+  if (isNative(win)) return false;
+  // Moving to another path on the same site: storage is already shared, so only redirect.
+  if (to && originOf(to) === win.location.origin) {
+    const home = new URL(to);
+    if (win.location.pathname.startsWith(home.pathname)) return false;
+    go(win, new URL('./' + win.location.search + win.location.hash, home));
+    return true;
+  }
+  if (role({ to, from: [], origin: win.location.origin }) !== 'old') return false;
   const storage = win.localStorage;
   const query = new URLSearchParams(win.location.search);
   if (query.has('stay')) session(win, STAY_KEY, '1');

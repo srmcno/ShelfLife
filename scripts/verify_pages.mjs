@@ -32,6 +32,8 @@ try {
     const saved = () => page.evaluate(()=>JSON.parse(localStorage.getItem('shelflife.v4')));
     try {
       const url=new URL(base);url.searchParams.set('verify',revision);
+      // The old address hands shelves to the new home and redirects there; stay=1 checks this build itself.
+      url.searchParams.set('stay','1');
       await page.goto(url.href);await page.locator('[data-arrival="mabel"]').click();await page.locator('#quickAdopt').click();
       await expect(page.locator('#cabinet .pet')).toHaveCount(1);
       await page.locator('#tabPlay').click();await page.locator('[data-game="stack"]').click();
