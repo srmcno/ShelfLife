@@ -154,7 +154,9 @@ base('a failed daily score submission retries only for its owner after reload', 
   // Assert it explicitly rather than treating its browser diagnostic as an app error.
   const appErrors = [], failedRequests = [], consoleErrors = [];
   page.on('pageerror', error => appErrors.push(error.message));
-  page.on('requestfailed', request => failedRequests.push(request.url()));
+  // A request still in flight when the page reloads is cancelled by the browser
+  // (net::ERR_ABORTED) and simply made again; only real transport failures count.
+  page.on('requestfailed', request => { if (!/ERR_ABORTED|cancelled/i.test(request.failure()?.errorText || '')) failedRequests.push(request.url()); });
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   const { fake, player } = await socialGame(page); let failed = false;
   await page.route(fake.url + '/rest/v1/rpc/submit_score', route => {
