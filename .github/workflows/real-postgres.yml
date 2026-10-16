@@ -1,0 +1,44 @@
+name: PostgreSQL checks
+
+on:
+  push:
+    branches: [main, wp2/integration, codex/integration-corrections]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  transactions:
+    name: Concurrent transactions and durable ledgers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Disposable CI database only; this is not a player database credential.
+      SHELF_PG: host=127.0.0.1 port=5432 user=postgres password=postgres dbname=postgres
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Require the isolated PostgreSQL connection
+        run: psql "$SHELF_PG" -X -v ON_ERROR_STOP=1 -tAc 'select 1'
+      - name: Run races and durable ledger checks on independent connections
+        run: node --test --test-concurrency=1 test/*_pg.test.mjs test/real_pg_harness.test.mjs

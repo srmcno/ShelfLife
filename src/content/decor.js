@@ -26,7 +26,7 @@ export const ACCENTS = {
   bubblegum: { name: 'Bubblegum', c: '#FF8FB8' },
   mint: { name: 'Mint', c: '#7FD8C0' },
   amber: { name: 'Amber', c: '#F2B441' },
-  blood: { name: 'Blood', c: '#C4414F' },
+  blood: { name: 'Blood', c: '#B8394A' },
   violet: { name: 'Violet', c: '#B183F0' },
   acid: { name: 'Acid', c: '#B8E634' }
 };

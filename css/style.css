@@ -40,6 +40,12 @@
   /* geometry */
   --shell:1180px; --r:10px; --r-lg:16px;
   --topbar-h:58px; --tabbar-h:64px;
+  /* the scale: new rules use these, and css/polish.css moves the drifters onto them */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-sheet:20px; --radius-pill:999px;
+  --text-xs:11px; --text-sm:12.5px; --text-md:14px; --text-body:15px; --text-lg:18px; --text-xl:22px; --text-display:26px;
+  --shadow-1:0 1px 0 rgba(0,0,0,.32),0 8px 18px -12px rgba(0,0,0,.7); --shadow-2:0 14px 30px -16px #000; --shadow-3:0 40px 100px -30px #000;
+  --dur-press:.06s; --dur-quick:.14s; --dur-spring:.34s; --dur-sheet:.42s;
   /* Safe areas. The Android app's SystemBars plugin writes --safe-area-inset-*
      because older WebViews report env() wrongly edge to edge; browsers never
      set them, so the web keeps using env() exactly as before. */
@@ -405,12 +411,15 @@ body.night .status .moon i{box-shadow:inset var(--ms,0px) 0 0 0 var(--night-3),0
 .pet:hover .nameplate{color:#FFF6E6}
 .pet.furious .nameplate,.pet.feuding .nameplate{color:#FF9AA6}
 .pet.scheming .nameplate{color:var(--mint)}
-.pips{position:absolute;z-index:5;left:0;right:0;top:calc(100% + var(--plank-h) + 3px);display:flex;gap:5px;height:8px;align-items:center;justify-content:center;pointer-events:none}
-.pip{width:6px;height:6px;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 6px currentColor}
+.pips{position:absolute;z-index:5;left:0;right:0;top:calc(100% + var(--plank-h) + 3px);display:flex;gap:5px;height:18px;align-items:center;justify-content:center;pointer-events:none}
+/* A need mark is a shape and a letter as well as a colour: round F food, diamond A attention, square W washing. */
+.pip{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 6px currentColor}
+.pip>b{font:800 11px/1 var(--body);color:#1a0a11;pointer-events:none}
 .pip.food{background:var(--amber);color:var(--amber)}
-.pip.fuss{background:var(--pink);color:var(--pink)}
-.pip.clean{background:var(--mint);color:var(--mint)}
-.pip.zzz,.pip.plotting{width:auto;height:auto;background:none;box-shadow:none;font:700 8.5px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.pip.fuss{background:var(--pink);color:var(--pink);border-radius:3px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);box-shadow:none}
+.pip.clean{background:var(--mint);color:var(--mint);border-radius:3px}
+.pip[data-gloss]{pointer-events:auto;cursor:help}
+.pip.zzz,.pip.plotting{width:auto;height:auto;background:none;box-shadow:none;font:700 11px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
 .pip.plotting{color:var(--mint)}
 /* props that are light sources */
 .prop[data-prop]::before{content:'';position:absolute;z-index:0;pointer-events:none;left:50%;top:50%;width:300%;height:260%;transform:translate(-50%,-34%);display:none}
@@ -490,7 +499,7 @@ body:has(.empty-shelf) .btn-check{opacity:.75}
 /* ---- what needs you ----------------------------------------------------------- */
 .needs-you{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
 .needs-you:empty{display:none}
-.needs-you .need-chip{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:6px 12px 6px 10px;border-radius:999px;
+.needs-you .need-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px 6px 10px;border-radius:999px;
   border:1px solid var(--hair-lit);background:var(--glass);color:var(--ink);font:600 12.5px var(--body);transition:background .14s,border-color .14s}
 .needs-you .need-chip:hover{background:var(--glass-2);border-color:var(--edge)}
 .needs-you .need-chip i{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);flex:none}
@@ -797,7 +806,7 @@ body:has(.empty-shelf) .btn-check{opacity:.75}
 @media (max-width:420px){.notes-head{gap:8px}.notes-head h2{letter-spacing:.16em;font-size:10px}}
 .notes-head .btn{order:2;flex:none}
 .note-filters{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}
-.filter-chip{min-height:30px;padding:5px 12px;border-radius:99px;border:1px solid var(--hair);background:var(--glass);color:var(--ink-2);font:600 12px var(--body);letter-spacing:.02em;transition:background .14s,border-color .14s,color .14s}
+.filter-chip{min-height:44px;padding:5px 12px;border-radius:99px;border:1px solid var(--hair);background:var(--glass);color:var(--ink-2);font:600 12px var(--body);letter-spacing:.02em;transition:background .14s,border-color .14s,color .14s}
 .filter-chip:hover{background:var(--glass-2);color:var(--ink)}
 .filter-chip[aria-pressed="true"]{background:var(--paper-lit);color:#2B2028;border-color:transparent}
 .notes{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:30px 18px;padding:30px 0 0}

@@ -1,5 +1,6 @@
 import { test as base, expect } from 'playwright/test';
 import { householdFixture } from '../household-fixtures.mjs';
+import { resumeArcadeIfPaused, waitForArcadePlay } from './support/arcade.mjs';
 
 /* The arcade as a player meets it: the count-in, the ladder, the banners, the
    reactions, the way a run ends, the hub, the haptics switch, the effects
@@ -37,7 +38,7 @@ async function start(page, game, { wait = true, govern = false, count = false } 
   await expect(page.locator('#arcadeSheet [data-ar-field]')).toBeVisible();
   // A long count-in would only make the tests slow; the count has its own test.
   await page.evaluate(([hold, quick]) => { const r = document.getElementById('arcadeSheet').arcadeRun; if (!r) return; if (hold) r.gov.push = () => null; if (quick) r.readyLen = 0.01; }, [!govern, !count && wait]);
-  if (wait) await expect.poll(() => phase(page), { timeout: 20000 }).toBe('play');
+  if (wait) await waitForArcadePlay(page);
 }
 const phase = page => page.evaluate(() => document.getElementById('arcadeSheet').arcadeRun?.phase || '');
 const saved = page => page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.v4')));
@@ -58,12 +59,13 @@ test('a run counts in from three, shows the count, and plays when it ends or is 
   await expect(page.locator('#arcadeSheet .ar-count')).toBeVisible();
   await expect(page.locator('#arcadeSheet .ar-count b')).toHaveText(/^[321]$/);
   expect(await phase(page)).toBe('ready');
-  await expect.poll(() => phase(page), { timeout: 20000 }).toBe('play');
+  await waitForArcadePlay(page);
   await expect(page.locator('#arcadeSheet .ar-count')).toBeHidden();
   // Starting again, any key ends the count at once and is the first move.
   await page.locator('#arcadeSheet [data-ar="close"]').click();
   await start(page, 'frenzy', { wait: false, count: true });
   expect(await phase(page)).toBe('ready');
+  await resumeArcadeIfPaused(page);
   await page.keyboard.down('ArrowRight');
   await expect.poll(() => phase(page)).toBe('play');
   expect(await page.evaluate(() => document.getElementById('arcadeSheet').arcadeRun.game.dir)).toBe(1);
@@ -230,6 +232,33 @@ test('closing the sheet in the middle of the slow-motion death still counts the 
   await expect(page.locator('#arcadeVeil')).not.toBeVisible();
   await expect.poll(async () => (await saved(page)).arcade.plays?.frenzy).toBe(1);
   expect((await saved(page)).arcade.best.frenzy).toBe(18);
+});
+
+test('closing a result during its Again delay keeps focus on the shelf launcher', async ({ page }) => {
+  await open(page, { size: { width: 360, height: 640 } });
+  await page.locator('#tabPlay').click();
+  await page.locator('#playroomVeil [data-game="frenzy"]').click();
+  await page.locator('#arcadeSheet [data-ar="play"]').click();
+  await waitForArcadePlay(page);
+  await page.evaluate(() => {
+    const sheet = document.getElementById('arcadeSheet');
+    window.__closedArcadeResult = new Promise(resolve => {
+      const observer = new MutationObserver(() => {
+        if (!sheet.querySelector('.ar-over')) return;
+        observer.disconnect();
+        // Close just before Again becomes live, while the veil's outgoing
+        // animation still allows the old button to receive focus.
+        setTimeout(() => { sheet.querySelector('.sheet-head [data-ar="close"]').click(); resolve(); }, 500);
+      });
+      observer.observe(sheet, { childList: true });
+    });
+    const run = sheet.arcadeRun;
+    run.game.score = 18; run.game.lives = 0; run.game.over = true;
+  });
+  await page.evaluate(() => window.__closedArcadeResult);
+  await expect(page.locator('#tabPlay')).toBeFocused();
+  await expect(page.locator('#arcadeVeil')).toBeHidden();
+  await expect(page.locator('#tabPlay')).toBeFocused();
 });
 
 test('the hub shows skull medals, the last fortnight and the arena to unlock, and an unlocked arena can be chosen', async ({ page }) => {

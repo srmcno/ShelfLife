@@ -10,6 +10,13 @@ import { blankCourtroom, normalizeCourtroom } from './court-state.js';
 import { blankPaperwork, normalizePaperwork, fileNote } from './paperwork-state.js';
 import { RESIDENT_TENURE } from './content/resident-life.js';
 import { blankRetention, normalizeRetention } from './almanac-state.js';
+import { normalizeTesting } from './tester-state.js';
+import { normalizeCovenState } from './coven-state.js';
+import { normalizeKin } from './kin-state.js';
+import { normalizeTrades } from './trade-state.js';
+import { normalizeMischief } from './mischief-state.js';
+import { normalizeCoop } from './coop-state.js';
+import { blankFriendVisits, normalizeFriendVisits } from './visits-state.js';
 export const Store = (function () {
   const mem = Object.create(null);
   let ok = true;
@@ -166,7 +173,7 @@ export function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 export function defaultNeeds() { return { food: 78, fuss: 78, clean: 82 }; }
 export function defaultDecor() { return { room: 'aubergine', wall: 'damask', wood: 'rosewood', accent: 'blood' }; }
 export function defaultStreak() { return { count: 0, lastCheckin: 0 }; }
-export function defaultSettings() { return { muted: false, narratorOn: false, narratorVoiceURI: null, effects: 'auto', nudges: false, nudgeAsked: false, haptics: true }; }
+export function defaultSettings() { return { muted: false, narratorOn: false, narratorVoiceURI: null, effects: 'auto', nudges: false, nudgeAsked: false, haptics: true, calm: false }; }
 export function defaultCareLog() { return { food: 0, fuss: 0, clean: 0 }; }
 // meeting: how many times the shelf has convened over you. carried: how many times
 // Item 4 has been carried forward. struck: petId -> when that pet closed the matter.
@@ -178,6 +185,7 @@ export function blankState() {
     notes: [], paperwork: blankPaperwork(), seq: 1, lastTick: Date.now(), started: Date.now(),
     seenUnlocks: [], decor: defaultDecor(), achievements: [], feudArcs: {},
     streak: defaultStreak(), settings: defaultSettings(),
+    friendVisits: blankFriendVisits(),
     gone: [], visits: [], ledger: defaultLedger(), roster: {}, rosterSeeded: false,
     formLog: [], noteCount: 0, lastGoneNote: 0, lastBackup: 0, backupSnooze: 0
   };
@@ -329,7 +337,7 @@ export function normalizeState(raw) {
   if (!['auto', 'light', 'full'].includes(s.settings.effects)) s.settings.effects = 'auto';
   delete s.settings.matureMode; // Retired setting from older backups.
   if (typeof s.settings.theatreOn !== 'boolean') s.settings.theatreOn = true;
-  for (const key of ['muted', 'narratorOn', 'nudges', 'nudgeAsked', 'haptics']) {
+  for (const key of ['muted', 'narratorOn', 'nudges', 'nudgeAsked', 'haptics', 'calm']) {
     if (typeof s.settings[key] !== 'boolean') s.settings[key] = defaultSettings()[key];
   }
   s.streak.count = Math.floor(finite(s.streak.count, 0));
@@ -397,10 +405,21 @@ export function normalizeState(raw) {
   s.escapades = normalizeEscapades(s.escapades, s, now);
   delete s.rug; // The retired play rug kept trick journals here; earned discoveries stay in life.
   s.mayhem = normalizeMayhem(s.mayhem, s, now);
+  s.arcade = normalizeArcade(s.arcade, s.pets);
+  s.mischief = normalizeMischief(s.mischief, s, now); // friends' hexes, hauntings and helps
   s.arcade = normalizeArcade(s.arcade);
+  s.coop = normalizeCoop(s.coop); // co-op: hired help and duels (coop-state.js)
+  // Loading/restore establishes the wallet baseline; it is not a reward.
+  if (s.coop.money.checkpoint) Object.assign(s.coop.money.checkpoint, { souls: s.mayhem.souls, lifetime: s.mayhem.lifetime });
   s.courtroom = normalizeCourtroom(s.courtroom);
   normalizeRetention(s, now); // the Almanac, streak freezes, return chest, Legacy, collections, exchange and owned decor
   s.householdEchoes = normalizeEchoes(s.householdEchoes, s.pets, now);
+  s.tester = s.tester === true; // set for good by the tester panel (src/tester-state.js)
+  s.testing = normalizeTesting(s.testing); // What's new, check-ins and the play-day switch
+  s.coven = normalizeCovenState(s.coven); // covens: counting, chests, cupboard, trophies (src/coven-state.js)
+  s.kin = normalizeKin(s.kin, s, now); // foundlings, kept letters and the step (kin-state.js)
+  s.trades = normalizeTrades(s.trades, s, now); // trading with friends: wishlist, escrow, applied trades, portraits
+  s.friendVisits = normalizeFriendVisits(s.friendVisits); // friends' residents staying here, and ours away
   return s;
 }
 
@@ -596,7 +615,12 @@ export function load() {
 }
 
 export let state = load();
-export function setState(next) { state = next; }
+export function setState(next) {
+  state = next;
+  if (state.coop?.money?.checkpoint && state.mayhem) Object.assign(state.coop.money.checkpoint, { souls: state.mayhem.souls, lifetime: state.mayhem.lifetime });
+}
+const saveObservers = new Set();
+export function onBeforeSave(observer) { saveObservers.add(observer); return () => saveObservers.delete(observer); }
 export function save() {
   try {
     // Never overwrite an unreadable original until its recovery copy is safe.
@@ -604,6 +628,9 @@ export function save() {
       if (!Store.set(RECOVERY_KEY, Store.get(RECOVERY_KEY))) return false;
       recoveryRequired = false;
     }
+    // Observers run before serialization so bookkeeping and game changes are
+    // written in one operation. A failed write must never be sent as money.
+    for (const observe of saveObservers) observe(state);
     const ok = Store.set(SAVE_KEY, JSON.stringify(state));
     // The first successful v4 save retires the old keys: a v3 shelf of drawn
     // pets is megabytes of data-URLs sitting next to the live save, and on a

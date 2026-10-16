@@ -11,14 +11,15 @@ import { challengeToday } from '../engine/arcade.js';
 import { ARCADE_BY_ID } from '../content/arcade.js';
 import { DAILY_SOULS } from '../content/daily.js';
 import { activeSeason, seasonProgress } from '../engine/seasons.js';
+import { deskReveal } from '../engine/guide.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { glyph } from '../art/mayhem-glyphs.js';
 import { reactTo } from '../art/animator.js';
 import { playAchievement, playPowerUp, playStar, playStomp, playFeud, playUnlock } from '../audio/sound.js';
 import { save } from '../state.js';
 import { toast } from './toast.js';
-import { nudgesAvailable, enableNudges } from '../notify.js';
-import { syncRetention, almanacTileHTML } from './almanac.js';
+import { nudgesAvailable, enableNudges, nudgePromptDue, notePrompted } from '../notify.js';
+import { almanacTileHTML } from './almanac.js';
 import { returnCardHTML } from './returns.js';
 import { cabinetExtrasHTML, cabinetFrameClass } from './collections.js';
 import { chapterAt, chapterHook } from '../engine/almanac.js';
@@ -56,12 +57,12 @@ function setHTML(node, html) {
 /* ---------------- top bar ---------------- */
 function renderHud(state) {
   if (!hud) return;
-  const m = mayhemState(state), info = rankInfo(state);
+  const m = mayhemState(state);
   hud.hidden = !state.pets.length && !m.lifetime;
+  // Souls only. The household rank and its progress sit in the Cabinet's header.
   setHTML(hud, '<span class="souls-icon">' + glyph('soul') + '</span>' +
-    '<span class="souls-count"><b>' + m.souls + '</b><small>souls</small></span>' +
-    '<span class="souls-rank"><em>' + esc(info.rank.legacy ? info.rank.title.split(':')[0] : info.rank.title) + '</em><i class="souls-bar"><i style="width:' + Math.round(info.progress * 100) + '%"></i></i></span>');
-  hud.setAttribute('aria-label', m.souls + ' souls. Household rank: ' + info.rank.title + '. Open the Cabinet of Curiosities.');
+    '<span class="souls-count"><b>' + m.souls + '</b><small>souls</small></span>');
+  hud.setAttribute('aria-label', m.souls + ' souls. Open the Cabinet of Curiosities.');
 }
 
 /* ---------------- the alarm strip ---------------- */
@@ -124,7 +125,11 @@ function renderDesk(state, now = Date.now()) {
       todayRow('court', docket.done, 'Shelf Court docket', docketCase.title + (docket.done ? ' · filed' : ' · +' + DOCKET_SOULS + ' souls')) +
       todayRow('arcade', ch.claimed, 'Arcade challenge', ARCADE_BY_ID[ch.game].title + ': ' + ch.mod.title + (ch.claimed ? ' · done' : ' · +' + DAILY_SOULS + ' souls'), ' data-mh-game="' + ch.game + '"') + '</div>'
     : '';
-  setHTML(deskEl, returnCardHTML(state) + almanacTileHTML(state, now) + seasonStrip + omenTile + choresTile + coffinTile + todayTile + cabinetTile);
+  // A new household sees the desk grow over its first days (engine/guide.js).
+  // Established ones see all of it.
+  const reveal = deskReveal(state, now);
+  const teaser = reveal.teaser ? '<p class="mh-tile mh-teaser">' + esc(reveal.teaser) + '</p>' : '';
+  setHTML(deskEl, returnCardHTML(state) + (reveal.today ? almanacTileHTML(state, now) : '') + (reveal.season ? seasonStrip : '') + (reveal.omen ? omenTile : '') + (reveal.chores ? choresTile : '') + (reveal.coffin ? coffinTile : '') + (reveal.today ? todayTile : '') + (reveal.cabinet ? cabinetTile : '') + teaser);
 }
 
 // The count of waiting disasters follows you: onto the Shelf tab, into the
@@ -134,6 +139,10 @@ function renderBadges(state) {
   const n = state.pets.length ? mayhemState(state).queue.length : 0;
   const badge = byId('shelfBadge');
   if (badge) { badge.hidden = !n; badge.textContent = n ? String(n) : ''; }
+  // The badge itself is decoration. The tab keeps its plain name ("Shelf") and describes what the badge counts.
+  const note = byId('shelfBadgeSr');
+  const words = n ? n + (n === 1 ? ' emergency waiting' : ' emergencies waiting') : '';
+  if (note && note.textContent !== words) note.textContent = words;
   const title = n ? '(' + n + ') ' + baseTitle : baseTitle;
   if (document.title !== title) document.title = title;
   try { if (n) navigator.setAppBadge?.(n)?.catch?.(() => {}); else navigator.clearAppBadge?.()?.catch?.(() => {}); } catch { /* badges are optional */ }
@@ -142,7 +151,6 @@ function renderBadges(state) {
 export function renderMayhem(state) {
   if (!state) return;
   S = state;
-  syncRetention(state);   // the Almanac, the return chest and the long-game achievements read what the game already counts
   renderBadges(state);
   renderHud(state);
   renderAlert(state);
@@ -176,11 +184,12 @@ function showEmergency(state) {
     '<div class="mh-card"><div class="mh-scene"><div class="mh-prop">' + glyph(info.template.art) + '</div></div>' +
     '<h3 class="mh-title">' + esc(info.title) + '</h3>' +
     '<div class="mh-choices">' + info.choices.map((label, i) => '<button class="mh-choice" type="button" data-choice="' + i + '" aria-describedby="mhOdds' + i + '"><span>' + (i ? 'B' : 'A') + '</span><span class="mh-choice-text">' + esc(label) + '</span><em class="mh-odds-tag odds-' + info.odds[i].level + '" id="mhOdds' + i + '">' + esc(info.odds[i].label) + '</em></button>').join('') + '</div>' +
-    '<p class="mh-fineprint">Every choice pays souls. Who is involved changes the odds: menace makes things worse, trust turns them aside.</p></div>';
+    '<p class="mh-fineprint">Every choice pays souls. Who is involved changes the odds: menace makes things worse, a strong bond turns them aside.</p></div>';
   const scene = sheet.querySelector('.mh-scene');
   scene.prepend(sprite(info.a, 'mh-actor-a'));
   if (info.b) scene.appendChild(sprite(info.b, 'mh-actor-b'));
   scene.classList.toggle('pair', !!info.b);
+  window.dispatchEvent(new CustomEvent('shelflife:emergency', { detail: { info, sheet } })); // a friend's hex adds its extras (ui/mischief.js)
   open();
   sheet.querySelector('.mh-choice')?.focus({ preventScroll: true });
 }
@@ -235,10 +244,11 @@ function choose(state, index) {
   card.querySelector('.mh-choices').outerHTML = '<div class="mh-outcome"><div class="mh-stamp tone-' + result.tone + '">' + esc(result.stamp) + '</div>' +
     '<p class="mh-text">' + esc(result.text) + '</p>' + chapterHookHTML(uid, result) + rewardList(result) +
     (result.curio ? '<div class="mh-drop"><span class="mh-drop-kicker">Something was left behind</span>' + curioCard(result.curio) + '</div>' : '') +
-    (nudgesAvailable() && !state.settings.nudges && !state.settings.nudgeAsked ? '<p class="mh-nudge"><span>Want a buzz when something goes wrong?</span><button class="btn btn-sm" type="button" data-mh="nudge">Yes, nudge me</button><button class="btn btn-ghost btn-sm" type="button" data-mh="nudge-no">Not now</button></p>' : '') +
+    (nudgePromptDue(state) ? (notePrompted(), '<p class="mh-nudge"><span>Want a nudge when something goes wrong on the shelf?</span><button class="btn btn-sm" type="button" data-mh="nudge">Yes, nudge me</button><button class="btn btn-ghost btn-sm" type="button" data-mh="nudge-no">Not now</button></p>') : '') +
     '<div class="mh-next">' + (left ? '<button class="btn btn-primary" type="button" data-mh="emergency">Next emergency <small>(' + left + ' left)</small></button>' : mayhemState(state).souls >= POKE_COST ? '<button class="btn btn-primary" type="button" data-mh="poke">Poke the drawer · ' + POKE_COST + '</button><button class="btn" type="button" data-mh="close">Back to the shelf</button>' : '<button class="btn btn-primary" type="button" data-mh="close">Back to the shelf</button>') +
     '<button class="btn btn-ghost" type="button" data-mh="cabinet">Cabinet</button></div></div>';
   card.querySelector('.mh-fineprint')?.remove();
+  window.dispatchEvent(new CustomEvent('shelflife:emergency-result', { detail: { result, card } }));
   (result.tone === 'bad' ? playFeud : result.tone === 'good' ? playStar : playStomp)();
   if (result.curio && !result.curio.duplicate) setTimeout(() => playUnlock(), 450);
   card.querySelectorAll('.mh-actor').forEach(el => el.classList.add(result.tone === 'bad' ? 'recoil' : 'bounce'));
@@ -289,7 +299,8 @@ function showOmen(state, revealed = null) {
   if (!omen) {
     sheet.innerHTML = head('Once a night', 'Tonight’s omen') +
       '<div class="mh-tarot-stage"><button class="mh-tarot" type="button" data-mh="flip" aria-label="Turn the omen over"><span class="mh-tarot-back">' + glyph('eye') + '</span></button></div>' +
-      '<p class="mh-coffin-note">Turn it over. Come back tomorrow night for another. Nights in a row pay more.</p>';
+      '<p class="mh-coffin-note">Turn it over. Come back tomorrow night for another. Nights in a row pay more.</p>' +
+      '<button class="mh-gloss-link" type="button" data-gloss="omen">What is an omen?</button>';
     open();
     sheet.querySelector('.mh-tarot')?.focus({ preventScroll: true });
     return;
@@ -300,7 +311,8 @@ function showOmen(state, revealed = null) {
     '<p class="mh-omen-line">' + esc(omen.line) + '</p>' +
     (revealed ? '<ul class="mh-rewards"><li class="souls">' + glyph('soul') + '+' + revealed.gift + ' souls for showing up</li>' + (revealed.graceUsed ? '<li class="good">The candle guttered while you were away. It held. One missed night is forgiven, and you get another after the next seventh night.</li>' : '') + (revealed.freezeUsed ? '<li class="good">A freeze saved your streak. You missed a night, and the candle was held for you.</li>' : '') + (m.omen.streak < 7 ? '<li>Night ' + m.omen.streak + ' of 7. The seventh night leaves something rare on the step.</li>' : '') + '</ul>' : '') +
     (revealed?.bonus ? '<div class="mh-drop"><span class="mh-drop-kicker">Seven nights. Something was left on the step.</span>' + curioCard(revealed.bonus) + '</div>' : '') +
-    '<div class="mh-next"><button class="btn btn-primary" type="button" data-mh="' + (mayhemState(state).queue.length ? 'emergency' : 'close') + '">' + (mayhemState(state).queue.length ? 'See what went wrong' : 'Back to the shelf') + '</button></div>';
+    '<div class="mh-next"><button class="btn btn-primary" type="button" data-mh="' + (mayhemState(state).queue.length ? 'emergency' : 'close') + '">' + (mayhemState(state).queue.length ? 'See what went wrong' : 'Back to the shelf') + '</button></div>' +
+    '<button class="mh-gloss-link" type="button" data-gloss="omen">What is an omen?</button>';
   open();
   sheet.querySelector('.mh-next .btn')?.focus({ preventScroll: true });
 }
@@ -342,15 +354,17 @@ function showCabinet(state) {
       '<p class="mh-season-note">' + (live ? 'In season now. Some coffins hold these.' : 'Out of season. They return every year.') + '</p><div class="mh-shelf-grid">' + items + '</div></section>';
   }).join('');
   const log = m.log.slice(0, 6).map(entry => '<li class="tone-' + entry.tone + '"><span class="mh-mini-stamp">' + esc(entry.stamp) + '</span><span><b>' + esc(entry.title) + '</b> ' + esc(entry.text) + '</span></li>').join('');
-  sheet.innerHTML = head('Souls earned in this house: ' + m.lifetime, 'Cabinet of Curiosities') +
+  const climb = info.next ? info.rank.title + '. ' + info.toNext + ' souls to ' + info.next.title + '.' : info.rank.title + '. Nowhere left to climb.';
+  sheet.innerHTML = head(climb, 'Cabinet of Curiosities') +
     '<section class="mh-rank-card"><span class="mh-tile-kicker">The neighbours call this house</span><h3>' + esc(info.rank.title) + '</h3><p>' + esc(info.rank.line) + '</p>' + (activeTitle(state) ? '<p class="mh-wears">Wearing the title: ' + esc(titleText(activeTitle(state))) + '</p>' : '') +
     '<span class="mh-meter big"><i style="width:' + Math.round(info.progress * 100) + '%"></i></span>' +
     '<small>' + (info.next ? info.toNext + ' more souls until the neighbours start saying “' + esc(info.next.title) + '”' : 'There is nothing worse they can call you. Well done.') + '</small>' +
     '<ol class="mh-ladder">' + ladder + '</ol>' +
-    '<p class="mh-stats">' + plural(m.resolved, 'emergency', 'emergencies') + ' survived · ' + plural(m.coffins, 'coffin') + ' opened · ' + m.souls + ' souls in hand</p></section>' +
+    '<p class="mh-stats">' + plural(m.resolved, 'emergency', 'emergencies') + ' survived · ' + plural(m.coffins, 'coffin') + ' opened · ' + m.souls + ' souls in hand · ' + m.lifetime + ' earned in this house</p>' +
+    '<button class="mh-gloss-link" type="button" data-gloss="souls">What are souls?</button></section>' +
     '<div class="mh-cabinet-actions"><button class="btn btn-primary" type="button" data-mh="coffin">Open a coffin · ' + coffinCost(state) + '</button>' + (m.queue.length ? '<button class="btn" type="button" data-mh="emergency">' + plural(m.queue.length, 'emergency', 'emergencies') + ' waiting</button>' : '') + '</div>' +
     '<div class="mh-curio-detail" id="mhCurioDetail" hidden></div>' +
-    (curioCount(state) ? '' : emptyState({ kind: 'cabinet', compact: true, title: 'Not one curio.', line: 'Every coffin holds something. The undertaker calls this a feature.' })) +
+    (Object.values(m.curios).some(count => count > 0) ? '' : emptyState({ kind: 'cabinet', compact: true, title: 'Not one curio.', line: 'Every coffin holds something. The undertaker calls this a feature.' })) +
     groups + seasonGroups + cabinetExtrasHTML(state) +
     (log ? '<section class="mh-log"><h3>The incident reports</h3><ul>' + log + '</ul></section>' : '');
   open();
@@ -467,6 +481,11 @@ export function initMayhem(state, onRefresh) {
     else if (action === 'poke') { if (pokeDrawer(S)) { save(); playFeud(); showEmergency(S); refresh(); } else showQuiet(S); }
   });
   hud?.addEventListener('click', () => showCabinet(S));
+  // The next-step card and the glossary open these without knowing the sheet's buttons.
+  window.addEventListener('shelflife:mayhem', event => {
+    const show = ({ emergency: showEmergency, omen: showOmen, coffin: showCoffin, cabinet: showCabinet, quiet: showQuiet })[event.detail?.open];
+    if (show && S) show(S);
+  });
   veil?.addEventListener('click', event => { if (event.target === veil) close(); });
   rankEl?.addEventListener('click', () => { rankEl.classList.remove('show'); rankEl.hidden = true; });
   // A one-second clock for the countdown. It only redraws the shelf when a new

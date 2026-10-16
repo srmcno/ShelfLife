@@ -49,7 +49,7 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
   const base = configured ? config.url.trim().replace(/\/+$/, '') : '';
   const anonKey = configured ? config.anonKey.trim() : '';
   const listeners = new Set();
-  let memo = {}, persisted = true, refreshing = null;
+  let memo = {}, persisted = true, refreshing = null, authEpoch = 0;
 
   // ---- local bookkeeping ----
   function meta() {
@@ -80,6 +80,24 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
   const email = () => session()?.user.email || '';
   const isAnonymous = () => { const s = session(); return !!s && !s.user.email; };
   const fresh = s => s && s.expires_at - now() / 1000 > REFRESH_EARLY;
+  const accountChanged = () => new CloudError('The cloud account changed. Try again for this account.', { status: 401, code: 'session_changed' });
+  function requireAccount(uid) {
+    const current = session();
+    if (!current || current.user.id !== uid) throw accountChanged();
+    return current;
+  }
+  const authSnapshot = () => ({ epoch: authEpoch, intent: meta().authIntent });
+  function beginAuthIntent() {
+    authEpoch += 1;
+    // A unique cancellation marker shared by tabs, including signed-out tabs.
+    // This is bookkeeping, never a credential or an authorization token.
+    if (configured) setMeta({ authIntent: authEpoch + ':' + now() + ':' + Math.random().toString(36).slice(2) });
+    return authSnapshot();
+  }
+  function requireAuthEpoch(snapshot) {
+    if (snapshot.epoch !== authEpoch || snapshot.intent !== meta().authIntent) throw accountChanged();
+  }
+  function requireSessionOwner(owner) { if (userId() !== owner) throw accountChanged(); }
 
   function keep(data, previous) {
     const user = data?.user && typeof data.user === 'object' && data.user.id ? data.user : previous?.user;
@@ -128,41 +146,65 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
   // One refresh at a time. Refresh tokens rotate, so two at once would spend
   // the same token twice and the second would be refused.
   function refresh() {
-    if (refreshing) return refreshing;
     const current = session();
-    refreshing = (async () => {
+    if (refreshing?.userId === current?.user.id) return refreshing.promise;
+    const epoch = authSnapshot(), entry = { userId: current?.user.id, promise: null };
+    entry.promise = (async () => {
       if (!current) throw new CloudError('Not signed in.', { status: 401, code: 'no_session' });
       try {
-        return keep(await send('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: current.refresh_token } }), current);
+        const data = await send('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: current.refresh_token } });
+        requireAuthEpoch(epoch);
+        const latest = requireAccount(current.user.id);
+        if (data?.user?.id && data.user.id !== current.user.id) throw accountChanged();
+        if (latest.refresh_token !== current.refresh_token && fresh(latest)) return latest;
+        return keep(data, current);
       } catch (error) {
+        requireAuthEpoch(epoch);
+        const latest = requireAccount(current.user.id);
+        if (error.code === 'session_changed') throw error;
         if (error.offline || error.status >= 500 || error.status === 429) throw error;
         // Another tab may have rotated the token first. Theirs is as good as ours.
-        const latest = session();
-        if (latest && latest.refresh_token !== current.refresh_token) return latest;
+        if (latest.refresh_token !== current.refresh_token) return latest;
         forget();
         throw new CloudError('This device has been signed out of cloud save.', { status: 401, code: 'session_expired' });
       }
-    })().finally(() => { refreshing = null; });
-    return refreshing;
+    })().finally(() => { if (refreshing === entry) refreshing = null; });
+    refreshing = entry;
+    return entry.promise;
   }
 
   async function authed(path, options = {}) {
     let s = session();
     if (!s) throw new CloudError('Not signed in.', { status: 401, code: 'no_session' });
+    const uid = s.user.id;
     if (!fresh(s)) s = await refresh();
+    requireAccount(uid);
+    if (s.user.id !== uid) throw accountChanged();
     try {
-      return await send(path, { ...options, token: s.access_token });
+      const data = await send(path, { ...options, token: s.access_token });
+      requireAccount(uid);
+      return data;
     } catch (error) {
-      if (error.status !== 401) throw error;
-      const latest = session();
-      const next = latest && latest.access_token !== s.access_token && fresh(latest) ? latest : await refresh();
-      return send(path, { ...options, token: next.access_token });
+      if (error.status !== 401 || error.code === 'session_changed') throw error;
+      const latest = requireAccount(uid);
+      const next = latest.access_token !== s.access_token && fresh(latest) ? latest : await refresh();
+      requireAccount(uid);
+      if (next.user.id !== uid) throw accountChanged();
+      const data = await send(path, { ...options, token: next.access_token });
+      requireAccount(uid);
+      return data;
     }
   }
 
   // ---- accounts ----
   async function signInAnonymously() {
-    return session() || keep(await send('/auth/v1/signup', { method: 'POST', body: {} }), null);
+    const existing = session();
+    if (existing) return existing;
+    const epoch = beginAuthIntent();
+    const data = await send('/auth/v1/signup', { method: 'POST', body: {} });
+    requireAuthEpoch(epoch);
+    requireSessionOwner(null);
+    return keep(data, null);
   }
   function cleanEmail(value) {
     const address = String(value || '').trim().toLowerCase();
@@ -175,12 +217,14 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
   // deletion page must never make one).
   async function requestEmailCode(address, { mode, create = true } = {}) {
     const target = cleanEmail(address);
+    const epoch = beginAuthIntent(), owner = userId();
     let how = mode === 'link' || mode === 'signin' ? mode : isAnonymous() ? 'link' : 'signin';
     if (how === 'link') {
       // GoTrue automatically attaches an anonymous user's email, without
       // sending a code, when confirmation is disabled. This UI requires proof
       // of inbox ownership before attaching it, so check before mutating.
       const settings = await send('/auth/v1/settings');
+      requireAuthEpoch(epoch); requireSessionOwner(owner);
       if (settings?.mailer_autoconfirm !== false) {
         throw new CloudError('Email confirmation is not enabled on the server.', { code: 'email_confirmation_disabled' });
       }
@@ -194,6 +238,8 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
       }
     }
     else await send('/auth/v1/otp', { method: 'POST', body: { email: target, create_user: create !== false } });
+    requireAuthEpoch(epoch);
+    requireSessionOwner(owner);
     setMeta({ pending: { email: target, mode: how, at: now() } });
     return { email: target, mode: how };
   }
@@ -201,15 +247,19 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
     const target = cleanEmail(address);
     const token = String(code || '').replace(/\s+/g, '');
     if (!/^\d{6,10}$/.test(token)) throw new CloudError('The code is the digits from the email.', { code: 'invalid_code' });
+    const epoch = beginAuthIntent();
     const pending = meta().pending;
     const how = pending?.email === target ? pending.mode : 'signin';
     const previous = session();
     const data = await send('/auth/v1/verify', { method: 'POST', body: { type: how === 'link' ? 'email_change' : 'email', email: target, token } });
+    requireAuthEpoch(epoch);
+    requireSessionOwner(previous?.user.id || null);
     let s;
     if (typeof data?.access_token === 'string') s = keep(data, previous);
     else if (how === 'link' && previous) {
       // Some servers confirm an email change without issuing a new session.
       const user = await authed('/auth/v1/user');
+      requireAuthEpoch(epoch);
       s = setMeta({ session: { ...session(), user: pickUser(user) } }).session;
       emit({ type: 'session', userChanged: false });
     } else throw new CloudError('The sign-in reply was incomplete.', { code: 'bad_session' });
@@ -218,9 +268,10 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
   }
   async function signOut() {
     const s = session();
+    beginAuthIntent();
     // Signing out of this device never waits on the network to agree.
-    if (s) { try { await send('/auth/v1/logout?scope=local', { method: 'POST', token: s.access_token }); } catch { /* local sign-out still happens */ } }
     forget();
+    if (s) { try { await send('/auth/v1/logout?scope=local', { method: 'POST', token: s.access_token }); } catch { /* local sign-out still happens */ } }
   }
 
   // ---- data ----

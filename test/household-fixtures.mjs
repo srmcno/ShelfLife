@@ -2,7 +2,7 @@ import { blankState, normalizeState, localDayKey } from '../src/state.js';
 import { generateCreature } from '../src/art/creatures.js';
 
 // Deterministic, synthetic households. No player data belongs in this file.
-export const FIXTURE_NAMES = ['fresh', 'established', 'nearly-full', 'drawing-heavy', 'conflicting', 'sleeping', 'capped', 'legacy', 'court-veteran', 'veteran'];
+export const FIXTURE_NAMES = ['fresh', 'established', 'nearly-full', 'drawing-heavy', 'conflicting', 'sleeping', 'capped', 'legacy', 'court-veteran', 'veteran', 'hexed'];
 const names = ['Agnes', 'Lord Dampington III', 'Pip', 'Bitey', 'Velvet', 'Mothball', 'Cricket', 'Doreen', 'Gladys', 'Snag', 'Mildred', 'Crumb', 'Wanda', 'Nell', 'Gnasher'];
 const traits = ['spiteful', 'damp', 'theatrical', 'magpie', 'porcelain', 'sugar', 'loadbearing', 'nocturnal'];
 // A valid synthetic raster with deliberately uncompressed pixels exercises the
@@ -73,6 +73,14 @@ export function householdFixture(kind='established', now=Date.now()) {
     s.exchange={frames:['tin','seance-felt'],frame:'tin',portraits:['cameo'],portrait:{qa0:'cameo'},commissions:['portrait'],titles:['ch:thin-2026','set:paper','cm:portrait'],title:'set:paper'};
     s.decor.owned=['room:pumpkin-hollow','wood:burnt-pumpkin','wall:scallop'];
     s.settings.nudgeCats={emergency:true,away:false,almanac:true,chest:true};
+    // Kin: Pip was found on the step, Agnes's co-parent writes to her, and Agnes answered once.
+    const friend='00000000-0000-4000-8000-0000000000f1', pal='00000000-0000-4000-8000-0000000000f2', basket='00000000-0000-4000-8000-0000000000f3';
+    s.kin={foundlings:[{pet:'qa2',basket,born:now-3*86400000,name:'Pip',parents:[{id:'qa0',name:'Agnes',home:true},{id:'b0',name:'Grubbs',home:false,friend,shelf:'Bea'}],twin:{friend,shelf:'Bea'}}],
+      letters:[{id:'00000000-0000-4000-8000-0000000000f4',pal,week:144,at:now-2*86400000,dir:'in',kind:'weekly',mine:'qa0',theirs:'Grubbs',friend,shelf:'Bea',
+        text:'Dear Agnes,\n\nPip bit the lamp. I told it you would be disappointed.\n\nYours in arrears,\nGrubbs\n\nP.S. You are on a list.',read:true,replied:true,
+        cards:{seed:42,writer:{name:'Grubbs',traits:['spiteful']},reader:{name:'Agnes',traits:['spiteful']}}},
+        {id:'00000000-0000-4000-8000-0000000000f5',pal,week:144,at:now-86400000,dir:'out',kind:'reply',mine:'qa0',theirs:'Grubbs',friend,shelf:'Bea',text:'Dear Grubbs,\n\nReceived. Read. Noted.\n\nYours,\nAgnes',read:true}],
+      step:[],notices:[],collected:[basket]};
   }
   if(kind==='drawing-heavy') { raster ||= drawing(); s.pets.forEach(p=>p.art={body:raster,stamps:Array.from({length:18},(_,i)=>({kind:i%2?'eyes':'legs',x:220+(i%6)*30,y:210+Math.floor(i/6)*65,size:24,rotation:i*3,color:'#271927'})),bounds:{x:.1,y:.1,width:.8,height:.85}}); }
   // A regular at Shelf Court: versions seen, a recent list, who last sat where, a rank and owed rewards.
@@ -80,6 +88,37 @@ export function householdFixture(kind='established', now=Date.now()) {
     versions:{'borrowed-coffin':{base:3,'a-second-telling':2},'snoring-wall':{base:2}},recent:['borrowed-coffin','snoring-wall','stolen-slot'],seats:{qa0:30,qa1:29,qa2:12},
     stars:52,rank:4,flawless:1,flawlessBest:3,summonsDay:localDayKey(now),summonsHeard:3,summonsVerdicts:0,summonsPaid:[],
     summonsOwed:[{id:'00000000-0000-4000-8000-000000000001',kind:'heard'}]};
+  // A friend's mischief under way: a hex in the tray, one waiting for room, a ghost on the shelf and a help received.
+  if(kind==='hexed') {
+    const bea={userId:'00000000-0000-4000-8000-0000000000bb',name:'Bea'}, grubbs={id:'friend-r1',name:'Grubbs',traits:['spiteful'],mood:'fine',bond:3,art:{body:'',stamps:[]}};
+    const hex=(n,card)=>({kind:'hex',ref:'11111111-1111-4111-8111-00000000000'+n,card,from:bea,culprit:grubbs,arrived:now-3600000,expires:now+40*3600000,rebound:false,trick:false});
+    s.mayhem.queue=[{uid:41,id:'x:unsolicited-accordion',a:'qa0',at:now-1800000,ext:hex(1,'unsolicited-accordion')}]; s.mayhem.serial=41; s.mayhem.nextAt=now+600000;
+    s.mischief={v:1,user:'00000000-0000-4000-8000-0000000000aa',hexes:[hex(1,'unsolicited-accordion'),hex(2,'damp-invitation')],
+      outbox:[{op:'ack',ref:'11111111-1111-4111-8111-000000000009',user:'00000000-0000-4000-8000-0000000000aa',at:now-60000}],
+      helps:[{id:'11111111-1111-4111-8111-000000000008',from:bea,petId:'qa1',petName:names[1],need:'food',amount:25,at:now-7200000,applied:now-3600000}],
+      haunt:{ref:'11111111-1111-4111-8111-000000000007',from:bea,ghost:grubbs,arrived:now-3600000,ends:now+20*3600000,shooed:false,paid:false},
+      done:['11111111-1111-4111-8111-000000000008'],paid:{day:localDayKey(now),help:1,knock:0,shoo:0}};
+  }
   if(kind==='legacy') { s.v=3; delete s.life; s.pets.forEach(p=>{p.img=drawing();delete p.art;delete p.names;delete p.slotHist;}); return s; }
   return normalizeState(s);
+}
+
+// A household on its first day: one resident who moved in a moment ago, nothing
+// done yet. The first-session tour starts for this one and for no fixture above.
+export function firstDayHousehold(now=Date.now()) {
+  const s=blankState(); s.started=now; s.lastTick=now; s.seq=3;
+  s.pets=[{ id:'first',name:'Mabel',born:now,traits:['theatrical','undertaker'],needs:{food:58,fuss:54,clean:66},bond:0,cared:0,grudges:0,
+    stats:{cute:6,menace:4,damp:5,mystique:7},art:{body:'',stamps:[],creature:generateCreature({seed:'first-day-mabel'})} }];
+  s.slots[0]='first'; s.life.introStarted=true;
+  return normalizeState(s);
+}
+
+// Residents visiting from friends' shelves, in the shape the Friends postbox
+// writes to state.visits.guests ({ visitId, from, resident, arrived, leaves }).
+// Shelf Court seats them on the jury or calls them as witnesses.
+export function visitingGuestsFixture(now=Date.now()) {
+  const guest=(visitId,userId,from,id,name,traits)=>({ visitId, from:{userId,name:from},
+    resident:{ id,name,traits,mood:'fine',bond:6,art:{creature:generateCreature({seed:'visiting-'+id})} }, arrived:now-3600000, leaves:now+2*86400000 });
+  return [guest('00000000-0000-4000-8000-0000000000e1','00000000-0000-4000-8000-0000000000b0','Bea','mabel','Mabel',['nocturnal']),
+    guest('00000000-0000-4000-8000-0000000000e2','00000000-0000-4000-8000-0000000000c0','Cat','crumb','Crumb',['damp'])];
 }

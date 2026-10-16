@@ -6,7 +6,9 @@
 // and safe to commit: row level security in supabase/migrations is what
 // protects each player's save, not the secrecy of this key. Never put a secret
 // or service_role key here.
-export const CLOUD_CONFIG = {
+import { DEPLOYED_CLOUD_CONFIG } from './deployment-config.js';
+
+export const CLOUD_CONFIG = DEPLOYED_CLOUD_CONFIG || {
   url: 'https://wsddmmsddghqxymwsgwt.supabase.co',
   anonKey: 'sb_publishable_Ow2VUbObAS3RKnbxLY0Bkw_VtUFIj1N'
 };

@@ -2,8 +2,6 @@ import { householdAftermath } from '../household-echoes.js';
 import { renderLife } from './life.js';
 import { renderWelcome } from './welcome.js';
 import { renderEscapades } from './escapades.js';
-import { welcomeView } from '../engine/welcome.js';
-import { escapadeView } from '../engine/escapades.js';
 import { advanceStories, withStories } from '../engine/stories.js';
 import { renderStories } from './stories.js';
 import { save } from '../state.js';
@@ -27,6 +25,9 @@ import { VISITORS } from '../content/stories.js';
 import { renderTheatreControls } from './shelf-theatre.js';
 import { createArrivalInvitation } from './arrival.js';
 import { renderMayhem } from './mayhem.js';
+import { packingFor } from '../engine/trades.js';
+import { renderNextStep } from './nextstep.js';
+import { syncRetention } from './almanac.js';
 
 const cabinet = document.getElementById('cabinet');
 const notesEl = document.getElementById('notes');
@@ -50,6 +51,8 @@ export function renderAll(state) {
   return withStories(state, () => {
     syncEffects(state);
     advanceStories(state);
+    // Settle counter-based rewards before any card or counter reads them.
+    syncRetention(state);
     renderStatus(state);
     renderShelf(state);
     renderAftermath(state);
@@ -107,7 +110,7 @@ export function renderStatus(state) {
   updateMarkup(statusBar,
     '<span class="day">Day <b>' + days + '</b></span>' +
     '<span class="pop">Living here <b>' + state.pets.length + '</b><span class="of">of ' + state.slots.length + '</span></span>' +
-    '<span class="trust">Trust <b>' + totalBond(state) + '</b></span>' +
+    '<span class="trust"><button class="trust-chip" type="button" data-gloss="household-trust" aria-label="Household trust ' + totalBond(state) + '. What is this?">Household trust <b>' + totalBond(state) + '</b></button></span>' +
     (unrest ? '<span class="bad">Unrest <b>' + unrest + '</b></span>' : '') +
     '<span class="moon" title="' + escapeHtml(moon.name + '. ' + moon.line) + '" aria-label="' + escapeHtml(moon.name) + '"><i style="--ms:' + moon.shift + 'px"></i><span class="moon-name">' + escapeHtml(moon.name) + '</span></span>');
 }
@@ -126,6 +129,9 @@ function feudDirectionFor(state, pet, slotIndex, feuds) {
   return null;
 }
 
+// A need mark is a shape and a letter as well as a colour: round F is food, diamond A is attention, square W is washing.
+const PIP_LETTER = { food: 'F', fuss: 'A', clean: 'W' };
+const PIP_WORD = { food: 'Hungry', fuss: 'Lonely', clean: 'Grubby' };
 const artForNode = new WeakMap();
 function petEl(state, pet, slotIndex, existing, feuds, feudIds) {
   const mood = moodOf(pet);
@@ -145,6 +151,8 @@ function petEl(state, pet, slotIndex, existing, feuds, feudIds) {
   // creature's own inner monologue instead of a generic mood bubble.
   btn.dataset.traits = (pet.traits || []).join(' ');
   btn.dataset.mood = mood;
+  const packing = !!packingFor(state, pet.id); // offered in a trade: still here, bags by the door
+  btn.classList.toggle('packing', packing);
   const needs = Object.keys(needWords).filter(k => pet.needs[k] < 42).map(k => needWords[k]);
   btn.setAttribute('aria-label', 'Take care of ' + pet.name + ', currently ' + MOOD_WORD[mood] + (needs.length ? ', ' + needs.join(', ') : ''));
   btn.title = pet.name + ' · ' + (needs.join(', ') || MOOD_WORD[mood]);
@@ -170,9 +178,9 @@ function petEl(state, pet, slotIndex, existing, feuds, feudIds) {
   if (nameplate.textContent !== pet.name) nameplate.textContent = pet.name;
   let pips = btn.querySelector('.pips');
   if (!pips) { pips = document.createElement('span'); pips.className = 'pips'; btn.appendChild(pips); }
-  const pipMarkup = (plotting && !asleep ? '<span class="pip plotting">plotting</span>' : '') +
+  const pipMarkup = (packing ? '<span class="pip packing">packing</span>' : '') + (plotting && !asleep ? '<span class="pip plotting">plotting</span>' : '') +
     (asleep ? '<span class="pip zzz">asleep</span>' : '') +
-    ['food', 'fuss', 'clean'].filter(k => pet.needs[k] < 42).map(k => '<span class="pip ' + k + '"></span>').join('');
+    ['food', 'fuss', 'clean'].filter(k => pet.needs[k] < 42).map(k => '<span class="pip ' + k + '" data-gloss="needs" role="img" aria-label="' + PIP_WORD[k] + '"><b aria-hidden="true">' + PIP_LETTER[k] + '</b></span>').join('');
   if (pips.innerHTML !== pipMarkup) pips.innerHTML = pipMarkup;
 
   return btn;
@@ -462,7 +470,7 @@ function renderProgress(state) {
   const bond = totalBond(state);
   const next = Object.values(PROPS).filter(p => p.at > bond).sort((a, b) => a.at - b.at)[0];
   if (!state.pets.length) { updateMarkup(host, ''); return; }
-  updateMarkup(host, next ? '<div><span class="eyebrow">Next unlock</span><p><strong>' + escapeHtml(next.name) + '</strong> at ' + next.at + ' trust <span>· ' + (next.at - bond) + ' to go. Care for someone individually.</span></p></div><meter min="0" max="' + next.at + '" value="' + bond + '" aria-label="Trust toward ' + escapeHtml(next.name) + '"></meter>' : '<div><span class="eyebrow">In far too deep</span><p>Every furnishing unlocked. They trust your judgment. An error, surely.</p></div>');
+  updateMarkup(host, next ? '<div><span class="eyebrow">Next unlock</span><p><strong>' + escapeHtml(next.name) + '</strong> at ' + next.at + ' household trust <span>· ' + (next.at - bond) + ' to go. Care for someone individually.</span></p></div><meter min="0" max="' + next.at + '" value="' + bond + '" aria-label="Household trust toward ' + escapeHtml(next.name) + '"></meter>' : '<div><span class="eyebrow">In far too deep</span><p>Every furnishing unlocked. They trust your judgment. An error, surely.</p></div>');
 }
 
 function renderDoors(state) {
@@ -472,7 +480,7 @@ function renderDoors(state) {
   const streak = state.streak && state.streak.count || 0;
   updateText(sub, n
     ? n + ' of ' + ACHIEVEMENTS.length + ' on record' + (streak > 1 ? ' · ' + streak + ' days running' : '')
-    : 'Milestones from care, games and household drama.');
+    : 'Care for someone, or play a game, to file the first one.');
 }
 
 let briefState;
@@ -488,41 +496,12 @@ function syncRounds(state) {
     updateText(check.querySelector('span'), wait ? 'Listening · ' + Math.ceil(wait / 1000) + 's' : 'Check the shelf');
   }
 }
+// The brief used to sit here as its own card, competing with the omen strip and
+// the emergency strip. One recommender now decides what the shelf asks next
+// (engine/nextstep.js) and ui/nextstep.js paints it above the cabinet.
 function renderBrief(state) {
   briefState = state;
-  const host = document.getElementById('shelfBrief');
-  if (!host) return;
-  const welcome = welcomeView(state);
-  if (welcome && !state.life?.welcome?.dismissed && welcome.stage !== 'finished') {
-    const markup = '<span class="brief-icon" aria-hidden="true">✦</span><div><b>' + escapeHtml(welcome.pet.name + ' has a housewarming invitation.') + '</b><span>Unpack a little bowl. Make your first household memory.</span></div><button class="btn btn-sm">Come in</button>';
-    if (updateMarkup(host, markup)) host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent('shelflife:goto', {detail:{tab:'plots',target:'#welcomePanel'}})));
-    return;
-  }
-  const adventure = escapadeView(state).active;
-  if (adventure) {
-    const text = adventure.ready ? 'The story is ready for its ending. You get to choose.' : 'Your place is saved. ' + adventure.completedSteps + ' of 2 moments shared.';
-    updateMarkup(host, '<span class="brief-icon" aria-hidden="true">✦</span><div><b>' + escapeHtml(adventure.pet.name + ' saved you a place.') + '</b><span>' + escapeHtml(text) + '</span></div><button id="escapadeBrief" class="btn btn-sm" data-escapade="open">' + (adventure.ready ? 'The ending' : 'Continue') + ' ↗</button>');
-    return;
-  }
-  const recap=state.life?.recap?.map(id=>state.life.scenes.find(scene=>scene.id===id)).filter(Boolean)||[];
-  if(recap.length){
-    const latest=recap[0],cast=(latest.cast||[]).map(id=>petById(state,id)?.name).filter(Boolean);
-    const next=state.life.outing?{action:'outing',label:'Continue expedition'}:{action:'scene-select',label:'See what happened'};
-    const text=latest.text.length>170?latest.text.slice(0,167).trimEnd()+'…':latest.text;
-    updateMarkup(host,'<span class="brief-icon" aria-hidden="true">✦</span><div><b>'+escapeHtml(cast.length?cast.join(' & ')+': '+latest.title:latest.title)+'</b><span>'+escapeHtml(text)+'</span></div><button class="btn btn-sm" data-life="'+next.action+'" data-id="'+latest.id+'">'+next.label+' ↗</button>');
-    return;
-  }
-  const sorted = [...state.pets].sort((a, b) => a.needs[worstNeed(a)] - b.needs[worstNeed(b)]);
-  const needy = sorted.find(p => p.needs[worstNeed(p)] < 60);
-  const playful = state.pets.find(p => !isAsleep(p)) || state.pets[0];
-  const pet = needy || playful;
-  if (!pet) {
-    updateMarkup(host, '<span class="brief-icon" aria-hidden="true">✦</span><div><b>Make something wonderfully odd.</b><span>Care. Conspire. Collect the evidence.</span></div>');
-    return;
-  }
-  const markup = '<span class="brief-icon" aria-hidden="true">' + (needy ? '!' : '✦') + '</span><div><b>' + escapeHtml(needy ? pet.name + ' is feeling ' + needWords[worstNeed(pet)] + '.' : 'A little time together?') + '</b><span>' + (needy ? 'Tap to help. Individual care builds trust.' : 'Hold a séance with ' + escapeHtml(pet.name) + '. The dead are chatty tonight.') + '</span></div><button class="btn btn-sm">' + (needy ? 'Care' : 'Play') + ' ↗</button>';
-  if (!updateMarkup(host, markup, JSON.stringify([pet.id, markup]))) return;
-  host.querySelector('button').addEventListener('click', () => window.dispatchEvent(new CustomEvent(needy ? 'shelflife:care' : 'shelflife:arcade', { detail: { petId: pet.id, game: 'seance' } })));
+  renderNextStep(state);
 }
 
 /* ---- what needs you -------------------------------------------------------

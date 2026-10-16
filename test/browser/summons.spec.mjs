@@ -4,6 +4,7 @@ import { createFakeSupabase } from '../support/fake-supabase.mjs';
 import { socialPlayer } from '../support/social-world.mjs';
 import { dailyChallenge } from '../../src/engine/daily.js';
 import { SUMMONS_SOULS, VERDICT_SOULS } from '../../src/engine/court.js';
+import { firstStackDrop } from './support/stack.mjs';
 
 // Two players, one browser context: the page is Ada, then Bea, then Ada
 // again, each with their own shelf and session, against one fake server.
@@ -73,13 +74,11 @@ async function noOverflow(page, width = 320) {
   expect(wide, 'nothing overflows at ' + width).toBe(false);
   await page.setViewportSize({ width: 1440, height: 900 });
 }
-// Coffin Stack to the end with the space bar. Under "Slim coffins" the first
-// coffin only overlaps after a moment, so the first drop waits for it; a run
-// that still scores nothing is played again.
+// Coffin Stack to the end with the space bar. Begin separately and land the
+// first coffin before trying to finish the run, under any daily modifier.
 async function stackRun(page, { tries = 3 } = {}) {
   for (let attempt = 0; ; attempt++) {
-    await expect(page.locator('#arcadeSheet [data-ar-field]')).toBeVisible();
-    await page.waitForTimeout(400);
+    await firstStackDrop(page);
     for (let i = 0; i < 80 && !(await page.locator('#arcadeSheet .ar-over').count()); i++) { await page.keyboard.press('Space'); await page.waitForTimeout(170); }
     await expect(page.locator('#arcadeSheet .ar-over')).toBeVisible();
     const score = Number(await page.locator('#arcadeSheet .ar-final b').textContent());
@@ -131,8 +130,8 @@ test('papers served, the case heard in Shelf Court, the verdict read, and friend
   await page.locator('#tabMore').click();
   await page.locator('#friendsBtn').click();
   const beaRow = page.locator('#friendsSheet .fr-friend').filter({ hasText: 'Bea' });
-  await beaRow.locator('[data-fr="menu"]').click();
-  await beaRow.locator('[data-fr="serve"]').click();
+  await beaRow.locator('[data-fr="profile"]').click();
+  await page.locator('#friendsSheet [data-fr-action="serve"]').click();
   await expect(page.locator('#friendsSheet .fr-status')).toHaveText('Choose whom to sue.');
   await expect(page.locator('#friendsSheet .fr-res [data-fr="papers"]').first()).toBeFocused();
   await page.locator('#friendsSheet .fr-res').filter({ hasText: 'Snag' }).locator('[data-fr="papers"]').click();
@@ -150,9 +149,13 @@ test('papers served, the case heard in Shelf Court, the verdict read, and friend
   await page.locator('#tabMore').click();
   await expect(page.locator('#friendsBtnSub')).toHaveText('Shelves, papers and scores');
   await page.locator('#friendsBtn').click();
-  await expect(page.locator('#friendsSheet .fr-inbox')).toContainText('1 set of papers waits for you in Shelf Court.');
+  // The papers are in the postbox, the one list for everything friends send.
+  await expect(page.locator('#friendsSheet [data-fr="postbox"]')).toContainText('1 waiting for you');
   await expect(page.locator('#friendsBadge')).toHaveText('1');
-  await page.locator('#friendsSheet [data-fr="court"]').click();
+  await page.locator('#friendsSheet [data-fr="postbox"]').click();
+  const served = page.locator('#friendsSheet [data-fr-mail="summons"]');
+  await expect(served).toContainText('Agnes, from Ada, is suing Snag over The Borrowed Coffin.');
+  await served.locator('[data-sx="court"]').click();
   await expect(page.locator('#courtVeil')).toHaveClass(/open/);
   const summons = page.locator('#courtSheet .sc-summons-case');
   await expect(summons).toHaveText(/Agnes, from Ada, is suing Snag over The Borrowed Coffin\./);

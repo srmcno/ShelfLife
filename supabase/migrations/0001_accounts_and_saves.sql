@@ -94,6 +94,24 @@ $$;
 revoke all on function private.new_friend_code() from public;
 revoke all on function private.require_user() from public;
 
+-- Saves and later account ledgers share this lock, before any row lock.
+create or replace function private.lock_account(p_user uuid)
+returns void language sql volatile set search_path = public as $$
+  select pg_advisory_xact_lock(hashtextextended('shelf-account:' || coalesce(p_user::text, ''), 0));
+$$;
+revoke all on function private.lock_account(uuid) from public;
+
+-- Later migrations can protect household-backed settlements without
+-- replacing push_save. Re-running this base file must not remove their hook.
+do $bootstrap$
+begin
+  if to_regprocedure('private.financial_save_ok(uuid,jsonb)') is null then
+    execute 'create function private.financial_save_ok(uuid, jsonb) returns void language plpgsql set search_path = public as $hook$ begin return; end; $hook$';
+  end if;
+end;
+$bootstrap$;
+revoke all on function private.financial_save_ok(uuid, jsonb) from public;
+
 -- ---------------------------------------------------------------------------
 -- Profiles
 -- ---------------------------------------------------------------------------
@@ -162,11 +180,13 @@ begin
   if p_data is null or jsonb_typeof(p_data) <> 'object' then
     raise exception 'save must be a json object' using errcode = '22023';
   end if;
+  perform private.lock_account(uid);
   select * into cur from public.saves where user_id = uid for update;
   if not found then
     if coalesce(p_base_rev, 0) <> 0 then
       return jsonb_build_object('ok', false, 'conflict', true, 'rev', 0, 'updated_at', null, 'device', null);
     end if;
+    perform private.financial_save_ok(uid, p_data);
     insert into public.saves (user_id, rev, data, device_id)
     values (uid, 1, p_data, left(coalesce(p_device, ''), 100))
     on conflict (user_id) do nothing
@@ -181,6 +201,7 @@ begin
   if cur.rev <> coalesce(p_base_rev, -1) then
     return jsonb_build_object('ok', false, 'conflict', true, 'rev', cur.rev, 'updated_at', cur.updated_at, 'device', cur.device_id);
   end if;
+  perform private.financial_save_ok(uid, p_data);
   update public.saves
      set rev = cur.rev + 1, data = p_data, device_id = left(coalesce(p_device, ''), 100), updated_at = now()
    where user_id = uid

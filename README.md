@@ -30,6 +30,14 @@ Missing a particular curio? A **special order** buys it outright, priced by rari
 coffins without anything cursed ends in one, and the coffin gets heavy when it is due. Doing the rounds
 pays for the first five each day.
 
+### Your first day
+
+A new household gets a six-step tour on the Shelf, one real action each, with a soft ring on the exact
+button: say hello, feed someone, clear the first emergency, turn over the omen, read a note and open the first
+coffin. Each step pays a few souls. **Skip the tour** is always there, and **Help** brings it back. One card
+above the shelf says what to do next; the desk grows over the first days; **Help → Glossary** explains every
+number in plain words. Established households never see any of it.
+
 ### Coming back tomorrow
 
 The shelf desk lists **today in the Playroom**. **The daily challenge** puts one arcade game in a
@@ -185,7 +193,7 @@ explain what belongs there and how to add it.
 On desktop, **P** opens the Playroom. Frenzy uses ← → or A/D, Coffin Stack uses Space, the Séance uses 1 to 4 and
 Grave Whack uses 1 to 9. In Shelf Court, Enter or Space advances dialogue. P pauses any run; a long stall or a hidden tab pauses it for you.
 **Escape** closes the current sheet and returns focus to its opener; the Back button does the same on a phone. Motion follows your system
-preference; More also offers Automatic, Light and Full effects. The narrator is off until enabled.
+preference; More also offers Automatic, Light and Full effects, and a Calm mode that stills everything. The narrator is off until enabled.
 Light retains brief gameplay reactions and scene movement while simplifying decoration.
 See [the expedition and paperwork design notes](docs/hearings-and-expeditions.md).
 
@@ -245,15 +253,54 @@ button at all, and a player without cloud save is pointed at Cloud save first.
   notices; closed-game phone push notifications are not supported.
   Hearing a case pays 15 souls and hearing a verdict pays 10,
   each for up to three summonses a day. A friend's resident never joins your shelf or its memories.
+- **The Joint Bench.** Serving papers now means judging them too: you hear the episode first (same case,
+  version, cast and seed as your friend will get), rule in secret, and your ruling is sealed on the server.
+  Your friend hears the identical episode, with the reactions you tapped (laugh, gasp, gavel) played back as
+  noises from the gallery, and rules. Then the bailiff opens both envelopes: a full bench (both right) pays
+  each of you 25 souls, three times a day; a divided bench reminds you that one of you is competent.
+  **Serve without judging** keeps the old one-sided summons. **Hear a case together** (from a friend’s
+  profile, or the Court lobby) does the same with any case you have aired or today’s docket, your household
+  on the podiums and their residents as character witnesses. Each friend’s profile and the Court lobby keep
+  the record: hearings, full benches and who is the better judge, with a replay of any revealed hearing.
+  Five open hearings per pair; an unanswered one expires after 14 days and your ruling then stands alone.
+  Residents visiting from a friend’s shelf sit on the jury, or give evidence when it is full.
 - **Cases you’ve sent** in Friends shows waiting papers, declined or expired cases, and verdicts
   even after you read them. Refresh checks for updates; Show older loads earlier cases. Open papers
   expire after 30 days. Rereading a verdict does not pay it again. Blocking deletes the shared cases;
   removing a friend deletes their open papers. Server housekeeping may remove old history.
 - **Daily challenge scores** go up when you play today's challenge. Friends appear by name (top five);
   everyone else is one line, such as "You beat 64% of players today". No stranger is ever named.
-- **Remove**, **Block** and **Report** sit in each friend's row. Blocking removes the friendship,
-  tears up any papers between you and makes your code stop working for them; they are not told.
+- **Remove**, **Block** and **Report** sit on each friend's profile and on every piece of their mail.
+  Blocking removes the friendship, tears up everything between you (papers, visits, treats, signatures,
+  waves) and makes your code stop working for them; they are not told.
   Reports go to a table only the project owner can read, with the name and shelf the reporter saw.
+- **The hub.** Home shows the postbox, requests, your friends (a strip of their residents, how close you
+  are, a dot when they have sent you something), your code and **Do not disturb**. Tap a friend for their
+  profile: household, cabinet highlights, guestbook, your history together and everything you can do with
+  them, with the reason when something is not available today.
+- **The postbox** is one list for everything friends send: papers, verdicts, visit requests, postcards,
+  treats, guestbook signatures and waves, newest first, with **Clear read**. The More tray badge and the
+  shelf notice count all of it.
+- **Visits.** Send a copy of one resident to stay on a friend's shelf for one to three days. They accept
+  or decline within 48 hours. A guest sits on the spare plank under the host's cabinet with a "visiting
+  from" tag; the host can feed, fuss and wash it (nothing can harm it) and it answers in character. At
+  home the resident shows "away at Bea’s". When the stay ends the sender gets a postcard written from what
+  the host actually did and a souvenir, the host gets a thank-you note, and both get a few souls (three
+  visits a day pay). Guests never count towards the household, achievements, rank or the arcade.
+- **Treats** (one a day per friend, the first five opened each day pay souls, unopened ones go off after
+  a week), **guestbooks** (one signature a day from 24 lines and six stamps; the owner can tear out any
+  page) and **waves and pokes** at a friend's resident (three a day) are all chosen from canned lines.
+- **Trades.** Propose a trade from a friend’s profile: up to three spare curios each way (the first copy of
+  anything never leaves the cabinet), or one resident as a gift or a one for one swap, two resident trades a
+  week. What you offer is held aside for seven days. Your account keeps one count across all your devices, so
+  two phones cannot promise the same moth wings twice. Every sealed trade goes into a ledger on the server
+  that is kept for as long as the account exists; any device, or a backup restored years later, catches up
+  from where its copy of the shelf left off and applies each trade exactly once. A resident who arrives to a
+  full shelf waits on the doorstep (Friends home, or the postbox notice) until there is room; nobody is ever
+  turned away.
+- **Friendship levels** count cases, visits, treats, signatures, waves, trades and joint hearings, a few
+  a day each, from Acquaintance to Co-conspirators.
+- **Do not disturb** stops new visits, treats, waves and papers; what has arrived stays.
 
 Nothing is public: there is no search, no global list of names and no way to see a stranger's shelf.
 Every reply from the server is checked again before the game draws it: text is clamped and escaped,
@@ -262,6 +309,107 @@ creatures are rebuilt from known parts, and a drawing is only accepted as a PNG 
 After the first visit, the installed game also works offline. Returning players receive a
 **Save & refresh** banner when a new edition is available. An active interaction or failed save
 prevents that refresh. Installation is available through your browser's app or home-screen menu.
+
+## For testers, and for reading what they say
+
+**More → Report a problem** (also in **Help → For testers**) is the main way to tell us something. Pick
+Bug, Confusing, Idea or Love it, write up to 1000 characters, optionally say what you were doing, and
+choose whether to attach diagnostics: the version and build, web or Android, the browser, screen size,
+effects and Calm settings, how many residents, days since the shelf started, the save's size, which
+sheet was open, whether the device was online and signed in to cloud save (never the email), and the
+last 20 errors the game caught. The game shows exactly what will be sent before it sends. With cloud
+save on it goes straight to the project (ten a day). Without it the report waits on this device and is
+sent once you sign in; **Copy report** puts the same text on the clipboard for an email. Nobody is ever
+signed in silently. The [issue form](https://github.com/srmcno/ShelfLife/issues/new/choose) still works.
+
+Errors are kept on the device (the last 20, message, file, line and time, never the shelf) under
+`shelflife.errors`, outside the save. The first one in a session brings up a small "Something on the
+shelf broke. Tell us?" notice. Three times in a tester's first week (after day two, after the first
+Shelf Court hearing, after day seven) a one-tap **How is it going?** card asks for a rating from 1 to 5;
+"Not now" twice and it stops asking.
+
+The version and the release notes live in `src/version.js`. More shows "Shelf Life 1.1.0 · build
+2026-10-11", and the first launch after an update shows a short **What's new** sheet, once, never on a
+brand-new install. Tap the version line seven times, or open the game with `?tester=1`, for the
+**tester panel**: start an emergency now, ready tonight's omen, finish the waits, move the clock a day on
+(and back), replay the first-day tour, rerun the effects benchmark, see the save's size and contents,
+export the save, check for an update, and pretend to be offline. Anything there that bends time or hands
+out souls marks the save as a tester save for good, and a tester save never sends daily challenge scores
+or Court verdict stars to the server. The weekly notes for testers are in `src/content/tester-notes.js`:
+edit them there.
+
+With cloud save on, the game also records which days each player opens it (one row per day, nothing
+else) so the owner can see retention. **More → Help improve the game: count which days I play** switches
+it off. Switching it off deletes the days already counted, including the days counted for coven invite
+rewards, and stops both until it is switched back on; while it is off, invite rewards cannot count that
+player's days. [privacy.html](privacy.html) says so.
+
+### Reading feedback and retention in Supabase
+
+Both tables are in `supabase/migrations/0006_feedback_and_play_days.sql`; nobody can read them through
+the API. To look at them, open the project at [supabase.com/dashboard](https://supabase.com/dashboard):
+
+- **Table Editor** (left sidebar) → schema `public` → `feedback` shows every report as a row. Click a
+  `diagnostics` cell to read it. `play_days` is one row per player per day.
+- **SQL Editor** (left sidebar) → **New query**, paste one of the queries below, then **Run** (or
+  Ctrl+Enter). Saved queries stay in the sidebar for next time.
+
+```sql
+-- Latest feedback, newest first
+select created_at, kind, rating, moment, body, doing, app_version, platform,
+       diagnostics -> 'errors' as errors, diagnostics, user_id
+  from public.feedback
+ order by created_at desc
+ limit 200;
+```
+
+```sql
+-- Daily active players, the last 30 days
+select day, count(*) as players
+  from public.play_days
+ where day > current_date - 30
+ group by day
+ order by day desc;
+```
+
+```sql
+-- Retention: D1, D7 and D30 by signup week. "Signup" is when the player's cloud
+-- account was created (auth.users.created_at), which is the first day the game
+-- could count them. Only players who leave the day count switched on are seen;
+-- a blank means too soon to tell.
+with signups as (
+  select u.id as user_id, (u.created_at at time zone 'utc')::date as signup_day
+    from auth.users u
+   where exists (select 1 from public.play_days p where p.user_id = u.id)
+), marked as (
+  select s.signup_day, date_trunc('week', s.signup_day)::date as signup_week,
+         exists (select 1 from public.play_days p where p.user_id = s.user_id and p.day = s.signup_day + 1) as d1,
+         exists (select 1 from public.play_days p where p.user_id = s.user_id and p.day = s.signup_day + 7) as d7,
+         exists (select 1 from public.play_days p where p.user_id = s.user_id and p.day = s.signup_day + 30) as d30
+    from signups s
+)
+select signup_week, count(*) as players,
+       round(100.0 * count(*) filter (where d1 and signup_day + 1 < current_date)
+         / nullif(count(*) filter (where signup_day + 1 < current_date), 0)) as d1_pct,
+       round(100.0 * count(*) filter (where d7 and signup_day + 7 < current_date)
+         / nullif(count(*) filter (where signup_day + 7 < current_date), 0)) as d7_pct,
+       round(100.0 * count(*) filter (where d30 and signup_day + 30 < current_date)
+         / nullif(count(*) filter (where signup_day + 30 < current_date), 0)) as d30_pct
+  from marked
+ group by signup_week
+ order by signup_week desc;
+```
+
+```sql
+-- Check-ins: how it is going, at each moment
+select moment, count(*) as answers, round(avg(rating), 1) as average_rating
+  from public.feedback
+ where kind = 'pulse'
+ group by moment
+ order by moment;
+```
+
+`test/feedback_sql.test.mjs` runs these exact queries, so they are known to work.
 
 ## Development
 
@@ -291,7 +439,7 @@ abandoned runs, emergencies, coffins and the curio cabinet, expedition returns, 
 replay identity, all sixteen keepsakes,
 cancelled gestures, failed saves, responsive layouts, cloud save and friends against an in-memory Supabase
 (`test/support/fake-supabase.mjs`) and runtime errors
-in desktop Chromium and phone-sized Chromium/WebKit. `npm test` also runs both SQL migrations in PGlite. Offline reload is tested in Chromium;
+in desktop Chromium and phone-sized Chromium/WebKit. `npm test` also runs the SQL migrations in PGlite. Offline reload is tested in Chromium;
 Playwright does not support WebKit service-worker tooling. This is browser automation, not physical-device
 testing. `test/responsive-harness.html` provides additional local fixture exploration.
 
@@ -304,10 +452,13 @@ testing. `test/responsive-harness.html` provides additional local fixture explor
 | `src/content/court-twists*.js`, `src/engine/court-twists.js`, `src/engine/court-traits.js`, `src/engine/court-objection.js`, `src/engine/court-career.js`, `src/content/court-bonus.js`, `src/art/court-dress.js` | Shelf Court replay: twisted case versions and their validation, trait-driven cast, the Objection, the bench career and its cosmetics, bonus questions |
 | `src/cloud/`, `src/ui/cloud.js`, `supabase/migrations/` | Optional accounts and cloud save: client, sync, sheet and schema |
 | `src/cloud/social.js`, `src/ui/friends.js`, `css/social.css` | Friends, shelves on show, Shelf Court summonses and daily boards |
+| `src/cloud/hearings.js`, `src/engine/court-joint.js`, `src/ui/court-joint.js`, `src/content/court-joint.js`, `src/engine/court-guests.js` | The Joint Bench: sealed hearings between friends, the reveal, the record, and guests on the jury |
+| `src/ui/social-registry.js`, `src/cloud/postbox.js`, `src/engine/visits.js`, `src/visits-state.js`, `src/ui/postbox.js`, `src/ui/guests.js`, `css/postbox.css` | The Friends hub's plug points, the postbox, visits, treats, guestbooks, waves and levels |
 | `src/almanac-state.js`, `src/content/almanac.js`, `src/engine/almanac.js`, `src/ui/almanac.js`, `css/almanac.css` | The Almanac: calendar, track, XP, weekly challenges, Back Issues and the screens |
 | `src/engine/streaks.js`, `src/engine/returns.js`, `src/engine/claimables.js` | Streak freezes, the return chest and one list of everything claimable |
 | `src/engine/collections.js`, `src/engine/legacy.js`, `src/ui/collections.js` | Sets, Legacy ranks and tokens, and the Collector's Exchange |
 | `src/native.js`, `capacitor.config.json`, `android/` | The Android app: native glue, Capacitor settings and the native project |
+| `src/version.js`, `src/errors.js`, `src/clock.js`, `src/diagnostics.js`, `src/tester-state.js`, `src/cloud/feedback.js`, `src/ui/testers.js`, `src/ui/feedback.js`, `src/ui/whats-new.js`, `src/ui/tester-panel.js`, `src/content/tester-notes.js`, `css/testers.css` | Tools for testers: the version and release notes, caught errors, Report a problem, check-ins, play days, What's new and the tester panel |
 | `src/engine/` | Testable gameplay rules and state transitions |
 | `src/content/` | Traits, writing, activities and creator invitations |
 | `src/art/` | Creature/drawing data, SVG rendering, animation and the studio |
@@ -359,9 +510,13 @@ npm run android:apk      # debug APK in android/app/build/outputs/apk/debug/
 npm run android:bundle   # release AAB in android/app/build/outputs/bundle/release/
 ```
 
-The version lives in one place: `version` in `package.json`. The app's `versionName` is that string and its
-`versionCode` is `major * 10000 + minor * 100 + patch` (1.0.0 is 10000, 1.2.3 is 10203), worked out in
-`android/app/build.gradle`. Play refuses a versionCode it has seen before, so bump `version` before every upload.
+The version lives in one place: `VERSION` in `src/version.js`, which More shows and every feedback report
+carries. The app's `versionName` is that string and its `versionCode` is `major * 10000 + minor * 100 + patch`
+(1.1.0 is 10100, 1.2.3 is 10203), worked out in `android/app/build.gradle`, which reads `src/version.js`.
+**Every upload to Play needs a higher versionCode**, even a closed-test build with one fix, because Play refuses
+a versionCode it has seen before. So for each upload: bump `VERSION` (a patch bump is enough: 1.1.0 to 1.1.1),
+set `BUILD` to the day, set `version` in `package.json` to the same string (`test/version.test.mjs` fails until
+they match), add a line to `CHANGES` if players should hear about it, then build the bundle.
 
 #### Signing a release
 
@@ -416,7 +571,8 @@ a real project (set `SHELF_REAL_CLOUD_CONFIG=1` to serve the real one).
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run `supabase/migrations/0001_accounts_and_saves.sql`, then
-   `supabase/migrations/0002_social.sql` for Friends. Running either again is harmless.
+   `supabase/migrations/0002_social.sql` for Friends, then the later ones in order (`0003_postbox_visits.sql`
+   for the postbox, visits, treats, guestbooks and levels, through `0010_kin.sql`). Running any of them again is harmless.
 3. Authentication → Sign In / Providers: enable **Anonymous sign-ins**, keep **Email** on, and enable
    **Confirm email**. Disabling confirmation automatically attaches email addresses to anonymous
    accounts without sending a code; the game refuses that configuration before changing the account.

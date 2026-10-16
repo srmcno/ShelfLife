@@ -117,7 +117,7 @@ function framesHTML(state, cat) {
   const cabinet = cat.frames.map(f => row('<span class="col-frame-sample fr-' + esc(f.id) + '"></span>', f.name, f.line,
     f.owned ? (f.active ? '<span class="ex-on">Worn</span>' : '<button class="btn btn-sm" type="button" data-ex="wear-frame" data-id="' + esc(f.id) + '">Wear</button>') :
       f.locked ? '<span class="ex-lock">Complete a set</span>' : buyButton(f, 'frame'), f.active ? 'active' : '')).join('');
-  const portraits = cat.portraits.map(f => row('<span class="pf-sample pf-' + esc(f.id) + '"></span>', f.name, f.line, f.owned ? '<span class="ex-on">Yours</span>' : buyButton(f, 'portrait'))).join('');
+  const portraits = cat.portraits.map(f => row('<span class="pf-sample pf-' + esc(f.id) + '"></span>', f.name, f.line, f.owned ? '<span class="ex-on">Yours</span>' : f.locked ? '<span class="ex-lock">Invite a new player</span>' : buyButton(f, 'portrait'))).join('');
   const owned = cat.portraits.filter(f => f.owned);
   const wear = S.pets.length && owned.length > 1 ? '<h4 class="ex-chapter">Who wears what</h4><ul class="ex-list">' + S.pets.map(p =>
     row('', p.name, 'Portrait frame on their card.', '<select class="ex-select" data-ex="pet-frame" data-id="' + esc(p.id) + '" aria-label="Portrait frame for ' + esc(p.name) + '">' + owned.map(f => '<option value="' + esc(f.id) + '"' + (portraitFor(S, p.id) === f.id ? ' selected' : '') + '>' + esc(f.name) + '</option>').join('') + '</select>')).join('') + '</ul>' : '';

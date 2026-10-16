@@ -36,7 +36,7 @@ function shifted(c, years, y) {
   const [fy, fm, fd] = isoParts(c.from), [ty, tm, td] = isoParts(c.to);
   const toDay = tm === 2 && td === 28 && daysInMonth(ty + years, 2) === 29 ? 29 : td;
   const fromNo = Math.floor(Date.UTC(fy + years, fm - 1, fd) / 86400000), toNo = Math.floor(Date.UTC(ty + years, tm - 1, toDay) / 86400000);
-  return { ...c, key: c.id + '~' + y, encore: true, fromNo, toNo, days: toNo - fromNo + 1 };
+  return { ...c, key: c.id + '~' + y, month: c.month.replace(/\d{4}$/, String(y)), encore: true, fromNo, toNo, days: toNo - fromNo + 1 };
 }
 
 // The chapter running on this date. Before the first chapter there is none. After
@@ -169,7 +169,7 @@ export function weeklyChallenges(weekNo) {
   });
 }
 
-function readCounters(state, now) {
+export function readCounters(state, now) {
   const m = mayhemState(state), pets = state.pets || [], today = localDayKey(now), arcade = state.arcade || {}, court = state.courtroom || {};
   const chores = m.chores?.day === today ? m.chores : null;
   return {

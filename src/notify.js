@@ -143,6 +143,18 @@ const pluginFor = () => globalThis.Capacitor?.Plugins?.LocalNotifications || nul
 export const NUDGE_CHANNEL = { id: 'shelf', name: 'Nudges', description: 'When something on the shelf needs you', importance: 3 };
 export const nudgesAvailable = (plugin = pluginFor()) => !!plugin;
 
+/* Asking in context. The offer appears once the player has seen a reason for it, on
+   the result of their first resolved emergency, never at launch and never twice in
+   one session. "Not now" is remembered (settings.nudgeAsked) so it is not asked again. */
+let promptedThisSession = false;
+export function nudgePromptDue(state, available = nudgesAvailable()) {
+  if (!available || promptedThisSession) return false;
+  if (state?.settings?.nudges || state?.settings?.nudgeAsked) return false;
+  return (state?.mayhem?.resolved || 0) >= 1;
+}
+export function notePrompted() { promptedThisSession = true; }
+export function resetPromptedForTests() { promptedThisSession = false; }
+
 // Ask the phone once, when the player says yes. Resolves 'granted', 'denied' or 'unavailable'.
 export async function enableNudges(plugin = pluginFor()) {
   if (!plugin) return 'unavailable';

@@ -6,6 +6,7 @@ import { cloudConfig, cloudConfigured } from './config.js';
 import { createCloud, CloudError, CLOUD_KEY } from './client.js';
 import { createSync, shelfSummary, deviceKind, SAFETY_KEY } from './sync.js';
 import { createSocial } from './social.js';
+import { createPostbox } from './postbox.js';
 
 export { CloudError, CLOUD_KEY, SAFETY_KEY, cloudConfigured, shelfSummary, deviceKind };
 
@@ -18,6 +19,8 @@ export const sync = createSync({
   canApply: () => hooks.canApply()
 });
 export const social = createSocial({ cloud, getState: () => state });
+// Visits, treats, guestbooks and waves (src/cloud/postbox.js). Inert until Friends is opened.
+export const postbox = createPostbox({ cloud, social });
 // Friends see the shelf as it was last pushed. Inert until the player opts in.
 sync.subscribe(info => social.syncStatus(info));
 

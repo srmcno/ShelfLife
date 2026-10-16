@@ -3,6 +3,7 @@ import { householdFixture } from '../household-fixtures.mjs';
 import { ARRIVALS, arrivalDraft } from '../../src/content/arrivals.js';
 import { ESCAPADES } from '../../src/content/escapades.js';
 import { startEscapade } from '../../src/engine/escapades.js';
+import { firstStackDrop } from './support/stack.mjs';
 
 const SAVE_KEY = 'shelflife.v4';
 const test = base.extend({
@@ -195,7 +196,7 @@ for (const game of arcadeGames) {
     await expectDialogFocus(page, '#arcadeVeil');
     await page.locator('#arcadeSheet [data-ar="play"]').click();
     await expect(page.locator('#arcadeSheet [data-ar-field]')).toBeVisible();
-    if (game.id === 'stack') { await page.keyboard.press('Space'); await expect(page.locator('#arcadeSheet [data-ar-score]')).toHaveText('1'); }
+    if (game.id === 'stack') { await firstStackDrop(page); await expect(page.locator('#arcadeSheet [data-ar-score]')).toHaveText('2'); }
     if (game.id === 'frenzy') { await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(250); await page.keyboard.up('ArrowLeft'); }
     if (game.id === 'seance') await expect(page.locator('#arcadeSheet .ar-candle')).toHaveCount(4);
     if (game.id === 'whack') await expect(page.locator('#arcadeSheet .ar-grave')).toHaveCount(9);
@@ -212,9 +213,8 @@ for (const game of arcadeGames) {
 
 async function finishStack(page) {
   await page.locator('#arcadeSheet [data-ar="play"]').click();
-  await expect(page.locator('#arcadeSheet [data-ar-field]')).toBeVisible();
-  await page.keyboard.press('Space');
-  await expect(page.locator('#arcadeSheet [data-ar-score]')).toHaveText('1');
+  await firstStackDrop(page);
+  await expect(page.locator('#arcadeSheet [data-ar-score]')).toHaveText('2');
   for (let i = 0; i < 80 && !(await page.locator('#arcadeSheet .ar-over').count()); i++) { await page.keyboard.press('Space'); await page.waitForTimeout(170); }
   await expect(page.locator('#arcadeSheet .ar-over')).toBeVisible();
 }
@@ -229,6 +229,8 @@ test('a finished arcade run saves its best, pays souls and offers another go', a
   expect(shelf.mayhem.souls).toBeGreaterThan(0);
   expect(shelf.pets[0].arcadeRuns).toBe(1);
   await expect(page.locator('#arcadeSheet .ar-again')).toBeFocused();
+  // Every finished game is graded in zero to three skulls next to the points.
+  await expect(page.locator('#arcadeSheet .ar-tier')).toHaveAttribute('aria-label', /^[0-3] of 3$/);
   await noHorizontalOverflow(page);
   await page.reload();
   expect((await savedShelf(page)).arcade.best.stack).toBe(shelf.arcade.best.stack);
@@ -320,7 +322,7 @@ test('full needs permit a story moment while abandoning a run never completes it
   await adventureSnack(page);
   await page.locator('#escapadeContent [data-escapade="play"]').click();
   await page.locator('#arcadeSheet [data-ar="play"]').click();
-  await page.keyboard.press('Space');
+  await firstStackDrop(page);
   await page.locator('#arcadeSheet [data-ar="close"]').click();
   await page.reload();
   const active = (await savedShelf(page)).escapades.active;

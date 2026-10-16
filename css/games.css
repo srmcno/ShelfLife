@@ -106,7 +106,8 @@ body[data-effects="light"] .hub-art *{animation:none}
 .ar-lives{flex-direction:row!important;gap:3px;margin-left:auto}
 .ar-lives i,.ar-tier i{display:block;width:22px;height:22px;color:#ffffff22}
 .ar-lives i.on,.ar-tier i.on{color:var(--ar-accent)}
-.ar-hud .ar-pause{min-height:36px;padding:6px 10px;letter-spacing:-.1em}
+.ar-hud .ar-pause{min-height:44px;min-width:44px;padding:6px 10px}
+.ar-pause-icon{display:block;width:16px;height:20px;fill:currentColor}
 .ar-hud:not(:has(.ar-lives)) .ar-pause{margin-left:auto}
 .ar-status{min-height:1.3em;margin:0 0 6px;font-size:12.5px;line-height:1.3;color:var(--ink-3)}
 /* the skull ladder: three notches, filled as the score climbs */

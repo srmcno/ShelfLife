@@ -11,6 +11,7 @@ import { generateCreature } from '../art/creatures.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { save } from '../state.js';
 import { toast } from './toast.js';
+import { renderTradePortraits } from './trades.js';
 import { checkAchievements } from '../engine/achievements.js';
 import { checkUnlocks } from '../engine/unlocks.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -90,7 +91,7 @@ function renderVisitor(state) {
   guest.dataset.viewKey = key; guest.dataset.visitKey = visitKey;
   guest.classList.toggle('guest-present', !!v);
   if (!v) {
-    guest.innerHTML = '<span class="eyebrow">The visiting step</span><h2>No one at the door.</h2><p>' + VISITORS.length + ' unusual callers. One questionable doorstep. Visitors stay six hours; the next arrives 8–18 hours after a departure.</p><small>No need to keep the app open. Missed visits never cost trust.</small><button class="btn btn-sm" data-visit-action="invite" ' + (inviteMinutes || !state.pets.length ? 'disabled' : '') + '>' + (inviteMinutes ? 'Calling cards rest · ' + inviteMinutes + 'm' : 'Send a calling card') + '</button><small>Invite a random guest now, once every 15 minutes.</small>';
+    guest.innerHTML = '<span class="eyebrow">The visiting step</span><h2>No one at the door.</h2><p>' + VISITORS.length + ' unusual callers. One questionable doorstep. Visitors stay six hours; the next arrives 8 to 18 hours after a departure.</p><small>No need to keep the app open. Missed visits never cost trust.</small><button class="btn btn-sm" data-visit-action="invite" ' + (inviteMinutes || !state.pets.length ? 'disabled' : '') + '>' + (inviteMinutes ? 'Calling cards rest · ' + inviteMinutes + 'm' : 'Send a calling card') + '</button><small>Invite a random guest now, once every 15 minutes.</small>';
     return;
   }
   guest.innerHTML = '<div class="guest-topline"><span class="eyebrow">' + (v.returning ? 'A familiar face · visit ' + (v.visitNumber || 2) : 'A new arrival') + '</span><span class="guest-clock">' + hours + 'h left</span></div><div class="guest-portrait" aria-hidden="true"></div><h2>' + esc(d.name) + '</h2><span class="guest-title">' + esc(d.title) + '</span><p class="guest-dialogue">' + esc(v.welcomed ? v.response || v.host + ' has welcomed ' + d.name + '. The keepsake is safe in the museum.' : v.arrival || d.line) + '</p>' +
@@ -114,7 +115,7 @@ export function renderMuseum(state) {
   const s = storyState(state), host = document.getElementById('museumContent');
   const memorials = [...s.residents, ...(state.gone || []).filter(p=>!s.residents.some(r=>r.id===p.id))];
   host.innerHTML = '<p class="museum-intro">Nothing here is forgotten. Some of it has been mislabelled.</p><h3>Visiting curiosities <small>'+s.collection.length+' / '+VISITORS.length+'</small></h3><div class="collection-grid">'+VISITORS.map(v=>{
-    const found=s.collection.find(x=>x.id===v.id); return '<article class="'+(found?'collected':'uncollected')+'"><span aria-hidden="true">'+(found?curioSVG(v.id):'◇')+'</span><b>'+esc(found?v.gift:'Unclaimed curiosity')+'</b><small>'+esc(found?v.name+' · hosted by '+found.host:'A future visitor carries this.')+'</small></article>';
+    const found=s.collection.find(x=>x.id===v.id); return '<article class="'+(found?'collected':'uncollected')+'"><span aria-hidden="true">'+(found?curioSVG(v.id):'◇')+'</span><b>'+esc(found?v.gift:'Unclaimed curiosity')+'</b><small>'+esc(found?v.name+(found.host?' · hosted by '+found.host:' · host not recorded'):'A future visitor carries this.')+'</small></article>';
   }).join('')+'</div><h3>Postcard album <small>Last six saved pictures</small></h3><div class="album">'+(s.postcards.length?s.postcards.map(p=>'<figure><img src="'+esc(p.image)+'" alt="'+esc(p.caption)+'"><figcaption>'+esc(p.caption)+'<small>'+date(p.at)+'</small></figcaption></figure>').join(''):emptyState({ kind: 'stories', compact: true, title: 'No postcards yet.', line: 'Open today’s postcard and choose Keep in museum. A small picture is saved here; Back up preserves the album.' }))+'</div><h3>Former residents</h3><div class="memorials">'+(memorials.length?memorials.map(p=>'<article><b>'+esc(p.name)+'</b><p>'+esc(p.grudges!=null?p.grudges+' grievances. '+(p.names||[]).map(n=>n.name).join(' → '):'Their old place is still on file.')+'</p><small>Left '+date(p.at)+'</small></article>').join(''):'<p class="hint">Nobody has left. This is not a suggestion.</p>')+'</div><h3>Names & grievances</h3>'+state.pets.map(p=>'<div class="memory-row"><b>'+esc(p.name)+'</b>'+((p.names||[]).length>1?'<span>'+esc(p.names.map(n=>n.name).join(' → '))+'</span>':'')+'<small>'+(p.grudges||0)+(p.grudges===1?' grievance · ':' grievances · ')+(p.arcadeRuns||0)+' arcade runs · '+(p.expeditions||0)+' expeditions'+'</small></div>').join('')+'<h3>The case archive</h3><div class="memory-timeline">'+(s.archive.length?s.archive.map(m=>'<article><small>'+date(m.at)+' · '+esc(m.kind)+'</small><b>'+esc(m.title)+'</b><p>'+esc(m.text)+'</p></article>').join(''):'<p class="hint">Cases, promises, visitors and truces leave their evidence here.</p>')+'</div>';
   // The ordinary archive has a 100-entry limit. Relationship chapters are kept
   // with the pair, so their last act stays readable after those reports roll off.
@@ -128,6 +129,7 @@ export function renderMuseum(state) {
       }).join('') + '</div>' + (sagas.length > 12 ? '<p class="hint">Showing the twelve most recent subplots.</p>' : '');
     host.querySelector('.memory-timeline').insertAdjacentHTML('beforebegin', section);
   }
+  renderTradePortraits(host, state);
 }
 export function initStories(state, refresh, refreshPet) {
   document.addEventListener('click', e => {

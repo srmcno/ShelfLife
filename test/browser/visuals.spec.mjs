@@ -230,6 +230,16 @@ const mayhem = (over = {}) => ({ souls: 120, lifetime: 120, resolved: 3, coffins
 test.describe('celebrations', () => {
   test('the first coffin ever opened gets a banner and a curio that arrives with a flourish', async ({ page }) => {
     await watchFx(page);
+    await page.addInitScript(() => {
+      window.__firstCoffinBanners = 0;
+      new MutationObserver(records => {
+        for (const record of records) for (const node of record.addedNodes) {
+          if (node.nodeType !== 1) continue;
+          const banners = [node, ...node.querySelectorAll('.fx-banner')].filter(el => el.matches('.fx-banner'));
+          for (const banner of banners) if (banner.querySelector('.fx-banner-kicker')?.textContent === 'First coffin') window.__firstCoffinBanners++;
+        }
+      }).observe(document, { childList: true, subtree: true });
+    });
     await openHousehold(page, s => { s.settings.effects = 'full'; s.mayhem = mayhem(); });
     await page.locator('#mayhemDesk [data-mh="coffin"]').click();
     await page.locator('#mayhemSheet [data-mh="pry"]').click();
@@ -243,8 +253,11 @@ test.describe('celebrations', () => {
     await page.locator('#mayhemSheet [data-mh="coffin"]').click();
     await page.locator('#mayhemSheet [data-mh="pry"]').click();
     await expect(page.locator('#mayhemSheet .mh-curio-card')).toBeVisible();
-    await page.waitForTimeout(1500);
-    await expect(page.locator('.fx-banner:not(.out)')).toHaveCount(await page.locator('.fx-banner:not(.out)').count());
+    // Observe the whole announcement lifetime: the first banner may fade
+    // between assertions, and a second announcement must never be queued.
+    const firstBanner = page.locator('.fx-banner').filter({ has: page.locator('.fx-banner-kicker', { hasText: /^First coffin$/ }) });
+    await expect(firstBanner).toHaveCount(0, { timeout: 12_000 });
+    expect(await page.evaluate(() => window.__firstCoffinBanners)).toBe(1);
     expect((await saved(page)).mayhem.coffins).toBe(2);
   });
 

@@ -1,8 +1,9 @@
 // Compact, versioned save data. No DOM, clock changes, or external services.
+import { normalizeOutingGuest } from './coop-state.js';
 export function blankLife() {
   return { v:1, introDone:false, introStarted:false, xp:0, day:'', daily:[], awards:[], scenes:[], serial:0,
     relics:[], displayed:[], frame:'wood', visitorEpisodes:{}, outing:null, outings:0, projects:[], projectParts:{}, trailPages:[],
-    lastSeen:0, recap:[], blueprints:[] };
+    lastSeen:0, recap:[], blueprints:[], guide:null };
 }
 const obj = x => x && typeof x === 'object' && !Array.isArray(x);
 const number = (x, max=1e9) => Number.isFinite(x) ? Math.max(0,Math.min(max,Math.floor(x))) : 0;
@@ -32,6 +33,7 @@ export function normalizeLife(raw, established=false) {
       if(['bold','thrifty','steady'].includes(o.dare))s.outing.dare=o.dare;
       if(o.mission===true){s.outing.mission=true;if(o.missionRevision===2)s.outing.missionRevision=2;}
       if(o.mission===true&&Number.isInteger(o.returnedAt)&&o.returnedAt>=1&&o.returnedAt<=2)s.outing.returnedAt=o.returnedAt;
+      const guest=normalizeOutingGuest(o.guest);if(guest)s.outing.guest=guest;
     }else s.outing.choices=s.outing.choices.filter(x=>x===0||x===1);
     if(obj(o.result)&&typeof o.result.relic==='string'){
       s.outing.result={relic:o.result.relic.slice(0,30),fresh:o.result.fresh===true};
@@ -47,5 +49,17 @@ export function normalizeLife(raw, established=false) {
   // Generated blueprints only, keeping the save small. Creature normalization
   // happens at the art boundary when a blueprint is loaded.
   s.blueprints=(Array.isArray(s.blueprints)?s.blueprints:[]).filter(x=>obj(x)&&typeof x.name==='string'&&obj(x.creature)).slice(0,6).map(x=>({name:x.name.slice(0,22),creature:x.creature}));
+  // The first-session guide (engine/guide.js). Absent for any household that was
+  // not new when the guide shipped, so an established save never gains a tour.
+  s.guide=normalizeGuide(s.guide);
   return s;
+}
+const stepIds=list=>[...new Set((Array.isArray(list)?list:[]).filter(x=>typeof x==='string'&&/^[a-z]{2,16}$/.test(x)))].slice(0,12);
+export function normalizeGuide(raw) {
+  if (!obj(raw)) return null;
+  return {v:1,status:['on','skipped','done'].includes(raw.status)?raw.status:'on',at:number(raw.at,1e14),
+    seen:stepIds(raw.seen),done:stepIds(raw.done),finishedAt:number(raw.finishedAt,1e14),celebrated:raw.celebrated===true,
+    // A replay from the tester panel counts only what happens after it began.
+    ...(obj(raw.replay)?{replay:{care:number(raw.replay.care,1e9),food:number(raw.replay.food,1e9),resolved:number(raw.replay.resolved,1e9),coffins:number(raw.replay.coffins,1e9),
+      omen:typeof raw.replay.omen==='string'?raw.replay.omen.slice(0,12):''}}:{})};
 }

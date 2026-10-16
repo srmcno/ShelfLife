@@ -107,7 +107,7 @@ export function portraitOwned(state, id) { return id === 'plain' || exchangeStat
 export function portraitFor(state, petId) { const ex = exchangeState(state); return ex.portrait[petId] && portraitOwned(state, ex.portrait[petId]) ? ex.portrait[petId] : 'plain'; }
 export function buyPortraitFrame(state, id) {
   const f = PORTRAIT_BY_ID[id];
-  if (!f || portraitOwned(state, id) || !pay(state, f)) return null;
+  if (!f || f.reward || portraitOwned(state, id) || !pay(state, f)) return null;
   exchangeState(state).portraits.push(id);
   return f;
 }
@@ -148,7 +148,7 @@ export function exchangeCatalog(state) {
   return {
     souls, tokens,
     frames: CABINET_FRAMES.map(f => row(f, frameOwned(state, f.id), { active: activeFrame(state) === f.id, locked: !!f.reward && !frameOwned(state, f.id) })),
-    portraits: PORTRAIT_FRAMES.map(f => row(f, portraitOwned(state, f.id))),
+    portraits: PORTRAIT_FRAMES.map(f => row(f, portraitOwned(state, f.id), { locked: !!f.reward && !portraitOwned(state, f.id) })),
     decor: ['room', 'wood', 'wall', 'accent'].flatMap(kind => EXCHANGE_DECOR[kind].map(item => row({ ...item, key: kind + ':' + item.id, kind }, decorOwned(state, kind + ':' + item.id)))),
     commissions: COMMISSIONS.map(c => row(c, commissionDone(state, c.id)))
   };

@@ -20,6 +20,7 @@ import {
 import { moodOf } from '../engine/tick.js';
 import { rankIndexFor } from '../engine/mayhem.js';
 import { CloudError } from './client.js';
+import { shelfExtras, readShelfExtras } from './shelf-extras.js';
 
 export const MAX_RESIDENTS = 18;
 export const MAX_IMAGE_CHARS = 120 * 1024;
@@ -132,9 +133,13 @@ export function readResident(raw, { art = true } = {}) {
   if (!record(raw) || !petId(raw.id)) return null;
   return {
     id: raw.id, name: cleanText(raw.name, 22) || 'Someone', traits: cleanTraits(raw.traits),
-    mood: MOODS.includes(raw.mood) ? raw.mood : 'fine', bond: count(raw.bond, 25), art: art ? cleanArt(raw.art) : null
+    mood: MOODS.includes(raw.mood) ? raw.mood : 'fine', bond: count(raw.bond, 25), art: art ? cleanArt(raw.art) : null,
+    needs: readNeeds(raw.needs)
   };
 }
+// Needs as their owner last published them (neighbourly help reads them), or null.
+const readNeeds = n => record(n) && ['food', 'fuss', 'clean'].every(k => Number.isFinite(n[k]))
+  ? { food: count(n.food, 100), fuss: count(n.fuss, 100), clean: count(n.clean, 100) } : null;
 
 export function readShelf(raw) {
   if (!record(raw)) return null;
@@ -147,7 +152,7 @@ export function readShelf(raw) {
     if (residents.length >= MAX_RESIDENTS) break;
   }
   return { name: cleanText(raw.name, 24), rank: Number.isInteger(raw.rank) ? clamp(raw.rank, 0, RANKS.length - 1) : 0,
-    curios: count(raw.curios, 999), residents };
+    curios: count(raw.curios, 999), residents, ...readShelfExtras(raw) };
 }
 
 export function readFriend(raw) {
@@ -246,8 +251,11 @@ export function residentSnapshot(pet, { image = true } = {}) {
     if (bounds) out.bounds = bounds;
   }
   const needs = record(pet?.needs) && ['food', 'fuss', 'clean'].every(k => Number.isFinite(pet.needs[k]));
-  return { id: String(pet.id), name: cleanText(pet.name, 22) || 'Someone', traits: cleanTraits(pet.traits),
+  const snap = { id: String(pet.id), name: cleanText(pet.name, 22) || 'Someone', traits: cleanTraits(pet.traits),
     mood: needs ? moodOf(pet) : 'fine', bond: count(pet.bond, 25), art: out };
+  // Rounded to tens, so the shelf is not republished for every point a need drifts.
+  if (needs) snap.needs = { food: Math.round(pet.needs.food / 10) * 10, fuss: Math.round(pet.needs.fuss / 10) * 10, clean: Math.round(pet.needs.clean / 10) * 10 };
+  return snap;
 }
 
 // Every resident's name, traits and mood; drawings while they fit, first
@@ -257,7 +265,7 @@ export function shelfSnapshot(state, { name = '' } = {}) {
   const m = record(state?.mayhem) ? state.mayhem : {};
   const residents = pets.map(p => residentSnapshot(p, { image: false }));
   const snapshot = { v: 1, name: cleanText(name, 24), rank: rankIndexFor(Number(m.lifetime) || 0),
-    curios: record(m.curios) ? Object.values(m.curios).filter(n => Number.isFinite(n) && n > 0).length : 0, residents };
+    curios: record(m.curios) ? Object.values(m.curios).filter(n => Number.isFinite(n) && n > 0).length : 0, residents, ...shelfExtras(state) };
   let size = JSON.stringify(snapshot).length;
   pets.forEach((pet, i) => {
     const body = pet.art?.creature ? '' : cleanImage(pet.art?.body);
@@ -305,13 +313,14 @@ const TEXT = {
   too_many_open: 'They already have five sets of papers from you. Let them catch up.',
   not_open: 'That case has already been heard.',
   too_large: 'Too large to send. Drawn residents take the most room.',
+  dnd: 'They have hung a Do not disturb sign on the door. It is not personal. It might be a little personal.',
   bad_score: 'That score was refused.',
   refused: 'That did not go through. Nothing was changed.',
   signed_out: 'Sign in to cloud save first.',
   offline: 'No connection. Try again once you are back online.',
   unexpected: 'The cloud did not answer properly. Try again in a moment.'
 };
-const TOKENS = new Set(['bad_code', 'not_found', 'self', 'blocked', 'already_friends', 'already_asked', 'rate_limited', 'not_friends',
+const TOKENS = new Set(['dnd', 'bad_code', 'not_found', 'self', 'blocked', 'already_friends', 'already_asked', 'rate_limited', 'not_friends',
   'too_many_open', 'not_open', 'too_large', 'bad_score', 'bad_day', 'bad_game', 'bad_mod', 'bad_case', 'bad_summons', 'bad_verdict', 'bad_shelf', 'signed_out']);
 const ALIAS = { bad_day: 'bad_score', bad_game: 'bad_score', bad_mod: 'bad_score', bad_case: 'refused', bad_summons: 'refused', bad_verdict: 'refused', bad_shelf: 'refused' };
 

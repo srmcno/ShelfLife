@@ -541,8 +541,13 @@ function trackMove(el, animation, cleanup) {
 export function captureShelfPositions(root) {
   const map = new Map();
   if (!root || document.hidden || (reduced && reduced.matches)) return map;
+  // Nobody on the shelf yet (the first render at boot): nothing can travel, and
+  // measuring would force a layout of the whole page just before the shelf is
+  // built and laid out again.
+  const pets = root.querySelectorAll('.pet[data-id]');
+  if (!pets.length) return map;
   const base = root.getBoundingClientRect();
-  root.querySelectorAll('.pet[data-id]').forEach(el => {
+  pets.forEach(el => {
     const r = el.getBoundingClientRect();
     map.set(el.dataset.id, { x: r.left - base.left, y: r.top - base.top, slot: el.dataset.slot });
   });

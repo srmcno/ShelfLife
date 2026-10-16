@@ -67,6 +67,13 @@ test('starting the challenge shows the modifier and its own best, then closes cl
   await expect(page.locator('#arcadeSheet .ar-best small')).toHaveText('Today');
   await expect(page.locator('#arcadeSheet [data-ar-status]')).toContainText(c.mod.title);
   await expect(page.locator('#arcadeSheet .sheet-head .eyebrow')).toContainText('Today’s challenge');
+  // A stalled frame or backgrounded app may pause before the player clicks.
+  await page.evaluate(() => window.dispatchEvent(new Event('shelflife:pause')));
+  await expect(page.locator('#arcadeSheet .ar-paused')).toBeVisible();
+  await page.locator('#arcadeSheet [data-ar="pause"]').click();
+  await expect(page.locator('#arcadeSheet .ar-paused')).toBeVisible();
+  await page.locator('#arcadeSheet .ar-paused').click();
+  await expect(page.locator('#arcadeSheet .ar-paused')).toHaveCount(0);
   await page.locator('#arcadeSheet [data-ar="pause"]').click();
   await expect(page.locator('#arcadeSheet .ar-paused')).toBeVisible();
   await page.keyboard.press('Escape');

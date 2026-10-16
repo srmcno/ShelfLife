@@ -195,6 +195,8 @@ export function createFx(host, { level = 0, world = null, haptics = () => true }
       if (next === lvl) return;
       lvl = next; caps = FX_CAPS[lvl]; host.dataset.fx = String(lvl);
       particles.setCaps(caps);
+      const nextDpr = Math.min(caps.dpr, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1);
+      if (nextDpr !== dpr) { dpr = nextDpr; particles.resize(w, h, dpr); }
       if (!caps.particles) { particles.clear(); canvas.hidden = true; }
       if (!caps.shake && world) world.style.transform = '';
     },

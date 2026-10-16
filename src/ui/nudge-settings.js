@@ -26,6 +26,8 @@ export function initNudgeSettings(state) {
     save(); render(); syncNudges(state);
   });
   window.addEventListener('shelflife:nudges', render);
+  // Backup and cloud replacements share this event; reuse the full nudge refresh.
+  window.addEventListener('shelflife:state-replaced', () => window.dispatchEvent(new CustomEvent('shelflife:nudges')));
   render();
   return { render };
 }

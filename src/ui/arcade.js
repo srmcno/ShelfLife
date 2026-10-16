@@ -1,12 +1,13 @@
 import { ARCADE_GAMES, ARCADE_BY_ID, ARCADE_THEMES, THEME_BY_ID, COUNTDOWN_WORDS, SKULL_LINES } from '../content/arcade.js';
 import {
-  startGame, finishRun, frenzyDirection, challengeToday, ladder, runStats, dailyHistory, FRENZY
+  startGame, finishRun, frenzyDirection, challengeToday, ladder, runStats, dailyHistory, FRENZY, seededRandom
 } from '../engine/arcade.js';
 import { arcadeState, themeUnlocked, nextUnlock, medalTotal, lifetimeRuns } from '../arcade-state.js';
 import { DAILY_SOULS } from '../content/daily.js';
 import { mayhemState } from '../mayhem-state.js';
 import { GAME_SOULS_PER_DAY } from '../engine/mayhem.js';
 import { localDayKey, save } from '../state.js';
+import { mayPostScore } from '../tester-state.js';
 import { renderPetSprite } from '../art/sprite.js';
 import { createPuppet } from '../art/animator.js';
 import { escapadeView } from '../engine/escapades.js';
@@ -17,6 +18,7 @@ import {
   createFx, createGovernor, countUp, fxLevelFor, rememberLevel, rememberedLevel, prefersReducedMotion, currentEffectsMode, buzz, FX_CAPS
 } from './arcade-fx.js';
 import { VIEWS } from './arcade-games.js';
+import { createDuelRun, duelKicker } from './duel-run.js';
 
 /* The arcade sheet. One screen per phase: the hub, an intro card with a single
    line of instructions, the live playfield, and a result card with "Again"
@@ -79,26 +81,51 @@ function showIntro() {
   if (p) sheet.querySelector('.ar-intro-pet').appendChild(renderPetSprite(p));
   open();
   sheet.querySelector('.ar-go')?.focus({ preventScroll: true });
-  // Today's best goes up again in case an earlier try found no connection.
-  if (today && arcadeSocial?.active()) loadBoard({ game: today.game, day: today.day, mod: today.mod.id }, today.best);
+  // A shelf best can belong to a different account. Retry only a score whose
+  // original account was recorded when that run finished.
+  if (today && arcadeSocial?.active()) {
+    const pending = a.daily?.submission, owner = arcadeSocial.userId();
+    loadBoard({ game: today.game, day: today.day, mod: today.mod.id }, pending?.pending && pending.user === owner ? pending.score : 0, owner);
+  }
 }
 
 /* ---------------- friends today ---------------- */
 // Friends by name, everyone else as a percentage. Filled in whenever the
 // network answers; the game never waits for it.
 const BOARD_SLOT = '<div class="ar-board" data-ar-board aria-live="polite"><p class="ar-board-note">Asking the neighbours.</p></div>';
-async function loadBoard(ch, score = 0) {
+async function loadBoard(ch, score = 0, owner = arcadeSocial?.userId()) {
+  const social = arcadeSocial;
+  const current = () => social?.active() && social.userId() === owner;
+  if (!current()) return;
   const token = ++boardToken;
-  const slot = () => token === boardToken ? sheet.querySelector('[data-ar-board]') : null;
-  if (score > 0) { try { await arcadeSocial.submitScore({ game: ch.game, day: ch.day, score, mod: ch.mod }); } catch { /* the board below says if we are offline */ } }
+  const slot = () => current() && token === boardToken ? sheet.querySelector('[data-ar-board]') : null;
+  // A tester save (src/ui/tester-panel.js) may have bent time: its scores stay home.
+  if (score > 0 && mayPostScore(S)) {
+    try {
+      await social.submitScore({ game: ch.game, day: ch.day, score, mod: ch.mod });
+      if (current()) {
+        const daily = arcadeState(S).daily, pending = daily?.submission;
+        if (daily?.day === ch.day && daily.game === ch.game && pending?.user === owner && pending.score === score) { pending.pending = false; save(); }
+      }
+    } catch { /* the owned score stays pending so the intro can retry it */ }
+  }
+  if (!current()) return;
   try {
-    const [board, place] = await Promise.all([arcadeSocial.board(ch.game, ch.day), arcadeSocial.percentile(ch.game, ch.day)]);
+    const [board, place] = await Promise.all([social.board(ch.game, ch.day), social.percentile(ch.game, ch.day)]);
     const el = slot();
     if (el) el.innerHTML = boardMarkup(board, place);
   } catch {
     const el = slot();
     if (el) el.innerHTML = '<p class="ar-board-note">Offline. The scores will keep.</p>';
   }
+}
+function queueDailyScore(id, result, owner) {
+  if (!owner || !result.daily || !(result.score > 0)) return null;
+  const daily = arcadeState(S).daily;
+  if (daily?.day !== result.day || daily.game !== id) return null;
+  const previous = daily.submission;
+  daily.submission = { user: owner, score: Math.max(result.score, previous?.user === owner ? previous.score : 0), pending: true };
+  return daily.submission;
 }
 function boardMarkup(board, place) {
   const top = board.slice(0, 5), mine = board.find(r => r.me);
@@ -156,7 +183,7 @@ function showMenu() {
 function hud() {
   const g = run.game, def = ARCADE_BY_ID[run.id];
   const lives = 'lives' in g ? '<span class="ar-lives" aria-label="' + g.lives + ' lives left">' + skulls(g.lives, run.maxLives) + '</span>' : '';
-  return '<div class="ar-hud"><span class="ar-score"><small>Score</small><b data-ar-score>' + g.score + '</b></span><span class="ar-best"><small>' + (run.daily ? 'Today' : 'Best') + '</small><b>' + (run.daily ? arcadeState(S).daily?.best || 0 : arcadeState(S).best[run.id] || 0) + '</b></span>' + lives + '<button class="btn btn-ghost btn-sm ar-pause" type="button" data-ar="pause" aria-label="Pause">❚❚</button></div>' +
+  return '<div class="ar-hud"><span class="ar-score"><small>Score</small><b data-ar-score>' + g.score + '</b></span><span class="ar-best"><small>' + (run.daily ? 'Today' : 'Best') + '</small><b>' + (run.daily ? arcadeState(S).daily?.best || 0 : arcadeState(S).best[run.id] || 0) + '</b></span>' + lives + '<button class="btn btn-ghost btn-sm ar-pause" type="button" data-ar="pause" aria-label="Pause"><svg class="ar-pause-icon" viewBox="0 0 16 20" aria-hidden="true" focusable="false"><rect x="1" y="1" width="5" height="18" rx="1"/><rect x="10" y="1" width="5" height="18" rx="1"/></svg></button></div>' +
     '<div class="ar-ladder" data-ar-ladder aria-hidden="true"><div class="ar-ladder-track"><i></i>' + def.tiers.map((t, k) => '<span class="ar-notch n' + (k + 1) + '"><u>' + arcadeGlyph('skull') + '</u><b>' + t + '</b></span>').join('') + '</div><small data-ar-next></small></div>' +
     '<p class="ar-status" data-ar-status aria-live="polite">' + esc(run.daily ? run.mod.title + '. ' + run.mod.line : def.howto) + '</p>';
 }
@@ -176,16 +203,17 @@ function status(text) { const el = sheet.querySelector('[data-ar-status]'); if (
 
 /* ---------------- a run ---------------- */
 function controlsFor() { return VIEWS[gameId]().controls(); }
-function startRun(daily = false) {
+// `duel` (ui/coop.js) plays the server's seed in fixed ticks: see ui/duel-run.js.
+function startRun(daily = false, duel = null) {
   stop();
-  const ch = daily ? challengeToday(S) : null;
+  const ch = daily && !duel ? challengeToday(S) : null;
   const challenge = ch && ch.game === gameId ? ch : null;
-  const game = startGame(gameId, Math.random, challenge ? challenge.mod : null);
+  const game = startGame(gameId, duel ? seededRandom(duel.seed) : Math.random, challenge ? challenge.mod : null);
   const a = arcadeState(S), def = ARCADE_BY_ID[gameId];
   const reduced = prefersReducedMotion();
   run = {
     id: gameId, petId: pet()?.id || '', game, raf: 0, last: 0, paused: false, phase: 'ready', maxLives: game.maxLives || game.lives || 0,
-    daily: !!challenge, mod: challenge ? challenge.mod : null, view: VIEWS[gameId](), bestStart: challenge ? challenge.best : (a.best[gameId] || 0),
+    daily: !!challenge, mod: challenge ? challenge.mod : null, socialUser: arcadeSocial?.userId(), view: VIEWS[gameId](), bestStart: challenge ? challenge.best : (a.best[gameId] || 0),
     tier: 0, beatShown: false, nearNext: 0, ladderKey: '', timeScale: 1, readyT: 0, readyLen: quickNext ? 0.3 : 0.42, readyStep: -1,
     puppet: null, reacts: {}, size: { w: 0, h: 0 }, timers: [], dying: false, ro: null, padDownAt: 0,
     gov: createGovernor(), reduced
@@ -195,7 +223,7 @@ function startRun(daily = false) {
   sheet.className = 'sheet sheet-arcade playing ar-' + gameId;
   veil.classList.add('ar-live');
   sheet.style.cssText = '--ar-accent:' + def.accent + ';' + themeVars(theme());
-  sheet.innerHTML = head(def.title, (run.daily ? 'Today’s challenge · ' : '') + 'With ' + (pet()?.name || 'nobody')) + hud() +
+  sheet.innerHTML = head(def.title, duel ? duelKicker(duel) : (run.daily ? 'Today’s challenge · ' : '') + 'With ' + (pet()?.name || 'nobody')) + hud() +
     '<div class="ar-field" data-ar-field tabindex="0" aria-label="' + esc(def.title) + ' playfield"><div class="ar-scene" aria-hidden="true">' + sceneMarkup(gameId) + '</div><div class="ar-world"></div></div>' + controlsFor();
   const field = sheet.querySelector('[data-ar-field]'), world = field.querySelector('.ar-world');
   open();
@@ -223,6 +251,7 @@ function startRun(daily = false) {
   run.A = A;
   run.el = { score: sheet.querySelector('[data-ar-score]'), lives: sheet.querySelector('.ar-lives') };
   run.view.build(A);
+  if (duel) run.duel = createDuelRun(run, duel);
   paintLadder(true);
   showReady(0);
   field.focus({ preventScroll: true });
@@ -231,7 +260,8 @@ function startRun(daily = false) {
   run.raf = requestAnimationFrame(frame);
 }
 
-/* The 3, 2, 1. Any tap or key ends it early and counts as the first move. */
+/* The 3, 2, 1. Input ends it early; Coffin Stack waits for a separate drop
+   so the first coffin has time to move over the base. */
 function showReady(step) {
   const field = run.field;
   let el = field.querySelector('.ar-count');
@@ -287,7 +317,7 @@ function frame(now) {
   if (run.fx.frozen(now)) return;        // hit-stop: nothing moves for a beat
   const slow = dt * run.timeScale;
   if (run.phase === 'play') {
-    run.view.frame(run.A, slow);
+    (run.duel || run.view).frame(run.A, slow);
     paintHud();
     if (run.game.over) startDying();
   }
@@ -356,12 +386,17 @@ function pause(on) {
   duckBed(on);
 }
 function stop() {
+  const duelOpen = !!run?.duel && !run.settled;
   // A run that is over still counts if the sheet is closed during the slow-motion beat.
   if (run?.dying && !run.settled) {
     run.settled = true;
-    finishRun(S, run.id, run.game.score, run.petId, Date.now(), Math.random, { daily: run.daily });
+    const result = finishRun(S, run.id, run.game.score, run.petId, Date.now(), Math.random, { daily: run.daily });
+    const submission = run.daily ? queueDailyScore(run.id, result, run.socialUser) : null;
     save(); refresh();
+    if (submission) loadBoard({ game: run.id, day: result.day, mod: result.daily.mod }, submission.score, submission.user);
   }
+  // A duel left before its result card files the score it had.
+  if (duelOpen) run.duel.abandon(!run.dying);
   if (run) {
     if (run.raf) cancelAnimationFrame(run.raf);
     run.timers.forEach(clearTimeout);
@@ -379,9 +414,10 @@ function stop() {
 /* ---------------- game over ---------------- */
 function gameOver() {
   if (!run) return;
-  const { id, game } = run, wasDaily = run.daily, stats = runStats(game);
+  const { id, game, socialUser, duel } = run, wasDaily = run.daily, stats = runStats(game);
   run.settled = true;
   const result = finishRun(S, id, game.score, run.petId, Date.now(), Math.random, { daily: wasDaily });
+  const submission = wasDaily ? queueDailyScore(id, result, socialUser) : null;
   const reduced = run.reduced, level = run.fx.level;
   stop();
   save();
@@ -436,9 +472,10 @@ function gameOver() {
   // A beat before Again is live, so the key mashing that ended the run does
   // not start another one by accident.
   const again = sheet.querySelector('.ar-again');
-  setTimeout(() => { if (again?.isConnected) { again.disabled = false; again.focus({ preventScroll: true }); } }, 650);
+  later(() => { if (again?.isConnected && veil.classList.contains('open')) { again.disabled = false; again.focus({ preventScroll: true }); } }, 650);
+  duel?.over(sheet, result);
   refresh();
-  if (wasDaily && result.daily && arcadeSocial?.active()) loadBoard({ game: id, day: result.day, mod: result.daily.mod }, result.score);
+  if (wasDaily && result.daily && arcadeSocial?.active()) loadBoard({ game: id, day: result.day, mod: result.daily.mod }, submission?.score || 0, submission?.user || arcadeSocial.userId());
 }
 
 /* ---------------- wiring ---------------- */
@@ -459,16 +496,17 @@ function inRun() { return run && run.phase !== 'dying'; }
 function press(pad) {
   if (!inRun() || run.paused || run.id !== 'seance') return;
   beginPlay();
-  run.view.press(run.A, pad);
+  if (run.duel) run.duel.press(pad); else run.view.press(run.A, pad);
 }
 function dropCoffin() {
   if (!inRun() || run.paused || run.id !== 'stack') return;
-  beginPlay();
-  run.view.drop(run.A);
+  if (run.phase === 'ready') { beginPlay(); return; }
+  if (run.duel) run.duel.drop(); else run.view.drop(run.A);
 }
 function tapGrave(i) {
   if (!inRun() || run.paused || run.id !== 'whack' || run.phase === 'ready') return;
-  run.view.hit(run.A, i);
+  if (run.game.mod?.blocked?.includes(i)) return;
+  if (run.duel) run.duel.hit(i); else run.view.hit(run.A, i);
 }
 function aim(field, e) {
   // The field does not move during a drag, so it is measured once per touch rather than once per move.
@@ -483,6 +521,13 @@ export function initArcade(state, onRefresh, { social } = {}) {
   Object.defineProperty(sheet, 'arcadeRun', { configurable: true, get: () => run });
   initHapticsButton();
   window.addEventListener('shelflife:arcade', e => openArcade(e.detail?.game, e.detail?.petId));
+  // A duel round from the Friends sheet (ui/coop.js).
+  window.addEventListener('shelflife:duel', e => {
+    const d = e.detail;
+    if (!S?.pets.length || !ARCADE_BY_ID[d?.game] || !Number.isInteger(d.seed)) return;
+    if (d.petId) petId = d.petId;
+    gameId = d.game; startRun(false, d);
+  });
   // Older invitations still say "play"; they now open the arcade menu.
   window.addEventListener('shelflife:play', e => openArcade(null, e.detail?.petId));
   sheet.addEventListener('click', e => {
@@ -507,7 +552,7 @@ export function initArcade(state, onRefresh, { social } = {}) {
     else if (action === 'play') { if (e.target.closest('.ar-again')) again(false); else startRun(false); }
     else if (action === 'challenge') { if (e.target.closest('.ar-again')) again(true); else startRun(true); }
     else if (action === 'menu') showMenu();
-    else if (action === 'pause') pause(!run?.paused);
+    else if (action === 'pause') pause(true);
     else if (action === 'resume') pause(false);
     else if (action === 'drop') dropCoffin();
   });
@@ -571,6 +616,7 @@ function initHapticsButton() {
     if (span) span.textContent = on ? 'Haptics' : 'Haptics off';
     if (small) small.textContent = on ? 'Small buzzes in the arcade' : 'The arcade stays still';
   };
+  window.addEventListener('shelflife:state-replaced', paint);
   paint();
   btn.addEventListener('click', () => {
     S.settings.haptics = !hapticsOn();

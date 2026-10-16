@@ -8,6 +8,14 @@
 // code is 123456. Knobs: setOffline, failNext, hangNext, expireTokens,
 // revokeRefreshTokens and setRemote (another device writing a save).
 import { createFakeSocial } from './fake-social.mjs';
+import { createFakeFeedback } from './fake-feedback.mjs';
+import { attachFakeHearings } from './fake-hearings.mjs';
+import { createFakeCoven } from './fake-coven.mjs';
+import { createFakeKin } from './fake-kin.mjs';
+import { createFakeTrades } from './fake-trades.mjs';
+import { createFakeMischief } from './fake-mischief.mjs';
+import { createFakeCoop } from './fake-coop.mjs';
+import { createFakePostbox } from './fake-postbox.mjs';
 
 export const FAKE_URL = 'https://fake.supabase.test';
 export const FAKE_KEY = 'fake-anon-key';
@@ -70,6 +78,8 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
       const row = saves.get(user.id), base = Number(p_base_rev);
       const conflict = () => json(200, { ok: false, conflict: true, rev: row ? row.rev : 0, updated_at: row?.updated_at || null, device: row?.device_id || null });
       if (row ? row.rev !== base : base !== 0) return conflict();
+      const financialError = coop.saveError(user.id, p_data);
+      if (financialError) return rest(400, 'P0001', financialError);
       const next = { rev: (row?.rev || 0) + 1, data: JSON.parse(JSON.stringify(p_data)), device_id: String(p_device || '').slice(0, 100), updated_at: new Date(now()).toISOString() };
       saves.set(user.id, next);
       return json(200, { ok: true, rev: next.rev, updated_at: next.updated_at });
@@ -90,7 +100,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
       return json(200, { friend_code: p.friend_code, display_name: p.display_name });
     },
     delete_my_account(user) {
-      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id);
+      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); postbox.forget(user.id); feedback.forget(user.id); coop.forget(user.id);
       for (const [token, entry] of access) if (entry.userId === user.id) access.delete(token);
       for (const [token, entry] of refresh) if (entry.userId === user.id) refresh.delete(token);
       return { status: 204, body: '', headers: {} };
@@ -99,6 +109,22 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const social = createFakeSocial({ users, profiles, now, json, rest, uuid,
     ensureProfile: user => RPC.ensure_profile(user, {}) });
   Object.assign(RPC, social.RPC);
+  // The postbox wraps the social functions first; every later feature wraps the live chain.
+  const postbox = createFakePostbox({ social, users, profiles, now, json, rest, uuid });
+  Object.assign(RPC, postbox.RPC, postbox.wrap({ ...RPC }));
+  const feedback = createFakeFeedback({ now, json, rest }); Object.assign(RPC, feedback.RPC);
+  social.hearings = attachFakeHearings({ RPC, social, profiles, now, json, rest, uuid });
+  Object.assign(RPC, createFakeCoven({ users, profiles, social, now, json, rest, uuid }).RPC); // fake.social.coven
+  // One day-count switch for play days and coven active days, as in 0006 and 0008.
+  social.playDayOptouts = feedback.optouts;
+  feedback.onForgetPlayDays(userId => social.coven.clearActiveDays(userId));
+  const kin = createFakeKin({ social, users, profiles, now, json, rest, uuid, rpc: { ...RPC } });
+  Object.assign(RPC, kin.RPC);
+  Object.assign(RPC, (social.trades = createFakeTrades({ social, users, profiles, now, json, rest, uuid })).RPC);
+  // Each feature wraps block_user and friends removal on top of the ones before it.
+  const mischief = createFakeMischief({ social, users, profiles, now, json, rest, uuid, rpc: RPC });
+  Object.assign(RPC, mischief.RPC);
+  const coop = createFakeCoop({ profiles, now, json, rest, uuid, friendships: social.friendships, blocks: social.blocks, saves }); Object.assign(RPC, coop.RPC);
   const TABLES = {
     ...social.TABLES,
     saves: user => [...saves].filter(([id]) => id === user.id).map(([id, r]) => ({ user_id: id, rev: r.rev, data: r.data, device_id: r.device_id, updated_at: r.updated_at })),
@@ -245,7 +271,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   }
 
   return {
-    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social,
+    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, postbox, feedback, kin, mischief, coop,
     fetch: fakeFetch, route, handle,
     setOffline(value = true) { offline = !!value; },
     failNext(count = 1, status = 500) { for (let i = 0; i < count; i++) failures.push(status); },

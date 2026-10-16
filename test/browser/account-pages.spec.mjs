@@ -43,6 +43,7 @@ test('the privacy page covers the essentials and fits the screen', async ({ page
 });
 
 test('without cloud save the deletion page gives the steps and says there is nothing on a server', async ({ page }) => {
+  await page.addInitScript(() => { globalThis.SHELFLIFE_CLOUD_CONFIG = { url: '', anonKey: '' }; });
   await page.goto('/delete-account.html');
   await expect(page.locator('h1')).toHaveText('Delete your account');
   await expect(page.locator('ol li')).toHaveCount(4);

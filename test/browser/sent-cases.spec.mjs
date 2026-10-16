@@ -67,8 +67,8 @@ test('serving papers immediately adds a waiting case and offers View my cases', 
   await openFriends(page);
   await expect(history(page)).toContainText('No cases sent yet.');
   const bea = page.locator('#friendsSheet .fr-friend').filter({ hasText: 'Bea' });
-  await bea.locator('[data-fr="menu"]').click();
-  await bea.locator('[data-fr="serve"]').click();
+  await bea.locator('[data-fr="profile"]').click();
+  await page.locator('#friendsSheet [data-fr-action="serve"]').click();
   await page.locator('#friendsSheet .fr-res').filter({ hasText: 'Snag' }).locator('[data-fr="papers"]').click();
   await page.locator('#frCase').selectOption('borrowed-coffin');
   await page.locator('#frPlaintiff').selectOption('qa0');
@@ -162,6 +162,13 @@ test('older cases paginate and a failed background refresh preserves history, dr
   await expect(page.locator('#frName')).toHaveValue('Unsaved nickname');
   await expect(page.locator('#frName')).toBeFocused();
   expect(await page.locator('#frName').evaluate(el => el.selectionStart)).toBe(3);
+  await page.locator('#frName').evaluate(el => el.setSelectionRange(2, 9, 'backward'));
+  // Await the same Postbox load used by background polling, including its
+  // Friends redraw, so this range assertion cannot race a pending refresh.
+  await page.evaluate(async () => { const { postbox } = await import('/src/cloud/index.js'); await postbox.load(); });
+  await expect(page.locator('#frName')).toBeFocused();
+  expect(await page.locator('#frName').evaluate(el => ({ start: el.selectionStart, end: el.selectionEnd, direction: el.selectionDirection })))
+    .toEqual({ start: 2, end: 9, direction: 'backward' });
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);

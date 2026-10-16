@@ -1,10 +1,11 @@
-import { ARCADE_BY_ID, ARCADE_THEMES, THEME_BY_ID, DEFAULT_THEME, LEGACY_TIERS } from './content/arcade.js';
+import { ARCADE_BY_ID, ARCADE_THEMES, THEME_BY_ID, DEFAULT_THEME, LEGACY_TIERS, ARCADE_SCORE_CAPS } from './content/arcade.js';
 
 // Arcade records: best score, play count and best skull (medal) per game, the
 // lifetime run count that unlocks arenas, the chosen arena, today's challenge
 // and the last fortnight of challenge days. Everything is bounded and
 // validated; fields this build does not know are dropped.
 const DAY_KEY = /^\d{4}-\d{1,2}-\d{1,2}$/;
+const USER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const HISTORY_DAYS = 14;
 
 export function blankArcade() {
@@ -49,7 +50,7 @@ export function nextUnlock(a) {
   return { theme, kind: runs ? 'runs' : 'medals', have, need, left: Math.max(0, need - have) };
 }
 
-export function normalizeArcade(raw) {
+export function normalizeArcade(raw, residents = []) {
   const out = blankArcade();
   if (!raw || typeof raw !== 'object') return out;
   for (const id of Object.keys(ARCADE_BY_ID)) {
@@ -69,12 +70,19 @@ export function normalizeArcade(raw) {
     out.daily = { day: d.day, game: d.game, mod: typeof d.mod === 'string' ? d.mod.slice(0, 24) : '',
       best: Number.isFinite(d.best) && d.best > 0 ? Math.floor(Math.min(d.best, 1e6)) : 0,
       plays: Number.isFinite(d.plays) && d.plays > 0 ? Math.floor(Math.min(d.plays, 1e5)) : 0, claimed: d.claimed === true };
+    const submission = d.submission;
+    if (submission && typeof submission.user === 'string' && USER_ID.test(submission.user) && Number.isFinite(submission.score) && submission.score > 0) {
+      out.daily.submission = { user: submission.user.toLowerCase(), score: Math.floor(Math.min(submission.score, ARCADE_SCORE_CAPS[d.game])), pending: submission.pending === true };
+    }
   }
   out.dailyStreak = Number.isFinite(raw.dailyStreak) && raw.dailyStreak > 0 ? Math.floor(Math.min(raw.dailyStreak, 1e5)) : 0;
   out.dailyLastDay = typeof raw.dailyLastDay === 'string' && DAY_KEY.test(raw.dailyLastDay) ? raw.dailyLastDay : '';
-  // Lifetime runs: never fewer than the plays already on record.
+  // Legacy daily plays were separate from ordinary plays. Resident histories
+  // include both, so use them as a lower bound, not an additional count.
   const runs = Number.isFinite(raw.runs) && raw.runs > 0 ? Math.floor(Math.min(raw.runs, 1e8)) : 0;
-  out.runs = Math.max(runs, Object.values(out.plays).reduce((n, v) => n + v, 0));
+  const plays = Object.values(out.plays).reduce((n, v) => n + v, 0);
+  const residentRuns = residents.reduce((n, p) => n + (Number.isFinite(p?.arcadeRuns) && p.arcadeRuns > 0 ? Math.floor(Math.min(p.arcadeRuns, 1e8)) : 0), 0);
+  out.runs = Math.max(runs, plays, !Number.isFinite(raw.runs) ? Math.min(1e8, Math.max(plays + (out.daily?.plays || 0), residentRuns)) : 0);
   // The fortnight of challenge days: one entry per day, newest last.
   if (Array.isArray(raw.history)) {
     const seen = new Map();

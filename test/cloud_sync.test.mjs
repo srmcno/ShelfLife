@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { blankState, normalizeState } from '../src/state.js';
-import { createCloud } from '../src/cloud/client.js';
+import { createCloud, CloudError } from '../src/cloud/client.js';
 import { createSync, saveHash, shelfSummary, deviceKind, SAFETY_KEY, DEBOUNCE_MS, MAX_WAIT_MS, MIN_GAP_MS, SAFETY_MS } from '../src/cloud/sync.js';
 import { createFakeSupabase, FAKE_CODE } from './support/fake-supabase.mjs';
 
@@ -197,6 +197,36 @@ test('a newer cloud copy arrives quietly on a device nobody touched, and a devic
   assert.equal(browser.meta().baseRev, 2);
 });
 
+test('a quiet catch-up keeps what this device had as a spare, and a copy with fewer residents is never swapped in quietly', async () => {
+  const { fake, clock, device: make } = world();
+  const phone = make(shelf(['Agnes', 'Pip'], 5));
+  await emailAccount(phone);
+  await phone.sync.enable();
+  const browser = make(blankState());
+  await emailAccount(browser);
+  await browser.sync.check();
+  assert.deepEqual(names(browser.local), ['Agnes', 'Pip']);
+  // The phone plays on: the untouched browser catches up, and keeps its old copy aside.
+  await phone.play(s => { s.mayhem.souls = 40; });
+  await phone.advance(MIN_GAP_MS);
+  clock.now += 120000;
+  await browser.hide();
+  await browser.show();
+  assert.deepEqual(browser.applied, ['arrived', 'newer']);
+  assert.equal(JSON.parse(browser.storage.getItem(SAFETY_KEY)).mayhem.souls, 5, 'the shelf it had is the spare');
+  assert.ok(browser.sync.info().safetyCopy, 'Undo is offered');
+  // Now the phone ends up with fewer residents (a fresh start, say) and pushes it.
+  await phone.play(s => { s.pets = s.pets.slice(0, 1); s.slots = s.slots.map(id => id === s.pets[0].id ? id : null); });
+  await phone.advance(MIN_GAP_MS);
+  assert.equal(fake.saves.get(phone.cloud.userId()).rev, 3);
+  clock.now += 120000;
+  await browser.hide();
+  await browser.show();
+  assert.deepEqual(browser.applied, ['arrived', 'newer'], 'not swapped in');
+  assert.deepEqual(names(browser.local), ['Agnes', 'Pip']);
+  assert.equal(browser.sync.status(), 'conflict', 'the player is asked');
+});
+
 test('two shelves that both moved on become a question, never a merge (c), and keeping the cloud copy can be undone', async () => {
   const { fake, device: make } = world();
   const phone = make(shelf(['Agnes', 'Pip'], 5));
@@ -314,6 +344,60 @@ test('a full browser still lets the player choose, and says no spare was kept', 
   assert.deepEqual(names(browser.local), ['Agnes']);
 });
 
+test('choosing a shown cloud copy never falls back to an old account after a switch', async () => {
+  const { fake, clock, device: make } = world();
+  const d = make(shelf(['Local'])); await d.sync.enable();
+  fake.setRemote(d.cloud.userId(), shelf(['PrivateA']), { device: 'iphone' });
+  await d.play(); await d.sync.syncNow();
+  assert.equal(d.sync.status(), 'conflict');
+  let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  const originalRpc = d.cloud.rpc;
+  d.cloud.rpc = (name, ...args) => name === 'pull_save' ? new Promise((resolve, reject) => {
+    release = () => reject(new CloudError('The cloud account changed.', { code: 'session_changed', status: 401 }));
+    entered();
+  }) : originalRpc(name, ...args);
+  const resolving = d.sync.resolve('cloud'); await started;
+  const replacementCloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory(), now: () => clock.now });
+  const replacement = await replacementCloud.signInAnonymously();
+  d.cloud.setMeta({ session: replacement }); // Another tab replaces the stored account.
+  release(); const result = await resolving;
+  assert.deepEqual(names(d.local), ['Local']);
+  assert.deepEqual(d.applied, []);
+  assert.equal(d.cloud.userId(), replacement.user.id);
+  assert.equal(d.sync.info().conflict, null);
+  assert.equal(result.error.code, 'session_changed');
+});
+
+test('a conflict captured for a different stored account cannot be chosen later', async () => {
+  const { fake, clock, device: make } = world();
+  const d = make(shelf(['Local'])); await d.sync.enable();
+  fake.setRemote(d.cloud.userId(), shelf(['PrivateA']), { device: 'iphone' });
+  await d.play(); await d.sync.syncNow();
+  assert.equal(d.sync.status(), 'conflict');
+  const replacementCloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory(), now: () => clock.now });
+  d.cloud.setMeta({ session: await replacementCloud.signInAnonymously() });
+  fake.setOffline(true); // The older shown copy must not become a fallback for B.
+  await d.sync.resolve('cloud');
+  assert.deepEqual(names(d.local), ['Local']);
+  assert.deepEqual(d.applied, []);
+  assert.equal(d.sync.info().conflict, null);
+});
+
+test('the current account may still choose its shown cloud copy during a connection failure', async () => {
+  const { fake, device: make } = world();
+  const d = make(shelf(['Local'])); await d.sync.enable();
+  fake.setRemote(d.cloud.userId(), shelf(['Cloud']), { device: 'iphone' });
+  await d.play(); await d.sync.syncNow();
+  assert.equal(d.sync.status(), 'conflict');
+  const owner = d.cloud.userId(); fake.setOffline(true);
+  await d.sync.resolve('cloud');
+  assert.deepEqual(names(d.local), ['Cloud']);
+  assert.deepEqual(d.applied, ['chosen']);
+  assert.equal(d.meta().syncUser, owner);
+  assert.deepEqual(names(JSON.parse(d.storage.getItem(SAFETY_KEY))), ['Local']);
+});
+
 test('offline pushes fail quietly, keep the changes pending, and go through later', async () => {
   const { fake, device: make } = world();
   const d = make();
@@ -402,7 +486,7 @@ test('signing out stops the copying and keeps the shelf; deleting ends the accou
   assert.equal(d.meta().syncUser, undefined);
 });
 
-test('an old safety copy is dropped after a week', async () => {
+test('an old safety copy is dropped after 30 days', async () => {
   const { clock, device: make } = world();
   const phone = make(shelf(['Agnes']));
   await emailAccount(phone);

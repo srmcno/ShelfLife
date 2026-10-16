@@ -1,0 +1,131 @@
+/* Mischief: the views a friend action opens (a hand of hexes, helping out, a
+   door to knock on), the doorstep, the postbox rows, a friend's hex in the
+   emergency sheet, and a ghost on the shelf. Built to fit a 320px phone. */
+
+/* ---------------- views inside the Friends sheet ---------------- */
+.mx-view{min-width:0}
+.mx-lede{margin:0 0 14px;line-height:1.55;color:var(--ink);overflow-wrap:anywhere}
+.mx-note{margin:0 0 12px;padding:12px 14px;border:1px solid var(--hair-lit);border-radius:var(--r);background:var(--glass);line-height:1.5;overflow-wrap:anywhere}
+.mx-wait{margin:0;color:var(--ink-2)}
+.mx-small{margin:12px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-3)}
+.mx-status:empty{display:none}
+.mx-status{margin:12px 0 0;padding:10px 12px;border-radius:var(--r);border:1px solid var(--hair-lit);color:var(--ink);overflow-wrap:anywhere}
+.mx-rebound{display:flex;gap:10px;align-items:center;margin:0 0 14px;padding:10px 12px;border-radius:12px;line-height:1.45;
+  border:1px solid color-mix(in srgb,var(--mint) 50%,transparent);background:linear-gradient(120deg,color-mix(in srgb,var(--mint) 12%,#0000),#0000)}
+.mx-rebound svg{width:26px;height:26px;flex:none;color:var(--mint)}
+
+.mx-hand,.mx-culprits,.mx-bowls{margin:0 0 16px;padding:0;border:0;min-width:0}
+.mx-hand legend,.mx-culprits legend,.mx-bowls legend{margin:0 0 8px;padding:0;font:700 14px/1.3 var(--body);color:var(--ink)}
+.mx-hand{display:grid;gap:8px}
+.mx-card{position:relative;display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 12px;border:1px solid var(--hair-lit);border-radius:14px;
+  background:linear-gradient(160deg,var(--surface-hi),var(--surface));cursor:pointer;min-width:0}
+.mx-card input,.mx-chip input,.mx-bowl input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+.mx-card-art{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--case-mid);color:var(--room-key)}
+.mx-card-art svg{width:28px;height:28px}
+.mx-card-words{display:grid;gap:2px;min-width:0}
+.mx-card-words b{font:400 17px/1.2 var(--display);color:var(--ink);overflow-wrap:anywhere}
+.mx-card-words small{font-size:13px;line-height:1.35;color:var(--ink-2);overflow-wrap:anywhere}
+.mx-card:has(input:checked){border-color:var(--pink);box-shadow:0 0 0 2px color-mix(in srgb,var(--pink) 40%,transparent),0 8px 22px rgba(0,0,0,.35)}
+.mx-card:has(input:checked) .mx-card-art{background:color-mix(in srgb,var(--pink) 22%,var(--case-mid));color:var(--paper)}
+.mx-card:has(input:focus-visible),.mx-chip:has(input:focus-visible),.mx-bowl:has(input:focus-visible){outline:2px solid var(--mint);outline-offset:3px}
+.mx-card-haunt{border-style:dashed;background:linear-gradient(160deg,color-mix(in srgb,#9BB7FF 14%,var(--surface-hi)),var(--surface))}
+.mx-card-haunt .mx-card-art{color:#C9D8FF}
+
+.mx-chips{display:flex;flex-wrap:wrap;gap:8px}
+.mx-chip{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border:1px solid var(--hair-lit);border-radius:999px;
+  background:var(--glass);cursor:pointer;max-width:100%;overflow-wrap:anywhere}
+.mx-chip:has(input:checked){border-color:var(--mint);background:color-mix(in srgb,var(--mint) 16%,transparent);color:var(--ink)}
+.mx-actions .btn{min-height:46px}
+
+.mx-sent{text-align:center}
+.mx-sent-card{display:flex;flex-direction:column;align-items:center;gap:6px;margin:4px 0 12px;font:400 20px/1.2 var(--display)}
+.mx-sent-card svg{width:56px;height:56px;color:var(--room-key)}
+.mx-paid{display:inline-flex;align-items:center;gap:6px;margin:0 0 8px;padding:6px 12px;border-radius:999px;background:color-mix(in srgb,var(--amber) 16%,transparent);
+  color:var(--amber);font-weight:700}
+.mx-paid svg{width:20px;height:20px}
+
+.mx-help-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.mx-help-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:4px 12px;align-items:center;padding:10px 12px;border:1px solid var(--hair);border-radius:var(--r);background:var(--glass)}
+.mx-help-art{grid-row:span 2;width:52px;height:60px}
+.mx-help-art .sprite{width:100%;height:100%;--pet-h:56px}
+.mx-help-who{display:grid;gap:2px;min-width:0}
+.mx-help-who b{overflow-wrap:anywhere}
+.mx-help-who small{color:var(--warn);font-size:13px}
+.mx-help-buttons{display:flex;flex-wrap:wrap;gap:6px}
+.mx-help-buttons .btn{flex:1 1 72px;min-height:44px;justify-content:center}
+
+.mx-knock-view{text-align:center}
+.mx-door{display:grid;place-items:center;margin:0 auto 12px;width:120px}
+.mx-door-art{width:110px;height:auto}
+.mx-door-treat .mx-door-art,.mx-door-curio .mx-door-art{filter:drop-shadow(0 0 18px color-mix(in srgb,var(--amber) 60%,transparent))}
+.mx-door-trick .mx-door-art{filter:drop-shadow(0 0 18px color-mix(in srgb,var(--mint) 55%,transparent))}
+.mx-knock-result{margin:0 0 10px;line-height:1.55;overflow-wrap:anywhere}
+
+/* ---------------- the doorstep, on the Friends home ---------------- */
+.mx-doorstep{padding:14px;border:1px solid color-mix(in srgb,#E07B2E 45%,transparent);border-radius:var(--r-lg);
+  background:linear-gradient(150deg,color-mix(in srgb,#E07B2E 10%,transparent),transparent 70%)}
+.mx-doorstep h3 small{font-weight:600;color:var(--ink-3)}
+.mx-door-line{margin:0 0 10px;line-height:1.5}
+.mx-knockers{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.mx-knockers li{padding:4px 10px;border-radius:999px;background:var(--glass-2);font-size:13px;overflow-wrap:anywhere}
+.mx-knockers small{color:var(--ink-3)}
+.mx-bowls{display:grid;gap:6px}
+.mx-bowl{position:relative;display:block;min-height:44px;padding:8px 12px;border:1px solid var(--hair);border-radius:var(--r);background:var(--glass);cursor:pointer}
+.mx-bowl span{display:grid;gap:2px}
+.mx-bowl small{color:var(--ink-2);font-size:12.5px;line-height:1.35}
+.mx-bowl:has(input:checked){border-color:#E07B2E;background:color-mix(in srgb,#E07B2E 14%,transparent)}
+
+/* ---------------- postbox rows ---------------- */
+.mx-row{list-style:none;padding:10px 12px;border:1px solid var(--hair);border-radius:var(--r);background:var(--glass);min-width:0}
+.mx-row p{margin:0;line-height:1.5;overflow-wrap:anywhere}
+.mx-row-hex,.mx-row-haunt{border-color:color-mix(in srgb,var(--pink) 40%,transparent)}
+.mx-row-rebound{border-color:color-mix(in srgb,var(--mint) 45%,transparent)}
+
+/* ---------------- a friend's hex in the emergency sheet ---------------- */
+.mh-card.mx-hexed .mh-scene{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--pink) 45%,transparent),inset 0 0 60px color-mix(in srgb,var(--pink) 18%,transparent)}
+.mx-from{position:absolute;z-index:3;top:10px;right:10px;max-width:60%;padding:4px 10px;border-radius:999px;background:rgba(12,9,20,.82);
+  border:1px solid color-mix(in srgb,var(--pink) 50%,transparent);color:var(--paper);font:600 12px/1.3 var(--body);text-align:right;overflow-wrap:anywhere}
+.mx-hexbar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding-top:10px;border-top:1px solid var(--hair)}
+.mx-hexbar .btn{flex:1 1 120px;min-height:44px;justify-content:center;white-space:normal}
+.mx-hexbar .fr-reasons{flex:1 1 100%;display:grid;gap:4px;margin:0;padding:0;border:0}
+.mx-hexbar .fr-reasons label{display:flex;align-items:center;gap:8px;min-height:40px}
+.mx-bar-note{flex:1 1 100%;margin:0 0 4px;line-height:1.5;text-align:left}
+
+/* ---------------- the resident card ---------------- */
+.care-helped{margin:8px 0 0;padding:8px 12px;border-radius:var(--r);background:color-mix(in srgb,var(--mint) 12%,transparent);
+  border:1px solid color-mix(in srgb,var(--mint) 35%,transparent);font-size:14px;line-height:1.45}
+
+/* ---------------- a ghost on the shelf ---------------- */
+.mx-haunt{position:relative;height:260px;margin:14px 0;pointer-events:none;overflow:hidden;border-radius:14px;
+  border:1px solid rgba(190,215,255,.18);background:radial-gradient(ellipse at center,rgba(190,215,255,.09),transparent 70%)}
+.mx-ghost{position:absolute;left:calc(50% - 42px);top:90px;width:84px;min-height:96px;padding:0;border:0;background:none;color:inherit;cursor:pointer;
+  pointer-events:auto;touch-action:manipulation;animation:mx-drift 34s ease-in-out infinite alternate;-webkit-tap-highlight-color:transparent}
+.mx-ghost-body{display:block;width:84px;height:92px;opacity:.58;filter:grayscale(.65) brightness(1.35) drop-shadow(0 0 12px rgba(190,215,255,.75));
+  animation:mx-bob 4.5s ease-in-out infinite}
+.mx-ghost-body .sprite{width:100%;height:100%;--pet-h:88px}
+.mx-ghost-from{display:block;margin-top:-4px;padding:2px 6px;border-radius:999px;background:rgba(12,9,20,.7);color:#D8E4FF;font:600 11px/1.25 var(--body);
+  text-align:center;overflow-wrap:anywhere}
+.mx-ghost-bubble{position:absolute;left:50%;bottom:calc(100% + 6px);width:max-content;max-width:min(230px,70vw);padding:8px 11px;border-radius:12px;
+  background:rgba(235,242,255,.95);color:#1B1630;font:500 13px/1.35 var(--body);text-align:left;transform:translateX(-50%) scale(.92);opacity:0;
+  transition:opacity .25s,transform .25s;pointer-events:none;box-shadow:0 8px 18px rgba(0,0,0,.4)}
+.mx-ghost-bubble::after{content:'';position:absolute;left:50%;top:100%;border:7px solid transparent;border-top-color:rgba(235,242,255,.95);transform:translateX(-50%)}
+.mx-saying .mx-ghost-bubble{opacity:1;transform:translateX(-50%) scale(1)}
+.mx-ghost:focus-visible{outline:2px solid var(--mint);outline-offset:4px;border-radius:12px}
+.mx-dodging .mx-ghost{animation:none;transition:left .22s ease-out,top .22s ease-out}
+.mx-shooed .mx-ghost{animation:mx-flee .65s ease-in forwards}
+@keyframes mx-drift{0%{transform:translate(-18px,0)}50%{transform:translate(0,6px)}100%{transform:translate(18px,0)}}
+@keyframes mx-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes mx-flee{to{opacity:0;transform:translate(40px,-60px) scale(.6)}}
+@media (max-width:520px){
+  .mx-ghost{left:calc(50% - 34px);width:68px;min-height:80px}
+  .mx-ghost-body{width:68px;height:74px}
+  .mx-ghost-body .sprite{--pet-h:70px}
+}
+/* Still, for reduced motion, Light effects and Calm mode: it waits in the corner and jumps when shooed. */
+@media (prefers-reduced-motion:reduce){
+  .mx-ghost,.mx-ghost-body,.mx-shooed .mx-ghost{animation:none!important}
+  .mx-dodging .mx-ghost,.mx-ghost-bubble{transition:none}
+}
+body[data-effects="light"] .mx-ghost,body[data-effects="light"] .mx-ghost-body,
+body.calm .mx-ghost,body.calm .mx-ghost-body,body.calm .mx-shooed .mx-ghost{animation:none!important}
+body.calm .mx-dodging .mx-ghost,body.calm .mx-ghost-bubble{transition:none}

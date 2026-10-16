@@ -109,6 +109,9 @@ test('the calendar encores after the last chapter, so there is always a chapter 
   assert.equal(daysLeft(chapterAt(at(2026, 10, 5)), at(2026, 10, 5)), 29);
   const jan = chapterAt(at(2028, 1, 10));
   assert.equal(jan.id, 'resolve-2027'); assert.equal(jan.encore, true); assert.equal(jan.key, 'resolve-2027~2028');
+  assert.equal(jan.month, 'January 2028');
+  assert.equal(chapterAt(at(2031, 7, 4)).month, 'July 2031');
+  assert.equal(chapterAt(at(2027, 1, 10)).month, 'January 2027', 'the original edition keeps its label');
   assert.equal(chapterAt(at(2028, 2, 29)).id, 'valentine-2027', 'leap day');
   assert.equal(chapterAt(at(2028, 10, 20)).id, 'thin-2027');
   assert.equal(chapterAt(at(2031, 7, 4)).id, 'dogdays-2027');

@@ -1,18 +1,35 @@
+// First, before anything reads the time or can break: the tester clock and the error buffer.
+import './clock.js';
+import './errors.js';
+import './ui/calm.js';
 import { initLife } from './ui/life.js';
 import { initWelcome } from './ui/welcome.js';
 import { initEscapades } from './ui/escapades.js';
 import { createBackup } from './backup.js';
 import { initBackupTransfer } from './ui/backup.js';
-import { cloud, sync, social, connectCloud } from './cloud/index.js';
+import { cloud, sync, social, postbox, connectCloud } from './cloud/index.js';
 import { initCloudUI } from './ui/cloud.js';
 import { initFriends } from './ui/friends.js';
+import { initTrades } from './ui/trades.js';
 import { initSocialInbox } from './ui/social-inbox.js';
+import { initTesters } from './ui/testers.js';
+import './ui/coven.js';
+import './ui/kin.js';
+import { initMischief } from './ui/mischief.js';
+import './ui/coop.js'; // co-op: hired help and arcade duels, through the social registry
+import './ui/social-court.js';
+import './ui/postbox.js';
+import { initGuests } from './ui/guests.js';
 import { initPlayroom } from './ui/playroom.js';
 import { initTheatreControls } from './ui/shelf-theatre.js';
 import { lifeState, welcomeBack } from './engine/life.js';
 import { artPersonality } from './engine/personality.js';
 import { initStories } from './ui/stories.js';
 import { initMayhem } from './ui/mayhem.js';
+import { initNextStep } from './ui/nextstep.js';
+import './ui/nextstep-extras.js';
+import { initHelp } from './ui/glossary.js';
+import { initCalm } from './ui/calm.js';
 import { initArcade } from './ui/arcade.js';
 import { initCourt } from './ui/court.js';
 import { accrueMayhem } from './engine/mayhem.js';
@@ -39,6 +56,7 @@ import { applyDecor, initDecorUI } from './ui/decorUI.js';
 import { initDrag } from './ui/drag.js';
 import { renderAll, renderStatus, renderShelf, renderNotes, escapeHtml } from './ui/render.js';
 import { toast, dismissToast } from './ui/toast.js';
+import { watchArrivals } from './move.js';
 import { nudgesAvailable, enableNudges, syncNudges, clearAwayNudges } from './notify.js';
 import { initAlmanac } from './ui/almanac.js';
 import { initCollections } from './ui/collections.js';
@@ -97,6 +115,8 @@ const studio = initStudio({
     if (anatomy.horns || anatomy.halo || anatomy.motion.canFlap) addNote(state, finalName + ': ' + anatomy.features[0].text, 'made this way', 'note');
     checkAchievements(state);
     advanceSchemes(state);
+    // The guide can reach its emergency immediately, before a shelf tick.
+    accrueMayhem(state);
     renderAll(state);
     requestAnimationFrame(()=>{reactTo(pet.id,'notice');toast(finalName+': '+TRAIT_BY_ID[traits[0]].blurb);});
   }
@@ -258,6 +278,10 @@ function applyRestoredState(normalized) {
   syncNight();
   renderAll(state);
   syncAudioButtons();
+  // Controls that paint themselves from settings (Calm, nudges, haptics) repaint here.
+  window.dispatchEvent(new CustomEvent('shelflife:state-replaced'));
+  // Trading settles anything this copy of the shelf predates (src/ui/trades.js).
+  window.dispatchEvent(new CustomEvent('shelflife:restored'));
 }
 document.getElementById('restoreConfirm').addEventListener('click', () => {
   if (!pendingRestore) return;
@@ -274,7 +298,12 @@ const CLOUD_ARRIVALS = {
   undo: 'Swapped back. Everyone is pretending nothing happened.'
 };
 cloudUI = initCloudUI({ cloud, sync, getState: () => state, onChange: () => syncBackupBanner() });
-initFriends({ state, cloud, sync, social, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
+initFriends({ state, cloud, sync, social, postbox, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
+initGuests({ state, postbox, social, save });
+initTrades({ state, cloud, social, save, renderAll: () => renderAll(state), toast });
+initMischief({ state, cloud, social, refresh: () => renderAll(state) });
+// A shelf that just moved here from the old address says so, once.
+watchArrivals(window, line => setTimeout(() => toast(line), 1200));
 connectCloud({
   applyRemote: (next, { reason } = {}) => {
     applyRestoredState(next);
@@ -429,9 +458,12 @@ initAlmanac(state, () => renderAll(state));
 initCollections(state, () => renderAll(state));
 initReturns(state, () => renderAll(state));
 initNudgeSettings(state);
+initNextStep(state, () => renderAll(state), { getOpenPetId });
+initCalm(state, { save, onChange: () => renderAll(state) });
 initArcade(state, () => renderAll(state), { social });
 initCourt(state, () => renderAll(state), { social, cloud });
-initSocialInbox({ cloud, social });
+initSocialInbox({ cloud, social, postbox });
+initTesters({ state, cloud, save, refresh: () => renderAll(state) });
 initSchemeUI(state, () => renderAll(state));
 initLife(state, () => renderAll(state));
 initWelcome(state, () => renderAll(state));
@@ -474,15 +506,9 @@ document.addEventListener('keydown', e => {
 function syncStorageWarning() { document.getElementById('storageWarn').hidden = Store.persistent; }
 window.addEventListener('shelflife:storage', syncStorageWarning);
 syncStorageWarning();
-const helpVeil = document.getElementById('helpVeil');
-document.getElementById('quickHelp').addEventListener('click', () => helpVeil.classList.add('open'));
-document.getElementById('helpBtn').addEventListener('click', () => helpVeil.classList.add('open'));
-document.getElementById('helpClose').addEventListener('click', () => helpVeil.classList.remove('open'));
-document.getElementById('helpPlayroom').addEventListener('click', () => {
-  helpVeil.classList.remove('open');
-  document.getElementById('playroomBtn').click();
-});
-helpVeil.addEventListener('click', e => { if (e.target === helpVeil) helpVeil.classList.remove('open'); });
+// Help: the labelled button, the More entry and every "what is this?" link open
+// the same sheet (ui/glossary.js) and focus comes back to whichever asked.
+initHelp(state);
 
 // Coming back to a pile of disasters is the point; say so once, briefly.
 function announceMayhem(added) {
@@ -514,6 +540,9 @@ function announceMayhem(added) {
   syncAudioButtons();
   syncBackupBanner();
   clearAwayNudges(); // opened: the way-back notes are for someone who is not here
+  // The static page shows the room and a candle while the modules load; the
+  // controls that only work once the game is running wait for this (css/polish.css).
+  document.body.classList.add('booted');
 })();
 
 setInterval(() => {
