@@ -14,7 +14,10 @@ import { createBackup } from '../../src/backup.js';
 const test = base.extend({
   runtimeErrors: [async ({ page }, use) => {
     const errors = [];
-    page.on('pageerror', error => errors.push(error.message));
+    // WebKit reports a request to the stubbed cloud that is cut off by a page switch
+    // as a page error ('... due to access control checks.'); the client already treats it
+    // as offline. Everything else is a real error.
+    page.on('pageerror', error => { if (!/due to access control checks\.?$/.test(error.message)) errors.push(error.message); });
     await use(errors);
     expect(errors).toEqual([]);
   }, { auto: true }]

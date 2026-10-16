@@ -64,6 +64,9 @@ async function challenge(page) {
   await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(75);
 }
 async function leaveRun(page, score) {
+  // Two players means two windows; WebKit pauses animation frames in the one behind,
+  // so the count-in only runs for the player whose window is in front, as on a real phone.
+  await page.bringToFront();
   await waitForArcadePlay(page);
   if (score) await firstStackDrop(page);
   await page.locator('#arcadeSheet [data-ar="close"]').click();
