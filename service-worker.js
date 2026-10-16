@@ -1,7 +1,10 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v66';
+const CACHE_VERSION = 'shelflife-v67';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
+  "./src/move.js",
+  "./src/move-config.js",
+  "./src/move-gate.js",
   "./src/cloud/config.js",
   "./src/cloud/client.js",
   "./src/cloud/sync.js",

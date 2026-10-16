@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0812">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="origin">
+<meta name="robots" content="noindex">
+<title>Shelf Life is moving</title>
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<style>
+  :root { --bg: #0B0812; --ink: #F3E9DA; --dim: #B9A98F; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 16px/1.5 Georgia, 'Times New Roman', serif; }
+  main { min-height: 100%; display: grid; place-items: center; padding: 0 16px; text-align: center; }
+  p { margin: 0 0 8px; } small { color: var(--dim); }
+</style>
+</head>
+<body>
+<main><div><p>Carrying the shelf to its new address.</p><small>Nobody is being dropped. This takes a moment.</small></div></main>
+<script type="module">
+  import { runMovePage } from './src/move.js';
+  runMovePage(window);
+</script>
+</body>
+</html>

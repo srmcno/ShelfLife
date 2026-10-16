@@ -197,6 +197,36 @@ test('a newer cloud copy arrives quietly on a device nobody touched, and a devic
   assert.equal(browser.meta().baseRev, 2);
 });
 
+test('a quiet catch-up keeps what this device had as a spare, and a copy with fewer residents is never swapped in quietly', async () => {
+  const { fake, clock, device: make } = world();
+  const phone = make(shelf(['Agnes', 'Pip'], 5));
+  await emailAccount(phone);
+  await phone.sync.enable();
+  const browser = make(blankState());
+  await emailAccount(browser);
+  await browser.sync.check();
+  assert.deepEqual(names(browser.local), ['Agnes', 'Pip']);
+  // The phone plays on: the untouched browser catches up, and keeps its old copy aside.
+  await phone.play(s => { s.mayhem.souls = 40; });
+  await phone.advance(MIN_GAP_MS);
+  clock.now += 120000;
+  await browser.hide();
+  await browser.show();
+  assert.deepEqual(browser.applied, ['arrived', 'newer']);
+  assert.equal(JSON.parse(browser.storage.getItem(SAFETY_KEY)).mayhem.souls, 5, 'the shelf it had is the spare');
+  assert.ok(browser.sync.info().safetyCopy, 'Undo is offered');
+  // Now the phone ends up with fewer residents (a fresh start, say) and pushes it.
+  await phone.play(s => { s.pets = s.pets.slice(0, 1); s.slots = s.slots.map(id => id === s.pets[0].id ? id : null); });
+  await phone.advance(MIN_GAP_MS);
+  assert.equal(fake.saves.get(phone.cloud.userId()).rev, 3);
+  clock.now += 120000;
+  await browser.hide();
+  await browser.show();
+  assert.deepEqual(browser.applied, ['arrived', 'newer'], 'not swapped in');
+  assert.deepEqual(names(browser.local), ['Agnes', 'Pip']);
+  assert.equal(browser.sync.status(), 'conflict', 'the player is asked');
+});
+
 test('two shelves that both moved on become a question, never a merge (c), and keeping the cloud copy can be undone', async () => {
   const { fake, device: make } = world();
   const phone = make(shelf(['Agnes', 'Pip'], 5));
@@ -456,7 +486,7 @@ test('signing out stops the copying and keeps the shelf; deleting ends the accou
   assert.equal(d.meta().syncUser, undefined);
 });
 
-test('an old safety copy is dropped after a week', async () => {
+test('an old safety copy is dropped after 30 days', async () => {
   const { clock, device: make } = world();
   const phone = make(shelf(['Agnes']));
   await emailAccount(phone);
