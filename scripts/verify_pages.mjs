@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium, expect } from 'playwright/test';
+import { firstStackDrop } from '../test/browser/support/stack.mjs';
 
 const base = new URL(process.env.PAGES_URL || 'https://srmcno.github.io/ShelfLife/');
 const revision = process.env.EXPECTED_REVISION || process.argv[2];
@@ -38,8 +39,9 @@ try {
       await expect(page.locator('#cabinet .pet')).toHaveCount(1);
       await page.locator('#tabPlay').click();await page.locator('[data-game="stack"]').click();
       await expect(page.locator('#toast')).not.toHaveClass(/show/);
-      await page.locator('#arcadeSheet [data-ar="play"]').click();await page.keyboard.press('Space');
-      await expect(page.locator('#arcadeSheet [data-ar-score]')).toHaveText('1');
+      // The count-in ends on its own; then time one real drop like a player would.
+      await page.locator('#arcadeSheet [data-ar="play"]').click();await firstStackDrop(page);
+      await expect(page.locator('#arcadeSheet [data-ar-score]')).not.toHaveText('0');
       await page.screenshot({path:'live-check-results/'+label+'-arcade.png'});
       await page.locator('#arcadeSheet [data-ar="close"]').click();await expect(page.locator('#arcadeVeil')).not.toBeVisible();
       await page.locator('#tabPlay').click();await expect(page.locator('#playroomVeil')).toBeVisible();await page.locator('#playroomVeil [data-activity="outing"]').click();
