@@ -85,6 +85,8 @@ function errors(page, transportPath = '') {
 }
 
 test('two players match a real 25-soul wager, play the same seed, and conserve the purse after settlement', async ({ page, browser }, info) => {
+  // Two players, two windows and two full games: the slowest browsers need longer than the file default.
+  test.setTimeout(120_000);
   const { fake, a, b, aShelf, bShelf } = await world();
   const otherContext = await browser.newContext({ viewport: info.project.use.viewport, isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch, deviceScaleFactor: info.project.use.deviceScaleFactor, timezoneId: 'America/Chicago', serviceWorkers: 'block' });
   const other = await otherContext.newPage(), pageErrors = errors(page), otherErrors = errors(other);
@@ -113,7 +115,8 @@ test('two players match a real 25-soul wager, play the same seed, and conserve t
     const pa = await saved(page), pb = await saved(other);
     expect(pa.mayhem.souls + pb.mayhem.souls).toBe(200);
     expect([pa.mayhem.lifetime, pb.mayhem.lifetime]).toEqual([125, 100]);
-    await page.reload(); await other.reload();
+    // Each window reloads in front: WebKit holds back the page behind.
+    await page.bringToFront(); await page.reload(); await other.bringToFront(); await other.reload();
     await expect.poll(async () => (await saved(page)).mayhem.souls).toBe(125);
     expect((await saved(other)).mayhem.souls).toBe(75);
     pageErrors(); otherErrors();
