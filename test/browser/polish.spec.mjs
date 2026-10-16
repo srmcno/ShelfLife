@@ -89,7 +89,8 @@ test.describe('on a small phone', () => {
     for (const summary of summaries) expect(summary).toEqual(summaries[0]);
     await page.keyboard.press('Escape');
     await page.locator('.tab[data-tab="notes"]').click();
-    for (const chip of await page.locator('#noteFilters .filter-chip').all()) expect((await chip.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    // The laid-out height is the tap target; a press spring still settling would shave a hair off boundingBox.
+    for (const chip of await page.locator('#noteFilters .filter-chip').all()) expect(await chip.evaluate(el => el.offsetHeight)).toBeGreaterThanOrEqual(44);
     // The two tools above the board are the same height.
     const heights = await Promise.all(['#checkBtn', '#clearNotes'].map(id => page.locator(id).evaluate(el => Math.round(el.getBoundingClientRect().height))));
     expect(heights[0]).toBe(heights[1]);
