@@ -665,10 +665,16 @@ export function initTrades({ state: live, cloud, social, save, renderAll, toast 
   const trades = createTrades({ cloud });
   const sync = createTradeSync({ cloud, social, trades, getState: () => live, save });
   deps = { state: live, cloud, social, trades, sync, save, renderAll, toast };
+  // The postbox's own load runs a sync, so repainting on every finished sync would
+  // load, sync and repaint forever. Repaint only when something it shows changed.
+  let shown = '';
+  const seen = () => { const c = sync.cache(); return c.count + '|' + c.trades.map(t => t.id + ':' + t.status + ':' + (t.parent || '')).join(','); };
   sync.subscribe(info => {
     if (info.results?.length) announce(info.results);
     if (info.changed) renderAll?.();
-    try { lastCtx?.refresh?.(); } catch { /* the sheet is closed */ }
+    const now = seen(), moved = now !== shown;
+    shown = now;
+    if (info.changed || info.results?.length || moved) { try { lastCtx?.refresh?.(); } catch { /* the sheet is closed */ } }
   });
   const kick = force => { if (social.active() && !document.hidden) sync.sync({ force }).catch(() => { /* offline: the next look catches up */ }); };
   setTimeout(() => kick(true), 1500);
