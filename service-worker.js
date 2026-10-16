@@ -2,6 +2,7 @@
 const CACHE_VERSION = 'shelflife-v67';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
+  "./move.html",
   "./src/move.js",
   "./src/move-config.js",
   "./src/move-gate.js",

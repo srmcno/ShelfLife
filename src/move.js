@@ -232,7 +232,8 @@ export function gate(win = globalThis, { to = MOVE_TO } = {}) {
   // Moving to another path on the same site: storage is already shared, so only redirect.
   if (to && originOf(to) === win.location.origin) {
     const home = new URL(to);
-    if (win.location.pathname.startsWith(home.pathname)) return false;
+    // Already this build's own directory is the home: nothing to do (and no loop).
+    if (new URL('./', win.location.href).pathname === home.pathname) return false;
     go(win, new URL('./' + win.location.search + win.location.hash, home));
     return true;
   }
@@ -252,6 +253,15 @@ export function gate(win = globalThis, { to = MOVE_TO } = {}) {
   session(win, RETURN_KEY, back);
   go(win, new URL('move.html', win.location.href));
   return true;
+}
+
+async function reachable(win, to, ms = 6000) {
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => controller?.abort(), ms);
+  try {
+    await win.fetch(new URL('release.json', to).href + '?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store', signal: controller?.signal });
+    return true;
+  } catch { return false; } finally { clearTimeout(timer); }
 }
 
 async function runOld(win, to) {
@@ -276,7 +286,8 @@ async function runOld(win, to) {
   const parts = partsOf(text);
   if (parts.length > MAX_PARTS) return go(win, './?stay=1');
   if (p.get('done') && p.get('sha') === sha) {
-    storage.setItem(DONE_KEY, JSON.stringify({ to, sha, at: Date.now() }));
+    // Best effort: a full storage must not stop the redirect to a home that already has the shelf.
+    try { storage.setItem(DONE_KEY, JSON.stringify({ to, sha, at: Date.now() })); } catch { /* moves again next visit; the new address sees the same sha and changes nothing */ }
     session(win, RETURN_KEY, null);
     session(win, OUT_KEY, null);
     return go(win, home);
@@ -290,6 +301,9 @@ async function runOld(win, to) {
     if (recent >= MAX_STARTS) return go(win, './?stay=1');
     try { storage.setItem(TRIES_KEY, JSON.stringify({ n: recent + 1, at: recent ? tries.at : Date.now() })); } catch { /* still try */ }
   }
+  // A device can say it is online while the new address is out of reach (a captive
+  // portal, a dead connection): check before leaving, and play here if it is.
+  if (i === 0 && !(await reachable(win, to))) return go(win, './?stay=1');
   return go(win, new URL('move.html', to).href + fragment({ m: 1, sha, i, n: parts.length, d: parts[i] }));
 }
 

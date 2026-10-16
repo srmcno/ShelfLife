@@ -186,4 +186,9 @@ test('a move to another path on the same site just redirects', () => {
   assert.equal(gate(old, { to }), true);
   assert.equal(old.went, 'https://example.com/new/?invite=Z');
   assert.equal(gate(fakeWin('https://example.com/new/'), { to }), false);
+  // A move to the root of the same site redirects too.
+  const toRoot = fakeWin('https://example.com/old/index.html');
+  assert.equal(gate(toRoot, { to: 'https://example.com/' }), true);
+  assert.equal(toRoot.went, 'https://example.com/');
+  assert.equal(gate(fakeWin('https://example.com/'), { to: 'https://example.com/' }), false);
 });
