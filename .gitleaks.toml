@@ -10,4 +10,8 @@ useDefault = true
 # anything but a publishable or anon key is shipped in that file.
 [allowlist]
 description = "Supabase publishable keys are public by design"
-regexes = ['''sb_publishable_[A-Za-z0-9_-]+''']
+regexes = [
+  '''sb_publishable_[A-Za-z0-9_-]+''',
+  # Public authentication secret from the RFC 8291 Appendix A test vector.
+  '''BTBZMqHH6r4Tts7J_aSIgg'''
+]
