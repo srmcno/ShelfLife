@@ -44,7 +44,7 @@ const byOrder = (a, b) => (a.order ?? 50) - (b.order ?? 50);
 const replace = (list, item) => { const i = list.findIndex(x => x.id === item.id); if (i >= 0) list.splice(i, 1, item); else list.push(item); list.sort(byOrder); };
 
 /* An action on a friend's profile ("Serve papers", "Invite to visit", "Propose a trade").
-   { id, label, order, icon?,
+   { id, label, order, icon?,                icon name or trusted inline SVG; omitted uses the action id
      available(friend, ctx) -> true | false | 'reason it is unavailable',
      run(friend, ctx) }                       usually calls ctx.show(...) */
 export function registerFriendAction(action) {

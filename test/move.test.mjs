@@ -147,6 +147,18 @@ test('the gate: the old address hands over, then redirects, keeping invite links
   assert.equal(gate(stay, { to }), false, 'a failed move lets this tab play where it is');
 });
 
+test('production aliases begin the storage handover and keep invite links', () => {
+  for (const host of ['shelf-life-five-ebon.vercel.app', 'shelf-life-srmcnos-projects.vercel.app', 'shelf-life-git-main-srmcnos-projects.vercel.app']) {
+    const win = fakeWin('https://' + host + '/?invite=ABC', { entries: { [SAVE_KEY]: shelf(['Mabel']) } });
+    assert.equal(gate(win), true);
+    assert.equal(win.went, 'https://' + host + '/move.html');
+    assert.equal(win.sessionStorage.getItem('shelflife-move.return'), '?invite=ABC');
+    assert.equal(gate(fakeWin('https://' + host + '/', { online: false })), false);
+    assert.equal(gate(fakeWin('https://' + host + '/', { native: true })), false);
+  }
+  assert.equal(gate(fakeWin('https://shelflife-game.vercel.app/')), false);
+});
+
 test('a shelf that won at the new address survives a later move from the old one', () => {
   const winner = shelf(['A', 'B', 'C', 'D'], 900);
   const s = new Storage({ [SAVE_KEY]: winner });

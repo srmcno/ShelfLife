@@ -94,7 +94,7 @@ export function createSync({
   let status = 'off', error = null, pending = null, safetyFailed = false;
   let started = false, timer = null, firstWaitAt = 0, lastPushAt = 0, lastCheckAt = 0;
   let retryMs = 0, needsCheck = true, pushQueued = false, dirtyHint = false, sessionCheck = null;
-  let chain = Promise.resolve(), unsubscribe = null;
+  let chain = Promise.resolve(), unsubscribe = null, beforeAccountExit = null;
   const listeners = new Set();
 
   // ---- status ----
@@ -431,6 +431,7 @@ export function createSync({
   }
 
   async function signOut() {
+    if (beforeAccountExit) await beforeAccountExit();
     stopTimer();
     pending = null;
     await cloud.signOut();
@@ -439,6 +440,7 @@ export function createSync({
   }
 
   async function deleteAccount() {
+    if (beforeAccountExit) await beforeAccountExit();
     await exclusive(() => cloud.deleteAccount());
     stopTimer();
     pending = null;
@@ -500,6 +502,7 @@ export function createSync({
   const api = {
     start, stop, enable, check, requestCopyChoice, syncNow: () => check({ manual: true }), push, resolve, undo, signOut, deleteAccount,
     dropSafetyCopy, markDirty, deviceId, info, status: () => status,
+    setBeforeAccountExit(fn) { beforeAccountExit = typeof fn === 'function' ? fn : null; },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
   };
   return api;

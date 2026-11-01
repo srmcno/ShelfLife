@@ -44,12 +44,13 @@ function pickUser(user) {
   return { id: String(user.id), email: typeof user.email === 'string' ? user.email : '', is_anonymous: user.is_anonymous === true };
 }
 
-export function createCloud({ config = cloudConfig(), fetch = (...args) => globalThis.fetch(...args), storage = browserStorage(), now = Date.now, timeoutMs = TIMEOUT_MS } = {}) {
+export function createCloud({ config = cloudConfig(), fetch = (...args) => globalThis.fetch(...args), storage = browserStorage(), now = Date.now, timeoutMs = TIMEOUT_MS, location = globalThis.location, history = globalThis.history, oauthStorage, crypto = globalThis.crypto } = {}) {
   const configured = cloudConfigured(config);
   const base = configured ? config.url.trim().replace(/\/+$/, '') : '';
   const anonKey = configured ? config.anonKey.trim() : '';
   const listeners = new Set();
-  let memo = {}, persisted = true, refreshing = null, authEpoch = 0;
+  const rpcListeners = new Set();
+  let memo = {}, persisted = true, refreshing = null, authEpoch = 0, beforeAccountSwitch = null;
 
   // ---- local bookkeeping ----
   function meta() {
@@ -197,6 +198,62 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
   }
 
   // ---- accounts ----
+  async function authSettings() { return send('/auth/v1/settings'); }
+  const base64url = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const oauthKey = 'shelflife.oauth.pkce';
+  const providerStorage = () => {
+    if (oauthStorage !== undefined) return oauthStorage;
+    try { return globalThis.sessionStorage || null; } catch { return null; }
+  };
+  async function signInWithProvider(provider) {
+    const oauthStore = providerStorage();
+    if (!configured || provider !== 'google' || !crypto?.subtle || !oauthStore) throw new CloudError('This sign-in is unavailable.', { code: 'provider_unavailable' });
+    const epoch = beginAuthIntent(), owner = userId();
+    const bytes = new Uint8Array(32); crypto.getRandomValues(bytes);
+    const verifier = base64url(bytes);
+    const challenge = base64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
+    requireAuthEpoch(epoch); requireSessionOwner(owner);
+    try { oauthStore.setItem(oauthKey, JSON.stringify({ intent: epoch.intent, owner, at: now(), verifier })); }
+    catch { throw new CloudError('This browser could not start sign-in.', { code: 'provider_unavailable' }); }
+    const redirect = new URL(location.href);
+    redirect.hash = ''; redirect.searchParams.delete('code'); redirect.searchParams.delete('error_description');
+    const url = new URL(base + '/auth/v1/authorize');
+    url.searchParams.set('provider', provider);
+    url.searchParams.set('redirect_to', redirect.href);
+    url.searchParams.set('code_challenge', challenge);
+    url.searchParams.set('code_challenge_method', 's256');
+    location.assign(url.href);
+  }
+  async function completeProviderSignIn() {
+    if (!configured || !location) return null;
+    const fragment = new URLSearchParams((location.hash || '').slice(1));
+    if (fragment.has('access_token') || fragment.has('refresh_token')) {
+      history.replaceState(history.state, '', location.pathname + location.search);
+      throw new CloudError('This sign-in link could not be verified.', { code: 'provider_failed' });
+    }
+    const query = new URLSearchParams(location.search || '');
+    const code = query.get('code'), error = query.get('error_description') || fragment.get('error_description');
+    if (!code && !error) return null;
+    query.delete('code'); query.delete('error'); query.delete('error_code'); query.delete('error_description');
+    const remaining = query.toString();
+    history.replaceState(history.state, '', location.pathname + (remaining ? '?' + remaining : '') + (error ? '' : location.hash || ''));
+    let intent;
+    const oauthStore = providerStorage();
+    try { intent = JSON.parse(oauthStore?.getItem(oauthKey) || 'null'); oauthStore?.removeItem(oauthKey); } catch { intent = null; }
+    if (!intent || intent.intent !== meta().authIntent || now() - intent.at > 3600000 || intent.owner !== userId() || !intent.verifier) {
+      throw new CloudError('This sign-in has expired. Please try again.', { code: 'session_changed' });
+    }
+    if (error) throw new CloudError(String(error).slice(0, 300), { code: 'provider_failed' });
+    const epoch = authSnapshot(), previous = session();
+    const data = await send('/auth/v1/token?grant_type=pkce', { method: 'POST', body: { auth_code: code, code_verifier: intent.verifier } });
+    requireAuthEpoch(epoch); requireSessionOwner(intent.owner);
+    if (!data?.user?.id) throw new CloudError('The sign-in reply was incomplete.', { code: 'bad_session' });
+    if (previous && previous.user.id !== data.user.id && beforeAccountSwitch) {
+      await beforeAccountSwitch(previous.user.id, data.user.id);
+      requireAuthEpoch(epoch); requireSessionOwner(intent.owner);
+    }
+    return keep(data, previous);
+  }
   async function signInAnonymously() {
     const existing = session();
     if (existing) return existing;
@@ -255,6 +312,11 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
     requireAuthEpoch(epoch);
     requireSessionOwner(previous?.user.id || null);
     let s;
+    if (how === 'signin' && !data?.user?.id) throw new CloudError('The sign-in reply was incomplete.', { code: 'bad_session' });
+    if (previous && data?.user?.id && previous.user.id !== data.user.id && beforeAccountSwitch) {
+      await beforeAccountSwitch(previous.user.id, data.user.id);
+      requireAuthEpoch(epoch); requireSessionOwner(previous.user.id);
+    }
     if (typeof data?.access_token === 'string') s = keep(data, previous);
     else if (how === 'link' && previous) {
       // Some servers confirm an email change without issuing a new session.
@@ -277,7 +339,13 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
   // ---- data ----
   function rpc(name, args = {}, { keepalive = false } = {}) {
     if (!NAME.test(name)) return Promise.reject(new CloudError('Unknown cloud function.', { code: 'bad_name' }));
-    return authed('/rest/v1/rpc/' + name, { method: 'POST', body: args || {}, keepalive });
+    const owner = userId();
+    return authed('/rest/v1/rpc/' + name, { method: 'POST', body: args || {}, keepalive }).then(result => {
+      if (owner && owner === userId() && ['rule_summons', 'open_hearing', 'rule_hearing'].includes(name)) {
+        for (const fn of rpcListeners) { try { fn({ name, id: name === 'open_hearing' ? result?.id : args?.p_id, userId: owner }); } catch (error) { console.error('[cloud rpc listener]', error); } }
+      }
+      return result;
+    });
   }
   function select(table, query = 'select=*') {
     if (!NAME.test(table)) return Promise.reject(new CloudError('Unknown cloud table.', { code: 'bad_name' }));
@@ -291,8 +359,10 @@ export function createCloud({ config = cloudConfig(), fetch = (...args) => globa
 
   return {
     configured, session, signedIn, isAnonymous, email, userId,
-    signInAnonymously, requestEmailCode, verifyEmailCode, pendingEmail: () => meta().pending || null,
+    signInAnonymously, authSettings, signInWithProvider, completeProviderSignIn, requestEmailCode, verifyEmailCode, pendingEmail: () => meta().pending || null,
     signOut, rpc, select, deleteAccount, refresh, meta, setMeta,
-    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+    setBeforeAccountSwitch(fn) { beforeAccountSwitch = typeof fn === 'function' ? fn : null; },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    subscribeRpc(fn) { rpcListeners.add(fn); return () => rpcListeners.delete(fn); }
   };
 }

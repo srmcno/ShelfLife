@@ -400,3 +400,95 @@ test('select reads only the caller rows, and delete_my_account ends the account'
   assert.equal(fake.users.has(id), false);
   assert.equal(fake.profiles.has(id), false);
 });
+
+
+test('Google PKCE rejects hostile callbacks and exchanges a code bound to this browser', async () => {
+  const fake = createFakeSupabase(), storage = memory(), oauthStorage = memory();
+  const location = { href: 'https://shelflife-game.vercel.app/?invite=ABCDEFGH', pathname: '/', search: '?invite=ABCDEFGH', hash: '', assign(value) { this.authorize = value; } };
+  const history = { state: null, replaceState(_state, _title, url) { location.stripped = url; const next = new URL(url, location.href); location.search = next.search; location.hash = next.hash; } };
+  const cloud = createCloud({ config: fake.config, fetch: fake.fetch, storage, location, history, oauthStorage });
+  const other = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory() });
+  const session = await other.signInAnonymously();
+  await cloud.signInWithProvider('google');
+  const auth = new URL(location.authorize);
+  assert.equal(auth.searchParams.get('provider'), 'google');
+  assert.equal(auth.searchParams.get('redirect_to'), location.href);
+  assert.equal(auth.searchParams.get('code_challenge_method'), 's256');
+  const challenge = auth.searchParams.get('code_challenge');
+  location.hash = '#access_token=' + session.access_token + '&refresh_token=' + session.refresh_token;
+  await assert.rejects(cloud.completeProviderSignIn(), { code: 'provider_failed' });
+  assert.equal(cloud.signedIn(), false);
+  assert.equal(location.stripped, '/?invite=ABCDEFGH');
+  const hostileCode = fake.issueProviderCode(session.user.id, 'attacker-challenge');
+  location.search = '?invite=ABCDEFGH&code=' + hostileCode;
+  await assert.rejects(cloud.completeProviderSignIn(), { code: 'bad_code_verifier' });
+  assert.equal(cloud.signedIn(), false);
+  await cloud.signInWithProvider('google');
+  const correctChallenge = new URL(location.authorize).searchParams.get('code_challenge');
+  assert.notEqual(correctChallenge, challenge);
+  const code = fake.issueProviderCode(session.user.id, correctChallenge);
+  location.search = '?invite=ABCDEFGH&code=' + code;
+  await cloud.completeProviderSignIn();
+  assert.equal(cloud.userId(), session.user.id);
+  assert.equal(location.stripped, '/?invite=ABCDEFGH');
+  location.search = '?code=' + code;
+  await assert.rejects(cloud.completeProviderSignIn(), { code: 'session_changed' });
+});
+
+test('account-switch cleanup completes under the old identity and cannot overwrite a later sign-out', async () => {
+  const fake = createFakeSupabase(), old = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory() });
+  const existing = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory() });
+  await existing.requestEmailCode('existing@example.com', { mode: 'signin' });
+  await existing.verifyEmailCode('existing@example.com', FAKE_CODE);
+  const guestId = (await old.signInAnonymously()).user.id;
+  await old.requestEmailCode('existing@example.com', { mode: 'signin' });
+  const entered = deferred(), release = deferred();
+  old.setBeforeAccountSwitch(async (previous, next) => {
+    assert.equal(previous, guestId); assert.equal(next, existing.userId()); assert.equal(old.userId(), guestId);
+    entered.resolve(); await release.promise;
+  });
+  const pending = old.verifyEmailCode('existing@example.com', FAKE_CODE);
+  const outcome = pending.then(() => null, error => error);
+  await entered.promise;
+  await old.signOut(); release.resolve();
+  assert.equal((await outcome).code, 'session_changed');
+  assert.equal(old.signedIn(), false);
+});
+
+test('Google PKCE account replacement runs cleanup under the previous account', async () => {
+  const fake = createFakeSupabase(), oauthStorage = memory();
+  const location = { href: 'https://shelflife-game.vercel.app/', pathname: '/', search: '', hash: '', assign(value) { this.authorize = value; } };
+  const history = { state: null, replaceState(_state, _title, url) { const next = new URL(url, location.href); location.search = next.search; location.hash = next.hash; } };
+  const cloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory(), location, history, oauthStorage });
+  const old = await cloud.signInAnonymously();
+  const other = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory() });
+  const replacement = await other.signInAnonymously();
+  let cleaned = false;
+  cloud.setBeforeAccountSwitch(async (previous, next) => { assert.equal(previous, old.user.id); assert.equal(next, replacement.user.id); assert.equal(cloud.userId(), previous); cleaned = true; });
+  await cloud.signInWithProvider('google');
+  const code = fake.issueProviderCode(replacement.user.id, new URL(location.authorize).searchParams.get('code_challenge'));
+  location.search = '?code=' + code;
+  await cloud.completeProviderSignIn();
+  assert.equal(cleaned, true);
+  assert.equal(cloud.userId(), replacement.user.id);
+});
+
+
+test('blocked session storage leaves cloud boot usable and refuses Google sign-in safely', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, get() { throw new Error('storage blocked'); } });
+  try {
+    const fake = createFakeSupabase();
+    const cloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory() });
+    assert.equal(cloud.signedIn(), false);
+    await assert.rejects(cloud.signInWithProvider('google'), { code: 'provider_unavailable' });
+    assert.equal(fake.requests.length, 0);
+    await cloud.signInAnonymously();
+    assert.equal(cloud.signedIn(), true);
+    const offline = createCloud({ config: {}, fetch() { throw new Error('unexpected request'); }, storage: memory() });
+    assert.equal(offline.signedIn(), false);
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, 'sessionStorage', descriptor);
+    else delete globalThis.sessionStorage;
+  }
+});

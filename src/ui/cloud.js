@@ -1,3 +1,5 @@
+import { initSignIn } from './signin.js';
+
 // The Cloud save sheet, its More tray button and the single nudge line.
 // Only set up when src/cloud/config.js is filled in; otherwise all of it stays
 // hidden and none of it runs.
@@ -95,13 +97,13 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
   const veil = $('cloudVeil'), status = $('cloudStatus');
   const trayButton = $('cloudBtn'), traySub = $('cloudBtnSub');
   const nudge = $('cloudNudge'), backupBanner = $('backupBanner');
-  const email = $('cloudEmail'), code = $('cloudCode');
   const parts = {
-    off: $('cloudOff'), conflict: $('cloudConflict'), repair: $('cloudRepair'), anon: $('cloudAnon'), signIn: $('cloudSignIn'),
-    email: $('cloudEmailForm'), code: $('cloudCodeForm'), account: $('cloudAccount'), undo: $('cloudUndo'),
-    signInLink: $('cloudSignInLink'), signInBack: $('cloudSignInBack'), remove: $('cloudDelete')
+    conflict: $('cloudConflict'), repair: $('cloudRepair'), anon: $('cloudAnon'),
+    signin: $('cloudSignin'), account: $('cloudAccount'), undo: $('cloudUndo'), remove: $('cloudDelete')
   };
-  let view = 'main', codeFor = '', busy = false, message = '', sawBackupBanner = false;
+  let busy = false, message = '', sawBackupBanner = false, confirmSignOut = false;
+  const signin = initSignIn({ root: parts.signin, prefix: 'cloud', cloud, sync, actionText,
+    onMessage: text => { message = text; status.textContent = text; }, onSuccess: () => render() });
   trayButton.hidden = false;
 
   const isOpen = () => veil.classList.contains('open');
@@ -130,29 +132,22 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
     traySub.textContent = cloudTrayLabel(info, now);
     renderNudge(info);
     onChange(info);
-    const on = info.signedIn, conflict = !!info.conflict, signing = view === 'signin' && !conflict;
-    const linking = on && info.anonymous && !conflict && !signing;
+    const on = info.signedIn, conflict = !!info.conflict;
     const show = (el, visible) => { el.hidden = !visible; };
-    show(parts.off, !on && !signing);
     show(parts.conflict, conflict);
     show(parts.repair, on && info.repairable);
-    show(parts.anon, linking);
-    show(parts.signIn, signing);
-    show(parts.email, linking || signing);
-    show(parts.code, (linking || signing) && !!codeFor);
-    show(parts.account, on && !conflict && !signing);
-    show(parts.undo, !!info.safetyCopy && !conflict && !signing);
-    show(parts.signInLink, (!on || info.anonymous) && !conflict && !signing);
-    show(parts.signInBack, signing);
-    show(parts.remove, on && !conflict && !signing);
+    show(parts.anon, on && info.anonymous && !conflict);
+    show(parts.signin, (!on || info.anonymous) && !conflict);
+    show(parts.account, on && !conflict);
+    show(parts.undo, !!info.safetyCopy && !conflict);
+    show(parts.remove, on && !conflict);
     if (parts.remove.hidden) $('cloudDeleteConfirm').hidden = true;
-
-    $('cloudSendCode').textContent = codeFor ? 'Send another code' : 'Email me a code';
-    email.readOnly = !!codeFor;
-    $('cloudCodeDestination').textContent = codeFor ? 'Code requested for ' + codeFor + '.' : '';
+    signin.render();
     $('cloudEmailShown').textContent = info.email || 'None yet. This browser is the only way in.';
     $('cloudSynced').textContent = info.status === 'syncing' ? 'Syncing now' : info.lastSyncedAt ? timeAgo(info.lastSyncedAt, now) : 'Not yet';
-    $('cloudSignOut').hidden = $('cloudSignOutHint').hidden = info.anonymous;
+    $('cloudSignOut').hidden = $('cloudSignOutHint').hidden = false;
+    $('cloudSignOut').textContent = confirmSignOut && info.anonymous ? 'Sign out and lose access' : 'Sign out of this device';
+    $('cloudSignOutHint').textContent = info.anonymous ? 'This browser holds your only key. Add an email first to keep access to your friends and cloud copy.' : 'Signing out stops the copying. The shelf on this device stays put.';
     $('cloudDeleteStart').textContent = info.anonymous ? 'Turn off and delete the cloud copy' : 'Delete my cloud data and account';
     if (conflict) {
       $('cloudLocalSummary').textContent = describeShelf(info.conflict.local) + ' Here, now.';
@@ -166,7 +161,7 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
       $('cloudUndoText').textContent = 'The other shelf' + who + ' is kept on this device until ' + until + '. Undo swaps the two back.';
     }
     status.textContent = message || problemText(info);
-    veil.querySelectorAll('.cloud-part button').forEach(button => { button.disabled = busy; });
+    veil.querySelectorAll('.cloud-part:not(#cloudSignin) button').forEach(button => { button.disabled = busy; });
     keepFocus();
   }
 
@@ -177,21 +172,13 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
     render();
     try { await work(); }
     catch (error) {
-      if (['email_exists', 'user_already_exists'].includes(error?.code) && view !== 'signin') {
-        view = 'signin'; codeFor = '';
-        message = 'That email already has an account. Sign in with it instead: send a code below.';
-      } else message = actionText(error, errorContext);
+      message = actionText(error, errorContext);
     } finally { busy = false; render(); }
   }
   const after = (info, ok) => { message = info.status === 'idle' ? ok : ''; };
 
   function open() {
-    // A code sent in the last hour is still worth typing in: pick up where the player left off.
-    const pending = cloud.pendingEmail(), info = sync.info();
-    const recent = pending && Date.now() - pending.at < 3600000 && (info.anonymous || (pending.mode === 'signin' && !info.signedIn));
-    codeFor = recent ? pending.email : '';
-    view = recent && pending.mode === 'signin' ? 'signin' : 'main';
-    if (codeFor) email.value = codeFor;
+    signin.resume();
     message = '';
     $('cloudDeleteConfirm').hidden = true;
     render();
@@ -200,7 +187,7 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
   function close() {
     veil.classList.remove('open');
     $('cloudDeleteConfirm').hidden = true;
-    view = 'main';
+    confirmSignOut = false;
     render();
   }
 
@@ -210,39 +197,12 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
   $('cloudClose').addEventListener('click', close);
   veil.addEventListener('click', e => { if (e.target === veil) close(); });
 
-  $('cloudEnable').addEventListener('click', () => act(async () => {
-    after(await sync.enable(), 'Cloud save is on. The shelf has been copied.');
-  }, 'Turning it on.'));
-  $('cloudSignInOpen').addEventListener('click', () => { view = 'signin'; codeFor = ''; message = ''; render(); email.focus(); });
-  $('cloudSignInCancel').addEventListener('click', () => { view = 'main'; codeFor = ''; message = ''; render(); });
-  parts.email.addEventListener('submit', e => {
-    e.preventDefault();
-    act(async () => {
-      const sent = await cloud.requestEmailCode(email.value, { mode: view === 'signin' ? 'signin' : 'link' });
-      if (sent.mode === 'signin') view = 'signin';
-      codeFor = sent.email; code.value = '';
-      message = 'Code requested. Check your email, including spam or junk. Delivery can take a minute.';
-    }, 'Requesting an email code.', { emailRequest: true }).then(() => { if (codeFor) code.focus(); });
-  });
-  $('cloudChangeEmail').addEventListener('click', () => {
-    codeFor = ''; code.value = ''; message = '';
-    cloud.setMeta({ pending: undefined });
-    render(); email.focus();
-  });
-  parts.code.addEventListener('submit', e => {
-    e.preventDefault();
-    act(async () => {
-      const signingIn = view === 'signin';
-      const result = await cloud.verifyEmailCode(codeFor || email.value, code.value);
-      codeFor = ''; code.value = ''; view = 'main';
-      message = signingIn ? 'Signed in as ' + result.email + '.' : 'Email added. Sign in with it on any device to find this shelf.';
-    });
-  });
   $('cloudSyncNow').addEventListener('click', () => act(async () => after(await sync.syncNow(), 'Synced just now.')));
-  $('cloudSignOut').addEventListener('click', () => act(async () => {
-    await sync.signOut();
-    message = 'Signed out of this device. The shelf stays here, uncopied.';
-  }));
+  $('cloudSignOut').addEventListener('click', () => {
+    if (sync.info().anonymous && !confirmSignOut) { confirmSignOut = true; message = 'Signing out without an email loses access to this cloud account and its friends.'; render(); return; }
+    confirmSignOut = false;
+    act(async () => { await sync.signOut(); message = 'Signed out of this device. The shelf stays here, uncopied.'; });
+  });
   $('cloudDeleteStart').addEventListener('click', () => { $('cloudDeleteConfirm').hidden = false; $('cloudDeleteCancel').focus(); });
   $('cloudDeleteCancel').addEventListener('click', () => { $('cloudDeleteConfirm').hidden = true; $('cloudDeleteStart').focus(); });
   $('cloudDeleteConfirmBtn').addEventListener('click', () => act(async () => {
@@ -273,5 +233,5 @@ export function initCloudUI({ cloud, sync, getState, onChange = () => {} }) {
   // Keeps "Saved 3 minutes ago" honest while the game sits open.
   setInterval(() => { traySub.textContent = cloudTrayLabel(sync.info()); }, MINUTE);
   render();
-  return { refresh: render, nudge: () => renderNudge(sync.info()), covers: () => cloudCovers(sync.info()), open };
+  return { refresh: render, nudge: () => renderNudge(sync.info()), covers: () => cloudCovers(sync.info()), open, showError(error) { open(); message = error?.code === 'provider_failed' ? error.message : actionText(error); render(); } };
 }

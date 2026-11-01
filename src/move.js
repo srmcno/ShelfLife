@@ -18,6 +18,19 @@
 // one is used and the other is kept as a spare (the Cloud sheet's Undo swaps them).
 import { MOVE_TO, MOVE_FROM } from './move-config.js';
 
+const CANONICAL_HOME = 'https://shelflife-game.vercel.app/';
+const ALIAS_HOMES = [
+  'https://shelf-life-five-ebon.vercel.app/',
+  'https://shelf-life-srmcnos-projects.vercel.app/',
+  'https://shelf-life-git-main-srmcnos-projects.vercel.app/'
+];
+function aliasTarget(win) {
+  return ALIAS_HOMES.some(url => originOf(url) === win.location.origin) ? CANONICAL_HOME : '';
+}
+function acceptedSources(win, sources) {
+  return win.location.origin === originOf(CANONICAL_HOME) ? [...new Set([...sources, ...ALIAS_HOMES])] : sources;
+}
+
 export const SAVE_KEY = 'shelflife.v4';
 export const SAFETY_KEY = 'shelflife.v4.beforecloud';
 export const SPARE_KEY = 'shelflife.v4.beforemove';
@@ -229,6 +242,7 @@ export function role({ to = MOVE_TO, from = MOVE_FROM, origin } = {}) {
 // on its way somewhere else.
 export function gate(win = globalThis, { to = MOVE_TO } = {}) {
   if (isNative(win)) return false;
+  to = to || aliasTarget(win);
   // Moving to another path on the same site: storage is already shared, so only redirect.
   if (to && originOf(to) === win.location.origin) {
     const home = new URL(to);
@@ -345,6 +359,8 @@ async function runNew(win, from) {
 
 // move.html on either address.
 export async function runMovePage(win = globalThis, { to = MOVE_TO, from = MOVE_FROM } = {}) {
+  to = to || aliasTarget(win);
+  from = acceptedSources(win, from);
   const r = role({ to, from, origin: win.location.origin });
   // One address can be both: it takes shelves from where the game used to be
   // and, after a later move, hands them on. A part arriving is always taken in.

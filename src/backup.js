@@ -1,7 +1,7 @@
 // Backups remain ordinary JSON, including when a share target needs .txt.
 import { DEPLOYED_PUBLIC_URL } from './cloud/deployment-config.js';
 
-export const PLAY_URL = DEPLOYED_PUBLIC_URL || 'https://srmcno.github.io/ShelfLife/';
+export const PLAY_URL = DEPLOYED_PUBLIC_URL || 'https://shelflife-game.vercel.app/';
 
 export function createBackup(state, now = Date.now()) {
   const stamp = new Date(now).toISOString().replace(/[:.]/g, '-');

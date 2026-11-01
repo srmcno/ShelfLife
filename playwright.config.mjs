@@ -18,6 +18,7 @@ export default defineConfig({
   },
   projects: [
     { name: 'desktop-chromium', use: { browserName: 'chromium', viewport: { width: 1440, height: 900 } } },
+    { name: 'desktop-firefox', testMatch: /(?:production|first-hour|onboarding|cloud|friends|service-worker-update|move)\.spec\.mjs/, use: { browserName: 'firefox', viewport: { width: 1440, height: 900 } } },
     { name: 'mobile-chromium', use: { browserName: 'chromium', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 } },
     { name: 'mobile-webkit', use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, browserName: 'webkit' } }
   ],

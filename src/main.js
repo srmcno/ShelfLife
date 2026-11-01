@@ -10,10 +10,15 @@ import { initBackupTransfer } from './ui/backup.js';
 import { cloud, sync, social, postbox, connectCloud } from './cloud/index.js';
 import { initCloudUI } from './ui/cloud.js';
 import { initFriends } from './ui/friends.js';
+import './ui/gazette.js';
 import { initTrades } from './ui/trades.js';
 import { initSocialInbox } from './ui/social-inbox.js';
 import { initTesters } from './ui/testers.js';
-import './ui/coven.js';
+import { initInstall } from './ui/install.js';
+import { createPush } from './cloud/push.js';
+import { DEPLOYED_VAPID_PUBLIC_KEY } from './cloud/deployment-config.js';
+import { initPush } from './ui/push.js';
+import { coven } from './ui/coven.js';
 import './ui/kin.js';
 import { initMischief } from './ui/mischief.js';
 import './ui/coop.js'; // co-op: hired help and arcade duels, through the social registry
@@ -70,6 +75,7 @@ import { isNative, initNative, saveFile, hideSplash } from './native.js';
 // ---------- studio (pet creation) ----------
 
 const dialogs = initDialogs({ onOpen: dismissToast });
+initInstall();
 document.getElementById('genMotion').addEventListener('click', () => previewMotion(document.getElementById('genMount')));
 const studio = initStudio({
   // `art` arrives in one of the studio's two shapes — `{ creature }` from the
@@ -297,8 +303,13 @@ const CLOUD_ARRIVALS = {
   chosen: 'The cloud copy is on the shelf now.',
   undo: 'Swapped back. Everyone is pretending nothing happened.'
 };
+const push = createPush({ cloud, publicKey: DEPLOYED_VAPID_PUBLIC_KEY });
+initPush(push);
+void push.start();
+sync.setBeforeAccountExit(() => push.unsubscribe());
+cloud.setBeforeAccountSwitch(() => push.unsubscribe());
 cloudUI = initCloudUI({ cloud, sync, getState: () => state, onChange: () => syncBackupBanner() });
-initFriends({ state, cloud, sync, social, postbox, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
+initFriends({ state, cloud, sync, social, coven, postbox, openCloud: () => cloudUI?.open(), onRefresh: () => renderAll(state) });
 initGuests({ state, postbox, social, save });
 initTrades({ state, cloud, social, save, renderAll: () => renderAll(state), toast });
 initMischief({ state, cloud, social, refresh: () => renderAll(state) });
@@ -311,8 +322,10 @@ connectCloud({
     return true;
   },
   // Never swap the shelf out from under a game or a resident's card.
-  canApply: () => !document.querySelector('.veil.open:not(#cloudVeil)')
+  canApply: () => !document.querySelector('.veil.open:not(#cloudVeil):not(#friendsVeil)') &&
+    (!document.querySelector('#friendsVeil.open') || !!document.querySelector('#friendsVeil.open .fr-guest:not([hidden])'))
 });
+if (cloud.configured) cloud.completeProviderSignIn().catch(error => { cloudUI?.showError(error); });
 const recoveryBtn = document.getElementById('recoveryBtn');
 recoveryBtn.hidden = !Store.get(RECOVERY_KEY);
 document.getElementById('recoveryWarn').hidden = !loadFailed;

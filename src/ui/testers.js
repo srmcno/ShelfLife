@@ -115,6 +115,12 @@ function helpPanel() {
   const list = items => '<ul class="tn-list">' + items.map(item => '<li>' + esc(item) + '</li>').join('') + '</ul>';
   const n = TESTER_NOTES;
   host.innerHTML = '<p class="tn-intro">' + esc(n.intro) + '</p>' +
+    '<h3 class="help-heading">Install Shelf Life</h3>' + list([
+      'iPhone or iPad: open the game in Safari, tap Share, then Add to Home Screen.',
+      'Android: open the game in Chrome, then use Install Shelf Life in More or Add to Home screen in the browser menu.',
+      'Desktop: open the game in a supported browser and use Install Shelf Life in More or the browser install button.'
+    ]) +
+    '<p>Adding an email to cloud save lets you recover this account on another device. Without it, losing this device can also mean losing your friends.</p>' +
     '<h3 class="help-heading">What to try this week</h3><p class="tn-week">' + esc(n.week) + '</p>' + list(n.tryThisWeek) +
     '<h3 class="help-heading">How to report</h3>' + list(n.howToReport) +
     '<div class="tn-actions"><button class="btn btn-primary" type="button" data-tn-report>Report a problem</button></div>' +

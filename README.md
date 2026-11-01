@@ -475,6 +475,8 @@ The tests check that the offline shell is complete.
 
 ### The Android app
 
+The latest debug APK is published in the `android-latest` GitHub prerelease after a successful main-branch build. Download it on Android, allow your browser to install the file when prompted, and open it. This is a test build, not a Play Store release. The workflow requires the repository variables `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for the production public configuration. Debug builds use the standard Android debug key and do not need a release keystore.
+
 The Play Store edition wraps the same web build in [Capacitor 8](https://capacitorjs.com). `android/` is the
 native project Capacitor generated; it is committed, and `npx cap sync` only rewrites its generated files
 (`capacitor.build.gradle`, `capacitor.settings.gradle` and the copied web assets). The web game has no

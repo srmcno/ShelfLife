@@ -22,6 +22,11 @@ jobs:
             workers: 2
             shard: 1/1
             part: 1
+          - project: desktop-firefox
+            os: ubuntu-latest
+            workers: 2
+            shard: 1/1
+            part: 1
           # macOS WebKit most closely matches the Safari engine used on iPhones.
           - project: mobile-webkit
             os: macos-latest
@@ -55,7 +60,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: python3 -m unittest discover -s test -p '*_test.py'
-      - run: npx playwright install --with-deps chromium webkit
+      - run: npx playwright install --with-deps chromium webkit firefox
       - run: npx playwright test --project="${{ matrix.project }}" --workers=${{ matrix.workers }} --shard=${{ matrix.shard }}
       - name: Keep browser review evidence
         if: always()

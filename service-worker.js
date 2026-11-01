@@ -1,9 +1,20 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v67';
+const CACHE_VERSION = 'shelflife-v68';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./move.html",
   "./src/move.js",
+  "./src/move-page.js",
+  "./src/delete-account.js",
+  "./src/ui/install.js",
+  "./src/ui/signin.js",
+  "./src/gazette-state.js",
+  "./src/ui/gazette.js",
+  "./src/cloud/push.js",
+  "./src/ui/push.js",
+  "./css/signin.css",
+  "./css/gazette.css",
+  "./css/push.css",
   "./src/move-config.js",
   "./src/move-gate.js",
   "./src/cloud/config.js",
@@ -330,5 +341,29 @@ self.addEventListener('fetch', event => {
       return cached || (request.mode === 'navigate' && await cache.match('./index.html')) ||
         new Response('Shelf Life could not load this file. Reconnect and try again.', { status: 503, headers: { 'Content-Type': 'text/plain' } });
     } finally { clearTimeout(timeout); }
+  })());
+});
+
+self.addEventListener('push', event => {
+  let payload = {};
+  try { payload = event.data?.json() || {}; } catch { /* Use the ordinary postbox notice. */ }
+  const body = typeof payload.body === 'string' ? payload.body.slice(0, 160) : 'Something arrived in your postbox.';
+  event.waitUntil(self.registration.showNotification('Shelf Life', {
+    body, icon: './icons/icon-192.png', badge: './icons/icon-192.png', tag: 'shelflife-postbox'
+  }));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const target = new URL('./?open=postbox', self.registration.scope).href;
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const existing = windows.find(client => client.url.startsWith(self.registration.scope));
+    if (existing) {
+      await existing.navigate(target);
+      await existing.focus();
+    } else {
+      await self.clients.openWindow(target);
+    }
   })());
 });
