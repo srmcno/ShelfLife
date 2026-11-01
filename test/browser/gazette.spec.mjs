@@ -55,3 +55,74 @@ test('news starts after sign-in, while replacing a shelf is baselined', async ({
   await page.waitForTimeout(500);
   expect(fake.calls('gazette_post').length).toBe(1);
 });
+
+test('reopening Friends fetches news published after an empty paper was loaded', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'One browser covers feed refresh.');
+  const fake=createFakeSupabase(), shelf=householdFixture('established');
+  shelf.settings.theatreOn=false; shelf.settings.calm=true; shelf.lastBackup=Date.now();
+  const reader=await socialPlayer(fake,'Reader',shelf), writer=await socialPlayer(fake,'Beatrice',shelf);
+  await reader.social.addFriend(writer.code); await writer.social.respond(reader.id,true);
+  await page.addInitScript(({config,shelf,session,id})=>{
+    globalThis.SHELFLIFE_CLOUD_CONFIG=config;
+    localStorage.setItem('shelflife.v4',JSON.stringify(shelf));
+    localStorage.setItem('shelflife.cloud',JSON.stringify({session,socialUser:id}));
+  },{config:fake.config,shelf,session:reader.session,id:reader.id});
+  await page.route(fake.url+'/**',route=>fake.route(route));
+  await page.goto('/'); await page.locator('#tabFriends').click();
+  const paper=page.locator('[data-fr-section="gazette"]');
+  await expect(paper).toContainText('No news.');
+  await expect.poll(()=>fake.calls('gazette_feed').length).toBeGreaterThan(0);
+  await page.locator('#friendsSheet [data-fr="close"]').click();
+  await writer.cloud.rpc('gazette_post',{p_events:[{key:'10000000-0000-4000-8000-000000000009',kind:'adopted',data:{resident:shelf.pets[0].id},generation:0}]});
+  await page.locator('#tabFriends').click();
+  await expect(paper).toContainText('Beatrice');
+});
+
+test('new unread news refreshes an open paper on the next check', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'One browser covers polling.');
+  const fake=createFakeSupabase(), shelf=householdFixture('established');
+  shelf.settings.theatreOn=false; shelf.settings.calm=true; shelf.lastBackup=Date.now();
+  const reader=await socialPlayer(fake,'Reader',shelf), writer=await socialPlayer(fake,'Beatrice',shelf);
+  await reader.social.addFriend(writer.code); await writer.social.respond(reader.id,true);
+  await page.addInitScript(({config,shelf,session,id})=>{
+    globalThis.SHELFLIFE_CLOUD_CONFIG=config;
+    localStorage.setItem('shelflife.v4',JSON.stringify(shelf));
+    localStorage.setItem('shelflife.cloud',JSON.stringify({session,socialUser:id}));
+  },{config:fake.config,shelf,session:reader.session,id:reader.id});
+  await page.route(fake.url+'/**',route=>fake.route(route));
+  await page.goto('/'); await page.locator('#tabFriends').click();
+  const paper=page.locator('[data-fr-section="gazette"]');
+  await expect(paper).toContainText('No news.');
+  await expect.poll(()=>fake.calls('gazette_seen').length).toBeGreaterThan(0);
+  await writer.cloud.rpc('gazette_post',{p_events:[{key:'10000000-0000-4000-8000-000000000011',kind:'adopted',data:{resident:shelf.pets[0].id},generation:0}]});
+  await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+  await expect(paper).toContainText('Beatrice');
+});
+
+test('replacing a shelf while a feed request is pending starts a fresh request', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'One browser covers shelf replacement.');
+  const fake=createFakeSupabase(), shelf=householdFixture('established');
+  shelf.settings.theatreOn=false; shelf.settings.calm=true; shelf.lastBackup=Date.now();
+  const reader=await socialPlayer(fake,'Reader',shelf), writer=await socialPlayer(fake,'Beatrice',shelf);
+  await reader.social.addFriend(writer.code); await writer.social.respond(reader.id,true);
+  await writer.cloud.rpc('gazette_post',{p_events:[{key:'10000000-0000-4000-8000-000000000010',kind:'adopted',data:{resident:shelf.pets[0].id},generation:0}]});
+  await page.addInitScript(({config,shelf,session,id})=>{
+    globalThis.SHELFLIFE_CLOUD_CONFIG=config;
+    localStorage.setItem('shelflife.v4',JSON.stringify(shelf));
+    localStorage.setItem('shelflife.cloud',JSON.stringify({session,socialUser:id}));
+  },{config:fake.config,shelf,session:reader.session,id:reader.id});
+  await page.route(fake.url+'/**',route=>fake.route(route));
+  let release, firstRequest;
+  const waiting=new Promise(resolve=>{firstRequest=resolve;}), gate=new Promise(resolve=>{release=resolve;});
+  let feeds=0;
+  await page.route(fake.url+'/rest/v1/rpc/gazette_feed',async route=>{
+    if (++feeds===1) { firstRequest(); await gate; }
+    await fake.route(route);
+  });
+  try {
+    await page.goto('/'); await page.locator('#tabFriends').click(); await waiting;
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('shelflife:state-replaced')));
+    await expect.poll(()=>feeds).toBeGreaterThan(1);
+    await expect(page.locator('[data-fr-section="gazette"]')).toContainText('Beatrice');
+  } finally { release(); }
+});

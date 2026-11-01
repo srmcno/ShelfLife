@@ -188,7 +188,7 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
   const guest = sheet.querySelector('.fr-guest');
   const signin = initSignIn({ root: sheet.querySelector('.fr-signin'), prefix: 'friends', cloud, sync, actionText,
     anonymousLabel: 'Start without email', onMessage: text => { status.textContent = text; },
-    onSuccess: async result => { await sync.check(); if (sync.info().conflict) { close(); openCloud(); return; } await open(); if (result.anonymous && isOpen()) { message = 'Add an email later so you do not lose your friends.'; render(); } } });
+    onSuccess: async result => { await sync.check(); if (sync.info().conflict) { close(); openCloud(); return; } await open(); if (result.anonymous && isOpen() && !message) { message = 'Add an email later so you do not lose your friends.'; render(); } } });
   const body = sheet.querySelector('.fr-body'), status = sheet.querySelector('.fr-status');
   const isOpen = () => veil.classList.contains('open');
   const accepted = () => friends.filter(f => f.status === 'accepted');
@@ -663,17 +663,22 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
   }
   async function finishArrivalOnce() {
     let arrival = cloud.meta().inviteArrival;
-    const user = cloud.userId();
+    const user = cloud.userId(), epoch = accountEpoch;
+    const current = () => cloud.userId() === user && accountEpoch === epoch;
     if (!coven || !arrival?.code || !user || (arrival.owner && arrival.owner !== user)) return;
     if (!arrival.owner) { arrival = { ...arrival, owner: user }; cloud.setMeta({ inviteArrival: arrival }); }
     try {
-      if (!arrival.referralDone) { try { await coven.registerReferral(arrival.code); } catch (error) { if (error.code !== 'already_referred') throw error; } if (cloud.userId() !== user) return; arrival = { ...arrival, referralDone: true }; cloud.setMeta({ inviteArrival: arrival }); }
       if (!arrival.requestDone) {
         try { await social.addFriend(arrival.code); } catch (error) { if (!['already_friends', 'already_asked'].includes(error.code)) throw error; }
-        if (cloud.userId() !== user) return; arrival = { ...arrival, requestDone: true }; cloud.setMeta({ inviteArrival: arrival });
+        if (!current()) return; arrival = { ...arrival, requestDone: true }; cloud.setMeta({ inviteArrival: arrival });
       }
-      if (cloud.userId() === user) { cloud.setMeta({ inviteArrival: undefined }); covenState(state).invite.code = ''; save(); await reload(); render(); }
-    } catch (error) { if (cloud.userId() === user) { message = 'The invitation could not be completed. Open Friends to try again.'; render(); } }
+      if (!arrival.referralDone) {
+        try { await coven.registerReferral(arrival.code); }
+        catch (error) { if (!['already_referred', 'not_new', 'too_many'].includes(error.code)) throw error; }
+        if (!current()) return; arrival = { ...arrival, referralDone: true }; cloud.setMeta({ inviteArrival: arrival });
+      }
+      if (current()) { cloud.setMeta({ inviteArrival: undefined }); covenState(state).invite.code = ''; save(); await reload(); if (current()) render(); }
+    } catch (error) { if (current()) { message = arrival.requestDone ? 'Friend request handled. Open Friends to retry the referral.' : 'The invitation could not be completed. Open Friends to try again.'; render(); } }
   }
   function close() { veil.classList.remove('open'); view = 'main'; visiting = serving = profile = custom = null; confirm = null; drafts = {}; mailSafety = ''; syncTray(); }
 

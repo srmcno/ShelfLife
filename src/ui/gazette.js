@@ -19,6 +19,7 @@ const HEADLINES = {
 };
 const journal = typeof window !== 'undefined' ? createGazetteJournal({ cloud, getState: () => state }) : null;
 let owner = null, epoch = 0, events = null, sharing = true, loading = false, problem = '', lastCtx = null, unread = 0, hasMore = false;
+let refreshRequested = false;
 let portraitCache = new Map();
 export const gazetteUnread = () => social.active() ? unread : 0;
 function setUnread(n) {
@@ -29,11 +30,16 @@ function setUnread(n) {
 }
 function reset() {
   if (owner === cloud.userId()) return;
-  owner = cloud.userId(); epoch++; events = null; sharing = true; loading = false; problem = ''; portraitCache = new Map(); lastCtx = null; hasMore = false;
+  owner = cloud.userId(); epoch++; events = null; sharing = true; loading = false; refreshRequested = false; problem = ''; portraitCache = new Map(); lastCtx = null; hasMore = false;
   setUnread(0); journal?.reset();
 }
 const alive = (id, generation) => id && cloud.userId() === id && epoch === generation && social.active();
 const repaint = () => { if (lastCtx?.isCurrent?.() !== false) lastCtx?.refresh?.(); };
+function refreshFeed() {
+  if (!lastCtx?.isCurrent?.() || !social.active()) return;
+  if (loading) { refreshRequested = true; return; }
+  void load(lastCtx);
+}
 const title = event => { const list = HEADLINES[event.kind] || ['News from the neighbourhood']; const seed = [...String(event.id)].reduce((n, c) => n + c.charCodeAt(0), 0); return list[seed % list.length]; };
 function description(e) {
   const d = e.data || {};
@@ -87,7 +93,13 @@ async function load(ctx, older = false) {
     await cloud.rpc('gazette_seen');
     if (alive(id, generation)) setUnread(0);
   } catch { if (alive(id, generation)) problem = 'unavailable'; }
-  finally { if (alive(id, generation)) { loading = false; repaint(); } }
+  finally {
+    if (alive(id, generation)) {
+      loading = false;
+      if (refreshRequested) { refreshRequested = false; refreshFeed(); }
+      else repaint();
+    }
+  }
 }
 async function handle(action, el, ctx) {
   const id = cloud.userId(), generation = epoch;
@@ -115,7 +127,19 @@ if (typeof window !== 'undefined') {
   let timer = null;
   const capture = () => { clearTimeout(timer); timer = setTimeout(() => { journal.capture(); void journal.flush(); }, 150); };
   window.addEventListener('shelflife:storage', capture);
-  window.addEventListener('shelflife:state-replaced', () => { clearTimeout(timer); epoch++; events = null; portraitCache.clear(); journal.reset(); });
+  window.addEventListener('shelflife:state-replaced', () => {
+    clearTimeout(timer); epoch++; events = null; loading = false; refreshRequested = false; problem = ''; hasMore = false; portraitCache.clear(); journal.reset();
+    if (document.querySelector('#friendsVeil.open')) repaint();
+  });
+  const veil = document.getElementById('friendsVeil');
+  if (veil) {
+    let wasOpen = veil.classList.contains('open');
+    new MutationObserver(() => {
+      const open = veil.classList.contains('open');
+      if (open && !wasOpen && events !== null) refreshFeed();
+      wasOpen = open;
+    }).observe(veil, { attributes: true, attributeFilter: ['class'] });
+  }
   cloud.subscribeRpc(({ name, id, userId }) => {
     if (userId !== cloud.userId() || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || '')) return;
     journal.enqueue({ kind: 'verdict', data: { item: name === 'rule_summons' ? 'friend-case' : 'joint-hearing' } }, id);
@@ -132,7 +156,16 @@ if (typeof window !== 'undefined') {
       void journal.flush();
     } catch { /* Keep local news until the connection returns. */ }
     if (!social.active()) return;
-    try { const n = await cloud.rpc('gazette_unread'); if (alive(id,generation)) setUnread(Number(n)); } catch { /* The next check retries. */ }
+    try {
+      const n = await cloud.rpc('gazette_unread');
+      if (alive(id,generation)) {
+        setUnread(Number(n));
+        if (Number(n) > 0 && events !== null) {
+          if (veil?.classList.contains('open')) refreshFeed();
+          else { events = null; hasMore = false; problem = ''; }
+        }
+      }
+    } catch { /* The next check retries. */ }
   };
   cloud.subscribe(() => { reset(); void poll(); });
   social.subscribe(() => { reset(); void poll(); });

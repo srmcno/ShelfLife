@@ -1,6 +1,6 @@
 import { test, expect } from 'playwright/test';
 import { householdFixture } from '../household-fixtures.mjs';
-import { createFakeSupabase } from '../support/fake-supabase.mjs';
+import { createFakeSupabase, FAKE_CODE } from '../support/fake-supabase.mjs';
 import { socialPlayer, pageSession } from '../support/social-world.mjs';
 
 test.use({ serviceWorkers: 'block' });
@@ -8,6 +8,9 @@ test('Friends asks permission on click, saves group preferences and revokes on s
   test.skip(info.project.name !== 'desktop-chromium');
   test.setTimeout(90000);
   const fake = createFakeSupabase(), player = await socialPlayer(fake, 'Ada');
+  await player.cloud.requestEmailCode('ada@example.com', { mode: 'link' });
+  await player.cloud.verifyEmailCode('ada@example.com', FAKE_CODE);
+  player.session = player.cloud.session();
   const fixture = householdFixture('established'); fixture.settings.theatreOn = false; fixture.lastBackup = Date.now();
   await page.addInitScript(({ fixture, config, session }) => {
     globalThis.SHELFLIFE_CLOUD_CONFIG = config;
@@ -44,6 +47,16 @@ test('Friends asks permission on click, saves group preferences and revokes on s
   await page.locator('#cloudSignOut').click();
   if (await page.locator('#cloudSignOut').textContent() === 'Sign out and lose access') await page.locator('#cloudSignOut').click();
   await expect.poll(() => fake.push.subscriptions.size).toBe(0);
+  await page.locator('#cloudEmail').fill('ada@example.com');
+  await page.locator('#cloudSendCode').click();
+  await page.locator('#cloudCode').fill(FAKE_CODE);
+  await page.locator('#cloudCode').press('Enter');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.cloud')).session?.user.id)).toBe(player.id);
+  await page.keyboard.press('Escape');
+  await page.locator('#tabFriends').click();
+  await expect(section.getByRole('button', { name: 'Turn on notifications' })).toBeVisible();
+  await expect(section.getByRole('button', { name: 'Turn off notifications' })).toHaveCount(0);
+  expect(await page.evaluate(() => globalThis.pushPrompts)).toBe(1);
 });
 
 test('boot revokes pending notification cleanup without opening Friends or contacting cloud', async ({ page }, info) => {

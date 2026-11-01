@@ -78,6 +78,53 @@ test('an invitation signs in anonymously and sends one request and referral', as
   expect(fake.calls('add_friend')).toHaveLength(1);
 });
 
+for (const ineligible of ['not_new', 'too_many']) {
+  test(`an invitation sends a friend request when the referral is ${ineligible}`, async ({ page }) => {
+    const fake = createFakeSupabase();
+    const inviter = await socialPlayer(fake, 'Ada');
+    if (ineligible === 'too_many') {
+      for (let i = 0; i < 50; i++) fake.social.coven.referrals.set('previous-' + i, { inviter: inviter.id });
+    }
+    await boot(page, fake, '/?invite=' + inviter.code);
+    if (ineligible === 'not_new') {
+      await page.route('**/rest/v1/rpc/register_referral', async route => {
+        const invitee = [...fake.users.values()].find(user => user.id !== inviter.id);
+        invitee.created_at = new Date(Date.now() - 15 * 86400000).toISOString();
+        await fake.route(route);
+      });
+    }
+    await page.locator('#friendsEnable').click();
+    await expect.poll(() => fake.calls('add_friend').length).toBe(1);
+    await expect.poll(() => fake.calls('register_referral').length).toBe(1);
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.cloud')).inviteArrival ?? null)).toBeNull();
+    await page.reload();
+    await page.locator('#tabFriends').click();
+    await expect(page.locator('#frAdd')).toBeVisible();
+    expect(fake.calls('add_friend')).toHaveLength(1);
+    expect(fake.calls('register_referral')).toHaveLength(1);
+  });
+}
+
+test('a temporary referral failure does not resend the friend request', async ({ page }) => {
+  const fake = createFakeSupabase();
+  const inviter = await socialPlayer(fake, 'Ada');
+  await boot(page, fake, '/?invite=' + inviter.code);
+  let attempts = 0;
+  await page.route('**/rest/v1/rpc/register_referral', async route => {
+    if (++attempts === 1) await route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' });
+    else await fake.route(route);
+  });
+  await page.locator('#friendsEnable').click();
+  await expect(page.locator('#friendsSheet')).toContainText('Open Friends to retry the referral.');
+  expect(fake.calls('add_friend')).toHaveLength(1);
+  await page.locator('#friendsSheet [data-fr="close"]').click();
+  await page.locator('#tabFriends').click();
+  await expect.poll(() => fake.social.coven.referrals.size).toBe(1);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.cloud')).inviteArrival ?? null)).toBeNull();
+  expect(attempts).toBe(2);
+  expect(fake.calls('add_friend')).toHaveLength(1);
+});
+
 test('Google is only shown when the provider is enabled', async ({ page }) => {
   const fake = createFakeSupabase({ googleEnabled: true });
   await boot(page, fake);
