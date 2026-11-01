@@ -19,7 +19,7 @@ const HEADLINES = {
 };
 const journal = typeof window !== 'undefined' ? createGazetteJournal({ cloud, getState: () => state }) : null;
 let owner = null, epoch = 0, events = null, sharing = true, loading = false, problem = '', lastCtx = null, unread = 0, hasMore = false;
-let refreshRequested = false;
+let refreshRequested = false, stale = false;
 let portraitCache = new Map();
 export const gazetteUnread = () => social.active() ? unread : 0;
 function setUnread(n) {
@@ -30,13 +30,17 @@ function setUnread(n) {
 }
 function reset() {
   if (owner === cloud.userId()) return;
-  owner = cloud.userId(); epoch++; events = null; sharing = true; loading = false; refreshRequested = false; problem = ''; portraitCache = new Map(); lastCtx = null; hasMore = false;
+  owner = cloud.userId(); epoch++; events = null; sharing = true; loading = false; refreshRequested = false; stale = false; problem = ''; portraitCache = new Map(); lastCtx = null; hasMore = false;
   setUnread(0); journal?.reset();
 }
 const alive = (id, generation) => id && cloud.userId() === id && epoch === generation && social.active();
 const repaint = () => { if (lastCtx?.isCurrent?.() !== false) lastCtx?.refresh?.(); };
+// A profile shows only one household's stories, so it cannot acknowledge the
+// entire feed. Other Friends views must leave the unread count alone as well.
+const paperVisible = () => !document.hidden && !!document.querySelector('#friendsVeil.open [data-fr-section="gazette"]');
 function refreshFeed() {
   if (!lastCtx?.isCurrent?.() || !social.active()) return;
+  if (document.hidden) { stale = true; return; }
   if (loading) { refreshRequested = true; return; }
   void load(lastCtx);
 }
@@ -63,7 +67,7 @@ function article(e) {
 function home(ctx) {
   lastCtx = ctx;
   if (!social.active()) return '';
-  if (events === null && !loading && !problem) void load(ctx);
+  if ((events === null || stale) && !loading && !problem && !document.hidden && document.querySelector('#friendsVeil.open')) void load(ctx);
   return '<div class="gz-paper"><p class="gz-kicker">The neighbourhood</p><h3>The Gazette</h3><p class="gz-subtitle">All the news that fits.</p>' +
     '<div class="gz-setting"><span>Print my news</span><button class="fr-switch" type="button" role="switch" data-sx="gazette-sharing" aria-label="Print my news" aria-checked="' + sharing + '"><i></i></button></div>' +
     (problem ? '<p role="status">The paper could not be delivered. <button type="button" class="btn btn-sm" data-sx="gazette-retry">Try again</button></p>' : '') +
@@ -90,6 +94,10 @@ async function load(ctx, older = false) {
     const actors = [...new Set(incoming.map(e => e.actor))].filter(actor => !portraitCache.has(actor));
     await Promise.all(actors.map(async actor => { try { const shelf = await social.shelf(actor); if (alive(id,generation)) portraitCache.set(actor,shelf?.shelf || null); } catch { if (alive(id,generation)) portraitCache.set(actor,null); } }));
     if (!alive(id, generation) || ctx?.isCurrent?.() === false) return;
+    if (!paperVisible()) { stale = true; refreshRequested = false; return; }
+    stale = false;
+    // Put the fetched stories on screen before acknowledging the feed.
+    repaint();
     await cloud.rpc('gazette_seen');
     if (alive(id, generation)) setUnread(0);
   } catch { if (alive(id, generation)) problem = 'unavailable'; }
@@ -128,7 +136,7 @@ if (typeof window !== 'undefined') {
   const capture = () => { clearTimeout(timer); timer = setTimeout(() => { journal.capture(); void journal.flush(); }, 150); };
   window.addEventListener('shelflife:storage', capture);
   window.addEventListener('shelflife:state-replaced', () => {
-    clearTimeout(timer); epoch++; events = null; loading = false; refreshRequested = false; problem = ''; hasMore = false; portraitCache.clear(); journal.reset();
+    clearTimeout(timer); epoch++; events = null; loading = false; refreshRequested = false; stale = false; problem = ''; hasMore = false; portraitCache.clear(); journal.reset();
     if (document.querySelector('#friendsVeil.open')) repaint();
   });
   const veil = document.getElementById('friendsVeil');
@@ -161,8 +169,8 @@ if (typeof window !== 'undefined') {
       if (alive(id,generation)) {
         setUnread(Number(n));
         if (Number(n) > 0 && events !== null) {
-          if (veil?.classList.contains('open')) refreshFeed();
-          else { events = null; hasMore = false; problem = ''; }
+          if (paperVisible()) refreshFeed();
+          else { stale = true; problem = ''; }
         }
       }
     } catch { /* The next check retries. */ }
@@ -170,7 +178,7 @@ if (typeof window !== 'undefined') {
   cloud.subscribe(() => { reset(); void poll(); });
   social.subscribe(() => { reset(); void poll(); });
   window.addEventListener('online', poll);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) void poll(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { if (stale || events === null) repaint(); void poll(); } });
   setInterval(() => { if (!document.hidden) void poll(); }, 60000);
   void poll();
 }

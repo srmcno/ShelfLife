@@ -125,9 +125,14 @@ registerSocialView('discovery', {
           state.error = answer?.error === 'rate_limited' ? 'Too many requests. Try again later.' : 'That player is no longer available.';
         } else {
           state.players = state.players.filter(player => player.id !== id);
+          // A request removes a row from the server's result set. Refill this
+          // page before allowing another offset, including after a retry.
+          state.more = false;
           state.notice = answer?.status === 'accepted' ? 'You are friends now.' : 'Friend request sent.'; state.error = '';
           try { await ctx.refreshFriends(); } catch { /* The next Friends opening retries the list. */ }
           if (!valid(ctx,user,token)) return;
+          await load(ctx);
+          return;
         }
       } catch { if (valid(ctx,user,token)) state.error = 'The request could not be sent. Try again.'; }
       if (valid(ctx,user,token)) paint(ctx);

@@ -78,6 +78,113 @@ test('an invitation signs in anonymously and sends one request and referral', as
   expect(fake.calls('add_friend')).toHaveLength(1);
 });
 
+test('a signed-in player chooses whether to accept an invitation', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  const fake = createFakeSupabase();
+  const inviter = await socialPlayer(fake, 'Ada');
+  const recipient = await socialPlayer(fake, 'Bea');
+  await inviter.social.addFriend(recipient.code);
+  const before = fake.calls('add_friend').length;
+  await page.addInitScript(session => {
+    if (!sessionStorage.getItem('signin.fixture')) localStorage.setItem('shelflife.cloud', JSON.stringify({ session }));
+  }, recipient.session);
+  await boot(page, fake, '/?invite=' + inviter.code);
+  const sheet = page.locator('#friendsSheet');
+  await expect(page.locator('#friendsVeil')).toBeVisible();
+  await expect(sheet).toContainText('A friend invited you');
+  expect(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  expect(fake.calls('add_friend')).toHaveLength(before);
+  await sheet.locator('[data-fr="invite-accept"]').click();
+  await expect.poll(() => fake.calls('add_friend').length).toBe(before + 1);
+  await expect(sheet).toContainText('You are now friends.');
+  await expect.poll(async () => (await inviter.social.friends())[0]?.status).toBe('accepted');
+  await page.reload();
+  await page.locator('#tabFriends').click();
+  await expect(page.locator('#frAdd')).toBeVisible();
+  expect(fake.calls('add_friend')).toHaveLength(before + 1);
+});
+
+test('a signed-in player can dismiss an invitation without sending a request', async ({ page }) => {
+  const fake = createFakeSupabase();
+  const inviter = await socialPlayer(fake, 'Ada');
+  const recipient = await socialPlayer(fake, 'Bea');
+  await page.addInitScript(session => {
+    if (!sessionStorage.getItem('signin.fixture')) localStorage.setItem('shelflife.cloud', JSON.stringify({ session }));
+  }, recipient.session);
+  await boot(page, fake, '/?invite=' + inviter.code);
+  await page.locator('#friendsSheet [data-fr="invite-dismiss"]').click();
+  await expect(page.locator('#frInviteTitle')).toHaveCount(0);
+  expect(fake.calls('add_friend')).toHaveLength(0);
+  await page.reload();
+  await page.locator('#tabFriends').click();
+  await expect(page.locator('#frInviteTitle')).toHaveCount(0);
+  expect(fake.calls('add_friend')).toHaveLength(0);
+});
+
+test('a signed-in player sends one request to an inviter who has not sent one yet', async ({ page }) => {
+  const fake = createFakeSupabase();
+  const inviter = await socialPlayer(fake, 'Ada');
+  const recipient = await socialPlayer(fake, 'Bea');
+  await page.addInitScript(session => {
+    if (!sessionStorage.getItem('signin.fixture')) localStorage.setItem('shelflife.cloud', JSON.stringify({ session }));
+  }, recipient.session);
+  await boot(page, fake, '/?invite=' + inviter.code);
+  await page.locator('#friendsSheet [data-fr="invite-accept"]').click();
+  await expect(page.locator('#friendsSheet')).toContainText('Friend request sent.');
+  await expect.poll(async () => (await inviter.social.friends())[0]?.status).toBe('pending');
+  expect(fake.calls('add_friend')).toHaveLength(1);
+});
+
+test('an invitation awaiting consent is not transferred to another account', async ({ page }) => {
+  const fake = createFakeSupabase();
+  const inviter = await socialPlayer(fake, 'Ada');
+  const recipient = await socialPlayer(fake, 'Bea');
+  const other = await socialPlayer(fake, 'Cam');
+  await page.addInitScript(session => {
+    if (!sessionStorage.getItem('signin.fixture')) localStorage.setItem('shelflife.cloud', JSON.stringify({ session }));
+  }, recipient.session);
+  await boot(page, fake, '/?invite=' + inviter.code);
+  await expect(page.locator('#frInviteTitle')).toBeVisible();
+  await page.evaluate(session => {
+    const cloud = JSON.parse(localStorage.getItem('shelflife.cloud'));
+    cloud.session = session;
+    localStorage.setItem('shelflife.cloud', JSON.stringify(cloud));
+  }, other.session);
+  await page.reload();
+  await page.locator('#tabFriends').click();
+  await expect(page.locator('#frInviteTitle')).toHaveCount(0);
+  expect(fake.calls('add_friend')).toHaveLength(0);
+});
+
+test('a delayed invitation cannot clear a newer invitation', async ({ page }) => {
+  const fake = createFakeSupabase();
+  const first = await socialPlayer(fake, 'Ada');
+  const second = await socialPlayer(fake, 'Cam');
+  const recipient = await socialPlayer(fake, 'Bea');
+  await page.addInitScript(session => {
+    if (!sessionStorage.getItem('signin.fixture')) localStorage.setItem('shelflife.cloud', JSON.stringify({ session }));
+  }, recipient.session);
+  await boot(page, fake, '/?invite=' + first.code);
+  let signal, release;
+  const started = new Promise(resolve => { signal = resolve; });
+  const held = new Promise(resolve => { release = resolve; });
+  await page.route('**/rest/v1/rpc/register_referral', async route => {
+    signal(); await held; await fake.route(route);
+  });
+  await page.locator('#friendsSheet [data-fr="invite-accept"]').click();
+  await started;
+  await page.evaluate(({ code, owner }) => {
+    const cloud = JSON.parse(localStorage.getItem('shelflife.cloud'));
+    cloud.inviteArrival = { code, owner, needsConsent: true };
+    localStorage.setItem('shelflife.cloud', JSON.stringify(cloud));
+  }, { code: second.code, owner: recipient.id });
+  const response = page.waitForResponse(res => res.url().endsWith('/rpc/register_referral'));
+  release();
+  await response;
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.cloud')).inviteArrival?.code)).toBe(second.code);
+});
+
 for (const ineligible of ['not_new', 'too_many']) {
   test(`an invitation sends a friend request when the referral is ${ineligible}`, async ({ page }) => {
     const fake = createFakeSupabase();

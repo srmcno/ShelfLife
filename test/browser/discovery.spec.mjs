@@ -95,6 +95,65 @@ test('browsing is paginated and blocks hide listed players in both directions',a
   await expect(directory).not.toContainText('Neighbour 01');
 });
 
+for (const mode of ['all','nearby']) test(`sending a request in ${mode} discovery refills the page without skipping players`,async({page},info)=>{
+  test.skip(info.project.name!=='desktop-chromium','One browser checks both directory pagination modes.');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader');
+  if(mode==='nearby') {
+    await reader.cloud.rpc('discovery_set',{p_on:true});
+    await reader.cloud.rpc('discovery_location_set',{p_lat_band:131,p_lon_band:140});
+  }
+  const players=[];
+  for(let i=0;i<22;i++) {
+    const player=await socialPlayer(fake,'Neighbour '+String(i).padStart(2,'0'));
+    await player.cloud.rpc('discovery_set',{p_on:true});
+    if(mode==='nearby') await player.cloud.rpc('discovery_location_set',{p_lat_band:131,p_lon_band:140});
+    players.push(player);
+  }
+  await boot(page,fake,reader); await page.locator('[data-sx="discovery-open"]').click();
+  const directory=page.locator('[data-fr-view="discovery"]');
+  if(mode==='nearby') await directory.locator('[data-sx="discovery-nearby"]').click();
+  await expect(directory.locator('.di-list li')).toHaveCount(20);
+  await directory.locator('[data-sx="discovery-request"]').first().click();
+  await expect(directory).toContainText('Friend request sent.');
+  await expect(directory.locator('.di-list li')).toHaveCount(20);
+  await expect(directory).toContainText('Neighbour 20');
+  const firstPage=await directory.locator('[data-sx="discovery-request"]').evaluateAll(nodes=>nodes.map(node=>node.dataset.user));
+  await directory.locator('[data-sx="discovery-next"]').click();
+  await expect(directory.locator('.di-list li')).toHaveCount(1);
+  await expect(directory).toContainText('Neighbour 21');
+  const lastPage=await directory.locator('[data-sx="discovery-request"]').evaluateAll(nodes=>nodes.map(node=>node.dataset.user));
+  expect([...firstPage,...lastPage].sort()).toEqual(players.slice(1).map(player=>player.id).sort());
+  expect((await players[0].social.friends()).some(friend=>friend.userId===reader.id&&friend.status==='pending')).toBe(true);
+});
+
+test('a failed directory refill can retry without skipping players or resending the request',async({page},info)=>{
+  test.skip(info.project.name!=='desktop-chromium','One browser checks failed pagination recovery.');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader');
+  for(let i=0;i<22;i++) {
+    const player=await socialPlayer(fake,'Neighbour '+String(i).padStart(2,'0'));
+    await player.cloud.rpc('discovery_set',{p_on:true});
+  }
+  await boot(page,fake,reader); await page.locator('[data-sx="discovery-open"]').click();
+  const directory=page.locator('[data-fr-view="discovery"]');
+  await expect(directory.locator('.di-list li')).toHaveCount(20);
+  let failNext=true;
+  await page.route(fake.url+'/rest/v1/rpc/discovery_find',async route=>{
+    if(failNext) { failNext=false; await route.fulfill({status:503,contentType:'application/json',body:'{}'}); }
+    else await fake.route(route);
+  });
+  await directory.locator('[data-sx="discovery-request"]').first().click();
+  await expect(directory).toContainText('Friend request sent.');
+  await expect(directory).toContainText('The directory is unavailable.');
+  await expect(directory.locator('[data-sx="discovery-next"]')).toHaveCount(0);
+  await directory.locator('[data-sx="discovery-retry"]').click();
+  await expect(directory.locator('.di-list li')).toHaveCount(20);
+  await expect(directory).toContainText('Neighbour 20');
+  await directory.locator('[data-sx="discovery-next"]').click();
+  await expect(directory).toContainText('Neighbour 21');
+  await expect(directory.locator('.di-list li')).toHaveCount(1);
+  expect(fake.calls('discovery_request')).toHaveLength(1);
+});
+
 test('nearby sharing sends only a broad area and can be removed',async({page,context},info)=>{
   test.skip(info.project.name!=='desktop-chromium','One browser covers the location workflow.');
   const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader'), nearby=await socialPlayer(fake,'<img src=x onerror=y>');

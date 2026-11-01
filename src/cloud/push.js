@@ -79,12 +79,18 @@ export function createPush({ cloud, publicKey, nav = globalThis.navigator, notif
   }
   const retryCleanup = () => cleanupPending();
   const onRetry = () => { void retryCleanup(); };
+  const onCloudChange = change => {
+    // A rejected refresh can end the session without the normal exit hook.
+    // Persist the device cleanup before another account can use this endpoint.
+    if (change?.type === 'session' && change.signedOut && !native()) markPending();
+    onRetry();
+  };
   function start() {
     if (!started) {
       started = true;
       events?.addEventListener?.('online', onRetry);
       events?.addEventListener?.('storage', onRetry);
-      unsubscribeCloud = cloud?.subscribe?.(onRetry) || null;
+      unsubscribeCloud = cloud?.subscribe?.(onCloudChange) || null;
     }
     return retryCleanup();
   }

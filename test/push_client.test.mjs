@@ -126,3 +126,62 @@ test('an older cleanup cannot clear a newer account exit marker', async () => {
   values.set(PUSH_CLEANUP_KEY, 'new'); finish(true);
   assert.equal(await attempt, false); assert.equal(values.get(PUSH_CLEANUP_KEY), 'new');
 });
+
+test('permanent refresh rejection revokes the expired account browser subscription', async () => {
+  const fake = createFakeSupabase(), player = await socialPlayer(fake, 'Ada'), device = browser();
+  const values = new Map();
+  const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
+  const push = createPush({ cloud: player.cloud, publicKey: 'AQ', storage, ...device });
+  await push.start();
+  await push.subscribe();
+  fake.expireTokens(); fake.revokeRefreshTokens();
+  await assert.rejects(player.cloud.rpc('pull_save'), error => error.code === 'session_expired');
+  assert.equal(player.cloud.signedIn(), false);
+  assert.equal(await push.current(), null);
+  assert.equal(storage.getItem(PUSH_CLEANUP_KEY), null);
+  assert.equal(fake.push.subscriptions.size, 1, 'the expired account row awaits provider rejection');
+  push.stop();
+});
+
+test('expired-session cleanup survives an unavailable worker and blocks the next account', async () => {
+  const fake = createFakeSupabase(), player = await socialPlayer(fake, 'Ada'), device = browser();
+  const values = new Map();
+  const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
+  let blocked = false;
+  const ready = device.nav.serviceWorker.ready;
+  device.nav.serviceWorker.getRegistration = () => blocked ? new Promise(() => {}) : ready;
+  const push = createPush({ cloud: player.cloud, publicKey: 'AQ', storage, registrationTimeoutMs: 20, ...device });
+  await push.start(); await push.subscribe();
+  blocked = true;
+  fake.expireTokens(); fake.revokeRefreshTokens();
+  await assert.rejects(player.cloud.rpc('pull_save'), error => error.code === 'session_expired');
+  assert.ok(storage.getItem(PUSH_CLEANUP_KEY), 'session loss records cleanup before another account can sign in');
+  await player.cloud.signInAnonymously();
+  await assert.rejects(push.subscribe(), /earlier notification/);
+  assert.equal(device.prompts, 1);
+  blocked = false;
+  assert.equal(await push.retryCleanup(), true);
+  assert.equal(await push.current(), null);
+  assert.equal(storage.getItem(PUSH_CLEANUP_KEY), null);
+  push.stop();
+});
+
+test('refresh rejection during registration cannot leak the endpoint to a later account', async () => {
+  const fake = createFakeSupabase(), player = await socialPlayer(fake, 'Ada'), device = browser();
+  const values = new Map();
+  const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
+  const rpc = player.cloud.rpc;
+  player.cloud.rpc = (name, ...args) => {
+    if (name === 'push_subscribe') { fake.expireTokens(); fake.revokeRefreshTokens(); }
+    return rpc(name, ...args);
+  };
+  const push = createPush({ cloud: player.cloud, publicKey: 'AQ', storage, ...device });
+  await push.start();
+  await assert.rejects(push.subscribe(), error => error.code === 'session_expired');
+  assert.equal(player.cloud.signedIn(), false);
+  await player.cloud.signInAnonymously();
+  assert.equal(await push.current(), null);
+  assert.equal(storage.getItem(PUSH_CLEANUP_KEY), null);
+  assert.equal(fake.push.subscriptions.size, 0);
+  push.stop();
+});

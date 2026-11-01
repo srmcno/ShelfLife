@@ -171,7 +171,11 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
   const tab = $('tabFriends');
   tab.hidden = false;
   const arrivalCode = covenState(state).invite.code;
-  if (arrivalCode && !cloud.signedIn() && !cloud.meta().inviteArrival) cloud.setMeta({ inviteArrival: { code: arrivalCode } });
+  const pendingArrival = cloud.meta().inviteArrival;
+  if (arrivalCode && (!pendingArrival || pendingArrival.code !== arrivalCode)) {
+    const user = cloud.userId();
+    cloud.setMeta({ inviteArrival: user ? { code: arrivalCode, owner: user, needsConsent: true } : { code: arrivalCode } });
+  }
 
   let view = 'main', message = '', busy = false, confirm = null, gazetteUnread = 0;
   let me = { code: '', name: '' }, friends = [], loaded = false, showAll = false;
@@ -385,7 +389,10 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
     const count = postboxCount(ctx), dots = mailFrom(), dnd = !!postbox?.state().dnd;
     const shown = showAll ? list : list.slice(0, HOME_FRIENDS);
     title = ['Friends', 'Your shelf is for friends.'];
-    return '<button class="fr-postbox-entry" type="button" data-fr="postbox"><span class="fr-pb-icon" aria-hidden="true">' + POSTBOX_ICON + '</span>' +
+    const arrival = cloud.meta().inviteArrival;
+    const invite = arrival?.needsConsent && arrival.owner === cloud.userId() ?
+      '<section class="fr-confirm" aria-labelledby="frInviteTitle"><h3 id="frInviteTitle">A friend invited you</h3><p>Code ' + esc(formatCode(arrival.code)) + '. Accepting sends a friend request, or accepts their existing request.</p><div class="fr-actions"><button class="btn btn-primary" type="button" data-fr="invite-accept">Accept invitation</button><button class="btn" type="button" data-fr="invite-dismiss">Decline</button></div></section>' : '';
+    return invite + '<button class="fr-postbox-entry" type="button" data-fr="postbox"><span class="fr-pb-icon" aria-hidden="true">' + POSTBOX_ICON + '</span>' +
       '<span class="fr-pb-text"><b>Postbox</b><small>' + (count ? count + ' waiting for you' : 'Nothing waiting. Suspicious.') + '</small></span>' +
       (count ? '<i class="fr-badge" aria-hidden="true">' + (count > 99 ? '99+' : count) + '</i>' : '') + '</button>' +
       (incoming.length ? '<section aria-labelledby="frRequestsTitle"><h3 id="frRequestsTitle">Requests</h3><ul class="fr-list">' + incoming.map(f => requestRow(f, { confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul></section>' : '') +
@@ -653,7 +660,7 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
     // Friends see the shelf as it is now. Quietly: a failure here changes nothing.
     social.publish({ force: true }).catch(() => {});
     await finishArrival();
-    if (cloud.meta().openPostbox && isOpen()) await openPostbox();
+    if (cloud.meta().openPostbox && isOpen() && !cloud.meta().inviteArrival?.needsConsent) await openPostbox();
   }
   let arrivalTask = null;
   function finishArrival() {
@@ -664,21 +671,38 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
   async function finishArrivalOnce() {
     let arrival = cloud.meta().inviteArrival;
     const user = cloud.userId(), epoch = accountEpoch;
-    const current = () => cloud.userId() === user && accountEpoch === epoch;
-    if (!coven || !arrival?.code || !user || (arrival.owner && arrival.owner !== user)) return;
+    const sessionCurrent = () => cloud.userId() === user && accountEpoch === epoch;
+    const current = () => {
+      const active = cloud.meta().inviteArrival;
+      return sessionCurrent() && active?.code === arrival?.code && (!active.owner || active.owner === user);
+    };
+    if (!coven || !arrival?.code || !user || arrival.needsConsent || (arrival.owner && arrival.owner !== user)) return;
     if (!arrival.owner) { arrival = { ...arrival, owner: user }; cloud.setMeta({ inviteArrival: arrival }); }
     try {
       if (!arrival.requestDone) {
-        try { await social.addFriend(arrival.code); } catch (error) { if (!['already_friends', 'already_asked'].includes(error.code)) throw error; }
-        if (!current()) return; arrival = { ...arrival, requestDone: true }; cloud.setMeta({ inviteArrival: arrival });
+        let requestStatus = 'pending';
+        try { requestStatus = (await social.addFriend(arrival.code)).status; }
+        catch (error) { if (!['already_friends', 'already_asked'].includes(error.code)) throw error; if (error.code === 'already_friends') requestStatus = 'accepted'; }
+        if (!current()) return; arrival = { ...arrival, requestDone: true, requestStatus }; cloud.setMeta({ inviteArrival: arrival });
       }
       if (!arrival.referralDone) {
         try { await coven.registerReferral(arrival.code); }
         catch (error) { if (!['already_referred', 'not_new', 'too_many'].includes(error.code)) throw error; }
         if (!current()) return; arrival = { ...arrival, referralDone: true }; cloud.setMeta({ inviteArrival: arrival });
       }
-      if (current()) { cloud.setMeta({ inviteArrival: undefined }); covenState(state).invite.code = ''; save(); await reload(); if (current()) render(); }
-    } catch (error) { if (current()) { message = arrival.requestDone ? 'Friend request handled. Open Friends to retry the referral.' : 'The invitation could not be completed. Open Friends to try again.'; render(); } }
+      if (current()) {
+        cloud.setMeta({ inviteArrival: undefined });
+        if (covenState(state).invite.code === arrival.code) { covenState(state).invite.code = ''; save(); }
+        await reload();
+        if (sessionCurrent()) { if (arrival.confirmedByUser) message = arrival.requestStatus === 'accepted' ? 'You are now friends.' : 'Friend request sent.'; render(); }
+      }
+    } catch (error) {
+      if (current()) {
+        if (arrival.confirmedByUser && !arrival.requestDone) { arrival = { ...arrival, needsConsent: true }; cloud.setMeta({ inviteArrival: arrival }); }
+        message = arrival.requestDone ? (arrival.requestStatus === 'accepted' ? 'You are now friends. ' : 'Friend request sent. ') + 'Open Friends to retry the referral.' : 'The invitation could not be completed. Try again.';
+        render();
+      }
+    }
   }
   function close() { veil.classList.remove('open'); view = 'main'; visiting = serving = profile = custom = null; confirm = null; drafts = {}; mailSafety = ''; syncTray(); }
 
@@ -801,6 +825,23 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
       case 'copy': copy(); break;
       case 'share': shareCode(); break;
       case 'invite-friend': shareInvite(); break;
+      case 'invite-accept': {
+        const arrival = cloud.meta().inviteArrival;
+        if (arrival?.needsConsent && arrival.owner === cloud.userId()) {
+          cloud.setMeta({ inviteArrival: { ...arrival, needsConsent: false, confirmedByUser: true } });
+          message = ''; render(); void finishArrival();
+        }
+        break;
+      }
+      case 'invite-dismiss': {
+        const arrival = cloud.meta().inviteArrival;
+        if (arrival?.needsConsent && arrival.owner === cloud.userId()) {
+          cloud.setMeta({ inviteArrival: undefined });
+          if (covenState(state).invite.code === arrival.code) { covenState(state).invite.code = ''; save(); }
+          message = 'Invitation declined.'; render();
+        }
+        break;
+      }
       case 'court': close(); window.dispatchEvent(new CustomEvent('shelflife:court')); break;
       case 'postbox': openPostbox(); break;
       case 'postbox-refresh': loadMail(); break;
@@ -910,8 +951,10 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
     window.history.replaceState(window.history.state, '', arrivalUrl.pathname + arrivalUrl.search + arrivalUrl.hash);
     cloud.setMeta({ openPostbox: true });
   }
-  if (cloud.meta().openPostbox) setTimeout(openPostbox, 0);
-  else if (cloud.meta().inviteArrival && !social.signedIn()) setTimeout(open, 0);
+  const invitation = cloud.meta().inviteArrival;
+  if (invitation?.needsConsent && invitation.owner === cloud.userId()) setTimeout(open, 0);
+  else if (cloud.meta().openPostbox) setTimeout(openPostbox, 0);
+  else if (invitation && !social.signedIn()) setTimeout(open, 0);
   return { open, close, refresh: render, openPostbox, get ctx() { return ctx; } };
 }
 
