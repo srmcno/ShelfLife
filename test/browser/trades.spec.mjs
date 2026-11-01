@@ -4,7 +4,7 @@ import { createFakeSupabase } from '../support/fake-supabase.mjs';
 import { socialPlayer } from '../support/social-world.mjs';
 import { createTrades } from '../../src/cloud/trades.js';
 import { createTradeSync } from '../../src/cloud/trade-sync.js';
-import { toggleWish } from '../../src/engine/trades.js';
+import { toggleWish, notice } from '../../src/engine/trades.js';
 
 // Two players: the page is Ada; Bea lives in this process on the same fake
 // Supabase, with the game's own trade client and sync. Until the Friends hub
@@ -81,6 +81,24 @@ async function postbox(page) {
 const saved = page => page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.v4')));
 const row = (page, text) => host(page).locator('[data-postbox-source="trades"]').filter({ hasText: text });
 
+test('dismissing trade news updates the real Friends postbox and stays dismissed', async ({ page }) => {
+  const { fake, ada } = await world();
+  const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  notice(ada.shelf, { id, kind: 'declined', at: NOW, title: 'Declined: Bea', text: 'Everything you offered is back where it was.' });
+  await open(page, fake, ada);
+  await page.locator('#tabFriends').click();
+  await page.locator('#friendsSheet [data-fr="postbox"]').click();
+  const trade = page.locator('#friendsSheet [data-fr-mail="trades"]').filter({ hasText: 'Declined: Bea' });
+  await expect(trade).toBeVisible();
+  await trade.locator('[data-sx="tr-dismiss"]').click();
+  await expect(trade).toHaveCount(0);
+  expect((await saved(page)).trades.notices.some(item => item.id === id)).toBe(false);
+  await page.reload();
+  await page.locator('#tabFriends').click();
+  await page.locator('#friendsSheet [data-fr="postbox"]').click();
+  await expect(trade).toHaveCount(0);
+});
+
 test('a curio gift: Bea’s wishlist is marked, the gift is held, then sealed on both shelves', async ({ page }) => {
   const { fake, ada, bea } = await world({ beaWish: ['moth-wing'] });
   await open(page, fake, ada);
@@ -115,6 +133,13 @@ test('a curio gift: Bea’s wishlist is marked, the gift is held, then sealed on
   expect(bea.box.state.mayhem.curios['moth-wing']).toBe(1);
   await postbox(page);
   await expect(row(page, 'Sealed with Bea')).toContainText('Moth Wing went to Bea.');
+  // An inbox notification repaints the hub, but must not start another chain
+  // of postbox loads when the clock is paused and nothing else has changed.
+  await page.evaluate(() => window.__tradeHost.ctx.social.inbox());
+  await page.waitForTimeout(500);
+  const reads = fake.calls('inbox').length;
+  await page.waitForTimeout(500);
+  expect(fake.calls('inbox')).toHaveLength(reads);
   const after = await saved(page);
   expect(after.mayhem.curios['moth-wing']).toBe(2);
   expect(after.trades.escrow).toEqual({});

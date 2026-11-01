@@ -593,7 +593,7 @@ registerPostboxSource({
     if (action === 'tr-withdraw' && t) {
       try { await deps.sync.cancel(t); ctx?.say?.('Withdrawn. Everything you offered is back where it was.'); deps.renderAll?.(); }
       catch (error) { ctx?.say?.(tradeText(error)); }
-      ctx?.refresh?.();
+      if (ctx?.reloadMail) await ctx.reloadMail(); else ctx?.refresh?.();
       return;
     }
     if (action === 'tr-read-sealed') {
@@ -604,7 +604,10 @@ registerPostboxSource({
       return;
     }
     if (action === 'tr-let-in') { letIn(itemId, ctx); return; }
-    if (action === 'tr-dismiss') { if (dismissNotice(state(), itemId)) deps.save?.(); ctx?.refresh?.(); }
+    if (action === 'tr-dismiss') {
+      if (dismissNotice(state(), itemId)) deps.save?.();
+      if (ctx?.reloadMail) await ctx.reloadMail(); else ctx?.refresh?.();
+    }
   }
 });
 
