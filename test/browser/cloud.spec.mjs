@@ -18,7 +18,7 @@ const test = base.extend({
 });
 test.use({ serviceWorkers: 'block' });
 test.beforeEach(({}, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium', 'The account layer is checked once, with phone widths set explicitly');
+  test.skip(!['desktop-chromium', 'desktop-firefox'].includes(testInfo.project.name), 'The account layer uses desktop projects with phone widths set explicitly');
 });
 
 function memory() {
@@ -105,7 +105,7 @@ test('an email already attached on the server recovers from an old guest session
   Object.assign(fake.users.get(userId), { email: 'mabel@example.com', is_anonymous: false });
   await page.locator('#cloudEmail').fill('mabel@example.com');
   await page.locator('#cloudSendCode').click();
-  await expect(page.locator('#cloudSignIn')).toBeVisible();
+  await expect(page.locator('#cloudSignin')).toBeVisible();
   await expect(page.locator('#cloudCodeForm')).toBeVisible();
   expect(fake.sent.map(item => item.type)).toEqual(['email']);
   await page.locator('#cloudCode').fill(FAKE_CODE);
@@ -129,7 +129,7 @@ test('turn it on, add an email, and settle a conflict both ways', async ({ page 
   await expect(page.locator('#cloudBtnSub')).toHaveText('Off');
   await page.locator('#cloudBtn').click();
   await expect(page.locator('#cloudEnable')).toBeVisible();
-  expect(fake.requests, 'opening the sheet sends nothing').toEqual([]);
+  expect(fake.requests.map(request => request.path)).toEqual(['/auth/v1/settings']);
   await fits(page);
 
   await page.locator('#cloudEnable').click();
@@ -142,11 +142,11 @@ test('turn it on, add an email, and settle a conflict both ways', async ({ page 
   await page.locator('#cloudEmail').fill('mabel@example.com');
   await page.locator('#cloudSendCode').click();
   await expect(page.locator('#cloudStatus')).toContainText('Code requested. Check your email');
-  await expect(page.locator('#cloudCodeDestination')).toHaveText('Code requested for mabel@example.com.');
+  await expect(page.locator('#cloudCodeDestination')).toHaveText('Sent to mabel@example.com');
   await expect(page.locator('#cloudCode')).toBeFocused();
   await page.locator('#cloudCode').fill(FAKE_CODE);
   await page.keyboard.press('Enter');
-  await expect(page.locator('#cloudStatus')).toContainText('Email added.');
+  await expect(page.locator('#cloudStatus')).toContainText('Signed in as mabel@example.com.');
   await expect(page.locator('#cloudEmailShown')).toHaveText('mabel@example.com');
   await expect(page.locator('#cloudSignOut')).toBeVisible();
   await expect(page.locator('#cloudDeleteStart')).toHaveText('Delete my cloud data and account');
@@ -208,9 +208,7 @@ test('signing in on a fresh device brings the shelf over, and deleting leaves it
   await open(page, { fake, snapshot: null });
   await expect(page.locator('.arrival-resident')).toHaveCount(3);
   await openCloud(page);
-  await page.locator('#cloudSignInOpen').click();
-  await expect(page.locator('#cloudSignIn')).toBeVisible();
-  await expect(page.locator('#cloudEmail')).toBeFocused();
+  await expect(page.locator('#cloudSignin')).toBeVisible();
   await page.locator('#cloudEmail').fill('pip@example.com');
   await page.keyboard.press('Enter');
   await expect(page.locator('#cloudCode')).toBeFocused();
@@ -218,10 +216,10 @@ test('signing in on a fresh device brings the shelf over, and deleting leaves it
   await page.keyboard.press('Escape');
   await expect(page.locator('#cloudVeil')).toBeHidden();
   await openCloud(page);
-  await expect(page.locator('#cloudSignIn')).toBeVisible();
+  await expect(page.locator('#cloudSignin')).toBeVisible();
   await expect(page.locator('#cloudEmail')).toHaveValue('pip@example.com');
   await page.locator('#cloudCode').fill(FAKE_CODE);
-  await page.locator('#cloudConfirm').click();
+  // Six digits submit automatically after the input settles.
   await expect(page.locator('#cloudStatus')).toHaveText('Signed in as pip@example.com.');
   await expect.poll(() => fake.calls('/rest/v1/rpc/pull_save').length).toBeGreaterThan(0);
   await expect(page.locator('#toast')).toContainText('Your shelf has arrived from the cloud.');
@@ -235,7 +233,7 @@ test('signing in on a fresh device brings the shelf over, and deleting leaves it
   await fits(page, [320]);
   await page.locator('#cloudDeleteConfirmBtn').click();
   await expect(page.locator('#cloudStatus')).toHaveText('Deleted. The cloud copy and the account are gone. This shelf is still here.');
-  await expect(page.locator('#cloudOff')).toBeVisible();
+  await expect(page.locator('#cloudSignin')).toBeVisible();
   expect(fake.users.size).toBe(0);
   expect(fake.saves.size).toBe(0);
   expect(await residents(page)).toEqual(['Agnes', 'Lord Dampington III', 'Pip']);
@@ -261,22 +259,20 @@ test('email instructions explain the code, preserve invalid input, and let the p
   await open(page, { fake });
   await openCloud(page);
   await expect(page.locator('#cloudVeil')).toContainText('The game saves automatically in this browser.');
-  await page.locator('#cloudSignInOpen').click();
-  await expect(page.locator('#cloudEmailSteps li')).toHaveCount(3);
-  await expect(page.locator('#cloudEmailHelp')).toContainText('you do not choose one yourself');
+  await expect(page.locator('#cloudSignin')).toContainText('Keep these residents safe');
   await page.locator('#cloudEmail').fill('not an email');
   await page.locator('#cloudSendCode').click();
   await expect(page.locator('#cloudStatus')).toHaveText('That does not look like an email address.');
   await expect(page.locator('#cloudEmail')).toHaveValue('not an email');
-  expect(fake.requests, 'invalid input never asks the server for a code').toEqual([]);
+  expect(fake.calls('/auth/v1/otp'), 'invalid input never asks the server for a code').toEqual([]);
   await expect(page.locator('#cloudCodeForm')).toBeHidden();
 
   const address = 'long-email-destination-for-small-screen@example.com';
   await page.locator('#cloudEmail').fill(address);
   await page.locator('#cloudSendCode').click();
-  await expect(page.locator('#cloudCodeDestination')).toHaveText('Code requested for ' + address + '.');
-  await expect(page.locator('#cloudEmail')).toHaveAttribute('readonly', '');
-  await expect(page.locator('#cloudCodeHelp')).toContainText('Wait at least a minute');
+  await expect(page.locator('#cloudCodeDestination')).toHaveText('Sent to ' + address);
+  await expect(page.locator('#cloudEmailForm')).toBeHidden();
+  await expect(page.locator('#cloudResend')).toBeDisabled();
   await fits(page);
   await page.locator('#cloudCode').fill('123');
   await page.locator('#cloudConfirm').click();
@@ -286,15 +282,13 @@ test('email instructions explain the code, preserve invalid input, and let the p
   await expect(page.locator('#cloudCodeForm')).toBeHidden();
   await expect(page.locator('#cloudEmail')).toBeEditable();
   await expect(page.locator('#cloudEmail')).toHaveValue(address);
-  await expect(page.locator('#cloudEmail')).toBeFocused();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.cloud')).pending)).toBeUndefined();
   await page.reload();
   await openCloud(page);
-  await page.locator('#cloudSignInOpen').click();
   await expect(page.locator('#cloudCodeForm')).toBeHidden();
   await page.locator('#cloudEmail').fill('new-inbox@example.com');
   await page.locator('#cloudSendCode').click();
-  await expect(page.locator('#cloudCodeDestination')).toHaveText('Code requested for new-inbox@example.com.');
+  await expect(page.locator('#cloudCodeDestination')).toHaveText('Sent to new-inbox@example.com');
   expect(fake.sent.map(sent => sent.email)).toEqual([address, 'new-inbox@example.com']);
 });
 

@@ -54,3 +54,12 @@ test('email configuration errors explain that the player cannot fix delivery by 
   assert.doesNotMatch(actionText({ status: 403 }), /code did not work/);
   assert.match(actionText({ status: 429 }), /Wait a few minutes/);
 });
+
+test('mail shortcuts use trusted destinations for supported inboxes', async () => {
+  const { mailLink } = await import('../src/ui/signin.js');
+  assert.deepEqual(mailLink('mabel@gmail.com'), ['Gmail', 'https://mail.google.com/']);
+  assert.deepEqual(mailLink('mabel@outlook.com'), ['Outlook', 'https://outlook.live.com/mail/']);
+  assert.deepEqual(mailLink('mabel@yahoo.co.uk'), ['Yahoo', 'https://mail.yahoo.com/']);
+  assert.deepEqual(mailLink('mabel@icloud.com'), ['iCloud Mail', 'https://www.icloud.com/mail/']);
+  assert.equal(mailLink('mabel@example.com'), null);
+});

@@ -342,11 +342,17 @@ function nextBanner() {
   el.querySelector('b').textContent = spec.title || '';
   el.querySelector('p').textContent = spec.line || '';
   if (!spec.line) el.querySelector('p').remove();
+  const scrim = low ? null : document.createElement('div');
+  if (scrim) {
+    scrim.className = 'fx-banner-scrim';
+    scrim.setAttribute('aria-hidden', 'true');
+    layer().appendChild(scrim);
+  }
   layer().appendChild(el);
   announce([spec.kicker, spec.title, spec.line].filter(Boolean).join('. '));
   const hold = motionLevel() === 'off' ? 3200 : 3600;
-  later(() => el.classList.add('out'), hold);
-  later(() => { el.remove(); nextBanner(); }, hold + 320);
+  later(() => { el.classList.add('out'); scrim?.classList.add('out'); }, hold);
+  later(() => { el.remove(); scrim?.remove(); nextBanner(); }, hold + 320);
 }
 
 // Each celebration is a small recipe built from the toolkit. `ctx` carries

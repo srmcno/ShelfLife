@@ -1,0 +1,10 @@
+.gz-paper{border:1px solid var(--border, #594c42);background:#e9ddc5;color:#30281f;padding:18px;box-shadow:3px 3px 0 #594c4266}
+.gz-paper h3{font-family:Georgia,serif;font-size:1.7rem;line-height:1.05;margin:.1rem 0;text-align:center;color:inherit}
+.gz-kicker,.gz-subtitle{text-align:center;font-size:.73rem;letter-spacing:.1em;text-transform:uppercase;margin:.25rem 0}
+.gz-setting{display:flex;justify-content:space-between;align-items:center;border-block:1px solid #766955;padding:8px 0;margin:12px 0;font-weight:700;gap:12px}
+.gz-story{border-top:1px solid #9d8e79;padding:12px 0;min-width:0}
+.gz-story-head{display:flex;gap:10px;align-items:center;min-width:0}
+.gz-story-head>div{min-width:0}.gz-story h4{font-family:Georgia,serif;font-size:1.1rem;line-height:1.15;margin:0;overflow-wrap:anywhere}
+.gz-story p{font-size:.8rem;margin:5px 0;overflow-wrap:anywhere}.gz-portrait{width:54px;height:54px;flex:none;overflow:hidden}.gz-portrait>span,.gz-portrait svg{width:100%;height:100%}
+.gz-stickers{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.gz-stickers button{min-height:32px;border:1px solid #9d8e79;background:#f6eedc;color:#30281f;padding:4px 7px;font-size:.72rem;border-radius:3px;cursor:pointer}.gz-stickers button[aria-pressed=true]{background:#30281f;color:#fff}
+.gz-empty{font-style:italic}.gz-profile h3{font-size:1.3rem}

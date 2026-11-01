@@ -11,7 +11,7 @@ import subprocess
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
-PUBLIC = ("index.html", "move.html", "privacy.html", "delete-account.html", "manifest.webmanifest", "service-worker.js", "css", "src", "icons", "assets")
+PUBLIC = ("index.html", "move.html", "privacy.html", "delete-account.html", "manifest.webmanifest", "service-worker.js", "robots.txt", "css", "src", "icons", "assets")
 
 
 def public_url(value, label, *, backend=False):
@@ -67,6 +67,14 @@ def build_revision(env):
 def build(output=None, *, require_cloud=False, env=None):
     env = os.environ if env is None else env
     config, site = deployment_settings(env, require_cloud)
+    vapid = env.get("SHELFLIFE_VAPID_PUBLIC_KEY", "").strip() or None
+    if vapid:
+        try:
+            decoded = base64.urlsafe_b64decode(vapid + "=" * (-len(vapid) % 4))
+            if not re.fullmatch(r"[A-Za-z0-9_-]{87}", vapid) or len(decoded) != 65 or decoded[0] != 4:
+                raise ValueError("invalid public key")
+        except (ValueError, IndexError) as exc:
+            raise ValueError("SHELFLIFE_VAPID_PUBLIC_KEY must be an uncompressed P-256 public key") from exc
     revision = build_revision(env)
     channel = env.get("VERCEL_TARGET_ENV") or env.get("VERCEL_ENV") or "production"
     output = Path(output) if output else ROOT / "dist"
@@ -82,9 +90,10 @@ def build(output=None, *, require_cloud=False, env=None):
     deployed = output / "src" / "cloud" / "deployment-config.js"
     deployed.write_text("// Public deployment settings; contains no server credentials.\n"
                         + "export const DEPLOYED_CLOUD_CONFIG = " + json.dumps(config) + ";\n"
-                        + "export const DEPLOYED_PUBLIC_URL = " + json.dumps(site) + ";\n")
+                        + "export const DEPLOYED_PUBLIC_URL = " + json.dumps(site) + ";\n"
+                        + "export const DEPLOYED_VAPID_PUBLIC_KEY = " + json.dumps(vapid) + ";\n")
     # Same code with changed environment settings must replace an old PWA cache.
-    suffix = "-" + hashlib.sha256(json.dumps([config, site], sort_keys=True).encode()).hexdigest()[:8] if config or site else ""
+    suffix = "-" + hashlib.sha256(json.dumps([config, site, vapid], sort_keys=True).encode()).hexdigest()[:8] if config or site or vapid else ""
     worker = output / "service-worker.js"
     worker.write_text(re.sub(r"const CACHE_VERSION = '[^']+';", f"const CACHE_VERSION = 'shelflife-{revision[:12]}{suffix}';", worker.read_text()))
     # The packaged copy says which commit it is, for feedback reports.

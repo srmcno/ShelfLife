@@ -29,6 +29,9 @@ function serve(dir, port, prefix) {
       const file = path.resolve(dir, '.' + pathname, pathname.endsWith('/') ? 'index.html' : '');
       if (!file.startsWith(dir) || !(await stat(file)).isFile()) { res.writeHead(404); return res.end(); }
       let body = await readFile(file);
+      // Production moves use HTTPS. These two disposable test origins use HTTP,
+      // so permit only their exact addresses for the reachability probe.
+      if (file.endsWith('.html')) body = Buffer.from(String(body).replace("connect-src 'self' https:", "connect-src 'self' https: http://localhost:4301 http://127.0.0.1:4302"));
       // Never the real cloud project from a test.
       if (file.endsWith(path.join('src', 'cloud', 'config.js'))) body = Buffer.from(String(body).replace(/export const CLOUD_CONFIG = \{[^}]*\};/, "export const CLOUD_CONFIG = { url: '', anonKey: '' };"));
       res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
@@ -63,7 +66,7 @@ const household = (names, now) => {
 };
 
 test('opening the old link carries the whole household to the new address by itself, then always redirects', async ({ browser }, info) => {
-  test.skip(info.project.name !== 'desktop-chromium' && info.project.name !== 'mobile-chromium', 'Chromium projects');
+  test.skip(!['desktop-chromium', 'mobile-chromium', 'desktop-firefox'].includes(info.project.name), 'Desktop and Chromium mobile projects');
   const context = await browser.newContext();
   const page = await context.newPage();
   const now = Date.now();
@@ -89,7 +92,7 @@ test('opening the old link carries the whole household to the new address by its
 });
 
 test('a shelf already started at the new address is kept as a spare, never overwritten', async ({ browser }, info) => {
-  test.skip(info.project.name !== 'desktop-chromium', 'once');
+  test.skip(!['desktop-chromium', 'desktop-firefox'].includes(info.project.name), 'desktop projects');
   const context = await browser.newContext();
   const page = await context.newPage();
   const now = Date.now();
@@ -107,7 +110,7 @@ test('a shelf already started at the new address is kept as a spare, never overw
 });
 
 test('the new address ignores a move that does not come from the old address', async ({ browser }, info) => {
-  test.skip(info.project.name !== 'desktop-chromium', 'once');
+  test.skip(!['desktop-chromium', 'desktop-firefox'].includes(info.project.name), 'desktop projects');
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(NEW + 'move.html#m=1&sha=' + 'a'.repeat(64) + '&i=0&n=1&d=rAAAA');
@@ -118,7 +121,7 @@ test('the new address ignores a move that does not come from the old address', a
 });
 
 test('offline, the old address just plays; a broken new address leaves the old one playable', async ({ browser }, info) => {
-  test.skip(info.project.name !== 'desktop-chromium', 'once');
+  test.skip(!['desktop-chromium', 'desktop-firefox'].includes(info.project.name), 'desktop projects');
   const context = await browser.newContext();
   const page = await context.newPage();
   const save = household(['Mabel'], Date.now());
@@ -131,4 +134,29 @@ test('offline, the old address just plays; a broken new address leaves the old o
   await expect(page).toHaveURL(OLD + '?stay=1');
   expect(await read(page, 'shelflife.v4')).toBeTruthy();
   await context.close();
+});
+
+test('each production alias moves its stored shelf to the canonical host', async ({ browser }) => {
+  const aliases = ['shelf-life-five-ebon.vercel.app', 'shelf-life-srmcnos-projects.vercel.app', 'shelf-life-git-main-srmcnos-projects.vercel.app'];
+  const canonical = 'shelflife-game.vercel.app';
+  const dir = path.join(ROOT, 'test-results', 'move-new');
+  for (const alias of aliases) {
+    const context = await browser.newContext({ serviceWorkers: 'block' });
+    await context.route(/^https:\/\/(shelf-life-five-ebon|shelf-life-srmcnos-projects|shelf-life-git-main-srmcnos-projects|shelflife-game)\.vercel\.app\//, async route => {
+      const url = new URL(route.request().url());
+      const filename = path.resolve(dir, '.' + url.pathname, url.pathname.endsWith('/') ? 'index.html' : '');
+      if (!filename.startsWith(dir + path.sep)) return route.abort();
+      try { await route.fulfill({ status: 200, contentType: TYPES[path.extname(filename)] || 'application/octet-stream', body: await readFile(filename) }); }
+      catch { await route.fulfill({ status: 404, body: 'Not found' }); }
+    });
+    const page = await context.newPage();
+    const old = `https://${alias}/`, home = `https://${canonical}/`;
+    await seed(page, old, { 'shelflife.v4': household(['Mabel', 'Grubbs'], Date.now()) });
+    await page.goto(old + '?invite=ABC123');
+    await page.waitForURL(home + '?invite=ABC123', { timeout: 20000 });
+    expect(await residents(page)).toEqual(['Mabel', 'Grubbs']);
+    await page.goto(old + 'privacy.html');
+    expect(await residents(page)).toEqual(['Mabel', 'Grubbs']);
+    await context.close();
+  }
 });

@@ -9,5 +9,9 @@ useDefault = true
 # service_role JWT is still caught, and test/cloud_client.test.mjs fails if
 # anything but a publishable or anon key is shipped in that file.
 [allowlist]
-description = "Supabase publishable keys are public by design"
-regexes = ['''sb_publishable_[A-Za-z0-9_-]+''']
+description = "Public Supabase keys and a published RFC test vector"
+regexes = [
+  '''sb_publishable_[A-Za-z0-9_-]+''',
+  # Public authentication secret from the RFC 8291 Appendix A test vector.
+  '''BTBZMqHH6r4Tts7J_aSIgg'''
+]

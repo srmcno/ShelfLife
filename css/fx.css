@@ -91,6 +91,10 @@ body[data-effects="light"] .fx-p.fx-s-ember{box-shadow:none}
 .fx-flyer svg{display:block;width:100%;height:100%}
 body[data-effects="light"] .fx-flyer{filter:none}
 
+.fx-banner-scrim{position:absolute;inset:0;pointer-events:none;background:rgba(11,8,18,.8);animation:fx-scrim-in .3s ease-out both}
+.fx-banner-scrim.out{animation:fx-scrim-out .3s ease-in both}
+@keyframes fx-scrim-in{from{opacity:0}to{opacity:1}}
+@keyframes fx-scrim-out{to{opacity:0}}
 .fx-banner{position:absolute;left:50%;top:calc(var(--topbar-h, 58px) + var(--sat, 0px) + 16px);width:min(92vw,420px);padding:16px 22px 18px;border-radius:18px;text-align:center;
   background:radial-gradient(120% 140% at 50% 0%,color-mix(in srgb,var(--fx-tone) 24%,transparent),transparent 62%),linear-gradient(180deg,#2a1b2e,#170f1d);
   border:1px solid color-mix(in srgb,var(--fx-tone) 62%,transparent);color:var(--ink);

@@ -31,7 +31,7 @@ const server = http.createServer(async (req, res) => {
     if (!realCloud && pathname === '/src/cloud/deployment-config.js') {
       // Override configuration data at its module boundary. Rewriting the
       // caller's source would silently fail when its implementation changes.
-      const source = "export const DEPLOYED_CLOUD_CONFIG = { url: '', anonKey: '' };\nexport const DEPLOYED_PUBLIC_URL = null;\n";
+      const source = "export const DEPLOYED_CLOUD_CONFIG = { url: '', anonKey: '' };\nexport const DEPLOYED_PUBLIC_URL = null;\nexport const DEPLOYED_VAPID_PUBLIC_KEY = " + JSON.stringify(process.env.SHELF_TEST_VAPID_PUBLIC_KEY || null) + ";\n";
       bytes = req.method === 'HEAD' ? null : Buffer.from(source);
       length = Buffer.byteLength(source);
     }

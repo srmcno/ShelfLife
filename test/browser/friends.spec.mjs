@@ -19,7 +19,7 @@ const test = base.extend({
 });
 test.use({ serviceWorkers: 'block' });
 test.beforeEach(({}, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium', 'The social layer is checked once, with phone widths set explicitly');
+  test.skip(!['desktop-chromium', 'desktop-firefox'].includes(testInfo.project.name), 'The social layer uses desktop projects with phone widths set explicitly');
 });
 
 function todayKey() {
@@ -85,16 +85,23 @@ test('without config there is no Friends button and not a single outside request
   expect(outside).toEqual([]);
 });
 
-test('a guest is sent to Cloud save first, and nothing is asked of the server', async ({ page }) => {
+test('a guest can start Friends without an email', async ({ page }) => {
   const fake = createFakeSupabase();
   await open(page, { fake });
-  await page.locator('#tabMore').click();
-  await expect(page.locator('#friendsBtnSub')).toHaveText('Needs cloud save first');
-  await page.locator('#friendsBtn').click();
-  await expect(page.locator('#cloudVeil')).toBeVisible();
-  await expect(page.locator('#cloudEnable')).toBeVisible();
-  await expect(page.locator('#friendsVeil')).toBeHidden();
-  expect(fake.requests).toEqual([]);
+  await expect(page.locator('#tabFriends')).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 800 });
+  const tabs = await page.locator('.tabbar .tab:visible').evaluateAll(nodes => nodes.map(node => { const rect = node.getBoundingClientRect(); return { left: rect.left, right: rect.right }; }));
+  expect(tabs).toHaveLength(6);
+  expect(tabs.every((rect, i) => rect.left >= 0 && rect.right <= 320 && (!i || rect.left >= tabs[i - 1].right))).toBe(true);
+  await page.locator('#tabFriends').click();
+  await expect(page.locator('#friendsVeil')).toBeVisible();
+  await expect(page.locator('#friendsEnable')).toHaveText('Start without email');
+  await expect(page.locator('#friendsSheet')).toContainText('Shelf Court');
+  await fits(page);
+  await page.locator('#friendsEnable').click();
+  await expect(page.locator('#frAdd')).toBeVisible();
+  await expect(page.locator('#friendsSheet .fr-status')).toContainText('Add an email later');
+  expect([...fake.users.values()][0].is_anonymous).toBe(true);
 });
 
 test('add a friend by code, accept one, visit a shelf and serve papers', async ({ page }) => {
@@ -155,6 +162,8 @@ test('add a friend by code, accept one, visit a shelf and serve papers', async (
   await expect(page.locator('#friendsVeil h2')).toHaveText('<img src=x onerror=y>');
   await expect(page.locator('#friendsSheet [data-fr="back"]')).toBeFocused();
   await expect(page.locator('#friendsSheet [data-fr-action="visit-shelf"]')).toBeVisible();
+  await expect(page.locator('#friendsSheet [data-fr-action="visit-shelf"] .fr-big-icon svg')).toHaveCount(1);
+  await expect(page.locator('#friendsSheet .fr-big-icon:not(:has(svg))')).toHaveCount(0);
   await page.locator('#friendsSheet .fr-options [data-fr="report"]').click();
   await expect(page.locator('#frReportMore')).toBeFocused();
   await page.locator('#friendsSheet input[name="frReason"][value="A rude name"]').check();

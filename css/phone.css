@@ -250,3 +250,5 @@
   #playroomVeil .playroom-passport { flex-direction: column; gap: 3px; flex: none; }
   #playroomVeil .activity-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+.tabbar.room-nav:has(#tabFriends:not([hidden])){grid-template-columns:repeat(6,minmax(0,1fr))}

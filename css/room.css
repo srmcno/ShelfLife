@@ -262,3 +262,5 @@ body[data-tab="notes"] .room-app > .pane-notes { display: block; }
 
 .household-aftermath>div:last-child{min-width:0;flex:1;overflow-wrap:anywhere}
 .household-aftermath button{white-space:normal;max-width:100%}
+
+.tabbar.room-nav:has(#tabFriends:not([hidden])){grid-template-columns:repeat(6,minmax(0,1fr))}

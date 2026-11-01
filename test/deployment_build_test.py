@@ -131,6 +131,22 @@ class DeploymentBuildTests(unittest.TestCase):
             self.assertIn("DEPLOYED_PUBLIC_URL = null", deployed)
             self.assertEqual(json.loads((output / "release.json").read_text())["channel"], "production")
 
+    def test_vapid_public_key_is_packaged_and_changes_the_cache(self):
+        key = base64.urlsafe_b64encode(bytes([4]) + bytes(range(64))).decode().rstrip('=')
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'dist'
+            env = self.env()
+            site_build.build(output, env=env)
+            old_worker = (output / 'service-worker.js').read_text()
+            env['SHELFLIFE_VAPID_PUBLIC_KEY'] = key
+            site_build.build(output, env=env)
+            self.assertIn(json.dumps(key), (output / 'src/cloud/deployment-config.js').read_text())
+            self.assertNotEqual(old_worker, (output / 'service-worker.js').read_text())
+            for invalid in ('invalid', 'A' * 87):
+                env['SHELFLIFE_VAPID_PUBLIC_KEY'] = invalid
+                with self.assertRaisesRegex(ValueError, 'P-256 public key'):
+                    site_build.build(output, env=env)
+
 
 if __name__ == "__main__":
     unittest.main()

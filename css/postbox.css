@@ -247,3 +247,7 @@
   .fr-switch i,.fr-switch i::after{transition:none}
 }
 body[data-effects="light"] .gc-react{animation:none}
+
+.fr-big button{gap:8px}
+.fr-big-icon{display:inline-flex;flex:none;width:20px;height:20px}
+.fr-big-icon svg{display:block;width:20px;height:20px}

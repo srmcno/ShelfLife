@@ -26,6 +26,8 @@ export async function mountHost() {
   social.optIn();
   let friends = (await social.friends()).filter(f => f.status === 'accepted');
   let view = { kind: 'home' }, items = [];
+  const owner = cloud.userId();
+  const current = () => veil.isConnected && cloud.userId() === owner && social.active();
 
   const ctx = {
     state, social, cloud,
@@ -34,8 +36,12 @@ export async function mountHost() {
     friend: id => friends.find(f => f.userId === id) || null,
     show(v) { view = { kind: 'custom', v }; render(); },
     back() { go(view.kind === 'custom' ? view.v.back : 'main'); },
-    // A repaint reloads the postbox rows, as the hub does when its mail changes.
-    refresh() { if (view.kind === 'postbox') openPostbox(); else render(); },
+    // The real hub repaints cached mail here; reloading is a separate action.
+    refresh() { if (current()) render(); },
+    reloadMail,
+    openPostbox,
+    current, isCurrent: current,
+    act: async work => { if (current()) return work(current); },
     say(text) { status.textContent = text; },
     toast, save,
     renderAll: () => renderAll(state)
@@ -50,9 +56,15 @@ export async function mountHost() {
     view = { kind: 'postbox' };
     items = [];
     render();
+    await reloadMail();
+  }
+  async function reloadMail() {
+    const requested = view;
+    if (requested.kind !== 'postbox' || !current()) return;
     const loaded = await Promise.all(postboxSources().map(async s => (await s.load(ctx).catch(() => [])).map(item => ({ ...item, source: s.id }))));
+    if (view !== requested || !current()) return;
     items = loaded.flat().sort((a, b) => b.at - a.at);
-    if (view.kind === 'postbox') { view.loaded = true; render(); }
+    view.loaded = true; render();
   }
   function render() {
     let title = 'Friends', kicker = 'Seen by friends. Nobody else.', html = '';

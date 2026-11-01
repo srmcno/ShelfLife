@@ -8,6 +8,14 @@ const promised = (state, pet, now) => {
   return r?.status === 'accepted' && now >= r.at && now < r.at + TWELVE_HOURS ? r : null;
 };
 const fill = (text, names) => text.replace(/\{(\w+)\}/g, (token, key) => names[key] ?? token);
+const visitingFriend = (state, now) => {
+  const guests = Array.isArray(state?.friendVisits?.guests) ? state.friendVisits.guests : [];
+  const guest = guests.find(g => Number.isFinite(g?.arrived) && Number.isFinite(g?.leaves) && g.arrived <= now && g.leaves > now &&
+    typeof g.resident?.name === 'string' && g.resident.name.trim());
+  // Names appear later in a second dialogue-template pass. Braces in a name
+  // must not become another speaker's placeholder during that pass.
+  return guest?.resident.name.replace(/[{}\u0000-\u001f\u007f]/g, '').trim().slice(0, 22) || '';
+};
 
 // Only text backed by the current save reaches the existing shuffle bags and
 // note-form budget. No extra simulation, invented counts, or render-time rolls.
@@ -34,6 +42,8 @@ export function observationLines(state, pet, now = Date.now()) {
     const visitor = VISITORS.find(d => d.id === v.kind)?.name;
     if (visitor) topics.push(['guest', { visitor }]);
   }
+  const friendGuest = visitingFriend(state, now);
+  if (friendGuest) topics.push(['visitingFriend', { visitor: friendGuest }]);
   const rival = neighborPets(state, state.slots.indexOf(pet.id)).find(other => {
     if (state.feudArcs?.[[pet.id, other.id].sort().join('|')]?.truce) return false;
     return FEUDS.some(([a,b]) => pet.traits.includes(a) && other.traits.includes(b) || pet.traits.includes(b) && other.traits.includes(a));
@@ -59,7 +69,11 @@ export function contextualExchanges(state, a, now = Date.now()) {
   if (previousName && previousName !== a.name) keys.push('renamed');
   if (promised(state, a, now)) keys.push('promise');
   if (a.bond >= 8) keys.push('trusted');
-  return keys.flatMap(key => CONTEXT_EXCHANGES[key].map(entry => key === 'renamed'
-    ? { ...entry, turns: entry.turns.map(([who, line]) => [who, line.replaceAll('{old}', previousName.replace(/[{}]/g, ''))]) }
-    : entry));
+  const friendGuest = visitingFriend(state, now);
+  if (friendGuest) keys.push('visitingFriend');
+  return keys.flatMap(key => CONTEXT_EXCHANGES[key].map(entry => {
+    if (key === 'renamed') return { ...entry, turns: entry.turns.map(([who, line]) => [who, line.replaceAll('{old}', () => previousName.replace(/[{}]/g, ''))]) };
+    if (key === 'visitingFriend') return { ...entry, turns: entry.turns.map(([who, line]) => [who, line.replaceAll('{visitor}', () => friendGuest)]) };
+    return entry;
+  }));
 }

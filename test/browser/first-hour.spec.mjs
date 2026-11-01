@@ -198,6 +198,19 @@ test('returning from an expedition to games preserves the original shelf launche
   await close(page, '#tabPlay');
 });
 
+test('reloading after many audio requests leaves no browser errors', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-firefox', 'Firefox exercises pending audio resume on navigation.');
+  await page.goto('/');
+  await page.locator('[data-arrival="mabel"]').click();
+  await page.locator('#quickAdopt').click();
+  await page.evaluate(async () => {
+    const { kit } = await import('/src/audio/sound.js');
+    for (let i = 0; i < 100; i++) kit.getCtx();
+  });
+  await page.reload();
+  await expect(page.locator('#cabinet .piece.pet')).toHaveCount(1);
+});
+
 test('a fresh player completes a first session, plays every game and keeps a usable backup at 360px', async ({ page }, testInfo) => {
   test.setTimeout(300_000);
   // October 29 naturally rolls the rounds/check chores. The clock continues

@@ -14,7 +14,7 @@ import { coopCode } from '../cloud/coop.js';
 import { createMischief, mischiefText, mischiefCode, FINAL } from '../cloud/mischief.js';
 import {
   receiveInbox, settleMischief, declineHex, dropFriend, outboxFor, clearOutbox, helped, takeKnock, activeHaunt,
-  planShoo, dismissHaunt, hexResultLine, hauntResultLine, doorstepLine, helpLineText, inTray, fromLabel
+  planShoo, dismissHaunt, hexResultLine, hauntResultLine, doorstepLine, helpLineText, visibleHelp, inTray, fromLabel
 } from '../engine/mischief.js';
 import { HEX_BY_ID, HAUNT_CARD, BOWLS, BOWL_BY_ID, HELP_BUTTONS, HELP_NOTHING_LINES, HELP_NEEDS } from '../content/mischief.js';
 import { mischiefState } from '../mischief-state.js';
@@ -136,6 +136,10 @@ export function rowHTML(item) {
     (buttons.length ? '<div class="fr-menu">' + buttons.join('') + '</div>' : '') + '</div>';
 }
 
+export function helpItems(state) {
+  return (state?.mischief?.helps || []).filter(h => visibleHelp(state.mischief, h)).slice(0, 10).map(h => ({ id: 'help:' + h.id, kind: 'help', ref: h.id, user: h.from.userId, name: h.from.name, at: h.applied, title: 'A neighbour called.', line: helpLineText(h) }));
+}
+
 function confirmHTML(kind, friend) {
   const name = esc(who(friend));
   if (kind === 'block') {
@@ -156,7 +160,7 @@ function hexBarHTML(ext) {
 
 /* ---------------- the controller ---------------- */
 
-export function initMischief({ state, cloud, social, refresh = () => {} }) {
+export function initMischief({ state, cloud, social, refresh = () => {}, persistPending = () => save() && Store.persistent }) {
   if (!cloud?.configured || !social) return null;
   const mx = createMischief({ cloud, social });
   const ghost = initGhost({ state, shoo: finishShoo, onShoo: () => { refresh(); sync(); } });
@@ -165,6 +169,32 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
   const repaint = () => { refresh(); ghost.render(); };
   const current = (user, ctx, domain) => !!user && mx.userId() === user && mx.active() && ctx?.isCurrent?.() !== false
     && (!domain || state.mischief === domain);
+
+  // The account can change before its first inbox read. Keep the viewer out of
+  // the save and hide another account's history immediately, without deleting it.
+  function setViewer(repaintNow = true) {
+    const domain = mischiefState(state), viewer = mx.userId() || '';
+    if (domain.viewer === viewer) return;
+    Object.defineProperty(domain, 'viewer', { value: viewer, writable: true, configurable: true });
+    if (repaintNow) repaint();
+  }
+  setViewer(false);
+  cloud.subscribe?.(() => setViewer());
+  window.addEventListener('shelflife:state-replacing', () => setViewer(false));
+  window.addEventListener('shelflife:state-replaced', () => setViewer());
+
+  // Every block route shares the social client. Capture the shelf before the
+  // request so a late reply cannot clean a replacement account or restore.
+  social.subscribeBlock?.((friendId, owner) => {
+    const domain = mischiefState(state);
+    return () => {
+      if (!current(owner, null, domain) || domain.user !== owner) return;
+      dropFriend(state, friendId, now());
+      const saved = save();
+      repaint();
+      if (!saved || !Store.persistent) toast('Blocked, but this device could not save the cleared history. Free some storage and try again.');
+    };
+  });
 
   async function finishShoo(taps) {
     const owner = mx.userId(), domain = mischiefState(state), h = activeHaunt(state), purse = state.coop;
@@ -190,6 +220,9 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
     const uid = mx.userId(), domain = state.mischief;
     if (!uid || !mx.active()) return;
     const items = outboxFor(state, uid);
+    // The server may stop returning an item as soon as it is acknowledged.
+    // Persist its local effects and pending report before sending anything.
+    if (items.length && (!persistPending() || !current(uid, null, domain))) return;
     const acks = items.filter(o => o.op === 'ack');
     if (acks.length) {
       try { await mx.ackHelps(acks.map(o => o.ref)); if (!current(uid, null, domain)) return; clearOutbox(state, acks); }
@@ -393,8 +426,6 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
         if (action === 'block-yes') {
           await social.block(friend.userId);
           if (!current(user, ctx)) return;
-          dropFriend(state, friend.userId, now());
-          save(); repaint();
           try { ctx.toast('Blocked. Their mischief went with them.'); ctx.refresh(); } catch { /* optional */ }
         } else {
           const reason = el.closest('.mx-view')?.querySelector('input[name="mxReason"]:checked')?.value || 'Something else';
@@ -443,10 +474,10 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
       ...c.status.rebounds.map(r => ({ id: 'reb:' + r.id, kind: 'rebound', ref: r.id, user: r.toUser, at: c.at, title: 'Rebound ready.', line: 'One of your hexes came back on its sender. You may send ' + name(r.toUser) + ' one back, free, once.' }))
     ].sort((a, b) => b.at - a.at);
   }
-  const helpItems = () => ms().helps.slice(0, 10).map(h => ({ id: 'help:' + h.id, kind: 'help', ref: h.id, user: h.from.userId, name: h.from.name, at: h.applied, title: 'A neighbour called.', line: helpLineText(h) }));
+  const visibleHelps = () => helpItems(state);
   const knockItems = () => (inThinSeason() ? (mx.cached()?.doorstep.knocks || []).map(k => ({ id: 'knock:' + k.id, kind: 'knock', ref: k.id, user: k.fromUser, name: k.fromName, at: k.at,
     title: (k.fromName || 'A friend') + ' knocked.', line: k.result === 'treat' ? 'They went home with a treat.' : 'They went home with a trick.' })) : []);
-  const LISTS = { 'mischief-incoming': incomingItems, 'mischief-news': newsItems, 'mischief-helps': helpItems, 'mischief-doorstep': knockItems };
+  const LISTS = { 'mischief-incoming': incomingItems, 'mischief-news': newsItems, 'mischief-helps': visibleHelps, 'mischief-doorstep': knockItems };
   async function postboxClick(source, action, itemId, ctx) {
     const user = mx.userId();
     if (!current(user, ctx)) return;
@@ -546,8 +577,7 @@ export function initMischief({ state, cloud, social, refresh = () => {} }) {
         if (act === 'block-yes') {
           await social.block(userId);
           if (!current(user)) return;
-          dropFriend(state, userId, now());
-          save(); refresh(); reopen(); ghost.render();
+          reopen();
           toast('Blocked. Their mischief went with them.');
         } else {
           await social.report(userId, 'Mischief: ' + (bar.querySelector('input[name="mxBarReason"]:checked')?.value || 'Something else'));

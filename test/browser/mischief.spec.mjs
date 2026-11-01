@@ -265,3 +265,105 @@ for (const result of ['trick', 'treat']) test('seasonal ' + result + ' uses the 
   await expect(mail(page, 'news')).toContainText('Your ghost was shooed');
   await page.close(); expect(errors).toEqual([]);
 });
+
+test('blocking from a friend profile removes their help history and saves the cleanup', async ({ context }) => {
+  const w = await world(), errors = [];
+  const oldText = 'Ada fed Gladys while you were out. It was, by all accounts, competent.';
+  w.bea.shelf.notes.unshift({ text: oldText, from: 'a neighbour', kind: 'note', form: 'doc', at: NOW });
+  await w.ada.cloud.rpc('help_out', { p_to: w.bea.id, p_resident: 'qa1', p_need: 'food' });
+  const page = await arrive(context, w, w.bea, errors);
+  await expect.poll(async () => (await saved(page)).mischief?.helps?.length).toBe(1);
+  await friends(page); await profile(page, 'Ada');
+  await page.locator('#friendsSheet .fr-options [data-fr="block"]').click();
+  await page.locator('#friendsSheet [data-fr="block-yes"]').click();
+  await expect(page.locator('#friendsSheet .fr-status')).toHaveText('Blocked. They will not find you again.');
+  await expect.poll(async () => (await saved(page)).mischief?.helps?.[0]?.hidden).toBe(true);
+  const result = (await saved(page)).mischief.helps[0];
+  expect(result.from).toEqual({ userId: w.ada.id, name: 'Ada' });
+  expect((await saved(page)).notes.some(n => n.text === oldText)).toBe(true);
+  expect((await saved(page)).paperwork.entries.some(n => n.text === oldText)).toBe(true);
+  await page.reload();
+  expect((await saved(page)).mischief.helps[0].hidden).toBe(true);
+  expect((await saved(page)).mischief.helps[0].from).toEqual({ userId: w.ada.id, name: 'Ada' });
+  expect(errors).toEqual([]);
+  await page.close();
+});
+
+test('restoring another account establishes the viewer before the first render', async ({ context }) => {
+  const w = await world(), errors = [];
+  const page = await arrive(context, w, w.bea, errors);
+  const backup = await saved(page), pet = backup.pets[0];
+  backup.mischief.user = w.ada.id;
+  backup.mischief.helps = [{ id: '11111111-1111-4111-8111-000000000001', owner: w.ada.id, from: { userId: w.bea.id, name: 'SecretHelper' }, petId: pet.id, petName: pet.name, need: 'food', amount: 25, at: NOW, applied: NOW }];
+  backup.notes.unshift({ text: 'A fed SecretHelper fed ' + pet.name + ' while you were out. It was, by all accounts, competent.', from: 'a neighbour', kind: 'note', form: 'doc', at: NOW });
+  await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    const { helpLineFor } = await import('/src/engine/mischief.js');
+    window.addEventListener('shelflife:state-replacing', () => {
+      window.restoreFirstView = { viewer: state.mischief.viewer, line: helpLineFor(state, state.pets[0]), note: state.notes[0].text, paper: state.paperwork.entries.map(n => n.text) };
+    });
+  });
+  await page.locator('#importFile').setInputFiles({ name: 'other-shelf.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
+  await page.locator('#restoreConfirm').click();
+  const first = await page.evaluate(() => window.restoreFirstView);
+  expect(first.viewer).toBe(w.bea.id);
+  expect(first.line).toBe('');
+  expect(first.note).toContain('SecretHelper');
+  expect(first.paper.some(text => text.includes('SecretHelper'))).toBe(true);
+  expect((await saved(page)).notes[0].text).toContain('SecretHelper');
+  await page.reload();
+  expect((await saved(page)).notes.some(n => n.text.includes('SecretHelper'))).toBe(true);
+  await page.locator('[data-tab="notes"]').click();
+  await expect(page.locator('#notes')).toContainText('A neighbour helped a resident');
+  await expect(page.locator('#notes')).not.toContainText('SecretHelper');
+  await page.locator('[data-filter="papers"]').click();
+  await expect(page.locator('#notes')).toContainText('A neighbour helped a resident');
+  await expect(page.locator('#notes')).not.toContainText('SecretHelper');
+  await page.locator('[data-tab="shelf"]').click();
+  await page.locator('#cabinet .piece.pet').first().click();
+  await expect(page.locator('#cardSheet')).not.toContainText('SecretHelper');
+  await page.keyboard.press('Escape');
+  await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    const note = state.notes.find(n => n.text.includes('SecretHelper'));
+    state.notes = [{ ...note, form: 'line' }];
+    window.postcardWords = [];
+    const original = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (text, ...rest) { window.postcardWords.push(String(text)); return original.call(this, text, ...rest); };
+    Math.random = () => 0;
+  });
+  await page.locator('#snapBtn').click();
+  await expect(page.locator('#postcardVeil')).toHaveClass(/open/);
+  await expect.poll(() => page.evaluate(() => window.postcardWords.join(' '))).toContain('A neighbour helped a resident');
+  expect(await page.evaluate(() => window.postcardWords.join(' '))).not.toContain('SecretHelper');
+  expect(errors).toEqual([]);
+  await page.close();
+});
+
+test('an unconfigured game hides restored account help on the card and away summary', async ({ context }) => {
+  const w = await world(), errors = [], page = await context.newPage();
+  page.on('pageerror', error => errors.push(error.message));
+  await page.clock.install({ time: NOW });
+  const backup = w.bea.shelf, pet = backup.pets[0];
+  backup.mischief.user = w.ada.id;
+  backup.mischief.helps = [{ id: '11111111-1111-4111-8111-000000000001', owner: w.ada.id, from: { userId: w.bea.id, name: 'SecretHelper' }, petId: pet.id, petName: pet.name, need: 'food', amount: 25, at: NOW, applied: NOW }];
+  await page.addInitScript(state => { globalThis.SHELFLIFE_CLOUD_CONFIG = {}; localStorage.setItem('shelflife.v4', JSON.stringify(state)); }, backup);
+  await page.goto('/');
+  await expect(page.locator('#cabinet .piece.pet')).toHaveCount(3);
+  expect(await page.evaluate(async () => (await import('/src/cloud/index.js')).cloud.configured)).toBe(false);
+  await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    const { helpLineFor, awayHelpLines } = await import('/src/engine/mischief.js');
+    window.addEventListener('shelflife:state-replacing', () => {
+      window.unconfiguredFirstView = { line: helpLineFor(state, state.pets[0]), away: awayHelpLines(state, { from: 0 }) };
+    });
+  });
+  await page.locator('#importFile').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
+  await page.locator('#restoreConfirm').click();
+  expect(await page.evaluate(() => window.unconfiguredFirstView)).toEqual({ line: '', away: [] });
+  await page.locator('#cabinet .piece.pet').first().click();
+  await expect(page.locator('#cardSheet')).not.toContainText('SecretHelper');
+  expect((await saved(page)).mischief.helps[0].from.name).toBe('SecretHelper');
+  expect(errors).toEqual([]);
+  await page.close();
+});

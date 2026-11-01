@@ -2,6 +2,7 @@
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0812">
 <meta name="color-scheme" content="dark">
@@ -16,7 +17,7 @@
 <main>
   <a class="wordmark" href="./">Shelf<em>Life</em></a>
   <h1>Privacy</h1>
-  <p class="dated">Last changed 11 October 2026. This covers the game on the web and the Android app.</p>
+  <p class="dated">Last changed 1 November 2026. This covers the game on the web and the Android app.</p>
 
   <div class="card short">
     <p class="lede">Your household lives on your device. Nothing goes to a server unless you turn on cloud save.</p>
@@ -37,7 +38,7 @@
     you and Google; we never see it.</p>
 
   <h2>What reaches a server, if you turn on cloud save</h2>
-  <p>Cloud save is off until you choose <strong>More → Cloud save → Turn on cloud save</strong>. Guest play
+  <p>Cloud save is off until you choose to sign in or turn it on. Guest play
     never needs an account. With it on, these are stored:</p>
   <ul>
     <li><strong>The save.</strong> The same data as a backup file, so your shelf can follow you to another
@@ -66,9 +67,22 @@
       and a copy of that player's name and shelf as they were, so a person can review it for moderation. It is
       removed if either account is deleted.</li>
     <li>A short record of friend codes tried, so nobody can guess their way into your list.</li>
+    <li><strong>The Neighbourhood Gazette:</strong> selected milestones and sticker reactions are shared with
+      accepted friends for up to 30 days. You can switch off printing your news in Friends.</li>
+    <li><strong>The player directory:</strong> if you choose to be listed, other signed-in players can see
+      your display name and account identifier and send a friend request. Your shelf, drawings and friend code remain private.
+      You can remove your listing at any time; blocked players cannot see one another.</li>
+    <li><strong>Nearby players:</strong> if you separately choose to share an approximate area, your device
+      rounds its location into a broad area before sending it to the server. Other nearby participants can see
+      an approximate distance band and may be able to infer that broad area. The area stays until you remove it
+      or remove your listing. Sharing a new area can require a 24-hour wait, including after removal. A timestamp
+      remains for that limit; the removed area does not. There is no background location tracking.</li>
+    <li><strong>Parlour Predictions:</strong> a question and the choices you and a friend make are visible
+      only to the two of you. Older rounds are cleaned up as play continues; blocking or unfriending removes
+      the rounds between you.</li>
   </ul>
-  <p>There are no public profiles and no chat. Strangers never see your name, your shelf or your residents;
-    at most, your score is one of the numbers in the anonymous day's results.</p>
+  <p>There are no public shelves and no chat. Unless you choose the directory, strangers never see your
+    name; they never see your shelf or residents. Your score is one of the anonymous day's results.</p>
   <h3>Problem reports you send</h3>
   <p><strong>More → Report a problem</strong> sends what you write (up to 1000 characters), the kind of report
     and, if you choose, what you were doing. The game shows you everything in the report before it goes. If
@@ -111,8 +125,12 @@
 
   <h2>Notifications and the narrator</h2>
   <p><strong>Nudges</strong> in the Android app are local notifications. The phone schedules them from what the
-    game already knows; there is no push server and nothing is sent anywhere. They stay off until you switch
+    game already knows; nothing is sent anywhere for these nudges. They stay off until you switch
     them on.</p>
+  <p><strong>Web notifications</strong> are separate and optional. If you enable them, the server keeps this
+    device's push address, encryption keys and notification preferences. A delivery service sends a short
+    notice when something arrives; the notice contains no resident names or message contents. Turn these off
+    in Friends or your browser settings. Do not disturb also prevents delivery.</p>
   <p><strong>The narrator</strong> uses your device's own voices. Some browsers also offer online voices that
     send the text to the browser's maker to be spoken; the voice list marks those as online.</p>
 

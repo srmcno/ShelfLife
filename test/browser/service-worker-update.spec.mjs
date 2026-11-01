@@ -8,9 +8,9 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2' };
 
 test('first install stays silent, a later real worker update offers refresh and preserves the household', async ({ page, browserName }) => {
-  // Keep the same Chromium-only service-worker coverage boundary as the offline
-  // regression. This is not a claim about installed Safari/iOS update behavior.
-  test.skip(browserName !== 'chromium', 'Playwright service-worker tooling is supported on Chromium only');
+  // This test uses the page's own service worker APIs. WebKit runs separately
+  // because installed iOS update behaviour needs a physical-device check.
+  test.skip(!['chromium', 'firefox'].includes(browserName), 'Service worker update coverage is run on desktop engines');
   test.setTimeout(60_000);
   let edition = 1;
   const errors = [];

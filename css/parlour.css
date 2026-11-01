@@ -1,0 +1,7 @@
+.pr-game{padding:14px;border:1px solid var(--hair-lit);border-radius:14px;background:var(--glass-2)}
+.pr-game h3{font:400 22px/1.2 var(--display);margin:0 0 10px}
+.pr-game p{line-height:1.45}
+.pr-options{display:grid;gap:8px;margin:12px 0}
+.pr-options .btn{min-height:44px;text-align:left;white-space:normal}
+.pr-options .btn[aria-pressed="true"]{border-color:var(--key);box-shadow:inset 0 0 0 1px var(--key)}
+.pr-result{border-left:3px solid var(--key);padding-left:12px}

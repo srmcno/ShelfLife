@@ -1,3 +1,6 @@
+import { initSignIn } from './signin.js';
+import { actionText } from './cloud.js';
+import { covenState } from '../coven-state.js';
 // The Friends sheet: one hub in three places.
 //   Home       your postbox, requests, the friends list (portraits, level, a dot
 //              for mail), your code and name, Do not disturb, and the sections
@@ -7,8 +10,7 @@
 //   Postbox    one list of everything every registered source sent you.
 // Visiting a friend's shelf (read only, waves and papers) and serving papers
 // live here too. Only built when cloud save is configured; the tray button
-// reads "Needs cloud save first" and opens the Cloud save sheet until the
-// player is signed in.
+// offers the same sign-in controls to guests as the Cloud save sheet.
 //
 // Features plug in through src/ui/social-registry.js and never edit this file.
 // Everything a friend wrote arrives through the readers in src/cloud/ and is
@@ -39,6 +41,28 @@ const errorText = error => error instanceof CloudError && error.message ? error.
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const MOOD_LINES = { content: 'Content. Suspiciously so.', fine: 'Fine, it says.', annoyed: 'Annoyed at someone.', furious: 'Furious. Do not knock.' };
 export const REPORT_REASONS = ['A rude name', 'A rude drawing', 'Bothering me', 'Something else'];
+const ACTION_ICONS = {
+  house: '<path d="M3 11 12 3l9 8M5 10v10h14V10M9 20v-6h6v6"/>',
+  gavel: '<path d="m5 5 6 6m-4-8 6 6m-2 2 7 7M4 20h12"/>',
+  scales: '<path d="M12 3v17M5 7h14M7 7l-4 7h8L7 7Zm10 0-4 7h8l-4-7ZM8 20h8"/>',
+  bed: '<path d="M3 19V8m0 7h18v4M7 15v-4h5a3 3 0 0 1 3 3v1M18 15v-3h3v3"/>',
+  swap: '<path d="M4 8h15l-3-3m4 11H5l3 3"/>',
+  swords: '<path d="m4 3 11 11m-3 1 4-4m-3 5-3 3M20 3 9 14m3 1-4-4m3 5 3 3"/>',
+  candle: '<path d="M8 10h8v10H8zM12 3c-3 3-2 5 0 5s3-2 0-5ZM6 20h12"/>',
+  gift: '<path d="M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7C5 7 6 2 9 4l3 3Zm0 0c7 0 6-5 3-3l-3 3Z"/>',
+  quill: '<path d="M4 20c3-9 7-14 16-17-2 9-7 14-16 17Zm5-5 6-5"/>',
+  door: '<path d="M5 21V4l12-1v18M3 21h18M13 12h.1"/>',
+  eye: '<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12Zm10-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/>',
+  heart: '<path d="M12 20 4 12C0 7 6 3 9 6l3 3 3-3c3-3 9 1 5 6l-8 8Z"/>',
+  basket: '<path d="M3 10h18l-2 10H5L3 10Zm4 0 5-7 5 7M9 13v4m6-4v4"/>'
+};
+const ACTION_ICON_BY_ID = { 'visit-shelf': 'house', serve: 'gavel', 'serve-sealed': 'gavel', 'hear-together': 'scales', invite: 'bed', trade: 'swap', 'coop-duel': 'swords', 'coven-invite': 'candle', treat: 'gift', sign: 'quill', 'mischief-knock': 'door', 'mischief-hex': 'eye', 'mischief-help': 'heart', 'kin-basket': 'basket' };
+function actionIcon(action) {
+  if (typeof action.icon === 'string' && /^<svg(?:\s|>)/i.test(action.icon.trim())) return action.icon;
+  const name = Object.hasOwn(ACTION_ICONS, action.icon) ? action.icon : ACTION_ICON_BY_ID[action.id];
+  const icon = Object.hasOwn(ACTION_ICONS, name) ? ACTION_ICONS[name] : '';
+  return icon ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + icon + '</svg>' : '';
+}
 const MISSING_ART = '<svg class="fr-missing" viewBox="0 0 60 60" aria-hidden="true"><path d="M14 52V27a16 16 0 0 1 32 0v25l-5-4-5 4-5-4-5 4-5-4z" fill="currentColor" opacity=".3"/><circle cx="24" cy="27" r="3" fill="currentColor" opacity=".7"/><circle cx="36" cy="27" r="3" fill="currentColor" opacity=".7"/></svg>';
 export const HOME_FRIENDS = 12, MAIL_PAGE = 20;
 
@@ -91,7 +115,7 @@ export function friendRow(f, { confirm = '', level = null, count = 0, mail = fal
 export function requestRow(f, { confirm = '' } = {}) {
   const id = esc(f.userId);
   if (f.direction === 'outgoing') {
-    return '<li class="fr-friend fr-pending" data-user="' + id + '"><div class="fr-line"><div class="fr-who"><b>' + esc('Code ' + formatCode(f.code)) + '</b><small>Waiting for them to add you back.</small></div>' +
+    return '<li class="fr-friend fr-pending" data-user="' + id + '"><div class="fr-line"><div class="fr-who"><b>' + esc(f.directory ? (f.name || 'Player from directory') : 'Code ' + formatCode(f.code)) + '</b><small>Waiting for them to add you back.</small></div>' +
       '<button class="btn btn-ghost btn-sm" type="button" data-fr="withdraw" data-user="' + id + '">Withdraw</button></div></li>';
   }
   return '<li class="fr-friend fr-pending" data-user="' + id + '"><div class="fr-line"><div class="fr-who"><b>' + esc(friendName(f)) + '</b><small>Wants to be friends.</small></div></div>' +
@@ -131,7 +155,7 @@ export function levelMarkup(level) {
 }
 
 /* ---------------- the sheet ---------------- */
-export function initFriends({ state, cloud, sync, social, postbox = null, openCloud = () => {}, onRefresh = () => {} }) {
+export function initFriends({ state, cloud, sync, social, coven = null, postbox = null, openCloud = () => {}, onRefresh = () => {} }) {
   if (!cloud?.configured || !social) return null;
   const $ = id => document.getElementById(id);
   const veil = $('friendsVeil'), sheet = $('friendsSheet');
@@ -144,8 +168,16 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   button.setAttribute('aria-haspopup', 'dialog');
   button.innerHTML = '<span>Friends <i class="fr-badge" id="friendsBadge" hidden></i></span><small id="friendsBtnSub"></small>';
   tray.after(button);
+  const tab = $('tabFriends');
+  tab.hidden = false;
+  const arrivalCode = covenState(state).invite.code;
+  const pendingArrival = cloud.meta().inviteArrival;
+  if (arrivalCode && (!pendingArrival || pendingArrival.code !== arrivalCode)) {
+    const user = cloud.userId();
+    cloud.setMeta({ inviteArrival: user ? { code: arrivalCode, owner: user, needsConsent: true } : { code: arrivalCode } });
+  }
 
-  let view = 'main', message = '', busy = false, confirm = null;
+  let view = 'main', message = '', busy = false, confirm = null, gazetteUnread = 0;
   let me = { code: '', name: '' }, friends = [], loaded = false, showAll = false;
   let visiting = null, serving = null, profile = null, custom = null, title = ['Friends', ''], drafts = {};
   let mail = new Map(), mailLoading = false, mailLoaded = false, mailShown = MAIL_PAGE, mailSafety = '', strips = new Map(), shelves = new Map();
@@ -156,7 +188,11 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   // Built once: the head stays a direct child of the sheet (it sticks on
   // phones) and the status line stays put, so screen readers hear each change.
   sheet.innerHTML = '<div class="sheet-head"><div><span class="eyebrow" data-fr-kicker></span><h2 data-fr-title tabindex="-1">Friends</h2></div><button class="btn btn-ghost btn-sm" type="button" data-fr="close">Close</button></div>' +
-    '<p class="fr-status" role="status" aria-live="polite"></p><div class="fr-body"></div>';
+    '<p class="fr-status" role="status" aria-live="polite"></p><div class="fr-guest" hidden><p data-fr-invite hidden>A friend invited you.</p><p>Visit shelves, bring cases to Shelf Court, trade and join covens.</p><div class="fr-signin"></div></div><div class="fr-body"></div>';
+  const guest = sheet.querySelector('.fr-guest');
+  const signin = initSignIn({ root: sheet.querySelector('.fr-signin'), prefix: 'friends', cloud, sync, actionText,
+    anonymousLabel: 'Start without email', onMessage: text => { status.textContent = text; },
+    onSuccess: async result => { await sync.check(); if (sync.info().conflict) { close(); openCloud(); return; } await open(); if (result.anonymous && isOpen() && !message) { message = 'Add an email later so you do not lose your friends.'; render(); } } });
   const body = sheet.querySelector('.fr-body'), status = sheet.querySelector('.fr-status');
   const isOpen = () => veil.classList.contains('open');
   const accepted = () => friends.filter(f => f.status === 'accepted');
@@ -192,6 +228,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
       },
       back: () => { if (current()) goBack(custom?.back || 'main'); },
       refresh: () => { if (current()) render(); },
+      async refreshFriends() { requireCurrent(); await reload(); requireCurrent(); render(); },
       say(text) { if (current()) { message = String(text || ''); render(); } },
       toast: (...args) => { if (current()) toast(...args); },
       save: () => { if (current()) save(); },
@@ -275,6 +312,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   function scopeSent() {
     const user = social.signedIn() ? cloud.userId() : null;
     if (user === sentUser) return false;
+    gazetteUnread = 0;
     sentUser = user; sentToken++; sent = []; sentNext = null; sentLoaded = sentLoading = false; sentError = ''; justServed = false;
     accountEpoch++; busy = false;
     ctx = epochCtx(); setSocialContext(ctx);
@@ -304,11 +342,14 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   /* ---- the tray badge counts everything in the postbox ---- */
   function syncTray() {
     const signedIn = social.signedIn(), count = signedIn && social.active() ? postboxCount(ctx) : 0;
-    $('friendsBtnSub').textContent = !signedIn ? 'Needs cloud save first' : count ? count + ' waiting for you' : 'Shelves, papers and scores';
+    $('friendsBtnSub').textContent = !signedIn ? 'Visit, trade and join covens' : count ? count + ' waiting for you' : 'Shelves, papers and scores';
     const badge = $('friendsBadge');
     badge.hidden = !count;
     badge.textContent = count > 9 ? '9+' : String(count);
-    button.setAttribute('aria-label', !signedIn ? 'Friends: needs cloud save first' : count ? 'Friends, ' + count + ' waiting' : 'Friends');
+    button.setAttribute('aria-label', count ? 'Friends, ' + count + ' waiting' : 'Friends');
+    const tabCount = count + (signedIn && social.active() ? gazetteUnread : 0);
+    const tabBadge = $('tabFriendsBadge'); tabBadge.hidden = !tabCount; tabBadge.textContent = tabCount > 9 ? '9+' : String(tabCount);
+    tab.setAttribute('aria-label', tabCount ? 'Friends, ' + tabCount + ' new items' : 'Friends');
   }
 
   /* ---- sections and actions from the registry ---- */
@@ -325,7 +366,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
       const why = !online() ? 'Go online to use this Friends action.' : typeof a.state === 'string' ? a.state : '';
       const reason = why ? ' aria-describedby="frWhy-' + esc(a.id) + '"' : '';
       return '<div class="fr-big"><button class="btn' + (a.primary ? ' btn-primary' : '') + '" type="button" data-fr-action="' + esc(a.id) + '" data-user="' + esc(friend.userId) + '"' + (why ? ' disabled' : '') + reason + '>' +
-        (a.icon ? '<span class="fr-big-icon" aria-hidden="true">' + a.icon + '</span>' : '') + '<span>' + esc(a.label) + '</span></button>' +
+        (actionIcon(a) ? '<span class="fr-big-icon" aria-hidden="true">' + actionIcon(a) + '</span>' : '') + '<span>' + esc(a.label) + '</span></button>' +
         (why ? '<small id="frWhy-' + esc(a.id) + '">' + esc(why) + '</small>' : '') + '</div>';
     }).join('') + '</div>';
   }
@@ -347,8 +388,11 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     const share = isNative() || (typeof navigator !== 'undefined' && typeof navigator.share === 'function');
     const count = postboxCount(ctx), dots = mailFrom(), dnd = !!postbox?.state().dnd;
     const shown = showAll ? list : list.slice(0, HOME_FRIENDS);
-    title = ['Friends', 'Seen by friends. Nobody else.'];
-    return '<button class="fr-postbox-entry" type="button" data-fr="postbox"><span class="fr-pb-icon" aria-hidden="true">' + POSTBOX_ICON + '</span>' +
+    title = ['Friends', 'Your shelf is for friends.'];
+    const arrival = cloud.meta().inviteArrival;
+    const invite = arrival?.needsConsent && arrival.owner === cloud.userId() ?
+      '<section class="fr-confirm" aria-labelledby="frInviteTitle"><h3 id="frInviteTitle">A friend invited you</h3><p>Code ' + esc(formatCode(arrival.code)) + '. Accepting sends a friend request, or accepts their existing request.</p><div class="fr-actions"><button class="btn btn-primary" type="button" data-fr="invite-accept">Accept invitation</button><button class="btn" type="button" data-fr="invite-dismiss">Decline</button></div></section>' : '';
+    return invite + '<button class="fr-postbox-entry" type="button" data-fr="postbox"><span class="fr-pb-icon" aria-hidden="true">' + POSTBOX_ICON + '</span>' +
       '<span class="fr-pb-text"><b>Postbox</b><small>' + (count ? count + ' waiting for you' : 'Nothing waiting. Suspicious.') + '</small></span>' +
       (count ? '<i class="fr-badge" aria-hidden="true">' + (count > 99 ? '99+' : count) + '</i>' : '') + '</button>' +
       (incoming.length ? '<section aria-labelledby="frRequestsTitle"><h3 id="frRequestsTitle">Requests</h3><ul class="fr-list">' + incoming.map(f => requestRow(f, { confirm: confirm?.userId === f.userId ? confirm.kind : '' })).join('') + '</ul></section>' : '') +
@@ -359,7 +403,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
         : loaded ? emptyState({ kind: 'friends', compact: true, line: 'Nobody yet. Swap codes with someone you know.', lineClass: 'fr-empty' }) : loadingState('Knocking on doors.')) + '</section>' +
       '<section class="fr-me" aria-labelledby="frCodeTitle"><h3 id="frCodeTitle">Your friend code</h3>' +
       '<p class="fr-code" data-fr-code>' + (me.code ? esc(formatCode(me.code)) : '<span class="fr-wait">Fetching</span>') + '</p>' +
-      '<div class="fr-actions"><button class="btn" type="button" data-fr="copy"' + (me.code ? '' : ' disabled') + '>Copy code</button>' +
+      '<div class="fr-actions"><button class="btn" type="button" data-fr="invite-friend"' + (me.code ? '' : ' disabled') + '>Invite a friend</button><button class="btn" type="button" data-fr="copy"' + (me.code ? '' : ' disabled') + '>Copy code</button>' +
       (share ? '<button class="btn" type="button" data-fr="share"' + (me.code ? '' : ' disabled') + '>Share</button>' : '') + '</div>' +
       '<form class="fr-form fr-add" data-fr-form="add"><label class="fr-label" for="frAdd">Add a friend by code</label><div class="fr-row"><input class="fr-input fr-code-input" id="frAdd" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD EFGH" value="' + esc(drafts.frAdd || '') + '"><button class="btn btn-primary" type="submit">Add</button></div></form>' +
       '<form class="fr-form" data-fr-form="name"><label class="fr-label" for="frName">Your name, as friends see it</label><div class="fr-row"><input class="fr-input" id="frName" maxlength="24" autocomplete="nickname" value="' + esc(drafts.frName ?? me.name) + '" placeholder="Leave blank to go by your code"><button class="btn" type="submit">Save name</button></div></form></section>' +
@@ -367,7 +411,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
       sentMarkup() +
       (postbox ? '<section class="fr-dnd" aria-labelledby="frDndTitle"><div class="fr-dnd-row"><div><h3 id="frDndTitle">' + esc(DND.label) + '</h3><p id="frDndLine">' + esc(dnd ? DND.on : DND.off) + '</p></div>' +
         '<button class="fr-switch" type="button" role="switch" data-fr="dnd" aria-checked="' + dnd + '" aria-labelledby="frDndTitle" aria-describedby="frDndLine"><i></i></button></div></section>' : '') +
-      '<p class="hint fr-small">Your name, residents and drawings are shown to accepted friends only. Daily scores reach everyone else as a percentage, never a name.</p>';
+      '<p class="hint fr-small">Your residents and drawings are shown to accepted friends only. Your name appears in the player directory only if you choose to list it. Daily scores reach everyone else as a percentage, never a name.</p>';
   }
 
   /* ---- a friend's profile ---- */
@@ -493,7 +537,8 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
       ? { value: active.value, start: active.selectionStart, end: active.selectionEnd, direction: active.selectionDirection } : null;
     const retained = view === 'custom' && custom === renderedCustom;
     if (busy && view === 'custom' && !customFocus && body.contains(active)) customFocus = active;
-    if (!retained) body.innerHTML = view === 'shelf' && visiting ? shelfMarkup() : view === 'serve' ? serveMarkup() : view === 'friend' && profile ? profileMarkup()
+    guest.hidden = view !== 'guest'; body.hidden = view === 'guest';
+    if (!retained && view !== 'guest') body.innerHTML = view === 'shelf' && visiting ? shelfMarkup() : view === 'serve' ? serveMarkup() : view === 'friend' && profile ? profileMarkup()
       : view === 'postbox' ? mailMarkup() : view === 'custom' && custom ? customMarkup() : mainMarkup();
     if (!retained) { renderedCustom = view === 'custom' ? custom : null; customFocus = null; }
     sheet.querySelector('[data-fr-title]').textContent = title[0];
@@ -592,7 +637,11 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   }
 
   async function open() {
-    if (!social.signedIn()) { openCloud(); return; }
+    if (!social.signedIn()) {
+      view = 'guest'; title = ['Friends', '']; message = ''; veil.classList.add('open');
+      guest.querySelector('[data-fr-invite]').hidden = !cloud.meta().inviteArrival;
+      signin.resume(); render(); return;
+    }
     scopeSent();
     social.optIn();
     view = 'main'; message = ''; confirm = null; visiting = serving = profile = custom = null; showAll = false; mailSafety = '';
@@ -610,10 +659,56 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     if (epoch !== accountEpoch || user !== cloud.userId()) return;
     // Friends see the shelf as it is now. Quietly: a failure here changes nothing.
     social.publish({ force: true }).catch(() => {});
+    await finishArrival();
+    if (cloud.meta().openPostbox && isOpen() && !cloud.meta().inviteArrival?.needsConsent) await openPostbox();
+  }
+  let arrivalTask = null;
+  function finishArrival() {
+    if (arrivalTask) return arrivalTask;
+    arrivalTask = finishArrivalOnce().finally(() => { arrivalTask = null; });
+    return arrivalTask;
+  }
+  async function finishArrivalOnce() {
+    let arrival = cloud.meta().inviteArrival;
+    const user = cloud.userId(), epoch = accountEpoch;
+    const sessionCurrent = () => cloud.userId() === user && accountEpoch === epoch;
+    const current = () => {
+      const active = cloud.meta().inviteArrival;
+      return sessionCurrent() && active?.code === arrival?.code && (!active.owner || active.owner === user);
+    };
+    if (!coven || !arrival?.code || !user || arrival.needsConsent || (arrival.owner && arrival.owner !== user)) return;
+    if (!arrival.owner) { arrival = { ...arrival, owner: user }; cloud.setMeta({ inviteArrival: arrival }); }
+    try {
+      if (!arrival.requestDone) {
+        let requestStatus = 'pending';
+        try { requestStatus = (await social.addFriend(arrival.code)).status; }
+        catch (error) { if (!['already_friends', 'already_asked'].includes(error.code)) throw error; if (error.code === 'already_friends') requestStatus = 'accepted'; }
+        if (!current()) return; arrival = { ...arrival, requestDone: true, requestStatus }; cloud.setMeta({ inviteArrival: arrival });
+      }
+      if (!arrival.referralDone) {
+        try { await coven.registerReferral(arrival.code); }
+        catch (error) { if (!['already_referred', 'not_new', 'too_many'].includes(error.code)) throw error; }
+        if (!current()) return; arrival = { ...arrival, referralDone: true }; cloud.setMeta({ inviteArrival: arrival });
+      }
+      if (current()) {
+        cloud.setMeta({ inviteArrival: undefined });
+        if (covenState(state).invite.code === arrival.code) { covenState(state).invite.code = ''; save(); }
+        await reload();
+        if (sessionCurrent()) { if (arrival.confirmedByUser) message = arrival.requestStatus === 'accepted' ? 'You are now friends.' : 'Friend request sent.'; render(); }
+      }
+    } catch (error) {
+      if (current()) {
+        if (arrival.confirmedByUser && !arrival.requestDone) { arrival = { ...arrival, needsConsent: true }; cloud.setMeta({ inviteArrival: arrival }); }
+        message = arrival.requestDone ? (arrival.requestStatus === 'accepted' ? 'You are now friends. ' : 'Friend request sent. ') + 'Open Friends to retry the referral.' : 'The invitation could not be completed. Try again.';
+        render();
+      }
+    }
   }
   function close() { veil.classList.remove('open'); view = 'main'; visiting = serving = profile = custom = null; confirm = null; drafts = {}; mailSafety = ''; syncTray(); }
 
   async function openPostbox() {
+    if (!social.signedIn()) { cloud.setMeta({ openPostbox: true }); await open(); return; }
+    cloud.setMeta({ openPostbox: undefined });
     if (!isOpen()) { await open(); if (!isOpen()) return; }
     view = 'postbox'; custom = null; confirm = null; mailSafety = ''; mailShown = MAIL_PAGE; message = '';
     render('[data-fr="back"]');
@@ -674,6 +769,7 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   button.addEventListener('click', open);
   veil.addEventListener('click', e => { if (e.target === veil) close(); });
   window.addEventListener('shelflife:postbox', () => openPostbox());
+  window.addEventListener('shelflife:gazette-unread', event => { gazetteUnread = Math.max(0, Math.floor(Number(event.detail) || 0)); syncTray(); });
   sheet.addEventListener('submit', e => {
     e.preventDefault();
     const form = e.target.dataset.frForm;
@@ -728,6 +824,24 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
       case 'close': close(); break;
       case 'copy': copy(); break;
       case 'share': shareCode(); break;
+      case 'invite-friend': shareInvite(); break;
+      case 'invite-accept': {
+        const arrival = cloud.meta().inviteArrival;
+        if (arrival?.needsConsent && arrival.owner === cloud.userId()) {
+          cloud.setMeta({ inviteArrival: { ...arrival, needsConsent: false, confirmedByUser: true } });
+          message = ''; render(); void finishArrival();
+        }
+        break;
+      }
+      case 'invite-dismiss': {
+        const arrival = cloud.meta().inviteArrival;
+        if (arrival?.needsConsent && arrival.owner === cloud.userId()) {
+          cloud.setMeta({ inviteArrival: undefined });
+          if (covenState(state).invite.code === arrival.code) { covenState(state).invite.code = ''; save(); }
+          message = 'Invitation declined.'; render();
+        }
+        break;
+      }
       case 'court': close(); window.dispatchEvent(new CustomEvent('shelflife:court')); break;
       case 'postbox': openPostbox(); break;
       case 'postbox-refresh': loadMail(); break;
@@ -801,6 +915,16 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
     catch { message = 'Your code is ' + formatCode(text) + '. Copying was not allowed here.'; }
     render('[data-fr="copy"]');
   }
+  async function shareInvite() {
+    if (!me.code) return;
+    const url = PLAY_URL + '?invite=' + encodeURIComponent(me.code);
+    const note = { title: 'Shelf Life', text: 'Join me on Shelf Life.', url };
+    try {
+      if (isNative()) await shareText({ ...note, dialogTitle: 'Send an invitation' });
+      else if (typeof navigator.share === 'function') await navigator.share(note);
+      else { await navigator.clipboard.writeText(url); message = 'Invitation copied.'; render('[data-fr="invite-friend"]'); }
+    } catch { message = 'Could not share the invitation. Try copying your friend code.'; render(); }
+  }
   async function shareCode() {
     const note = { title: 'Shelf Life', text: 'Add me on Shelf Life. My friend code is ' + formatCode(me.code) + '.', url: PLAY_URL };
     // The app's WebView has no Web Share; the Android share sheet does the same job.
@@ -813,13 +937,24 @@ export function initFriends({ state, cloud, sync, social, postbox = null, openCl
   social.subscribe(() => {
     const changed = scopeSent();
     syncTray();
-    if (changed && isOpen()) { close(); return; }
+    if (changed && isOpen() && view !== 'guest') { close(); return; }
     if (isOpen() && view === 'main') loadSent();
   });
   postbox?.subscribe(() => { syncTray(); if (isOpen() && (view === 'main' || view === 'friend')) render(); });
-  cloud.subscribe(() => { if (scopeSent() && isOpen()) close(); });
-  sync.subscribe(() => { syncTray(); if (isOpen() && !social.signedIn()) close(); });
+  cloud.subscribe(() => { if (scopeSent() && isOpen() && view !== 'guest') close(); });
+  sync.subscribe(() => { syncTray(); if (isOpen() && !social.signedIn() && view !== 'guest') close(); });
   syncTray();
+  tab.addEventListener('click', open);
+  const arrivalUrl = new URL(window.location.href);
+  if (arrivalUrl.searchParams.get('open') === 'postbox') {
+    arrivalUrl.searchParams.delete('open');
+    window.history.replaceState(window.history.state, '', arrivalUrl.pathname + arrivalUrl.search + arrivalUrl.hash);
+    cloud.setMeta({ openPostbox: true });
+  }
+  const invitation = cloud.meta().inviteArrival;
+  if (invitation?.needsConsent && invitation.owner === cloud.userId()) setTimeout(open, 0);
+  else if (cloud.meta().openPostbox) setTimeout(openPostbox, 0);
+  else if (invitation && !social.signedIn()) setTimeout(open, 0);
   return { open, close, refresh: render, openPostbox, get ctx() { return ctx; } };
 }
 

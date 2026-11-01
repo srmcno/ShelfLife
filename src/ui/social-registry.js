@@ -17,6 +17,7 @@
 //                              clicks inside it on [data-sx] reach the owner's onClick
 //     back(),                  return to where the view said it came from
 //     refresh(),               repaint the sheet (and the tray badge)
+//     refreshFriends(),        reload friend requests and accepted friends
 //     say(text),               the sheet's polite status line
 //     toast(text),             a game toast
 //     save(),                  persist the game state
@@ -44,7 +45,7 @@ const byOrder = (a, b) => (a.order ?? 50) - (b.order ?? 50);
 const replace = (list, item) => { const i = list.findIndex(x => x.id === item.id); if (i >= 0) list.splice(i, 1, item); else list.push(item); list.sort(byOrder); };
 
 /* An action on a friend's profile ("Serve papers", "Invite to visit", "Propose a trade").
-   { id, label, order, icon?,
+   { id, label, order, icon?,                icon name or trusted inline SVG; omitted uses the action id
      available(friend, ctx) -> true | false | 'reason it is unavailable',
      run(friend, ctx) }                       usually calls ctx.show(...) */
 export function registerFriendAction(action) {

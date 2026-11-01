@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 // An in-memory stand-in for exactly the Supabase endpoints cloud save uses:
 // GoTrue signup / otp / verify / user / token / logout, and PostgREST rpc and
 // select. The rpc functions mirror supabase/migrations/0001_accounts_and_saves.sql,
@@ -16,6 +17,10 @@ import { createFakeTrades } from './fake-trades.mjs';
 import { createFakeMischief } from './fake-mischief.mjs';
 import { createFakeCoop } from './fake-coop.mjs';
 import { createFakePostbox } from './fake-postbox.mjs';
+import { createFakeGazette } from './fake-gazette.mjs';
+import { createFakePush } from './fake-push.mjs';
+import { createFakeDiscovery } from './fake-discovery.mjs';
+import { createFakeParlour } from './fake-parlour.mjs';
 
 export const FAKE_URL = 'https://fake.supabase.test';
 export const FAKE_KEY = 'fake-anon-key';
@@ -27,9 +32,9 @@ const CORS = {
   'access-control-allow-headers': 'apikey, authorization, content-type, accept, x-client-info, prefer'
 };
 
-export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = FAKE_CODE, now = () => Date.now(), tokenLifetime = 3600, anonymousSignIns = true, emailAutoconfirm = false } = {}) {
+export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = FAKE_CODE, now = () => Date.now(), tokenLifetime = 3600, anonymousSignIns = true, emailAutoconfirm = false, googleEnabled = false } = {}) {
   const users = new Map(), saves = new Map(), profiles = new Map();
-  const access = new Map(), refresh = new Map(), codes = new Map();
+  const access = new Map(), refresh = new Map(), codes = new Map(), pkceCodes = new Map();
   const requests = [], sent = [], failures = [];
   let offline = false, hangs = 0, serial = 0;
 
@@ -100,7 +105,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
       return json(200, { friend_code: p.friend_code, display_name: p.display_name });
     },
     delete_my_account(user) {
-      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); postbox.forget(user.id); feedback.forget(user.id); coop.forget(user.id);
+      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); postbox.forget(user.id); feedback.forget(user.id); coop.forget(user.id); gazette.forget(user.id); push.forget(user.id); discovery.forget(user.id); parlour.forget(user.id);
       for (const [token, entry] of access) if (entry.userId === user.id) access.delete(token);
       for (const [token, entry] of refresh) if (entry.userId === user.id) refresh.delete(token);
       return { status: 204, body: '', headers: {} };
@@ -109,6 +114,13 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const social = createFakeSocial({ users, profiles, now, json, rest, uuid,
     ensureProfile: user => RPC.ensure_profile(user, {}) });
   Object.assign(RPC, social.RPC);
+  const discovery = createFakeDiscovery({ social, profiles, now, json, rest });
+  Object.assign(RPC, discovery.RPC);
+  RPC.list_friends = discovery.listFriends;
+  const gazette = createFakeGazette({ social, profiles, now, json, rest, uuid });
+  Object.assign(RPC, gazette.RPC);
+  const push = createFakePush({ json, rest });
+  Object.assign(RPC, push.RPC);
   // The postbox wraps the social functions first; every later feature wraps the live chain.
   const postbox = createFakePostbox({ social, users, profiles, now, json, rest, uuid });
   Object.assign(RPC, postbox.RPC, postbox.wrap({ ...RPC }));
@@ -125,6 +137,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const mischief = createFakeMischief({ social, users, profiles, now, json, rest, uuid, rpc: RPC });
   Object.assign(RPC, mischief.RPC);
   const coop = createFakeCoop({ profiles, now, json, rest, uuid, friendships: social.friendships, blocks: social.blocks, saves }); Object.assign(RPC, coop.RPC);
+  const parlour = createFakeParlour({ social, postbox, profiles, now, json, rest }); Object.assign(RPC, parlour.RPC, parlour.wrap({ ...RPC }));
   const TABLES = {
     ...social.TABLES,
     saves: user => [...saves].filter(([id]) => id === user.id).map(([id, r]) => ({ user_id: id, rev: r.rev, data: r.data, device_id: r.device_id, updated_at: r.updated_at })),
@@ -143,7 +156,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
     if (body) { try { input = JSON.parse(body); } catch { return rest(400, 'PGRST102', 'Invalid JSON'); } }
     const who = caller(h);
 
-    if (path === '/auth/v1/settings' && method === 'GET') return json(200, { mailer_autoconfirm: emailAutoconfirm });
+    if (path === '/auth/v1/settings' && method === 'GET') return json(200, { mailer_autoconfirm: emailAutoconfirm, external: { google: googleEnabled } });
     if (path === '/auth/v1/signup' && method === 'POST') {
       if (input.email || input.phone) return auth(400, 'validation_failed', 'Password sign-ups are not part of this fake');
       if (!anonymousSignIns) return auth(422, 'anonymous_provider_disabled', 'Anonymous sign-ins are disabled');
@@ -183,6 +196,13 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
         }
         return json(200, publicUser(who));
       }
+    }
+    if (path === '/auth/v1/token' && method === 'POST' && u.searchParams.get('grant_type') === 'pkce') {
+      const entry = pkceCodes.get(input.auth_code);
+      const challenge = createHash('sha256').update(String(input.code_verifier || '')).digest('base64url');
+      if (!entry || entry.challenge !== challenge || !users.has(entry.userId)) return auth(400, 'bad_code_verifier', 'Invalid authorization code or verifier');
+      pkceCodes.delete(input.auth_code);
+      return json(200, issue(users.get(entry.userId)));
     }
     if (path === '/auth/v1/token' && method === 'POST' && u.searchParams.get('grant_type') === 'refresh_token') {
       const entry = refresh.get(input.refresh_token);
@@ -271,8 +291,9 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   }
 
   return {
-    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, postbox, feedback, kin, mischief, coop,
+    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, postbox, feedback, kin, mischief, coop, gazette, push,
     fetch: fakeFetch, route, handle,
+    issueProviderCode(userId, challenge) { const code = uuid(); pkceCodes.set(code, { userId, challenge }); return code; },
     setOffline(value = true) { offline = !!value; },
     failNext(count = 1, status = 500) { for (let i = 0; i < count; i++) failures.push(status); },
     hangNext(count = 1) { hangs += count; },

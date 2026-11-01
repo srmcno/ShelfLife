@@ -2,11 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0812">
 <meta name="color-scheme" content="dark">
 <title>Shelf Life: small creatures, long memories</title>
 <meta name="description" content="Grow or draw peculiar little immortal pets. Feed them, survive their emergencies, collect cursed curios and read the complaints. A free, offline-friendly creature game.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Shelf Life: small creatures, long memories">
+<meta property="og:description" content="Make a home for peculiar creatures in this free, offline-friendly game.">
+<meta property="og:url" content="https://shelflife-game.vercel.app/">
+<meta property="og:image" content="https://shelflife-game.vercel.app/icons/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Shelf Life: small creatures, long memories">
+<meta name="twitter:description" content="Make a home for peculiar creatures in this free, offline-friendly game.">
+<meta name="twitter:image" content="https://shelflife-game.vercel.app/icons/og-card.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -40,12 +52,17 @@
 <link rel="stylesheet" href="css/court.css">
 <link rel="stylesheet" href="css/atmosphere.css">
 <link rel="stylesheet" href="css/cloud.css">
+<link rel="stylesheet" href="css/signin.css">
 <link rel="stylesheet" href="css/social.css">
 <link rel="stylesheet" href="css/coven.css">
 <link rel="stylesheet" href="css/kin.css">
 <link rel="stylesheet" href="css/trades.css">
 <link rel="stylesheet" href="css/mischief.css">
 <link rel="stylesheet" href="css/postbox.css">
+<link rel="stylesheet" href="css/gazette.css">
+<link rel="stylesheet" href="css/discovery.css">
+<link rel="stylesheet" href="css/parlour.css">
+<link rel="stylesheet" href="css/push.css">
 <link rel="stylesheet" href="css/almanac.css">
 <link rel="stylesheet" href="css/fx.css">
 <link rel="stylesheet" href="css/guide.css">
@@ -204,6 +221,10 @@
   <button class="tab" type="button" id="tabPlay" data-proxy="playroomBtn" aria-haspopup="dialog">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 10v5m-2-2.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="11" r="1.2" fill="currentColor"/><circle cx="18" cy="14" r="1.2" fill="currentColor"/></svg>
     <span>Play</span>
+  </button>
+  <button class="tab" type="button" id="tabFriends" aria-haspopup="dialog" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5v1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Friends</span><span class="tab-badge" id="tabFriendsBadge" hidden></span>
   </button>
   <button class="tab" type="button" data-tab="plots">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2 3 3 4.5 3 6.5a3 3 0 0 1-6 0C9 7.5 10 6 12 3z" fill="currentColor"/><path d="M9 13h6v7H9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7 20h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -480,13 +501,9 @@
 <!-- Only reachable when src/cloud/config.js is filled in. ui/cloud.js shows one part at a time. -->
 <div class="veil" id="cloudVeil"><div class="sheet sheet-cloud">
   <div class="sheet-head"><div><span class="eyebrow">Entirely optional</span><h2>Cloud save</h2></div><button class="btn btn-ghost btn-sm" id="cloudClose">Close</button></div>
-  <p class="hint">The game saves automatically in this browser. Cloud save adds an online copy; an email account lets you use it on other devices and join Friends.</p>
+  <p class="hint">The game saves automatically in this browser. Cloud save adds an online copy; an email account lets you use it on other devices. Friends also works without email.</p>
   <p class="cloud-status" id="cloudStatus" role="status" aria-live="polite"></p>
-  <section class="cloud-part" id="cloudOff" aria-label="Cloud save is off">
-    <p>Turn on cloud save to copy this shelf, then add your email below to keep a way back in.</p>
-    <p class="hint">Nothing leaves this device until you turn it on. No account is needed to play, now or later.</p>
-    <div class="cloud-actions"><button class="btn btn-primary" id="cloudEnable">Turn on cloud save</button></div>
-  </section>
+  <div class="cloud-part" id="cloudSignin"></div>
   <section class="cloud-part cloud-conflict" id="cloudConflict" aria-labelledby="cloudConflictTitle" hidden>
     <h3 id="cloudConflictTitle">Two shelves, one household</h3>
     <p>This device and the cloud copy have both moved on without each other. Choose the shelf to keep. The other is kept on this device for a week, if there is room, so you can undo.</p>
@@ -501,29 +518,8 @@
     <div class="cloud-actions"><button class="btn" id="cloudRepairBtn">Replace the cloud copy with this shelf</button></div>
   </section>
   <section class="cloud-part" id="cloudAnon" hidden>
-    <p>Cloud save is on. This browser holds the only key. Add your email to sign in on another device or use Friends. Clearing this browser's data without an email loses access to the cloud copy.</p>
+    <p>Cloud save is on. This browser holds the only key. Add an email to keep access if this browser is cleared.</p>
   </section>
-  <section class="cloud-part" id="cloudSignIn" aria-labelledby="cloudSignInTitle" hidden>
-    <h3 id="cloudSignInTitle">Sign in on this device</h3>
-    <p class="hint">Use the same email as your other device, or enter an email to make a new account. If both shelves have residents, you choose which shelf stays.</p>
-  </section>
-  <form class="cloud-part cloud-form" id="cloudEmailForm" novalidate hidden>
-    <ol class="cloud-steps" id="cloudEmailSteps">
-      <li>Enter an email inbox you can open, then choose <b>Email me a code</b>.</li>
-      <li>Open the email and copy its sign-in code. Check spam or junk if it is missing.</li>
-      <li>Enter the emailed code below and choose <b>Confirm</b>.</li>
-    </ol>
-    <p class="hint" id="cloudEmailHelp">No password to set up. The email service creates the code; you do not choose one yourself.</p>
-    <label for="cloudEmail">Your email</label>
-    <div class="cloud-row"><input type="email" id="cloudEmail" aria-describedby="cloudEmailHelp" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" maxlength="254" placeholder="you@example.com"><button class="btn" type="submit" id="cloudSendCode">Email me a code</button></div>
-  </form>
-  <form class="cloud-part cloud-form" id="cloudCodeForm" novalidate hidden>
-    <p id="cloudCodeDestination" class="cloud-destination"></p>
-    <label for="cloudCode">Code from your email</label>
-    <div class="cloud-row"><input type="text" id="cloudCode" aria-describedby="cloudCodeHelp cloudCodeDestination" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="Emailed digits"><button class="btn btn-primary" type="submit" id="cloudConfirm">Confirm</button></div>
-    <p class="hint" id="cloudCodeHelp">Nothing arrived? Check the address above and your spam or junk folder. Wait at least a minute before sending another code, then use the newest email.</p>
-    <div class="cloud-actions"><button class="btn btn-ghost" type="button" id="cloudChangeEmail">Use a different email</button></div>
-  </form>
   <section class="cloud-part" id="cloudAccount" hidden>
     <dl class="cloud-facts"><div><dt>Email</dt><dd id="cloudEmailShown"></dd></div><div><dt>Last synced</dt><dd id="cloudSynced"></dd></div></dl>
     <div class="cloud-actions"><button class="btn btn-primary" id="cloudSyncNow">Sync now</button><button class="btn" id="cloudSignOut">Sign out of this device</button></div>
@@ -533,8 +529,6 @@
     <p id="cloudUndoText"></p>
     <div class="cloud-actions"><button class="btn" id="cloudUndoBtn">Undo</button></div>
   </section>
-  <div class="cloud-part cloud-more" id="cloudSignInLink" hidden><button class="btn btn-ghost" id="cloudSignInOpen">Sign in or create an email account</button></div>
-  <div class="cloud-part cloud-more" id="cloudSignInBack" hidden><button class="btn btn-ghost" id="cloudSignInCancel">Back</button></div>
   <section class="cloud-part cloud-danger" id="cloudDelete" hidden>
     <button class="btn btn-ghost" id="cloudDeleteStart">Delete my cloud data and account</button>
     <div id="cloudDeleteConfirm" role="group" aria-labelledby="cloudDeleteQuestion" hidden>

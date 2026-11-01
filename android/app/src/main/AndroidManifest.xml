@@ -40,6 +40,7 @@
 
     <!-- Optional cloud save only. The game itself ships inside the app. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Small buzzes in the arcade (src/ui/arcade-fx.js). The player can switch them off in More. -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Nudges are local notifications, asked for only when the player turns them on. -->

@@ -7,7 +7,7 @@
 // hurt a guest) and it answers in its own manner. Ours that are away keep
 // their place at home with a small "away at Bea’s" tag: only a copy went.
 import { guestSprite, MOOD_LINES, traitNames, esc } from './friends.js';
-import { activeGuests, careCounts, recordCare, reactionLine, timesWord, dropDepartedGuests, awayFor } from '../engine/visits.js';
+import { activeGuests, careCounts, recordCare, reactionLine, guestGreeting, seedOf, timesWord, dropDepartedGuests, awayFor } from '../engine/visits.js';
 import { CARE_WORDS } from '../content/postbox.js';
 import { leftWords } from './postbox.js';
 
@@ -38,7 +38,13 @@ export function initGuests({ state, postbox, social, save = () => {} }) {
   plank.hidden = true;
   stage.after(plank);
   const sprites = new Map();
-  let drawn = '', openId = '', reaction = '', busy = false, tags = '';
+  let drawn = '', openId = '', reaction = '', busy = false, tags = '', generation = 0;
+
+  function conversation(g, now = Date.now()) {
+    const residents = (Array.isArray(state.pets) ? state.pets : []).filter(p => p && typeof p.name === 'string' && p.name.trim());
+    const neighbour = residents.length ? residents[seedOf('guest-neighbour:' + g.visitId) % residents.length] : null;
+    return { visitId: g.visitId, neighbour, counts: careCounts(state, g.visitId), leaves: g.leaves, now };
+  }
 
   const sprite = g => { let el = sprites.get(g.visitId); if (!el) { el = guestSprite(g.resident); sprites.set(g.visitId, el); } return el; };
   function renderPlank() {
@@ -84,35 +90,48 @@ export function initGuests({ state, postbox, social, save = () => {} }) {
       (why ? '<p class="gc-why">' + esc(why) + '</p>' : '') +
       '<p class="gc-count">' + esc(careLine(c)) + '</p><p class="hint">Nothing you do can harm a guest. Its home shelf keeps its real needs; this is hospitality, and gossip.</p>';
   }
-  function renderCard(focus = null) {
+  function renderCard(focus = null, animate = false) {
     const g = activeGuests(state).find(x => x.visitId === openId);
     if (!g) { close(); return; }
     const active = document.activeElement?.dataset?.gc;
     sheet.innerHTML = cardMarkup(g);
-    sheet.querySelector('[data-gc-art]')?.appendChild(guestSprite(g.resident));
+    const art = sheet.querySelector('[data-gc-art]');
+    art?.appendChild(guestSprite(g.resident));
+    if (animate) art?.classList.add('gc-react');
     const target = sheet.querySelector(focus || (active ? '[data-gc="' + active + '"]' : '[data-gc="food"]'));
     if (target && !target.disabled) target.focus({ preventScroll: true });
     else sheet.querySelector('h2')?.focus({ preventScroll: true });
   }
-  function open(id) { openId = id; reaction = ''; veil.classList.add('open'); renderCard('[data-gc="food"]'); }
+  function open(id) {
+    openId = id;
+    const guest = activeGuests(state).find(g => g.visitId === id);
+    reaction = guest ? guestGreeting(guest.resident, conversation(guest)) : '';
+    veil.classList.add('open'); renderCard('[data-gc="food"]');
+  }
   function close() { veil.classList.remove('open'); openId = ''; reaction = ''; }
 
   async function care(kind) {
     const g = activeGuests(state).find(x => x.visitId === openId);
     if (!g || busy) return;
+    const owner = social?.userId?.(), started = generation;
+    const current = () => started === generation && (!social?.userId || social.userId() === owner);
+    const showingGuest = () => current() && openId === g.visitId && veil.classList.contains('open');
+    let animate = false;
     busy = true; renderCard();
     try {
       const counts = await postbox.care(g.visitId, kind);
-      recordCare(state, g.visitId, counts);
-      save();
-      const total = counts.fed + counts.fussed + counts.washed;
-      reaction = reactionLine(g.resident, kind, total);
-      sheet.querySelector('[data-gc-art]')?.classList.add('gc-react');
+      if (!current()) return;
+      if (recordCare(state, g.visitId, counts)) save();
+      if (showingGuest()) {
+        const total = counts.fed + counts.fussed + counts.washed;
+        reaction = reactionLine(g.resident, kind, total, conversation(g));
+        animate = true;
+      }
     } catch (error) {
-      reaction = error?.message || 'That did not go through.';
+      if (showingGuest()) reaction = error?.message || 'That did not go through.';
     } finally {
       busy = false;
-      if (openId) renderCard('[data-gc="' + kind + '"]');
+      if (openId) renderCard('[data-gc="' + kind + '"]', animate && showingGuest());
     }
   }
 
@@ -127,6 +146,7 @@ export function initGuests({ state, postbox, social, save = () => {} }) {
   const refresh = () => renderPlank();
   window.addEventListener('shelflife:guests', refresh);
   window.addEventListener('shelflife:storage', refresh);
+  window.addEventListener('shelflife:state-replaced', () => { generation++; renderPlank(); });
   window.addEventListener('online', () => { if (openId) renderCard(); });
   window.addEventListener('offline', () => { if (openId) renderCard(); });
   // Guests leave on time even with nobody signed in.

@@ -1,0 +1,7 @@
+.signin-pitch{line-height:1.5}
+.signin-email,.signin-code{margin:0 0 14px}
+.signin-code input{font-variant-numeric:tabular-nums;letter-spacing:.35em;background-image:repeating-linear-gradient(90deg,transparent 0,transparent 1.25em,var(--hair-lit) 1.25em,var(--hair-lit) 1.3em);background-size:8em 2px;background-repeat:no-repeat;background-position:14px calc(100% - 8px)}
+.signin-links{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;margin-top:10px}
+.signin-links a{overflow-wrap:anywhere}
+.signin-change{min-height:36px}
+.signin-anon,.signin-google{width:100%;min-height:44px;justify-content:center;white-space:normal;margin-top:10px}
