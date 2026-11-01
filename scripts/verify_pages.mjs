@@ -20,6 +20,11 @@ for (let attempt = 0; attempt < 10; attempt++) {
   if (attempt < 9) await new Promise(resolve => setTimeout(resolve, 12000));
 }
 assert.equal(deployed?.revision, revision, 'Pages must serve the revision this workflow deployed');
+const workerUrl = new URL('service-worker.js', base); workerUrl.searchParams.set('verify', revision);
+const workerResponse = await fetch(workerUrl, { signal: AbortSignal.timeout(10000), cache: 'no-store' });
+assert.ok(workerResponse.ok, 'The published service worker must be readable');
+const cacheVersion = (await workerResponse.text()).match(/const CACHE_VERSION = '([^']+)';/)?.[1];
+assert.match(cacheVersion || '', new RegExp('^shelflife-' + revision.slice(0, 12) + '(?:-[a-f0-9]{8})?$'), 'The published cache belongs to this exact revision');
 await mkdir('live-check-results', { recursive: true });
 const browser = await chromium.launch();
 try {
@@ -59,7 +64,7 @@ try {
       await page.locator('.tabbar .tab[data-tab="shelf"]').click();
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
       await page.evaluate(()=>navigator.serviceWorker.ready);
-      await expect.poll(()=>page.evaluate(()=>caches.keys())).toContain('shelflife-'+revision.slice(0,12));
+      await expect.poll(()=>page.evaluate(()=>caches.keys())).toContain(cacheVersion);
       await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
       await context.setOffline(true);await page.reload();await expect(page.locator('#cabinet .pet')).toHaveCount(1);
       assert.equal((await saved()).paperwork.entries.length,1);
