@@ -69,15 +69,19 @@ begin
   if p_on then
     perform private.discovery_rate(uid, 'setting');
   else
-    -- Removal must remain possible even when the setting rate limit is full.
+    -- Withdrawal stays available at the limit. It can change a row only
+    -- after a rate-limited opt-in, so repeated withdrawals are no-ops.
     perform pg_advisory_xact_lock(hashtextextended('discovery-rate:' || uid::text || ':setting', 0));
+    update private.discovery_preferences set listed = false, changed_at = now()
+      where user_id = uid and listed;
+    delete from private.discovery_areas where user_id = uid;
+    return jsonb_build_object('listed', false);
   end if;
   perform public.ensure_profile('');
   select display_name into name from public.profiles where user_id = uid;
   if p_on and coalesce(btrim(name), '') = '' then perform private.refuse('name_required'); end if;
   insert into private.discovery_preferences(user_id, listed) values (uid, p_on)
     on conflict (user_id) do update set listed = excluded.listed, changed_at = now();
-  if not p_on then delete from private.discovery_areas where user_id = uid; end if;
   return jsonb_build_object('listed', p_on);
 end $$;
 

@@ -44,6 +44,11 @@ test('private by default, authenticated functions only, and names require opt-in
 
 test('opt-out and blocks immediately prevent lookup and requests',async()=>{
   await as(b,'public.discovery_set($1)',[false]);
+  const changed=(await db.query('select changed_at from private.discovery_preferences where user_id=$1',[b])).rows[0].changed_at;
+  await as(b,'public.discovery_set($1)',[false]);
+  assert.deepEqual((await db.query('select changed_at from private.discovery_preferences where user_id=$1',[b])).rows[0].changed_at,changed);
+  await as(d,'public.discovery_set($1)',[false]);
+  assert.equal((await db.query('select count(*)::int n from private.discovery_preferences where user_id=$1',[d])).rows[0].n,0);
   assert.deepEqual((await as(a,'public.discovery_find()')).players,[]);
   assert.deepEqual(await as(a,'public.discovery_request($1)',[b]),{ok:false,error:'not_found'});
   await as(b,'public.discovery_set($1)',[true]);
