@@ -126,8 +126,12 @@ test('a visit to Ada: request, accept, the guest on the shelf, care, and the tha
   await expect(page.locator('#guestVeil')).toBeVisible();
   await expect(page.locator('#guestSheet h2')).toHaveText('Gladys');
   await expect(page.locator('#guestSheet h2')).toBeFocused();
+  await expect(page.locator('#guestSheet .gc-reaction')).toContainText('Gladys');
   await page.locator('#guestSheet [data-gc="food"]').click();
   await expect(page.locator('#guestSheet .gc-reaction')).toContainText('Gladys');
+  const conversation = await page.locator('#guestSheet .gc-reaction').textContent();
+  expect(w.ada.shelf.pets.some(pet => conversation.includes(pet.name))).toBe(true);
+  await expect(page.locator('#guestSheet [data-gc-art]')).toHaveClass(/gc-react/);
   await expect(page.locator('#guestSheet .gc-count')).toContainText('fed it once');
   await expect.poll(() => w.fake.postbox.visits[0].fed).toBe(1);
   await page.locator('#guestSheet [data-gc="clean"]').click();

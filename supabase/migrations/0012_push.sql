@@ -131,7 +131,7 @@ begin
   elsif tg_table_name = 'coop_duels' then a := new.challenger; b := new.opponent; g := 'games';
   else
     a := (row_data->>'from_user')::uuid; b := (row_data->>'to_user')::uuid;
-    g := case when tg_table_name in ('summons','hearings') then 'court' when tg_table_name in ('visits','gifts','trades') then 'gifts' when tg_table_name = 'coven_invites' then 'covens' else 'kin' end;
+    g := case when tg_table_name in ('summons','hearings') then 'court' when tg_table_name in ('visits','gifts','trades') then 'gifts' when tg_table_name in ('parlour_rounds','parlour_answers') then 'games' when tg_table_name = 'coven_invites' then 'covens' else 'kin' end;
   end if;
   if a is null or b is null or a = b or private.blocked_either(a,b) or private.dnd_on(b) then return new; end if;
   if not exists (select 1 from public.push_subscriptions where user_id=b) then return new; end if;
@@ -160,6 +160,7 @@ create or replace function private.push_take() returns jsonb language plpgsql se
 declare token uuid := gen_random_uuid(); result jsonb;
 begin
   delete from private.push_queue q where q.created_at < now() - interval '30 days' or private.blocked_either(q.actor,q.recipient)
+    or (q.event_group='games' and not private.are_friends(q.actor,q.recipient))
     or private.dnd_on(q.recipient) or not exists (select 1 from public.push_subscriptions s where s.user_id=q.recipient)
     or not coalesce((select case q.event_group when 'friends' then p.friends when 'court' then p.court when 'gifts' then p.gifts when 'games' then p.games when 'covens' then p.covens else p.kin end from public.push_preferences p where p.user_id=q.recipient), true);
   with selected as (select id from private.push_queue where available_at <= now() and (lease is null or leased_at < now() - interval '5 minutes') order by created_at limit 4 for update skip locked)

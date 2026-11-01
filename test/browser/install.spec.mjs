@@ -1,9 +1,16 @@
 import { test, expect } from 'playwright/test';
 
-test('a browser install request is offered only after the browser provides it', async ({ page }) => {
+test('install guidance follows the browser and device', async ({ page }) => {
   await page.goto('/');
   await page.locator('#tabMore').click();
   const button = page.locator('#installBtn');
+  const apple = await page.evaluate(() => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+  if (apple) {
+    await expect(button).toBeVisible();
+    await button.click();
+    await expect(page.locator('#installSteps')).toContainText('Add to Home Screen');
+    return;
+  }
   await expect(button).toBeHidden();
   await page.evaluate(() => {
     const event = new Event('beforeinstallprompt', { cancelable: true });

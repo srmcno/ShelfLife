@@ -4,7 +4,8 @@
 // what it pays; this file turns its answers into the save and into words.
 import { addSouls } from './mayhem.js';
 import {
-  GUEST_REACTIONS, TRAIT_REACTIONS, POSTCARD_COMPLAINTS, POSTCARD_DECLINED, POSTCARD_LAPSED, THANK_YOU_NOTES,
+  GUEST_REACTIONS, TRAIT_REACTIONS, GUEST_HELLOS, GUEST_CARE_COMPANY, GUEST_CARE_REPEAT,
+  POSTCARD_COMPLAINTS, POSTCARD_DECLINED, POSTCARD_LAPSED, THANK_YOU_NOTES,
   SOUVENIRS, SOUVENIR_BY_ID, FRIEND_LEVELS, DAY_WORDS
 } from '../content/postbox.js';
 import { blankFriendVisits, storedResident, MAX_POSTCARDS, MAX_SOUVENIRS, MAX_PAID } from '../visits-state.js';
@@ -77,13 +78,43 @@ export function dropDepartedGuests(state, now = Date.now()) {
   return true;
 }
 
-// The guest answers in its own manner: a trait first, if it has one that
-// fits, otherwise a line for that kind of care.
-export function reactionLine(resident, kind, seed = 0) {
+const careCount = (counts, kind) => {
+  const value = Number(counts?.[kind]);
+  return Number.isFinite(value) ? Math.max(0, Math.min(30, Math.floor(value))) : 0;
+};
+const nameOf = (resident, fallback) => typeof resident?.name === 'string' && resident.name.trim() ? resident.name.trim().slice(0, 22) : fallback;
+
+// This is a view of the visit already in the save, not a new saved event. A
+// stable visit seed prevents the greeting changing whenever the card repaints.
+export function guestGreeting(resident, { visitId = '', neighbour = null, counts = {}, leaves = 0, now = Date.now() } = {}) {
+  const pet = nameOf(resident, 'The guest'), neighbourName = nameOf(neighbour, '');
+  const seed = seedOf('greeting:' + String(visitId));
+  const count = ['food', 'fuss', 'clean'].reduce((n, kind) => n + careCount(counts, kind), 0);
+  const traits = Array.isArray(resident?.traits) ? resident.traits.filter(t => Object.hasOwn(GUEST_HELLOS.traits, t)) : [];
+  let line;
+  if (Number.isFinite(leaves) && leaves > now && leaves - now <= 3600000) line = pick(GUEST_HELLOS.leaving, seed);
+  else if (resident?.mood === 'annoyed' || resident?.mood === 'furious') line = GUEST_HELLOS.moods[resident.mood];
+  else if (count) line = pick(GUEST_HELLOS.returning, seed);
+  else if (traits.length) line = GUEST_HELLOS.traits[pick(traits, seed)];
+  else if (neighbourName) line = pick(GUEST_HELLOS.company, seed);
+  else line = GUEST_HELLOS.moods[resident?.mood] || pick(GUEST_HELLOS.first, seed);
+  return fill(line, { pet, resident: neighbourName });
+}
+
+// The guest answers in its own manner. Optional context adds a conversation
+// with someone actually on this shelf or a callback to care already recorded.
+export function reactionLine(resident, kind, seed = 0, context = null) {
   const name = resident?.name || 'The guest';
-  const traits = (resident?.traits || []).filter(t => TRAIT_REACTIONS[t] && ['any', kind].includes(TRAIT_REACTIONS[t].need));
-  const own = traits.length && seed % 3 !== 2 ? TRAIT_REACTIONS[pick(traits, seed)].line : '';
-  return fill(own || pick(GUEST_REACTIONS[kind] || GUEST_REACTIONS.fuss, seed), { pet: name });
+  const n = Number.isFinite(seed) ? Math.max(0, Math.floor(seed)) : 0;
+  const care = ['food', 'fuss', 'clean'].includes(kind) ? kind : 'fuss';
+  const traits = (Array.isArray(resident?.traits) ? resident.traits : []).filter(t => Object.hasOwn(TRAIT_REACTIONS, t) && ['any', care].includes(TRAIT_REACTIONS[t].need));
+  const neighbour = nameOf(context?.neighbour, '');
+  const count = careCount(context?.counts, care);
+  const variant = seedOf(String(context?.visitId || '') + ':' + care + ':' + n);
+  if (context && count >= 2 && n % 3 === 0) return fill(pick(GUEST_CARE_REPEAT[care], variant), { pet: name, count: timesWord(count) });
+  if (context && neighbour && n % 3 === 1) return fill(pick(GUEST_CARE_COMPANY[care], variant), { pet: name, resident: neighbour });
+  const own = traits.length && n % 3 !== 2 ? TRAIT_REACTIONS[pick(traits, n)].line : '';
+  return fill(own || pick(GUEST_REACTIONS[care], n), { pet: name });
 }
 
 /* ---- the end of a visit ---- */

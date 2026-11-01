@@ -113,6 +113,75 @@ export const GUEST_REACTIONS = {
     '{pet} comes out cleaner and noticeably more suspicious.'
   ]
 };
+
+// A visit has its own small conversation. These lines are shown on the host's
+// device only and use the guest, a real resident here, and recorded care counts.
+export const GUEST_HELLOS = {
+  first: [
+    '{pet} has inspected the spare plank and found a place for its bag.',
+    '{pet} has put its shoes by the edge. They are very small shoes.',
+    '{pet} is a guest. It has brought one button and several instructions.'
+  ],
+  returning: [
+    '{pet} recognises you now. It has moved its bag closer.',
+    '{pet} has settled in. The spare plank is no longer called spare.',
+    '{pet} has kept a place for you beside the button.'
+  ],
+  company: [
+    '{pet}: Is this seat taken? {resident}: It is a plank. {pet} sits down.',
+    '{resident} has given {pet} the tour. It took six steps and a short break.',
+    '{pet} and {resident} have agreed to share the view. Neither will move.'
+  ],
+  leaving: [
+    '{pet} has packed its bag. One corner of the shelf is packed inside it.',
+    '{pet} is nearly due home. It is checking the plank for anything it can return.',
+    '{pet} is getting ready to leave. The button has been counted twice.'
+  ],
+  traits: {
+    critic: '{pet} is reviewing the accommodation. The plank has been told.',
+    damp: '{pet} has made a small ring on the spare plank. It calls this unpacking.',
+    etiquette: '{pet} has written a thank-you card before sitting down.',
+    feral: '{pet} has inspected the room with its teeth. The room passed.',
+    gossip: '{pet} has asked who lives here. It has a pencil ready.',
+    landlord: '{pet} has measured the spare plank and asked about rent.'
+  },
+  moods: {
+    content: '{pet} is comfortable enough to have taken one shoe off.',
+    annoyed: '{pet} has put its bag down with an audible opinion.',
+    furious: '{pet} has asked for a moment alone. It is taking it on the plank.'
+  }
+};
+export const GUEST_CARE_COMPANY = {
+  food: [
+    '{pet}: Is there enough? {resident} has already pushed half a crumb over.',
+    '{resident} watched {pet} eat, then moved the bowl a little closer.',
+    '{pet} offered {resident} the last crumb. They are still negotiating it.'
+  ],
+  fuss: [
+    '{pet} leans into your hand. {resident} pretends not to notice.',
+    '{resident} takes a place beside {pet}. Your hand is now fully booked.',
+    '{pet} holds your finger. {resident} holds the other end, just in case.'
+  ],
+  clean: [
+    '{pet} emerges from the flannel. {resident} checks that all the bits came back.',
+    '{resident} offers {pet} a dry corner of the plank. They both fit, just.',
+    '{pet} is clean. {resident} has put a towel down for the journey back.'
+  ]
+};
+export const GUEST_CARE_REPEAT = {
+  food: [
+    '{pet} has been fed {count} here. It now waits at the bowl with purpose.',
+    '{pet} has had a meal {count}. It has begun folding the napkin.'
+  ],
+  fuss: [
+    '{pet} has been fussed over {count}. It has stopped pretending to object.',
+    '{pet} has accepted attention {count}. Your finger has a reserved place.'
+  ],
+  clean: [
+    '{pet} has been washed {count}. It has learned where the towel lives.',
+    '{pet} has met the flannel {count}. They have reached an understanding.'
+  ]
+};
 // A trait can answer instead. `need` is food, fuss, clean or any.
 export const TRAIT_REACTIONS = {
   damp: { need: 'clean', line: '{pet} cannot get any wetter. You tried anyway. It is quietly impressed.' },
@@ -138,35 +207,47 @@ export const POSTCARD_COMPLAINTS = {
   clean: [
     '{pet} would like it noted that the towel was the wrong colour.',
     '{pet} says the water was wet in a way it did not care for.',
-    '{pet} has kept the soap. As a hostage.'
+    '{pet} has kept the soap. As a hostage.',
+    '{pet} came home folded neatly inside the towel. The towel came too.',
+    '{pet} says the flannel was firm but fair. It has asked for its name.'
   ],
   food: [
     '{pet} says the portions were generous and the plates were judgemental.',
     '{pet} would like the recipe, so that it can never have it again.',
-    '{pet} has gained a little weight and a great deal of opinion.'
+    '{pet} has gained a little weight and a great deal of opinion.',
+    '{pet} brought back a crumb, wrapped in another, smaller crumb.',
+    '{pet} has written down the meals in case they come up in Court.'
   ],
   fuss: [
     '{pet} was fussed over so thoroughly it forgot its own name for an afternoon.',
     '{pet} enjoyed the attention and will deny it under oath.',
-    '{pet} has come back slightly smug. Nobody can say why.'
+    '{pet} has come back slightly smug. Nobody can say why.',
+    '{pet} fell asleep in the middle of the attention and missed the end.',
+    '{pet} would like the same treatment here. It has made a little appointment card.'
   ],
   none: [
     '{pet} would like you to know nobody touched it once. {pet} has never been happier.',
     '{pet} spent the whole stay staring at a wall. It says it was a nice wall.',
-    '{pet} describes the hospitality as “present, technically”.'
+    '{pet} describes the hospitality as “present, technically”.',
+    '{pet} brought its bag home exactly as packed, including the emergency crumb.',
+    '{pet} says it was left to its own devices. One of the devices is a button.'
   ],
   lots: [
     '{pet} is exhausted from being loved and needs a lie down in a cold room.',
-    '{pet} has been looked after to within an inch of its life, which, given everything, is quite far.'
+    '{pet} has been looked after to within an inch of its life, which, given everything, is quite far.',
+    '{pet} has slept all the way home, still holding the corner of the towel.',
+    '{pet} says it was a very good visit and has asked for the same plank next time.'
   ]
 };
 export const POSTCARD_DECLINED = [
   '{host} declined. {pet} has taken it well, which is to say badly, in private.',
-  '{host} said no. {pet} has unpacked its suitcase very loudly.'
+  '{host} said no. {pet} has unpacked its suitcase very loudly.',
+  '{host} could not take a guest. {pet} has put the suitcase back under its bed.'
 ];
 export const POSTCARD_LAPSED = [
   '{host} never answered. {pet} waited by the door for two days with a small suitcase and is now unpacking it at you.',
-  'Nobody at {host}’s came to the door. {pet} says it was relieved. {pet} is lying.'
+  'Nobody at {host}’s came to the door. {pet} says it was relieved. {pet} is lying.',
+  '{pet} has taken its coat off. The invitation to {host}’s has expired.'
 ];
 // The note the guest leaves the host.
 export const THANK_YOU_NOTES = [

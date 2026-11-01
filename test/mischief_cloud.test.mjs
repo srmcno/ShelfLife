@@ -163,6 +163,7 @@ test('help: the published needs decide, the owner applies it once, and the helpe
   assert.equal(await bea.mx.ackHelps(acks.map(o => o.ref)), 1);
   assert.equal(await bea.mx.ackHelps(acks.map(o => o.ref)), 0, 'once');
   assert.deepEqual((await bea.mx.inbox()).helps, []);
+  Object.defineProperty(bea.shelf.mischief, 'viewer', { value: bea.id, configurable: true });
   assert.equal(X.helpLineFor(bea.shelf, bea.shelf.pets[1], clock), 'Ada fed Snag while you were out.');
 });
 

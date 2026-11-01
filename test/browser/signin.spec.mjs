@@ -25,7 +25,7 @@ async function boot(page, fake, path = '/') {
 
 test.use({ serviceWorkers: 'block' });
 
-test('an existing email falls back automatically and a pasted code signs in', async ({ page, context }) => {
+test('an existing email falls back automatically and a pasted code signs in', async ({ page, context, browserName }) => {
   const fake = createFakeSupabase();
   const existing = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory() });
   await existing.requestEmailCode('mabel@gmail.com', { mode: 'signin' });
@@ -43,10 +43,19 @@ test('an existing email falls back automatically and a pasted code signs in', as
   await expect(page.locator('#cloudMail')).toHaveAttribute('href', 'https://mail.google.com/');
   await expect(page.locator('#cloudResend')).toBeDisabled();
   await expect(page.locator('#cloudResend')).toContainText(/in [1-9][0-9]?s/);
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.evaluate(code => navigator.clipboard.writeText(code), FAKE_CODE);
-  await page.locator('#cloudCode').focus();
-  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+V' : 'Control+V');
+  if (browserName === 'webkit') {
+    // Playwright WebKit does not expose clipboard permissions. Exercise the
+    // resulting paste input event; Chromium covers the actual clipboard path.
+    await page.locator('#cloudCode').evaluate((input, value) => {
+      input.value = value;
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: value }));
+    }, FAKE_CODE);
+  } else {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.evaluate(code => navigator.clipboard.writeText(code), FAKE_CODE);
+    await page.locator('#cloudCode').focus();
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+V' : 'Control+V');
+  }
   await expect.poll(() => fake.calls('/auth/v1/verify').length).toBe(2);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.cloud')).session.user.id)).toBe(oldUser);
 });

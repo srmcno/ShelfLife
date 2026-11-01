@@ -96,6 +96,12 @@ export const OBSERVATIONS = {
     '{p} is giving {visitor} the tour. Turning round is the second half.',
     '{p} has offered {visitor} a seat. It is the same plank, said more warmly.'
   ],
+  visitingFriend: [
+    '{p} has made room for {visitor}. The room is four inches wide.',
+    '{p} has shown {visitor} the best place to stand when the shelf is dusted.',
+    '{p} and {visitor} have exchanged a look across the spare plank.',
+    '{p} has put a crumb aside for {visitor}. It is guarding the crumb from itself.'
+  ],
   rival: [
     '{p} and {n} are sharing a shelf edge. Both have described gravity as an opportunity.',
     '{p} is leaving a gap beside {n}. The gap is getting the silent treatment too.',
@@ -162,5 +168,12 @@ export const CONTEXT_EXCHANGES = {
     { turns: [['a', 'I think the giant likes me.'], ['b', 'It keeps putting you down very carefully.']] },
     { turns: [['a', 'I would climb into that hand willingly.'], ['b', 'Disgusting. Is there room?']] },
     { turns: [['a', 'They know my soft side.'], ['b', 'All four inches of scandal.']] }
+  ],
+  visitingFriend: [
+    { turns: [['a', '{visitor} is visiting.'], ['b', 'I moved the dust over.'], ['a', 'Some of it has moved back.']] },
+    { turns: [['a', 'What should we offer {visitor}?'], ['b', 'The good crumb.'], ['a', 'I thought we were saving it.'], ['b', 'For a guest.']] },
+    { turns: [['a', 'Does {visitor} like it here?'], ['b', 'Ask.'], ['a', 'I have practised asking.']] },
+    { turns: [['a', '{visitor} gets the spare plank.'], ['b', 'It is the same plank.'], ['a', 'Be a better host.']] },
+    { turns: [['a', 'We should make {visitor} comfortable.'], ['b', 'I have stopped staring.'], ['a', 'That is a start.']] }
   ]
 };

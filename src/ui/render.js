@@ -28,6 +28,7 @@ import { renderMayhem } from './mayhem.js';
 import { packingFor } from '../engine/trades.js';
 import { renderNextStep } from './nextstep.js';
 import { syncRetention } from './almanac.js';
+import { displayHelpNote } from '../engine/mischief.js';
 
 const cabinet = document.getElementById('cabinet');
 const notesEl = document.getElementById('notes');
@@ -283,6 +284,7 @@ export function nameMentions(text, name) {
   return new RegExp('(^|[^\\w])' + safe + '(?=$|[^\\w])', 'i').test(String(text || ''));
 }
 export function noteAbout(n, name) {
+  n = displayHelpNote(n);
   return n.from === name || nameMentions(n.text, name);
 }
 export function setPetFilter(state, name) {
@@ -341,7 +343,7 @@ if (filterHost) filterHost.addEventListener('click', e => {
 function renderTeaser(state) {
   const teaser = document.getElementById('shelfTeaser');
   if (!teaser) return;
-  const n = state.notes[0];
+  const n = displayHelpNote(state.notes[0]);
   teaser.hidden = !n;
   if (!n) return;
   teaser.querySelector('.teaser-text').textContent = n.text.length > 150 ? n.text.slice(0, 148).replace(/\s+\S*$/, '') + '…' : n.text;
@@ -351,7 +353,7 @@ function renderTeaser(state) {
 let notesKey = null;
 export function renderNotes(state) {
   notesState = state;
-  const papers = state.paperwork?.entries || [];
+  const papers = (state.paperwork?.entries || []).map(displayHelpNote), notes = state.notes.map(displayHelpNote);
   const report = noteFilter === 'papers' ? householdReport(state) : null;
   const key = JSON.stringify([state.notes, papers, report?.key, noteFilter, petFilter, expandedNotes, !!state.pets.length, document.getElementById('clearNotes').dataset.undo]);
   if (key === notesKey) return;
@@ -361,10 +363,10 @@ export function renderNotes(state) {
   pane.querySelector('.destination-heading h1').textContent = noteFilter === 'papers' ? 'Paperwork' : 'The note board';
   pane.querySelector('.destination-heading > p').textContent = noteFilter === 'papers' ? 'The official record of a deeply unofficial household.' : 'Complaints, confessions and the occasional compliment. Mostly complaints.';
   renderTeaser(state);
-  const list = (noteFilter === 'papers' ? papers : state.notes).filter(n => noteMatches(n, noteFilter));
+  const list = (noteFilter === 'papers' ? papers : notes).filter(n => noteMatches(n, noteFilter));
   filterHost?.querySelectorAll('[data-filter]').forEach(chip => {
     const label = chip.dataset.label || (chip.dataset.label = chip.textContent);
-    const source = chip.dataset.filter === 'papers' ? papers : state.notes;
+    const source = chip.dataset.filter === 'papers' ? papers : notes;
     const count = source.filter(n => noteMatches(n, chip.dataset.filter)).length;
     chip.innerHTML = escapeHtml(label) + '<span class="filter-count" aria-hidden="true">' + count + '</span>';
     chip.setAttribute('aria-label', label + ', ' + count + (chip.dataset.filter === 'papers' ? ' filed documents' : ' notes'));

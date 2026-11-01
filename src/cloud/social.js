@@ -160,9 +160,9 @@ export function readFriend(raw) {
   const userId = cleanUuid(raw.user_id);
   if (!userId || !['pending', 'accepted'].includes(raw.status) || !['incoming', 'outgoing'].includes(raw.direction)) return null;
   const code = cleanCode(raw.friend_code);
-  // A request we sent does not get to show the other player's name yet.
-  const named = raw.status === 'accepted' || raw.direction === 'incoming';
-  return { userId, name: named ? cleanText(raw.display_name, 24) : '', code, status: raw.status, direction: raw.direction,
+  // A directory request may show the name that was already listed publicly.
+  const named = raw.status === 'accepted' || raw.direction === 'incoming' || raw.directory_request === true;
+  return { userId, name: named ? cleanText(raw.display_name, 24) : '', code, ...(raw.directory_request === true ? { directory: true } : {}), status: raw.status, direction: raw.direction,
     shelfAt: raw.status === 'accepted' ? cleanTime(raw.shelf_updated_at) : 0 };
 }
 export function readFriends(rows) {
@@ -345,6 +345,7 @@ const refuse = (code, status = 0) => new CloudError(TEXT[ALIAS[code] || code] ||
 
 export function createSocial({ cloud, getState = () => null, now = Date.now } = {}) {
   const listeners = new Set();
+  const blockListeners = new Set();
   let lastStatus = '', publishing = null, inboxRequest = null, inboxUser = null;
   let mail = { cases: [], results: [] }, inboxVersion = 0;
 
@@ -399,7 +400,20 @@ export function createSocial({ cloud, getState = () => null, now = Date.now } = 
   const friends = async () => readFriends(await call('list_friends', {}));
   const respond = async (userId, accept) => { await call('respond_friend', { p_user: user(userId), p_accept: !!accept }); return true; };
   const remove = async userId => { await call('remove_friend', { p_user: user(userId) }); return true; };
-  const block = async userId => { await call('block_user', { p_user: user(userId) }); return true; };
+  const block = async userId => {
+    const target = user(userId), owner = cloud?.userId?.();
+    const after = [];
+    for (const listener of blockListeners) {
+      try { const done = listener(target, owner); if (typeof done === 'function') after.push(done); }
+      catch (error) { console.error('[social block]', error); }
+    }
+    await call('block_user', { p_user: target });
+    if (!signedIn() || cloud.userId() !== owner) throw refuse('signed_out', 401);
+    for (const done of after) {
+      try { done(); } catch (error) { console.error('[social block]', error); }
+    }
+    return true;
+  };
   const report = async (userId, reason) => { await call('report_user', { p_user: user(userId), p_reason: cleanText(reason, 200) }); return true; };
 
   // ---- shelves ----
@@ -528,7 +542,9 @@ export function createSocial({ cloud, getState = () => null, now = Date.now } = 
   return {
     active, optIn, signedIn, userId: () => signedIn() ? cloud.userId() : null, profile, setName, addFriend, friends, respond, remove, block, report,
     publish, shelf, serve, sentCases, rule, decline, seen, inbox, inboxCount, inboxState, submitScore, board, percentile, syncStatus,
-    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    // Capture a local context before the request; the returned callback runs only after success.
+    subscribeBlock(fn) { blockListeners.add(fn); return () => blockListeners.delete(fn); }
   };
 }
 

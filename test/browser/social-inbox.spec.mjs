@@ -214,13 +214,12 @@ test('switching accounts in the same page clears the previous account’s Court 
   await page.locator('#courtSheet [data-sc="close"]').click();
   await page.locator('#tabMore').click();
   await page.locator('#cloudBtn').click();
-  await page.locator('#cloudSignInOpen').click();
   await page.locator('#cloudEmail').fill('bea@example.com');
   await page.locator('#cloudSendCode').click();
   await expect(page.locator('#cloudCodeForm')).toBeVisible();
   await page.locator('#cloudCode').fill(FAKE_CODE);
-  await page.locator('#cloudConfirm').click();
-  await expect(page.locator('#cloudStatus')).toHaveText('Signed in as bea@example.com.');
+  await page.clock.fastForward(700);
+  await expect(page.locator('#cloudStatus')).toHaveText('Signed in. Check which shelf to keep.');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('shelflife.cloud')).session.user.id)).toBe(bea.id);
   await page.locator('#cloudClose').click();
   await page.locator('#tabMore').click();

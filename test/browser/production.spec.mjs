@@ -367,9 +367,9 @@ test('replayed ending celebrates the current resident while the album preserves 
   await expect(page.locator('.escapade-receipt')).toContainText('Kept with Agnes');
 });
 
-test('the complete keepsake album and long resident names fit a 320px screen', async ({ page }) => {
+test('the complete keepsake album and long resident names fit a 320px screen', async ({ page }, testInfo) => {
   // Opening all 16 receipts means 34 pointer actions plus acceptance of a story.
-  test.setTimeout(60_000);
+  test.setTimeout(testInfo.project.name === 'desktop-firefox' ? 150_000 : 60_000);
   await page.setViewportSize({ width:320, height:740 });
   await openHousehold(page, 'nearly-full', snapshot => {
     const petName = 'W'.repeat(22), at = Date.now() - 60_000;

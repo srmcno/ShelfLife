@@ -8,7 +8,7 @@ const live = available();
 test('the harness runs every migration twice and races calls on separate connections', { skip: live ? false : skipReason }, async () => {
   const db = await freshDatabase();
   try {
-    assert.equal(MIGRATIONS.length, 12);
+    assert.equal(MIGRATIONS.length, 14);
     const pids = await Promise.all([1, 2, 3].map(() => db.admin('select pg_backend_pid(), pg_sleep(0.3)')));
     assert.equal(new Set(pids).size, 3, 'three distinct backends');
   } finally { await db.drop(); }

@@ -22,7 +22,7 @@ import { petById, propById, pick, addNote, save, clamp } from '../state.js';
 import { SHELF_SCENES } from '../content/shelf-theatre.js';
 import { lampIsOn, toggleLamp, sceneAvailability, availableShelfScenes } from '../engine/shelf-theatre.js';
 import { kinCardHTML } from './kin-card.js';
-import { helpLineFor } from '../engine/mischief.js';
+import { helpLineFor, displayHelpNote } from '../engine/mischief.js';
 
 const cardVeil = document.getElementById('cardVeil');
 const cardSheet = document.getElementById('cardSheet');
@@ -93,7 +93,7 @@ function personalityDetails(pet) {
 
 // The last few things the board has said about this creature, in its own hand.
 function onFile(state, pet) {
-  const all = (state.notes || []).filter(n => noteAbout(n, pet.name));
+  const all = (state.notes || []).map(displayHelpNote).filter(n => noteAbout(n, pet.name));
   const mine = all.slice(0, 3);
   if (!mine.length) return '<p class="on-file-empty">No recent notes about this resident. Check the shelf to collect their words; care and play create memories below. Filed reports stay in Notes → Paperwork.</p>';
   return '<ul class="on-file">' + mine.map(n => {

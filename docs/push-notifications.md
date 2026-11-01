@@ -56,3 +56,5 @@ Set `SHELFLIFE_VAPID_PUBLIC_KEY` to the public key in Vercel production environm
 ## Verification
 
 On an Android Chrome installation, open Friends and turn notifications on. Accept the browser permission prompt. Send that account a friend request from a second account and check that the notification opens the postbox. Repeat with Do not disturb enabled, after signing out, and after turning a notification group off. Check the function logs and Supabase security advisors. A browser simulator cannot prove delivery to a physical phone. If account exit happens while the browser cannot inspect its subscription, the device keeps a cleanup marker and retries on startup, reconnect, or account change. Generic postbox notifications can still arrive until the browser revokes that subscription; a new account cannot subscribe until cleanup succeeds.
+
+Parlour prediction invitations and answered results use the Games notification group. Both are addressed only to the receiving friend; if either player blocks or removes the other, queued game notifications are discarded before delivery.

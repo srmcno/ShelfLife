@@ -50,6 +50,10 @@ try {
       const portrait = seed => ({ id: seed, name: seed, traits: ['damp'], needs: { food: 80, fuss: 80, clean: 80 }, bond: 4, art: { body: '', stamps: [], creature: generateCreature({ seed }) } });
       const bea = await socialPlayer(fake, 'Bea', { pets: [portrait('Gladys')] });
       const cat = await socialPlayer(fake, 'Cat', { pets: [portrait('Snag')] });
+      const dorothy = await socialPlayer(fake, 'Dorothy');
+      await dorothy.cloud.rpc('discovery_set', { p_on: true });
+      await ada.cloud.rpc('discovery_set', { p_on: true });
+      await Promise.all([ada, dorothy].map(player => player.cloud.rpc('discovery_location_set', { p_lat_band: 126, p_lon_band: 67 })));
       await bea.social.publish({ force: true });
       await cat.social.publish({ force: true });
       await ada.social.addFriend(bea.code); await bea.social.respond(ada.id, true);
@@ -96,7 +100,11 @@ try {
           const rect = el.getBoundingClientRect(), s = getComputedStyle(el);
           if ((rect.right > innerWidth + 1 || rect.left < -1) && !scrolled(el) && !el.closest('svg, canvas')) issues.pokes.push({ element: label(el), left: Math.round(rect.left), right: Math.round(rect.right) });
           if (el.tagName === 'IMG' && (!el.complete || !el.naturalWidth)) issues.brokenImages.push(label(el));
-          if (innerWidth <= 390 && el.matches('button, a[href], input:not([type=hidden]), select, textarea, [role=button]') && (rect.width < 30 || rect.height < 30)) issues.smallTargets.push({ element: label(el), width: Math.round(rect.width), height: Math.round(rect.height) });
+          if (innerWidth <= 390 && el.matches('button, a[href], input:not([type=hidden]), select, textarea, [role=button]')) {
+            // A wrapping label is also an activation target for a checkbox or radio.
+            const target = el.matches('input[type=checkbox], input[type=radio]') ? el.closest('label')?.getBoundingClientRect() || rect : rect;
+            if (target.width < 30 || target.height < 30) issues.smallTargets.push({ element: label(el), width: Math.round(target.width), height: Math.round(target.height) });
+          }
           for (const child of el.childNodes) if (child.nodeType === Node.TEXT_NODE && child.textContent.trim()) {
             const text = child.textContent.trim();
             if (/(?:^|\s)(?:undefined|NaN|null)(?:\s|$)|\[object Object\]/.test(text)) issues.badText.push({ element: label(el), text: text.slice(0, 120) });
@@ -106,9 +114,16 @@ try {
             }
           }
         }
+        const stickyFooter = el => {
+          for (let p = el; p && p !== document.body; p = p.parentElement) {
+            const style = getComputedStyle(p);
+            if (style.position === 'sticky' && style.bottom !== 'auto') return true;
+          }
+          return false;
+        };
         const buttons = els.filter(el => el.matches('button, [role=button]') && !el.disabled);
         for (let i = 0; i < buttons.length; i++) for (let j = i + 1; j < buttons.length; j++) {
-          const a = buttons[i], b = buttons[j]; if (a.contains(b) || b.contains(a) || a.closest('.sheet-foot, .sheet-footer') || b.closest('.sheet-foot, .sheet-footer')) continue;
+          const a = buttons[i], b = buttons[j]; if (a.contains(b) || b.contains(a) || stickyFooter(a) || stickyFooter(b)) continue;
           const x = a.getBoundingClientRect(), y = b.getBoundingClientRect();
           const w = Math.min(x.right, y.right, innerWidth) - Math.max(x.left, y.left, 0), h = Math.min(x.bottom, y.bottom, innerHeight) - Math.max(x.top, y.top, 0);
           if (w > 2 && h > 2) issues.overlaps.push({ a: label(a), b: label(b), width: Math.round(w), height: Math.round(h) });
@@ -138,6 +153,10 @@ try {
         const openFriends = async () => { await close(); if (!await click('#tabFriends')) { await click('#tabMore'); await click('#friendsBtn'); } };
         await step('friends', async () => { await openFriends(); await page.waitForTimeout(500); });
         if (mode === 'cloud') {
+          await step('directory', async () => { if (!await click('#friendsSheet [data-sx="discovery-open"]')) throw new Error('Directory unavailable'); await page.waitForTimeout(400); });
+          await step('directory-nearby', async () => { if (!await click('#friendsSheet [data-sx="discovery-nearby"]')) throw new Error('Nearby players unavailable'); await page.waitForTimeout(400); });
+          await step('directory-request', async () => { if (!await click('#friendsSheet [data-sx="discovery-request"]')) throw new Error('Directory request unavailable'); });
+          await openFriends();
           await step('postbox', async () => { await click('#friendsSheet [data-fr="postbox"]'); });
           await step('friend-profile', async () => { await openFriends(); await page.waitForTimeout(400); if (!await click('#friendsSheet [data-fr="profile"]')) throw new Error('Friend profile unavailable'); });
           const actions = await page.locator('#friendsSheet [data-fr-action]').evaluateAll(els => els.map(el => el.dataset.frAction));

@@ -19,6 +19,8 @@ import { createFakeCoop } from './fake-coop.mjs';
 import { createFakePostbox } from './fake-postbox.mjs';
 import { createFakeGazette } from './fake-gazette.mjs';
 import { createFakePush } from './fake-push.mjs';
+import { createFakeDiscovery } from './fake-discovery.mjs';
+import { createFakeParlour } from './fake-parlour.mjs';
 
 export const FAKE_URL = 'https://fake.supabase.test';
 export const FAKE_KEY = 'fake-anon-key';
@@ -103,7 +105,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
       return json(200, { friend_code: p.friend_code, display_name: p.display_name });
     },
     delete_my_account(user) {
-      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); postbox.forget(user.id); feedback.forget(user.id); coop.forget(user.id); gazette.forget(user.id); push.forget(user.id);
+      users.delete(user.id); saves.delete(user.id); profiles.delete(user.id); social.forget(user.id); postbox.forget(user.id); feedback.forget(user.id); coop.forget(user.id); gazette.forget(user.id); push.forget(user.id); discovery.forget(user.id); parlour.forget(user.id);
       for (const [token, entry] of access) if (entry.userId === user.id) access.delete(token);
       for (const [token, entry] of refresh) if (entry.userId === user.id) refresh.delete(token);
       return { status: 204, body: '', headers: {} };
@@ -112,6 +114,9 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const social = createFakeSocial({ users, profiles, now, json, rest, uuid,
     ensureProfile: user => RPC.ensure_profile(user, {}) });
   Object.assign(RPC, social.RPC);
+  const discovery = createFakeDiscovery({ social, profiles, now, json, rest });
+  Object.assign(RPC, discovery.RPC);
+  RPC.list_friends = discovery.listFriends;
   const gazette = createFakeGazette({ social, profiles, now, json, rest, uuid });
   Object.assign(RPC, gazette.RPC);
   const push = createFakePush({ json, rest });
@@ -132,6 +137,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const mischief = createFakeMischief({ social, users, profiles, now, json, rest, uuid, rpc: RPC });
   Object.assign(RPC, mischief.RPC);
   const coop = createFakeCoop({ profiles, now, json, rest, uuid, friendships: social.friendships, blocks: social.blocks, saves }); Object.assign(RPC, coop.RPC);
+  const parlour = createFakeParlour({ social, postbox, profiles, now, json, rest }); Object.assign(RPC, parlour.RPC, parlour.wrap({ ...RPC }));
   const TABLES = {
     ...social.TABLES,
     saves: user => [...saves].filter(([id]) => id === user.id).map(([id, r]) => ({ user_id: id, rev: r.rev, data: r.data, device_id: r.device_id, updated_at: r.updated_at })),

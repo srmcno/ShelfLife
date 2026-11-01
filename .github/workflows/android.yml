@@ -2,6 +2,7 @@ name: Android test APK
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: write
@@ -33,6 +34,15 @@ jobs:
           SHELFLIFE_PUBLIC_URL: https://shelflife-game.vercel.app/
         run: python3 scripts/build_site.py --require-cloud
       - run: npx cap sync android
+      - name: Preserve the test app signing identity
+        env:
+          DEBUG_KEYSTORE: ${{ secrets.SHELFLIFE_ANDROID_DEBUG_KEYSTORE }}
+        run: |
+          if [ -n "$DEBUG_KEYSTORE" ]; then
+            mkdir -p "$HOME/.android"
+            printf '%s' "$DEBUG_KEYSTORE" | base64 --decode > "$HOME/.android/debug.keystore"
+            chmod 600 "$HOME/.android/debug.keystore"
+          fi
       - run: ./gradlew assembleDebug
         working-directory: android
       - uses: actions/upload-artifact@v7.0.1
@@ -46,7 +56,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REVISION: ${{ github.sha }}
         run: |
-          notes="Debug build for commit ${REVISION}. Download the APK on Android, allow installation from your browser when prompted, then open the file. This build is for testing and is not a Play Store release."
+          notes="Debug build for commit ${REVISION}. Download the APK on Android, allow installation from your browser when prompted, then open the file. This build is for testing and is not a Play Store release. If Android cannot update an existing edition, back up or link your shelf before switching. Do not uninstall to force an update."
           if gh release view android-latest >/dev/null 2>&1; then
             gh release edit android-latest --title 'Latest Android test build' --notes "$notes" --prerelease
           else

@@ -3,6 +3,7 @@
 // drawn from the same sources the shelf uses (the creature renderer, the
 // stamp art, the prop art), so the picture matches what is on screen.
 import { storyState } from '../engine/stories.js';
+import { displayHelpNote } from '../engine/mischief.js';
 import { state, save } from '../state.js';
 import { PROPS, PROP_ART } from '../content/props.js';
 import { POSTCARD_CAPTIONS } from '../content/postcards.js';
@@ -278,7 +279,7 @@ export async function renderPostcard(caption) {
 
   // a note, pinned under the case
   // A short note reads on a postcard; a filled-in document does not.
-  const recent = state.notes.slice(0, 8);
+  const recent = state.notes.slice(0, 8).map(displayHelpNote);
   const short = recent.filter(n => n.form !== 'doc' && n.form !== 'list' && n.text.length <= 170);
   const pool = short.length ? short : recent;
   const note = pool.length ? pool[Math.floor(Math.random() * Math.min(4, pool.length))] : null;

@@ -24,7 +24,7 @@ jobs:
             part: 1
           - project: desktop-firefox
             os: ubuntu-latest
-            workers: 2
+            workers: 1
             shard: 1/1
             part: 1
           # macOS WebKit most closely matches the Safari engine used on iPhones.

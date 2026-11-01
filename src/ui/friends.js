@@ -115,7 +115,7 @@ export function friendRow(f, { confirm = '', level = null, count = 0, mail = fal
 export function requestRow(f, { confirm = '' } = {}) {
   const id = esc(f.userId);
   if (f.direction === 'outgoing') {
-    return '<li class="fr-friend fr-pending" data-user="' + id + '"><div class="fr-line"><div class="fr-who"><b>' + esc('Code ' + formatCode(f.code)) + '</b><small>Waiting for them to add you back.</small></div>' +
+    return '<li class="fr-friend fr-pending" data-user="' + id + '"><div class="fr-line"><div class="fr-who"><b>' + esc(f.directory ? (f.name || 'Player from directory') : 'Code ' + formatCode(f.code)) + '</b><small>Waiting for them to add you back.</small></div>' +
       '<button class="btn btn-ghost btn-sm" type="button" data-fr="withdraw" data-user="' + id + '">Withdraw</button></div></li>';
   }
   return '<li class="fr-friend fr-pending" data-user="' + id + '"><div class="fr-line"><div class="fr-who"><b>' + esc(friendName(f)) + '</b><small>Wants to be friends.</small></div></div>' +
@@ -224,6 +224,7 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
       },
       back: () => { if (current()) goBack(custom?.back || 'main'); },
       refresh: () => { if (current()) render(); },
+      async refreshFriends() { requireCurrent(); await reload(); requireCurrent(); render(); },
       say(text) { if (current()) { message = String(text || ''); render(); } },
       toast: (...args) => { if (current()) toast(...args); },
       save: () => { if (current()) save(); },
@@ -383,7 +384,7 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
     const share = isNative() || (typeof navigator !== 'undefined' && typeof navigator.share === 'function');
     const count = postboxCount(ctx), dots = mailFrom(), dnd = !!postbox?.state().dnd;
     const shown = showAll ? list : list.slice(0, HOME_FRIENDS);
-    title = ['Friends', 'Seen by friends. Nobody else.'];
+    title = ['Friends', 'Your shelf is for friends.'];
     return '<button class="fr-postbox-entry" type="button" data-fr="postbox"><span class="fr-pb-icon" aria-hidden="true">' + POSTBOX_ICON + '</span>' +
       '<span class="fr-pb-text"><b>Postbox</b><small>' + (count ? count + ' waiting for you' : 'Nothing waiting. Suspicious.') + '</small></span>' +
       (count ? '<i class="fr-badge" aria-hidden="true">' + (count > 99 ? '99+' : count) + '</i>' : '') + '</button>' +
@@ -403,7 +404,7 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
       sentMarkup() +
       (postbox ? '<section class="fr-dnd" aria-labelledby="frDndTitle"><div class="fr-dnd-row"><div><h3 id="frDndTitle">' + esc(DND.label) + '</h3><p id="frDndLine">' + esc(dnd ? DND.on : DND.off) + '</p></div>' +
         '<button class="fr-switch" type="button" role="switch" data-fr="dnd" aria-checked="' + dnd + '" aria-labelledby="frDndTitle" aria-describedby="frDndLine"><i></i></button></div></section>' : '') +
-      '<p class="hint fr-small">Your name, residents and drawings are shown to accepted friends only. Daily scores reach everyone else as a percentage, never a name.</p>';
+      '<p class="hint fr-small">Your residents and drawings are shown to accepted friends only. Your name appears in the player directory only if you choose to list it. Daily scores reach everyone else as a percentage, never a name.</p>';
   }
 
   /* ---- a friend's profile ---- */

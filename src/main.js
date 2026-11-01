@@ -11,6 +11,8 @@ import { cloud, sync, social, postbox, connectCloud } from './cloud/index.js';
 import { initCloudUI } from './ui/cloud.js';
 import { initFriends } from './ui/friends.js';
 import './ui/gazette.js';
+import './ui/discovery.js';
+import './ui/parlour.js';
 import { initTrades } from './ui/trades.js';
 import { initSocialInbox } from './ui/social-inbox.js';
 import { initTesters } from './ui/testers.js';
@@ -276,6 +278,8 @@ function applyRestoredState(normalized) {
   document.getElementById('clearNotes').textContent = 'Clear notes';
   Object.keys(state).forEach(k => delete state[k]);
   Object.assign(state, normalized);
+  // Account-bound views must establish their context before this copy renders.
+  window.dispatchEvent(new CustomEvent('shelflife:state-replacing'));
   tick(state);
   catchUpBehavior(state);
   advanceSchemes(state);

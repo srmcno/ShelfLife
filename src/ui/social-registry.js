@@ -17,6 +17,7 @@
 //                              clicks inside it on [data-sx] reach the owner's onClick
 //     back(),                  return to where the view said it came from
 //     refresh(),               repaint the sheet (and the tray badge)
+//     refreshFriends(),        reload friend requests and accepted friends
 //     say(text),               the sheet's polite status line
 //     toast(text),             a game toast
 //     save(),                  persist the game state

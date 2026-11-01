@@ -219,7 +219,7 @@ test('signing in on a fresh device brings the shelf over, and deleting leaves it
   await expect(page.locator('#cloudSignin')).toBeVisible();
   await expect(page.locator('#cloudEmail')).toHaveValue('pip@example.com');
   await page.locator('#cloudCode').fill(FAKE_CODE);
-  await page.locator('#cloudConfirm').click();
+  // Six digits submit automatically after the input settles.
   await expect(page.locator('#cloudStatus')).toHaveText('Signed in as pip@example.com.');
   await expect.poll(() => fake.calls('/rest/v1/rpc/pull_save').length).toBeGreaterThan(0);
   await expect(page.locator('#toast')).toContainText('Your shelf has arrived from the cloud.');

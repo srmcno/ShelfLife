@@ -87,12 +87,14 @@ function normalizeOutboxItem(raw, now) {
   return out;
 }
 
-function normalizeHelp(raw, now) {
+function normalizeHelp(raw, now, legacyOwner) {
   if (!object(raw) || !uuid(raw.id) || !petId(raw.petId) || !HELP_NEEDS.includes(raw.need)) return null;
   const applied = finite(raw.applied, now, 0, now);
   if (applied < now - WEEK) return null;
-  return { id: raw.id, from: fromOf(raw.from), petId: raw.petId, petName: text(raw.petName, 22), need: raw.need,
-    amount: Math.floor(finite(raw.amount, 0, 0, 30)), at: finite(raw.at, applied, 0, now), applied };
+  const owner = uuid(raw.owner) || legacyOwner;
+  return { id: raw.id, from: fromOf(raw.from), ...(owner ? { owner } : {}), petId: raw.petId, petName: text(raw.petName, 22), need: raw.need,
+    amount: Math.floor(finite(raw.amount, 0, 0, 30)), at: finite(raw.at, applied, 0, now), applied,
+    ...(raw.hidden === true ? { hidden: true } : {}), ...(!owner || raw.quarantined === true ? { quarantined: true } : {}) };
 }
 
 function normalizeHaunt(raw, now) {
@@ -118,7 +120,7 @@ export function normalizeMischief(raw, state = {}, now = Date.now()) {
   out.outbox = outbox.filter(item => item.op === 'shoo' || !item.user || activity.has(item));
   out.shooRewards = normalizeRewardHistory(raw.shooRewards);
   const seen = new Set();
-  out.helps = (Array.isArray(raw.helps) ? raw.helps : []).map(x => normalizeHelp(x, now)).filter(h => h && !seen.has(h.id) && seen.add(h.id)).slice(0, HELP_LOG_MAX);
+  out.helps = (Array.isArray(raw.helps) ? raw.helps : []).map(x => normalizeHelp(x, now, out.user)).filter(h => h && !seen.has(h.id) && seen.add(h.id)).slice(0, HELP_LOG_MAX);
   out.haunt = normalizeHaunt(raw.haunt, now);
   out.done = [...new Set((Array.isArray(raw.done) ? raw.done : []).filter(r => typeof r === 'string' && REF.test(r)))].slice(-DONE_MAX);
   if (object(raw.paid)) {

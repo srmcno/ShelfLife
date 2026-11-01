@@ -125,8 +125,10 @@ function dropFromTray(state, ref, now) {
 // A different account on this device: what the old one received stays with it.
 function changeAccount(state, userId, now) {
   const ms = mischiefState(state);
+  // Older saves did not label help history; assign it to its original owner.
+  ms.helps = ms.helps.map(h => h.owner ? h : { ...h, owner: ms.user });
   for (const h of ms.hexes.slice()) dropFromTray(state, h.ref, now);
-  ms.hexes = []; ms.outbox = ms.outbox.filter(item => item.op === 'shoo' || !item.user); ms.haunt = null;
+  ms.hexes = []; ms.haunt = null;
   ms.done = []; ms.paid = { day: '', help: 0, knock: 0, shoo: 0 };
   ms.user = userId;
 }
@@ -137,8 +139,9 @@ export function receiveInbox(state, box, userId, now = Date.now()) {
   const ms = mischiefState(state), out = { hexes: [], helps: [], haunt: null };
   if (!box || !userId) return out;
   if (ms.user && ms.user !== userId) changeAccount(state, userId, now);
+  if (!ms.user) ms.helps = ms.helps.map(h => h.owner ? h : { ...h, quarantined: true });
   ms.user = userId;
-  const owed = new Set(ms.outbox.filter(o => o.op === 'resolve' || o.op === 'decline').map(o => o.ref));
+  const owed = new Set(outboxFor(state, userId).filter(o => o.op === 'resolve' || o.op === 'decline').map(o => o.ref));
   const waiting = new Set(box.hexes.map(h => h.id));
   // Played on another device, expired, withdrawn or blocked: the server no longer has it waiting.
   for (const h of ms.hexes.slice()) if (!h.trick && !waiting.has(h.ref) && !owed.has(h.ref)) { dropFromTray(state, h.ref, now); forgetHex(ms, h.ref); }
@@ -215,34 +218,58 @@ export function dropFriend(state, userId, now = Date.now()) {
   const refs = [...ms.hexes, ...mayhemState(state).queue.map(q => q.ext).filter(Boolean)].filter(h => h.from?.userId === userId).map(h => h.ref);
   for (const ref of new Set(refs)) { dropFromTray(state, ref, now); forgetHex(ms, ref); }
   if (ms.haunt?.from.userId === userId) { markDone(ms, ms.haunt.ref); ms.haunt = null; }
+  // Hide the entry but retain its attribution and count toward the daily cap.
+  ms.helps = ms.helps.map(h => (!h.owner || h.owner === ms.user) && h.from?.userId === userId ? { ...h, hidden: true } : h);
   ms.outbox = ms.outbox.filter(o => !refs.includes(o.ref));
 }
 
 /* ---------------- neighbourly help ---------------- */
 
 export const helpLineText = h => friendName(h.from) + ' ' + HELP_VERBS[h.need] + ' ' + (h.petName || 'someone') + ' while you were out.';
-function helpsToday(ms, now) { const day = localDayKey(now); return ms.helps.filter(h => localDayKey(h.applied) === day).length; }
+const helpNoteText = h => helpLineText({ ...h, from: { name: 'A neighbour' } }) + ' ' + fillAll(pickBy(HELP_NOTE_TAILS, h.id), { a: h.petName, f: 'a neighbour' });
+// Old help notes did not record an owner. Mask exact generated templates in
+// views and shareable postcards, retaining the original records in backups.
+export function displayHelpNote(note) {
+  if (note?.from !== 'a neighbour' || typeof note.text !== 'string') return note;
+  const separator = ' while you were out. ';
+  for (const match of note.text.matchAll(/ (fed|fussed over|washed) /g)) {
+    const helper = note.text.slice(0, match.index), start = match.index + match[0].length;
+    for (let end = note.text.indexOf(separator, start); end !== -1; end = note.text.indexOf(separator, end + 1)) {
+      const pet = note.text.slice(start, end), tail = note.text.slice(end + separator.length);
+      if (!helper || !pet) continue;
+      const template = HELP_NOTE_TAILS.find(t => fillAll(t, { a: pet, f: helper }) === tail);
+      if (template) return { ...note, text: 'A neighbour helped a resident while you were out.' };
+    }
+  }
+  return note;
+}
+export const visibleHelp = (ms, h) => {
+  const viewer = typeof ms?.viewer === 'string' ? ms.viewer : '';
+  return !!viewer && !h.hidden && !h.quarantined && h.owner === viewer;
+};
+function helpsToday(ms, now) { const day = localDayKey(now); return ms.helps.filter(h => !h.quarantined && (!h.owner || h.owner === ms.user) && localDayKey(h.applied) === day).length; }
 
 export function applyHelp(state, help, now = Date.now()) {
   const pet = petById(state, help.residentId), ms = mischiefState(state);
   if (!pet || !pet.needs || !Number.isFinite(pet.needs[help.need]) || helpsToday(ms, now) >= HELPS_APPLIED_PER_DAY) return null;
   pet.needs[help.need] = clamp(pet.needs[help.need] + clamp(Math.floor(help.amount) || 0, 0, 30), 0, 100);
-  const entry = { id: help.id, from: { userId: help.fromUser, name: help.fromName }, petId: pet.id, petName: pet.name, need: help.need,
+  const entry = { id: help.id, from: { userId: help.fromUser, name: help.fromName }, ...(ms.user ? { owner: ms.user } : {}), petId: pet.id, petName: pet.name, need: help.need,
     amount: clamp(Math.floor(help.amount) || 0, 0, 30), at: Math.min(help.createdAt || now, now), applied: now };
   ms.helps.unshift(entry);
   if (ms.helps.length > HELP_LOG_MAX) ms.helps.length = HELP_LOG_MAX;
-  addNote(state, helpLineText(entry) + ' ' + fillAll(pickBy(HELP_NOTE_TAILS, entry.id), { a: pet.name, f: friendName(entry.from) }), 'a neighbour', 'note');
+  const note = addNote(state, helpNoteText(entry), 'a neighbour', 'note');
+  note.socialHelp = { owner: ms.user, source: entry.id };
   return entry;
 }
 // For the resident's card: the latest help in the last two days.
 export function helpLineFor(state, pet, now = Date.now()) {
-  const h = (state?.mischief?.helps || []).find(x => x.petId === pet?.id && x.applied > now - 2 * DAY);
+  const h = (state?.mischief?.helps || []).find(x => visibleHelp(state.mischief, x) && x.petId === pet?.id && x.applied > now - 2 * DAY);
   return h ? helpLineText({ ...h, petName: pet.name }) : '';
 }
 // For the "while you were away" card: helps that arrived since the player left.
 export function awayHelpLines(state, pending) {
   if (!pending) return [];
-  const helps = (state?.mischief?.helps || []).filter(h => h.applied >= pending.from).slice(0, 3);
+  const helps = (state?.mischief?.helps || []).filter(h => visibleHelp(state.mischief, h) && h.applied >= pending.from).slice(0, 3);
   if (!helps.length) return [];
   const lines = helps.slice(0, 2).map(h => 'While you were out, ' + helpLineText(h).replace(/ while you were out\.$/, '.'));
   if (helps.length > 2) lines[1] = lines[1].replace(/\.$/, ', and someone else helped too.');

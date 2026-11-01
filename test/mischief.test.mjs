@@ -6,7 +6,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { householdFixture } from './household-fixtures.mjs';
-import { normalizeState } from '../src/state.js';
+import { addNote, normalizeState } from '../src/state.js';
+import { createBackup } from '../src/backup.js';
 import { normalizeMayhem, QUEUE_MAX } from '../src/mayhem-state.js';
 import { normalizeMischief, normalizeHexPayload, normalizeGuest, PENDING_MAX, GUEST_MAX_CHARS } from '../src/mischief-state.js';
 import {
@@ -22,6 +23,7 @@ import { awayExtraLines } from '../src/engine/returns.js';
 const NOW = Date.UTC(2026, 9, 20, 12);
 const ME = '00000000-0000-4000-8000-0000000000aa', BEA = '00000000-0000-4000-8000-0000000000bb', CAT = '00000000-0000-4000-8000-0000000000cc';
 const ref = n => '11111111-1111-4111-8111-' + String(n).padStart(12, '0');
+const viewAs = (s, user) => Object.defineProperty(s.mischief, 'viewer', { value: user, configurable: true });
 const grubbs = { id: 'g1', name: 'Grubbs', traits: ['spiteful'], mood: 'fine', bond: 3, art: { body: '', stamps: [] } };
 
 function shelf(kind = 'established') {
@@ -264,14 +266,126 @@ test('blocking or switching accounts takes a friend’s mischief off the shelf',
   assert.equal(s.mischief.user, CAT);
 });
 
+test('blocking hides a friend’s help without undoing care or resetting the daily limit', () => {
+  const s = shelf(), pet = s.pets[0];
+  pet.needs.food = 20; pet.needs.fuss = 20; pet.needs.clean = 20;
+  const help = (n, from, need) => ({ id: ref(200 + n), fromUser: from, fromName: from === BEA ? 'Bea' : 'Cat', residentId: pet.id, need, amount: 25, createdAt: NOW - 1000 });
+  X.receiveInbox(s, box({ helps: [help(1, BEA, 'food'), help(2, CAT, 'fuss')] }), ME, NOW);
+  viewAs(s, ME);
+  X.dropFriend(s, BEA, NOW);
+  assert.equal(pet.needs.food, 45, 'care already received stays with the resident');
+  assert.equal(X.helpLineFor(s, pet, NOW + 1), 'Cat fussed over ' + pet.name + ' while you were out.');
+  assert.ok(X.awayHelpLines(s, { from: NOW - 1000 }).every(line => !line.includes('Bea')));
+  const restored = normalizeMischief(JSON.parse(JSON.stringify(s.mischief)), s, NOW + 1);
+  assert.deepEqual(restored.helps.find(h => h.from.userId === BEA).from, { userId: BEA, name: 'Bea' }, 'blocked attribution survives save and reload');
+  s.mischief = restored;
+  viewAs(s, ME);
+  assert.equal(X.helpLineFor(s, pet, NOW + 1), 'Cat fussed over ' + pet.name + ' while you were out.');
+  X.receiveInbox(s, box({ helps: [help(3, CAT, 'clean'), help(4, CAT, 'food')] }), ME, NOW + 1);
+  assert.equal(pet.needs.food, 45, 'hiding history does not reset the three-help limit');
+  assert.equal(pet.needs.clean, 45);
+});
+
+test('help notes and filed copies never disclose a helper after blocking, switching or restoring', () => {
+  const s = shelf(), pet = s.pets[0];
+  pet.needs.food = 20;
+  X.receiveInbox(s, box({ helps: [{ id: ref(249), fromUser: BEA, fromName: 'Bea', residentId: pet.id, need: 'food', amount: 25, createdAt: NOW }] }), ME, NOW);
+  const note = s.notes.find(n => n.socialHelp?.source === ref(249));
+  assert.ok(note);
+  assert.equal(note.socialHelp.owner, ME);
+  assert.ok(!note.text.includes('Bea'));
+  assert.ok(s.paperwork.entries.every(n => !n.text.includes('Bea')));
+  X.dropFriend(s, BEA, NOW);
+  X.receiveInbox(s, box(), CAT, NOW + 1);
+  assert.ok(s.notes.every(n => !n.text.includes('Bea')));
+  assert.ok(s.paperwork.entries.every(n => !n.text.includes('Bea')));
+});
+
+test('legacy help notes are masked only in views and preserve distinct original records through backup', t => {
+  const s = shelf(), pet = s.pets[0].name;
+  const oldText = 'Bea fed ' + pet + ' while you were out. ' + pet + ' has written Bea a thank you note and then eaten it.';
+  const otherText = 'Cat fed ' + pet + ' while you were out. ' + pet + ' has written Cat a thank you note and then eaten it.';
+  t.mock.method(Date, 'now', () => NOW);
+  addNote(s, oldText, 'a neighbour', 'note', 'doc');
+  addNote(s, otherText, 'a neighbour', 'note', 'doc');
+  addNote(s, 'Bea fed ' + pet + ' while you were out. A different memory.', 'a neighbour', 'note', 'doc');
+  const original = structuredClone(s);
+  const masked = 'A neighbour helped a resident while you were out.';
+  assert.equal(X.displayHelpNote(s.notes[1]).text, masked);
+  assert.equal(X.displayHelpNote(s.notes[2]).text, masked);
+  assert.equal(X.displayHelpNote(s.notes[0]).text, s.notes[0].text);
+  assert.deepEqual(s.notes, original.notes);
+  assert.deepEqual(s.paperwork, original.paperwork);
+  const restored = normalizeState(JSON.parse(createBackup(s, NOW).text));
+  assert.deepEqual(restored.notes, original.notes);
+  assert.deepEqual(restored.paperwork, original.paperwork, 'same-time documents retain distinct original identities');
+  assert.equal(new Set(restored.paperwork.entries.map(n => n.key)).size, 3);
+  assert.equal(restored.paperwork.entries.filter(n => X.displayHelpNote(n).text === masked).length, 2);
+});
+
+test('legacy helper names containing care verbs cannot escape the display mask', () => {
+  const s = shelf(), pet = s.pets[0].name;
+  for (const name of ['A fed SecretHelper', 'A washed SecretHelper', 'A fussed over SecretHelper']) {
+    addNote(s, name + ' fed ' + pet + ' while you were out. It was, by all accounts, competent.', 'a neighbour', 'note', 'doc');
+  }
+  const restored = normalizeState(JSON.parse(createBackup(s, Date.now()).text));
+  for (const collection of [restored.notes, restored.paperwork.entries]) {
+    const originals = collection.filter(n => n.text.includes('SecretHelper'));
+    assert.equal(originals.length, 3);
+    assert.ok(originals.every(n => X.displayHelpNote(n).text === 'A neighbour helped a resident while you were out.'));
+  }
+});
+
+test('a restored shelf without an authenticated viewer never shows named help', t => {
+  t.mock.method(Date, 'now', () => NOW);
+  const s = shelf(), pet = s.pets[0];
+  pet.needs.food = 20;
+  X.receiveInbox(s, box({ helps: [{ id: ref(252), fromUser: BEA, fromName: 'Bea', residentId: pet.id, need: 'food', amount: 25, createdAt: NOW }] }), ME, NOW);
+  const restored = normalizeState(JSON.parse(createBackup(s, NOW).text));
+  assert.equal(restored.mischief.user, ME);
+  assert.equal(X.helpLineFor(restored, restored.pets[0], NOW + 1), '');
+  assert.deepEqual(X.awayHelpLines(restored, { from: NOW - 1000 }), []);
+});
+
+test('help history and unsent reports stay with their owner across an account switch and reload', () => {
+  const s = shelf(), pet = s.pets[0];
+  pet.needs.food = 20;
+  const help = { id: ref(250), fromUser: BEA, fromName: 'Bea', residentId: pet.id, need: 'food', amount: 25, createdAt: NOW - 1000 };
+  X.receiveInbox(s, box({ helps: [help] }), ME, NOW);
+  assert.equal(X.outboxFor(s, ME).length, 1);
+  Object.defineProperty(s.mischief, 'viewer', { value: CAT, configurable: true });
+  assert.equal(X.helpLineFor(s, pet, NOW + 1), '', 'a switched account cannot see history while its inbox is loading');
+  delete s.mischief.viewer;
+  X.receiveInbox(s, box(), CAT, NOW + 1);
+  assert.equal(X.helpLineFor(s, pet, NOW + 1), '');
+  assert.deepEqual(X.awayHelpLines(s, { from: NOW - 1000 }), []);
+  assert.equal(X.outboxFor(s, CAT).length, 0);
+  assert.equal(X.outboxFor(s, ME).length, 1, 'the original owner can retry their acknowledgement');
+  s.mischief = normalizeMischief(JSON.parse(JSON.stringify(s.mischief)), s, NOW + 2);
+  X.receiveInbox(s, box(), ME, NOW + 2);
+  viewAs(s, ME);
+  assert.equal(X.helpLineFor(s, pet, NOW + 2), 'Bea fed ' + pet.name + ' while you were out.');
+  assert.equal(X.outboxFor(s, ME).length, 1);
+});
+
+test('unowned legacy help is kept for recovery but never adopted by a new account', () => {
+  const s = shelf(), pet = s.pets[0];
+  s.mischief = normalizeMischief({ helps: [{ id: ref(251), from: { userId: BEA, name: 'Bea' }, petId: pet.id, petName: pet.name, need: 'food', amount: 25, at: NOW, applied: NOW }] }, s, NOW);
+  X.receiveInbox(s, box(), ME, NOW);
+  assert.equal(s.mischief.helps.length, 1);
+  assert.equal(X.helpLineFor(s, pet, NOW + 1), '');
+  assert.deepEqual(X.awayHelpLines(s, { from: NOW - 1000 }), []);
+});
+
 test('help is applied once, bounded, at most three a day, and named on the card and the return card', () => {
   const s = shelf(), pet = s.pets[0];
   pet.needs.food = 20;
   const help = (n, extra = {}) => ({ id: ref(100 + n), fromUser: BEA, fromName: 'Bea', residentId: pet.id, residentName: pet.name, need: 'food', amount: 25, createdAt: NOW - 5000, ...extra });
   const news = X.receiveInbox(s, box({ helps: [help(1)] }), ME, NOW);
+  viewAs(s, ME);
   assert.equal(news.helps.length, 1);
   assert.equal(pet.needs.food, 45);
-  assert.equal(s.notes[0].text.startsWith('Bea fed ' + pet.name + ' while you were out.'), true, 'a note on the board');
+  assert.equal(s.notes[0].text.startsWith('A neighbour fed ' + pet.name + ' while you were out.'), true, 'the board keeps the helper anonymous');
   X.receiveInbox(s, box({ helps: [help(1)] }), ME, NOW + 1000);
   assert.equal(pet.needs.food, 45, 'applied once, even when the server sends it again');
   assert.deepEqual(X.outboxFor(s, ME).map(o => o.op), ['ack'], 'acknowledged once');

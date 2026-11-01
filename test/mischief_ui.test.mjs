@@ -3,7 +3,7 @@
 // states, and every button carries the data-sx the registry routes by.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hexViewHTML, helpViewHTML, knockViewHTML, doorstepHTML, rowHTML, inThinSeason } from '../src/ui/mischief.js';
+import { hexViewHTML, helpViewHTML, knockViewHTML, doorstepHTML, rowHTML, helpItems, inThinSeason } from '../src/ui/mischief.js';
 import { HEX_DECK, BOWLS } from '../src/content/mischief.js';
 
 const EVIL = '<img src=x onerror=alert(1)>';
@@ -12,6 +12,13 @@ const pets = [{ id: 'qa0', name: 'Agnes' }, { id: 'qa1', name: '"><script>' }];
 const status = (extra = {}) => ({ hand: HEX_DECK.slice(0, 3).map(h => h.id), hexedToday: false, hauntReady: true, hauntNextAt: 0, helped: [], helpsGiven: 0, knocked: [], season: true, rebounds: [], ...extra });
 const count = (html, pattern) => (html.match(pattern) || []).length;
 const noRawMarkup = html => { assert.ok(!html.includes('<img src=x') && !html.includes('<script>'), 'escaped: ' + html.slice(0, 200)); };
+
+test('hidden help history does not appear in the postbox', () => {
+  const help = (id, name, hidden = false) => ({ id, owner: 'viewer', from: { userId: id, name }, petName: 'Mabel', need: 'food', applied: 1, hidden });
+  const items = helpItems({ mischief: { viewer: 'viewer', helps: [help('a', 'Bea', true), help('b', 'Cat')] } });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].name, 'Cat');
+});
 
 test('the hand: three cards, the weekly haunting, a culprit, and one send button', () => {
   const html = hexViewHTML({ friend, status: status(), pets });
