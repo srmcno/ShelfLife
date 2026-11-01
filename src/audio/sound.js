@@ -22,7 +22,12 @@ import { state, save, onNote } from '../state.js';
 const MASTER_GAIN = 0.82;
 
 let ctx = null;
+let pageEpoch = 0;
 const graphs = new WeakMap();
+
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('pagehide', () => { pageEpoch++; });
+}
 
 // Browsers refuse to start audio before the player has touched the page, and
 // a context created early sits suspended with every scheduled sound piling up
@@ -49,7 +54,16 @@ function getCtx() {
   }
   // Autoplay policy: the context starts suspended until a gesture resumes it.
   // Every trigger in this game is a click, so resuming here is enough.
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state === 'suspended') {
+    // Firefox may leave resume pending until audio is permitted and reject it
+    // during navigation. Handle that lifecycle cancellation without hiding
+    // failures that occur while the page is still active.
+    const epoch = pageEpoch;
+    ctx.resume().catch(error => {
+      if (epoch !== pageEpoch && error?.name === 'InvalidStateError') return;
+      console.error('Audio could not resume.', error);
+    });
+  }
   return ctx;
 }
 

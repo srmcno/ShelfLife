@@ -16,14 +16,26 @@ jobs:
             browser: chromium
             os: ubuntu-latest
             workers: 2
-            shard: 1/1
+            shard: 1/2
+            part: 1
+          - project: desktop-chromium
+            browser: chromium
+            os: ubuntu-latest
+            workers: 2
+            shard: 2/2
+            part: 2
+          - project: mobile-chromium
+            browser: chromium
+            os: ubuntu-latest
+            workers: 2
+            shard: 1/2
             part: 1
           - project: mobile-chromium
             browser: chromium
             os: ubuntu-latest
             workers: 2
-            shard: 1/1
-            part: 1
+            shard: 2/2
+            part: 2
           - project: desktop-firefox
             browser: firefox
             os: ubuntu-latest
