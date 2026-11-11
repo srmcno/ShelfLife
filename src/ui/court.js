@@ -115,7 +115,30 @@ function careerPanel() {
   return '<section class="sc-career" aria-label="Your career on the bench"><div class="sc-career-top"><span class="sc-kicker">On the bench</span><b>' + esc(v.name) + '</b><small>' + plural(v.stars, 'star') + '</small></div>' +
     '<div class="sc-bar" role="progressbar" aria-label="Progress to the next rank" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"><i style="width:' + pct + '%"></i></div>' +
     '<p>' + (v.max ? 'Top of the bench. There is nothing above you but the ceiling.' :
-      plural(v.toNext, 'star') + ' to <b>' + esc(v.next.name) + '</b> (+' + v.next.souls + ' souls)' + (v.next.unlock ? '. Unlocks the ' + esc(lowerFirst(v.next.unlock.name)) : '') + '.') + '</p></section>';
+      plural(v.toNext, 'star') + ' to <b>' + esc(v.next.name) + '</b> (+' + v.next.souls + ' souls)' + (v.next.unlock ? '. Unlocks the ' + esc(lowerFirst(v.next.unlock.name)) : '') + '.') + '</p>' + recordMarkup() + '</section>';
+}
+// The judge's record: how often the ruling was right, and the run of three-star episodes.
+function recordMarkup() {
+  const c = courtroomState(S);
+  if (!c.episodes) return '';
+  const right = Math.min(c.justice, c.episodes), pct = Math.round(100 * right / c.episodes);
+  const cell = (value, label) => '<li><b>' + value + '</b><small>' + label + '</small></li>';
+  return '<ul class="sc-record" aria-label="Your record">' + cell(pct + '%', 'rulings right') + cell(right + ' of ' + c.episodes, 'justice served') +
+    cell(c.flawless || 0, 'flawless in a row') + cell(c.flawlessBest || 0, 'best flawless run') + '</ul>';
+}
+// The episode guide can be narrowed to what is left to do.
+let guideFilter = 'all';
+const GUIDE_FILTERS = [['all', 'All'], ['unaired', 'Unaired'], ['improve', 'Under three stars'], ['versions', 'Versions to find']];
+const guideMatch = (x, filter) => filter === 'unaired' ? !x.aired : filter === 'improve' ? x.aired && x.stars < 3 : filter === 'versions' ? x.versions.of > 1 && x.versions.seen < x.versions.of : true;
+function guideMarkup(cases) {
+  const counts = Object.fromEntries(GUIDE_FILTERS.map(([id]) => [id, cases.filter(x => guideMatch(x, id)).length]));
+  if (!counts[guideFilter]) guideFilter = 'all';
+  const shown = cases.filter(x => guideMatch(x, guideFilter));
+  const chips = GUIDE_FILTERS.filter(([id]) => id === 'all' || counts[id]).map(([id, label]) =>
+    '<button type="button" class="sc-filter' + (id === guideFilter ? ' on' : '') + '" data-sc-filter="' + id + '" aria-pressed="' + (id === guideFilter) + '">' + label + ' <b>' + counts[id] + '</b></button>').join('');
+  return (chips.includes('data-sc-filter="unaired"') || chips.includes('data-sc-filter="improve"') || chips.includes('data-sc-filter="versions"') ? '<div class="sc-filters" role="group" aria-label="Show episodes">' + chips + '</div>' : '') +
+    '<div class="sc-guide">' + shown.map(x => '<button type="button" class="sc-ep' + (x.id === lobby.caseId ? ' on' : '') + '" data-sc-case="' + x.id + '" aria-pressed="' + (x.id === lobby.caseId) + '"><span class="sc-ep-no">Ep. ' + x.number + '</span><b>' + esc(x.title) + '</b><span class="sc-ep-stars" aria-label="' + (x.aired ? x.stars + ' of 3 stars' : 'Unaired') + '">' + (x.aired ? stars(x.stars) : '<em>Unaired</em>') + '</span>' +
+      (x.versions.of > 1 ? '<span class="sc-ep-ver" aria-label="' + x.versions.seen + ' of ' + x.versions.of + ' versions seen">Version ' + x.versions.seen + ' of ' + x.versions.of + '</span>' : '') + '</button>').join('') + '</div>';
 }
 function versionMarkup(k) {
   const v = versionView(courtroomState(S), k.id);
@@ -137,6 +160,7 @@ function whyMarkup(preview) {
   return '<div class="sc-why"><span class="sc-kicker">Why this cast matters</span>' + (lines.length ? '<ul>' + lines.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul>' :
     '<p>This cast plays it straight. Residents who are Theatrical, Terminally Dramatic or Cult Adjacent change the maths, and so do bonds and old quarrels.</p>') + '</div>';
 }
+let keepGuide = false;
 function showLobby() {
   stopAll(); ep = null; joint = null;
   const c = courtroomState(S), cases = courtCases(S), docket = docketToday(S);
@@ -166,10 +190,10 @@ function showLobby() {
     '<li>When chaos breaks out, <b>bang the gavel</b> (the jury likes order) or <b>let it play</b> (the ratings like chaos).</li><li><b>Rule</b> for the plaintiff, the defendant, or “you’re both idiots”. Rule against whoever was right and they will remember it.</li></ol>' +
     '<div class="sc-guide-head"><h3 class="sc-guide-title">Episode guide</h3><button class="btn btn-ghost btn-sm" type="button" data-sc="notebook">Case Notebook</button></div>' +
     (totals.twists ? '<p class="sc-guide-note">Versions seen: <b>' + totals.seen + ' of ' + totals.of + '</b>. Some cases have more than one truth.</p>' : '') +
-    '<div class="sc-guide">' + cases.map(x => '<button type="button" class="sc-ep' + (x.id === lobby.caseId ? ' on' : '') + '" data-sc-case="' + x.id + '" aria-pressed="' + (x.id === lobby.caseId) + '"><span class="sc-ep-no">Ep. ' + x.number + '</span><b>' + esc(x.title) + '</b><span class="sc-ep-stars" aria-label="' + (x.aired ? x.stars + ' of 3 stars' : 'Unaired') + '">' + (x.aired ? stars(x.stars) : '<em>Unaired</em>') + '</span>' +
-      (x.versions.of > 1 ? '<span class="sc-ep-ver" aria-label="' + x.versions.seen + ' of ' + x.versions.of + ' versions seen">Version ' + x.versions.seen + ' of ' + x.versions.of + '</span>' : '') + '</button>').join('') + '</div>';
+    guideMarkup(cases);
   open();
-  $('.sc-roll')?.focus({ preventScroll: true });
+  if (keepGuide) { keepGuide = false; $('.sc-filter.on')?.focus({ preventScroll: true }); $('.sc-filters')?.scrollIntoView({ block: 'nearest' }); }
+  else $('.sc-roll')?.focus({ preventScroll: true });
   dressJudge($('.sc-titlecard-judge'), careerView(c).dress);
 }
 
@@ -845,6 +869,17 @@ function versionLine(res) {
   return '<li class="sc-ver-line' + (v.isNew && v.key !== BASE ? ' twist' : '') + '">' + (v.key === BASE ? 'The original telling.' : 'The twist: ' + esc(v.title) + '.') +
     ' Versions seen: ' + v.seen + ' of ' + v.of + (v.isNew ? ' (a new one)' : '') + '</li>';
 }
+// Where the three stars came from: the ruling, the ratings and the jury, each with how near it was.
+const RATINGS_STAR = 70, JURY_STAR = 5;
+function scorecard(res, f = null) {
+  const agree = res.agree ?? 0, ratings = f?.ratingsAt ?? Math.floor(res.ratings ?? 0);
+  const gotRatings = f ? f.ratings : ratings >= RATINGS_STAR, gotJury = f ? f.jury : agree >= JURY_STAR;
+  const row = (won, label, detail) => '<li class="' + (won ? 'won' : 'lost') + '"><i aria-hidden="true">★</i><span><b>' + label + '</b><small>' + detail + '</small></span><em>' + (won ? 'Star' : 'No star') + '</em></li>';
+  return '<ul class="sc-scorecard" aria-label="How the stars were decided">' +
+    row(res.correct, 'The ruling', res.correct ? 'You ruled for the right side.' : 'You ruled for the wrong side. The notes had it.') +
+    row(gotRatings, 'The ratings', gotRatings ? ratings + ', and the bar is ' + RATINGS_STAR + '.' : ratings + ' of the ' + RATINGS_STAR + ' needed. Zingers and chaos lift them.') +
+    row(gotJury, 'The jury', gotJury ? plural(agree, 'juror') + ' agreed with you.' : agree + ' of the ' + JURY_STAR + ' needed agreed. Clues, checked notes and order win them.') + '</ul>';
+}
 let verdictCard = null;
 function finish() {
   const res = courtFinish(S, ep, Date.now()), heard = ep.guest ? hearing : null, judged = ep.joint ? joint : null;
@@ -861,7 +896,7 @@ function finish() {
   controls.innerHTML = '<div class="sc-wrap ' + (res.correct ? 'right' : 'wrong') + '"><span class="sc-kicker">That’s a wrap</span>' +
     '<div class="sc-wrap-stars" aria-label="' + res.stars + ' of 3 stars">' + stars(res.stars) + '</div>' +
     '<h3>' + (res.correct ? 'Justice, allegedly, was served' : 'You got it wrong, live on air') + '</h3>' +
-    '<p>' + esc(truth) + ' Ratings ' + res.ratings + '. The jury agreed ' + res.agree + ' to ' + res.disagree + '.' + (ep.disagree + ep.agree < ep.jury.length ? ' ' + plural(ep.jury.length - ep.agree - ep.disagree, 'juror') + ' slept through it.' : '') + '</p>' +
+    '<p>' + esc(truth) + ' Ratings ' + res.ratings + '. The jury agreed ' + res.agree + ' to ' + res.disagree + '.' + (ep.disagree + ep.agree < ep.jury.length ? ' ' + plural(ep.jury.length - ep.agree - ep.disagree, 'juror') + ' slept through it.' : '') + '</p>' + scorecard(res, ep.starsFor) +
     '<ul class="mh-rewards">' + (res.souls ? '<li class="souls">' + glyph('soul') + '+' + res.souls + ' souls</li>' : '<li>Today’s game purse is empty. You did it for the art.</li>') +
     (res.docket ? '<li class="souls">' + glyph('soul') + '+' + res.docket.bonus + ' for today’s docket' + (res.docket.streak > 1 ? ' · ' + res.docket.streak + ' days in session' : '') + '</li>' : '') +
     (res.trust ? '<li class="good">' + esc(res.trust) + ' trusts you a little more</li>' : '') +
@@ -976,6 +1011,8 @@ export function initCourt(state, onRefresh, { social, cloud } = {}) {
     if (decline) { declineSummons(decline.dataset.scDecline); return; }
     const replay = e.target.closest('[data-sc-replay]');
     if (replay) { const [id, key] = replay.dataset.scReplay.split('|'); pickCase(id); lobby.twist = key; defaultLobby('', true); showLobby(); return; }
+    const filter = e.target.closest('[data-sc-filter]');
+    if (filter) { guideFilter = filter.dataset.scFilter; keepGuide = true; showLobby(); return; }
     const caseButton = e.target.closest('[data-sc-case]');
     if (caseButton) { pickCase(caseButton.dataset.scCase); showLobby(); return; }
     const choice = e.target.closest('[data-sc-choice]');

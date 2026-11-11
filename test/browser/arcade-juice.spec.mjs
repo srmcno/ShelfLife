@@ -209,6 +209,10 @@ test('a run ends in a beat of slow motion, then the card: the real score, a resi
   await expect(page.locator('#arcadeSheet .ar-rank')).toContainText('Peckish');
   await expect(page.locator('#arcadeSheet .ar-stats li')).toHaveCount(3);
   await expect(page.locator('#arcadeSheet .ar-stats li').first()).toContainText('12');
+  // A run short of the last skull gets one line of advice, and any scoring run can be sent as a picture.
+  await expect(page.locator('#arcadeSheet .ar-tip')).toContainText('Next time.');
+  await expect(page.locator('#arcadeSheet [data-ar="card"]')).toHaveText('Share the score');
+  if (process.env.SHOTS) await page.locator('#arcadeSheet').screenshot({ path: process.env.SHOTS + '/arcade-over-' + test.info().project.name + '.png' });
   await expect(page.locator('#arcadeSheet .ar-tier i.on')).toHaveCount(1);
   await expect(page.locator('#arcadeSheet .ar-again')).toBeFocused({ timeout: 10000 });
   await expect(page.locator('#arcadeSheet .ar-final-num.counting')).toHaveCount(0, { timeout: 4000 });

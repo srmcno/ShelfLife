@@ -112,6 +112,11 @@ test('a whole episode of Shelf Court: questions, a ruling, a jury vote and a wra
   await expect(page.locator('#courtSheet .sc-seat.agree, #courtSheet .sc-seat.disagree')).toHaveCount(6);
   await expect(page.locator('#courtSheet .sc-wrap h3')).toHaveText('Justice, allegedly, was served');
   await expect(page.locator('#courtSheet .sc-wrap')).toContainText('souls');
+  // The scorecard says where each star came from, and agrees with the stars shown.
+  await expect(page.locator('#courtSheet .sc-scorecard li')).toHaveCount(3);
+  await expect(page.locator('#courtSheet .sc-scorecard li').first()).toHaveClass(/won/);
+  expect(await page.locator('#courtSheet .sc-scorecard li.won').count()).toBe(await page.locator('#courtSheet .sc-wrap-stars i.on').count());
+  if (process.env.SHOTS) await page.locator('#courtSheet .sc-wrap').screenshot({ path: process.env.SHOTS + '/court-wrap-' + test.info().project.name + '.png' });
   await noHorizontalOverflow(page);
   const after = await saved(page);
   expect(after.courtroom.episodes).toBe(1);

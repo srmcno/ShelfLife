@@ -60,28 +60,80 @@ export async function renderVerdictCard(card) {
   return canvas;
 }
 
-// Share it, or save it where sharing is not on offer. Returns 'shared', 'saved', 'cancelled' or 'failed'.
-export async function shareVerdictCard(card) {
+// An arcade score, as a picture: the game, who played, the score and the rank.
+// card: { title, accent, score, rank, tier, newBest, daily, stats: [[label, value]], pet, name }
+export async function renderScoreCard(card) {
+  await loadFonts();
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const accent = /^#[0-9a-f]{6}$/i.test(card.accent || '') ? card.accent : GOLD;
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#1C1430'); sky.addColorStop(0.6, '#130E20'); sky.addColorStop(1, '#0A0711');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = accent; ctx.lineWidth = 4; roundRect(ctx, 36, 36, W - 72, H - 72, 28); ctx.stroke();
+  ctx.strokeStyle = accent + '55'; ctx.lineWidth = 2; roundRect(ctx, 52, 52, W - 104, H - 104, 20); ctx.stroke();
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = accent; ctx.font = '700 26px Karla, sans-serif';
+  ctx.fillText(card.daily ? 'T O D A Y \u2019 S   C H A L L E N G E' : 'T H E   A R C A D E', W / 2, 138);
+  ctx.fillStyle = INK; ctx.font = '400 92px Gloock, Georgia, serif';
+  let y = centered(ctx, wrap(ctx, String(card.title || 'The arcade'), W - 200, 2), W / 2, 240, 96);
+
+  const floor = 690;
+  ctx.fillStyle = '#2A1E3A'; roundRect(ctx, W / 2 - 230, floor, 460, 26, 8); ctx.fill();
+  if (card.pet) { try { await drawPet(ctx, card.pet, W / 2, floor, 330); } catch { /* the stage stays empty */ } }
+  ctx.fillStyle = DIM; ctx.font = '700 24px Karla, sans-serif';
+  ctx.fillText(String(card.name ? 'PLAYED BY ' + card.name : 'PLAYED BY THE HOUSEHOLD').toUpperCase().slice(0, 44), W / 2, floor + 74);
+
+  ctx.fillStyle = accent; ctx.font = '400 190px Gloock, Georgia, serif';
+  ctx.fillText(String(Math.max(0, Math.floor(Number(card.score) || 0))), W / 2, floor + 270);
+  ctx.fillStyle = INK; ctx.font = '600 48px Caveat, cursive';
+  const tier = Math.max(0, Math.min(3, Math.floor(Number(card.tier) || 0)));
+  ctx.fillText((card.newBest ? 'A new best. ' : '') + (tier ? String(card.rank || '') + ', skull ' + tier + ' of 3' : 'No skull this time'), W / 2, floor + 338);
+  const stats = (card.stats || []).slice(0, 3), gap = 300, left = W / 2 - gap * (stats.length - 1) / 2;
+  stats.forEach(([label, value], i) => {
+    const cx = left + i * gap;
+    ctx.fillStyle = INK; ctx.font = '400 60px Gloock, Georgia, serif'; ctx.fillText(String(value), cx, floor + 440);
+    ctx.fillStyle = DIM; ctx.font = '700 22px Karla, sans-serif'; ctx.fillText(String(label).toUpperCase(), cx, floor + 476);
+  });
+  ctx.fillStyle = DIM; ctx.font = '700 22px Karla, sans-serif';
+  ctx.fillText(PLAY_URL.replace(/^https?:\/\//, '').replace(/\/$/, '').toUpperCase(), W / 2, H - 78);
+  return canvas;
+}
+
+// Send a drawn card: the share sheet where there is one, a saved file where not.
+// Returns 'shared', 'saved', 'cancelled' or 'failed'.
+async function sendCard(render, { name, title, text, dialogTitle, saved, failed }) {
   let blob;
   try {
-    const canvas = await renderVerdictCard(card);
+    const canvas = await render();
     blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
   } catch { blob = null; }
-  if (!blob) { toast('The court artist could not finish the picture.'); return 'failed'; }
-  const name = 'shelf-court-verdict.png', text = String(card.ruling || 'A verdict from Shelf Court');
+  if (!blob) { toast(failed); return 'failed'; }
   if (isNative()) {
-    const result = await shareFile({ name, blob, title: 'Shelf Court', text, dialogTitle: 'Send the verdict' });
+    const result = await shareFile({ name, blob, title, text, dialogTitle });
     if (result === 'failed') toast('Sharing did not go through.');
     return result === 'failed' ? 'failed' : 'shared';
   }
   if (canShareFiles()) {
-    try { await navigator.share({ files: [new File([blob], name, { type: 'image/png' })], title: 'Shelf Court', text }); return 'shared'; }
+    try { await navigator.share({ files: [new File([blob], name, { type: 'image/png' })], title, text }); return 'shared'; }
     catch (error) { if (error?.name === 'AbortError') return 'cancelled'; }
   }
   const url = URL.createObjectURL(blob), a = document.createElement('a');
   a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30000);
-  toast('Verdict saved as a picture. Send it to the losing side.');
+  toast(saved);
   return 'saved';
+}
+
+export function shareVerdictCard(card) {
+  return sendCard(() => renderVerdictCard(card), { name: 'shelf-court-verdict.png', title: 'Shelf Court', text: String(card.ruling || 'A verdict from Shelf Court'),
+    dialogTitle: 'Send the verdict', saved: 'Verdict saved as a picture. Send it to the losing side.', failed: 'The court artist could not finish the picture.' });
+}
+export function shareScoreCard(card) {
+  return sendCard(() => renderScoreCard(card), { name: 'shelf-life-score.png', title: String(card.title || 'The arcade'),
+    text: String(card.score) + ' in ' + String(card.title || 'the arcade') + '. Beat it.', dialogTitle: 'Send the score',
+    saved: 'Score saved as a picture. Send it to somebody who thinks they can beat it.', failed: 'The picture would not develop.' });
 }

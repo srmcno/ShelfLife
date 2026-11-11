@@ -407,6 +407,8 @@ export function episodeRule(ep, ruling, rnd = Math.random) {
   if (agree >= 5) nudge(ep, { ratings: 5 });
   const stars = (correct ? 1 : 0) + (ep.ratings >= 70 ? 1 : 0) + (agree >= 5 ? 1 : 0);
   ep.agree = agree; ep.disagree = disagree; ep.stars = stars;
+  // What each star was decided on, as it stood at the ruling, for the wrap's scorecard.
+  ep.starsFor = { ruling: correct, ratings: ep.ratings >= 70, jury: agree >= 5, ratingsAt: Math.floor(ep.ratings) };
   const voice = (list, agrees) => {
     const who = ep.jury.filter((_, i) => votes[i] === agrees && !absent.includes(i));
     if (!who.length) return null;
