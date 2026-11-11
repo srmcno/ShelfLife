@@ -84,7 +84,6 @@ registerSocialView('parlour-send', { async onClick(action,el,ctx) {
       // A retry may follow a committed send whose response was lost. Keep it
       // until the server confirms it, even if a later request is refused.
       if (current() && !saved && ['parlour_wait','dnd','not_friends','bad_parlour','rate_limited'].includes(error?.message)) { remove(user,data); draft.locked=false; }
-      if (current() && saved && ['dnd','not_friends','bad_parlour'].includes(error?.message)) { remove(user,data); draft.locked=false; throw explain(error); }
       if (saved) throw new CloudError('The earlier send could not be confirmed. Your question is saved here for another retry.', { code:error?.code, status:error?.status });
       throw explain(error);
     }
