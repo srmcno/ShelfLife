@@ -30,8 +30,7 @@ export const CHANGES = [
       { title: 'Share the verdict', text: 'After an episode, Share the verdict makes a picture of the case, both parties and your ruling. Send it to the losing side.' },
       { title: 'Find players', text: 'List yourself to be found by name, or share a broad area to meet players nearby. Both are off until you choose, and exact locations are never sent.' },
       { title: 'Parlour predictions', text: 'Answer a question, then seal it and send it to a friend. Neither answer is shown until both are in.' },
-      { title: 'Word when friends do things', text: 'Turn on notifications in Friends to hear about papers, trades and visitors. On an iPhone, add Shelf Life to the Home Screen first.' },
-      { title: 'Install Shelf Life', text: 'More → Install puts the game on your home screen. Android testers can also use the test app from the project’s releases page.' }
+      { title: 'Install, and word from friends', text: 'More → Install puts the game on your home screen. Then turn on notifications in Friends to hear about papers, trades and visitors. On an iPhone, install first.' }
     ]
   },
   {
