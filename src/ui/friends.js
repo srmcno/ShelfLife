@@ -660,7 +660,7 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
     // Friends see the shelf as it is now. Quietly: a failure here changes nothing.
     social.publish({ force: true }).catch(() => {});
     await finishArrival();
-    if (cloud.meta().openPostbox && isOpen() && !cloud.meta().inviteArrival?.needsConsent) await openPostbox();
+    if ((cloud.meta().openPostbox || wantPostbox) && isOpen() && !cloud.meta().inviteArrival?.needsConsent) await openPostbox();
   }
   let arrivalTask = null;
   function finishArrival() {
@@ -719,9 +719,11 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
   }
   function close() { veil.classList.remove('open'); view = 'main'; visiting = serving = profile = custom = null; confirm = null; drafts = {}; mailSafety = ''; syncTray(); }
 
+  let wantPostbox = false;
   async function openPostbox() {
-    if (!social.signedIn()) { cloud.setMeta({ openPostbox: undefined }); await open(); return; }
-    cloud.setMeta({ openPostbox: undefined });
+    // Signed out: remember the wish for this visit only, so it cannot reopen Friends on every launch.
+    if (!social.signedIn()) { cloud.setMeta({ openPostbox: undefined }); wantPostbox = true; await open(); return; }
+    cloud.setMeta({ openPostbox: undefined }); wantPostbox = false;
     if (!isOpen()) { await open(); if (!isOpen()) return; }
     view = 'postbox'; custom = null; confirm = null; mailSafety = ''; mailShown = MAIL_PAGE; message = '';
     render('[data-fr="back"]');
