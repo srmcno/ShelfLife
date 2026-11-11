@@ -93,3 +93,11 @@ test('a push that keeps failing backs off and is dropped after five tries', asyn
     assert.equal(await value("select relrowsecurity from pg_class where oid = ('private.' || $1)::regclass", [table]), true);
   }
 });
+
+test('parlour questions 18 to 63 are accepted once the limit is raised', async () => {
+  await db.query('delete from public.friendships');
+  await db.query("insert into public.friendships(requester, addressee, status) values ($1, $2, 'accepted')", [ada, bea]);
+  assert.equal((await as(ada, () => value('select public.parlour_send($1,$2,$3,$4)', [id(7001), bea, 35, 1]))).sent, true);
+  await assert.rejects(as(ada, () => value('select public.parlour_send($1,$2,$3,$4)', [id(7002), bea, 64, 1])), /bad_parlour/);
+  assert.deepEqual(await as(bea, () => value('select public.parlour_reply($1,$2)', [id(7001), 2])), { id: id(7001), prompt: 35, first: 1, second: 2 });
+});

@@ -13,6 +13,7 @@ const SHELL = [
   "./src/ui/discovery.js",
   "./src/ui/parlour.js",
   "./src/content/parlour.js",
+  "./src/content/gazette.js",
   "./src/cloud/push.js",
   "./src/ui/push.js",
   "./css/signin.css",

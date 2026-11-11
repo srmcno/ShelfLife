@@ -153,3 +153,35 @@ begin
   return true;
 end $$;
 revoke all on function private.push_result(uuid, uuid, boolean, text[], text[]) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Parlour predictions: room for more questions (the game ships 36, up from 18)
+-- ---------------------------------------------------------------------------
+
+alter table public.parlour_rounds drop constraint if exists parlour_rounds_prompt_check;
+alter table public.parlour_rounds add constraint parlour_rounds_prompt_check check (prompt between 0 and 63);
+
+create or replace function public.parlour_send(p_id uuid, p_to uuid, p_prompt integer, p_choice integer) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare uid uuid := private.require_user(); existing public.parlour_rounds%rowtype;
+begin
+  if p_id is null or p_to is null or p_prompt is null or p_prompt not between 0 and 63 or p_choice is null or p_choice not between 0 and 2 then perform private.refuse('bad_parlour'); end if;
+  -- Keep the same lock order as other parlour writes without charging a retry.
+  perform pg_advisory_xact_lock(hashtextextended('parlour-rate:' || uid::text, 0));
+  perform private.parlour_friend(uid, p_to, false);
+  perform pg_advisory_xact_lock(hashtextextended('parlour-send:' || uid::text, 0));
+  select * into existing from public.parlour_rounds where id = p_id;
+  if found then
+    if existing.from_user <> uid or existing.to_user <> p_to or existing.prompt <> p_prompt or existing.first_choice <> p_choice then perform private.refuse('bad_parlour'); end if;
+    return jsonb_build_object('id',existing.id,'sent',true);
+  end if;
+  perform private.parlour_rate(uid);
+  perform private.require_friend(uid, p_to, true);
+  if (select count(*) from public.parlour_rounds where from_user=uid and created_at > now()-interval '1 day') >= 12 then perform private.refuse('rate_limited'); end if;
+  if exists (select 1 from public.parlour_rounds where from_user=uid and to_user=p_to and created_at > now()-interval '1 day') then perform private.refuse('parlour_wait'); end if;
+  delete from public.parlour_rounds where created_at < now()-interval '30 days';
+  insert into public.parlour_rounds(id,from_user,to_user,prompt,first_choice) values (p_id,uid,p_to,p_prompt,p_choice);
+  return jsonb_build_object('id',p_id,'sent',true);
+end $$;
+revoke all on function public.parlour_send(uuid, uuid, integer, integer) from public, anon, authenticated;
+grant execute on function public.parlour_send(uuid, uuid, integer, integer) to authenticated;

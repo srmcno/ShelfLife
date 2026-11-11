@@ -9,7 +9,7 @@ export function createFakeParlour({ social, postbox, profiles, now, json, rest }
   const iso = t => new Date(t).toISOString();
   return { RPC: {
     parlour_send(user,{p_id,p_to,p_prompt,p_choice}={}) {
-      if(!UUID.test(p_id||'')||!UUID.test(p_to||'')||!integer(p_prompt,17)||!integer(p_choice,2)) return fail('bad_parlour');
+      if(!UUID.test(p_id||'')||!UUID.test(p_to||'')||!integer(p_prompt,63)||!integer(p_choice,2)) return fail('bad_parlour');
       if(!valid(user.id,p_to)) return fail('not_friends');
       const old=rounds.get(p_id);
       if(old) return old.from_user===user.id&&old.to_user===p_to&&old.prompt===p_prompt&&old.first===p_choice ? json(200,{id:p_id,sent:true}) : fail('bad_parlour');

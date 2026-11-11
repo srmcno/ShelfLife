@@ -22,8 +22,8 @@ before(async()=>{
  await db.query("insert into public.friendships(requester,addressee,status) values($1,$2,'accepted')",[a,b]);
 });
 after(async()=>db?.close());
-test('all 18 prompts and three choices are valid and content stays bounded',()=>{
- assert.equal(PARLOUR_CARDS.length,18);
+test('all 36 prompts and three choices are valid and content stays bounded',()=>{
+ assert.equal(PARLOUR_CARDS.length,36);
  for(const card of PARLOUR_CARDS) { assert.equal(card.choices.length,3); for(const line of [card.question,...card.choices,card.same,card.different]) { assert.ok(line.length>0&&line.length<160); assert.doesNotMatch(line,/[\u2014<>]/); } }
 });
 test('questions stay sealed, then both players can see and dismiss the result',async()=>{
@@ -52,7 +52,7 @@ test('a committed send can be confirmed after DND and rate limit changes',async(
  await db.query('update public.social_prefs set dnd=false where user_id=$1',[b]);
 });
 test('validation, privacy, DND and unfriend remove the round',async()=>{
- await assert.rejects(as(a,'public.parlour_send($1,$2,$3,$4)',[id(2),b,18,0]),/bad_parlour/);
+ await assert.rejects(as(a,'public.parlour_send($1,$2,$3,$4)',[id(2),b,64,0]),/bad_parlour/);
  await assert.rejects(as(a,'public.parlour_send($1,$2,$3,$4)',[id(2),c,0,0]),/not_friends/);
  await db.query('insert into public.social_prefs(user_id,dnd) values($1,true) on conflict(user_id) do update set dnd=true',[b]);
  await assert.rejects(as(a,'public.parlour_send($1,$2,$3,$4)',[id(2),b,0,0]),/dnd/);
