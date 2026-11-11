@@ -188,7 +188,7 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
   // Built once: the head stays a direct child of the sheet (it sticks on
   // phones) and the status line stays put, so screen readers hear each change.
   sheet.innerHTML = '<div class="sheet-head"><div><span class="eyebrow" data-fr-kicker></span><h2 data-fr-title tabindex="-1">Friends</h2></div><button class="btn btn-ghost btn-sm" type="button" data-fr="close">Close</button></div>' +
-    '<p class="fr-status" role="status" aria-live="polite"></p><div class="fr-guest" hidden><p data-fr-invite hidden>A friend invited you.</p><p>Visit shelves, bring cases to Shelf Court, trade and join covens.</p><div class="fr-signin"></div></div><div class="fr-body"></div>';
+    '<p class="fr-status" role="status" aria-live="polite"></p><div class="fr-guest" hidden><p data-fr-invite hidden>A friend invited you.</p><p>Visit shelves, sue each other in Shelf Court, trade curios and join covens. An email keeps the shelf and your friends safe on any device.</p><div class="fr-signin"></div></div><div class="fr-body"></div>';
   const guest = sheet.querySelector('.fr-guest');
   const signin = initSignIn({ root: sheet.querySelector('.fr-signin'), prefix: 'friends', cloud, sync, actionText,
     anonymousLabel: 'Start without email', onMessage: text => { status.textContent = text; },
