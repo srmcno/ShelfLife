@@ -14,11 +14,22 @@
 //            is one short title and one or two sentences in the game's voice.
 // No DOM and no imports: safe to load anywhere, including Node.
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.2.1';
 export const BUILD = '2026-11-11';
 export const COMMIT = '';
 
 export const CHANGES = [
+  {
+    version: '1.2.1',
+    date: '2026-11-11',
+    items: [
+      { title: 'Why you got those stars', text: 'The end of a Shelf Court episode now says where each star came from: the ruling, the ratings and the jury, and how near you were.' },
+      { title: 'Your record on the bench', text: 'The Court lobby keeps your record: how often you ruled right and your longest run of three-star episodes.' },
+      { title: 'A tidier episode guide', text: 'Narrow the episode guide to what is unaired, under three stars, or still hiding a version.' },
+      { title: 'Arcade records', text: 'Each game remembers your best combo, tallest stack and the rest, and says so when a run beats one.' },
+      { title: 'Advice, and bragging', text: 'A short run ends with one line of advice. Any scoring run can be sent to a friend as a picture.' }
+    ]
+  },
   {
     version: '1.2.0',
     date: '2026-11-11',

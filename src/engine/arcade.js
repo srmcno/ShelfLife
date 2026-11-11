@@ -403,13 +403,43 @@ const STARTERS = { frenzy: frenzyStart, stack: stackStart, seance: seanceStart, 
 export function startGame(id, rnd = Math.random, mod = null) { return STARTERS[id] ? STARTERS[id](rnd, mod) : null; }
 
 // Three lines for the result card, from what actually happened in the run.
+// Three numbers a run is remembered by: [label, value, key]. The key names
+// the lifetime record kept for it (arcade-state.js).
 export function runStats(g) {
   if (!g) return [];
-  if (g.id === 'frenzy') return [['Best combo', g.bestCombo], ['Flawless bosses', g.flawless], ['Close shaves', g.near]];
-  if (g.id === 'stack') return [['Height', g.stack.length - 1], ['Perfect drops', g.perfects], ['Longest streak', g.bestStreak]];
-  if (g.id === 'seance') return [['Rounds', g.rounds], ['In time', g.inTime], ['Longest streak', g.bestStreak]];
-  if (g.id === 'whack') return [['Pushed down', g.hits], ['Best combo', g.bestCombo], ['Gold teeth', g.golds]];
+  if (g.id === 'frenzy') return [['Best combo', g.bestCombo, 'combo'], ['Flawless bosses', g.flawless, 'flawless'], ['Close shaves', g.near, 'near']];
+  if (g.id === 'stack') return [['Height', g.stack.length - 1, 'height'], ['Perfect drops', g.perfects, 'perfects'], ['Longest streak', g.bestStreak, 'streak']];
+  if (g.id === 'seance') return [['Rounds', g.rounds, 'rounds'], ['In time', g.inTime, 'inTime'], ['Longest streak', g.bestStreak, 'streak']];
+  if (g.id === 'whack') return [['Pushed down', g.hits, 'hits'], ['Best combo', g.bestCombo, 'combo'], ['Gold teeth', g.golds, 'golds']];
   return [];
+}
+
+// One line of advice after a run that fell short of the last skull, chosen
+// from what the run did not do. Every line states a rule the engine keeps.
+export function runTip(g) {
+  if (!g) return '';
+  if (g.id === 'frenzy') {
+    if (g.bestCombo < FRENZY.comboStep) return 'Catches in a row build a multiplier. A snack that reaches the floor resets it.';
+    if (g.bosses > 0 && !g.flawless) return 'Come through a boss wave untouched and it pays a bonus and hands a life back.';
+    return 'A still-beating heart doubles every catch for a few seconds. It is worth crossing the shelf for.';
+  }
+  if (g.id === 'stack') {
+    if (!g.perfects) return 'Land a coffin exactly on the one below and nothing is sawn off. A clean drop also pays extra.';
+    if (g.bestStreak < STACK.regrowAfter) return 'Three clean drops in a row win back a sliver of width.';
+    return 'Clean drops in a row pay more each time, up to four extra a coffin. Wait for the line.';
+  }
+  if (g.id === 'seance') {
+    if (!g.inTime) return 'Tap the answer back in the rhythm it was played and the round pays an extra point.';
+    if (g.bestStreak < SEANCE.healAt) return 'Three rounds in time in a row give back a forgiven mistake.';
+    return 'Say the order under your breath as the candles light. The dead do.';
+  }
+  if (g.id === 'whack') {
+    if (g.gloves > 0) return 'A stuffed glove does no harm, but tapping it ends the streak. Leave it be.';
+    if (!g.golds) return 'A gold tooth pays eight and gives a strike back. It does not stay up for long.';
+    if (g.bestCombo < WHACK.comboStep) return 'Tapping bare earth ends the streak. Eight hands in a row and each one pays double.';
+    return 'The landlord pays five. He is worth the reach.';
+  }
+  return '';
 }
 
 // Where a score stands on the skull ladder: the skulls earned, the next
@@ -476,6 +506,16 @@ export function finishRun(state, id, score, petId, now = Date.now(), rnd = Math.
   // Skulls on the card are earned in the ordinary game, where scores compare.
   const medalBefore = Number(a.medals[id]) || 0;
   if (!daily && tier > medalBefore) a.medals[id] = tier;
+  // Lifetime records for the run's three numbers, kept for the ordinary game only.
+  const records = [];
+  if (!daily && score > 0 && Array.isArray(opts.stats)) {
+    const kept = a.records[id] = a.records[id] && typeof a.records[id] === 'object' ? a.records[id] : {};
+    for (const [, value, key] of opts.stats) {
+      if (!key || !Number.isFinite(value) || value <= 0) continue;
+      const before = Number(kept[key]) || 0;
+      if (value > before) { kept[key] = Math.floor(Math.min(value, 1e6)); if (before > 0) records.push(key); }
+    }
+  }
   let souls = 0, trust = 0, counted = false;
   // A run that scored nothing is a warm-up, not a game.
   if (score > 0) {
@@ -517,5 +557,5 @@ export function finishRun(state, id, score, petId, now = Date.now(), rnd = Math.
   const quip = pool[Math.floor(rnd() * pool.length) % pool.length].replace(/\{n\}/g, name);
   const bestLine = newBest && previous ? NEW_BEST_LINES[Math.floor(rnd() * NEW_BEST_LINES.length) % NEW_BEST_LINES.length].replace(/\{n\}/g, name) : '';
   return { id, score, best: daily ? daily.best : a.best[id] || 0, previous, newBest, tier, medal: Number(a.medals[id]) || 0, newMedal: !daily && tier > medalBefore,
-    unlocked, souls, trust, counted, quip, bestLine, daily: dailyResult, day: localDayKey(now) };
+    unlocked, souls, trust, counted, quip, bestLine, records, daily: dailyResult, day: localDayKey(now) };
 }

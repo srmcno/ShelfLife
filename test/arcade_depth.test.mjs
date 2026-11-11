@@ -644,3 +644,26 @@ test('the set of challenges takes 48 days to come round, while the docket turns 
   assert.ok(dayNumber('2026-8-25') > 0);
   assert.ok(seq.length >= 2 || true);
 });
+
+test('lifetime records keep the best of each run number, in the ordinary game only', async () => {
+  const { runTip } = await import('../src/engine/arcade.js');
+  const { normalizeArcade, RECORD_KEYS } = await import('../src/arcade-state.js');
+  const s = household();
+  const first = finishRun(s, 'stack', 12, 'g0', NOW, () => 0, { stats: [['Height', 9, 'height'], ['Perfect drops', 2, 'perfects'], ['Longest streak', 0, 'streak']] });
+  assert.deepEqual(first.records, [], 'a first run sets records without announcing them');
+  assert.deepEqual(s.arcade.records.stack, { height: 9, perfects: 2 });
+  const second = finishRun(s, 'stack', 14, 'g0', NOW + 1000, () => 0, { stats: [['Height', 11, 'height'], ['Perfect drops', 1, 'perfects'], ['Longest streak', 2, 'streak']] });
+  assert.deepEqual(second.records, ['height']);
+  assert.deepEqual(s.arcade.records.stack, { height: 11, perfects: 2, streak: 2 });
+  assert.deepEqual(finishRun(s, 'stack', 0, 'g0', NOW + 2000, () => 0, { stats: [['Height', 99, 'height']] }).records, [], 'a run that scored nothing keeps nothing');
+  const c = challengeToday(s, NOW);
+  finishRun(s, c.game, 20, 'g0', NOW + 3000, () => 0, { daily: true, stats: runStats(startGame(c.game, seededRandom(1))).map(([l, , k]) => [l, 500, k]) });
+  assert.equal(Object.values(s.arcade.records[c.game] || {}).includes(500), false, 'a challenge run does not set them');
+  const clean = normalizeArcade({ records: { stack: { height: 11.7, perfects: -3, bogus: 9, streak: 'x' }, nope: { a: 1 } } });
+  assert.deepEqual(clean.records, { stack: { height: 11 } });
+  for (const id of Object.keys(RECORD_KEYS)) {
+    assert.deepEqual(runStats(startGame(id, seededRandom(1))).map(x => x[2]), RECORD_KEYS[id]);
+    const tip = runTip(startGame(id, seededRandom(1)));
+    assert.ok(tip.length > 20 && !tip.includes('—'), id + ' has a tip');
+  }
+});

@@ -413,3 +413,14 @@ body[data-effects="light"] .ar-field :is(.a-sway,.a-mist,.a-fog,.a-bat,.a-pigeon
 .ar-menu-card{position:relative}
 .ar-menu-card.is-today{border-color:color-mix(in srgb,var(--ar-accent) 70%,transparent)}
 .ar-today{position:absolute;top:10px;right:10px;font:700 11px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;padding:4px 7px;border-radius:99px;background:var(--ar-accent);color:#1b1220}
+
+/* Lifetime records, a run that set one, and the advice after a short run. */
+.ar-stats li.rec{border-color:var(--ar-accent)}
+.ar-stats li.rec em{font:700 10px var(--body);font-style:normal;letter-spacing:.06em;text-transform:uppercase;color:var(--ar-accent)}
+.ar-tip{margin:2px 0 0;padding:8px 12px;border-radius:10px;border:1px dashed var(--hair-lit);font-size:14px;line-height:1.45;color:var(--ink-2,var(--ink));max-width:40ch}
+.ar-tip b{color:var(--ar-accent)}
+.ar-lifetime{display:flex;flex-direction:column;align-items:center;gap:6px;margin:2px 0}
+.ar-lifetime ul{list-style:none;margin:0;padding:0;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.ar-lifetime li{display:flex;flex-direction:column;align-items:center;min-width:82px;padding:5px 10px;border-radius:10px;border:1px solid var(--hair);background:#0003}
+.ar-lifetime b{font:18px/1.1 var(--display);color:var(--ink)}
+.ar-lifetime small{font:600 11px var(--body);color:var(--ink-3)}

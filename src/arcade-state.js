@@ -7,9 +7,11 @@ import { ARCADE_BY_ID, ARCADE_THEMES, THEME_BY_ID, DEFAULT_THEME, LEGACY_TIERS, 
 const DAY_KEY = /^\d{4}-\d{1,2}-\d{1,2}$/;
 const USER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const HISTORY_DAYS = 14;
+// The lifetime records kept per game. The names match engine/arcade.js runStats.
+export const RECORD_KEYS = { frenzy: ['combo', 'flawless', 'near'], stack: ['height', 'perfects', 'streak'], seance: ['rounds', 'inTime', 'streak'], whack: ['hits', 'combo', 'golds'] };
 
 export function blankArcade() {
-  return { best: {}, plays: {}, lastGame: '', daily: null, dailyStreak: 0, dailyLastDay: '', medals: {}, runs: 0, theme: DEFAULT_THEME, history: [] };
+  return { best: {}, plays: {}, lastGame: '', daily: null, dailyStreak: 0, dailyLastDay: '', medals: {}, records: {}, runs: 0, theme: DEFAULT_THEME, history: [] };
 }
 export function arcadeState(state) {
   const a = state.arcade && typeof state.arcade === 'object' && !Array.isArray(state.arcade) ? state.arcade : blankArcade();
@@ -17,6 +19,7 @@ export function arcadeState(state) {
   a.plays = a.plays && typeof a.plays === 'object' ? a.plays : {};
   a.medals = a.medals && typeof a.medals === 'object' ? a.medals : {};
   a.history = Array.isArray(a.history) ? a.history : [];
+  a.records = a.records && typeof a.records === 'object' && !Array.isArray(a.records) ? a.records : {};
   if (!Number.isFinite(a.dailyStreak)) a.dailyStreak = 0;
   if (!Number.isFinite(a.runs)) a.runs = 0;
   if (typeof a.dailyLastDay !== 'string') a.dailyLastDay = '';
@@ -63,6 +66,13 @@ export function normalizeArcade(raw, residents = []) {
     const seeded = out.best[id] ? skulls(LEGACY_TIERS[id], out.best[id]) : 0;
     const have = Number.isFinite(medal) ? Math.max(0, Math.min(3, Math.floor(medal))) : 0;
     if (Math.max(have, seeded) > 0) out.medals[id] = Math.max(have, seeded);
+    // Lifetime records: a few named numbers per game, each a positive whole number.
+    const kept = raw.records?.[id];
+    if (kept && typeof kept === 'object' && !Array.isArray(kept)) {
+      const clean = {};
+      for (const key of RECORD_KEYS[id] || []) { const v = kept[key]; if (Number.isFinite(v) && v > 0) clean[key] = Math.floor(Math.min(v, 1e6)); }
+      if (Object.keys(clean).length) out.records[id] = clean;
+    }
   }
   if (ARCADE_BY_ID[raw.lastGame]) out.lastGame = raw.lastGame;
   const d = raw.daily;

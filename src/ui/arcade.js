@@ -1,9 +1,10 @@
 import { ARCADE_GAMES, ARCADE_BY_ID, ARCADE_THEMES, THEME_BY_ID, COUNTDOWN_WORDS, SKULL_LINES } from '../content/arcade.js';
 import {
-  startGame, finishRun, frenzyDirection, challengeToday, ladder, runStats, dailyHistory, FRENZY, seededRandom
+  startGame, finishRun, frenzyDirection, challengeToday, ladder, runStats, runTip, dailyHistory, FRENZY, seededRandom
 } from '../engine/arcade.js';
 import { arcadeState, themeUnlocked, nextUnlock, medalTotal, lifetimeRuns } from '../arcade-state.js';
 import { DAILY_SOULS } from '../content/daily.js';
+import { shareScoreCard } from './verdict-card.js';
 import { mayhemState } from '../mayhem-state.js';
 import { GAME_SOULS_PER_DAY } from '../engine/mayhem.js';
 import { localDayKey, save } from '../state.js';
@@ -62,6 +63,13 @@ function clearResultTimers() {
 const later = (fn, ms) => { const t = setTimeout(fn, ms); resultTimers.push(t); return t; };
 
 /* ---------------- intro ---------------- */
+// Lifetime records for the three numbers each run reports.
+function recordsMarkup(id) {
+  const kept = arcadeState(S).records?.[id] || {}, labels = runStats(startGame(id, () => 0.5));
+  const rows = labels.filter(([, , key]) => kept[key] > 0);
+  if (!rows.length) return '';
+  return '<div class="ar-lifetime"><span class="ar-daily-kicker">Your records</span><ul>' + rows.map(([label, , key]) => '<li><b>' + kept[key] + '</b><small>' + esc(label) + '</small></li>').join('') + '</ul></div>';
+}
 function showIntro() {
   stop();
   const g = ARCADE_BY_ID[gameId], a = arcadeState(S), p = pet();
@@ -73,6 +81,7 @@ function showIntro() {
     '<p class="ar-hook">' + esc(g.hook) + '</p><p class="ar-howto">' + esc(g.howto) + '</p>' +
     '<div class="ar-records"><span><b>' + (a.best[gameId] || 0) + '</b><small>best</small></span><span><b>' + (a.plays[gameId] || 0) + '</b><small>runs</small></span><span><b>' + purseLeft() + '</b><small>souls left today</small></span></div>' +
     '<div class="ar-skullrow" aria-label="Skull targets">' + g.tiers.map((t, k) => '<span class="' + ((a.medals[gameId] || 0) > k ? 'got' : '') + '"><i>' + arcadeGlyph('skull') + '</i><b>' + t + '</b><small>' + esc(g.ranks[k]) + '</small></span>').join('') + '</div>' +
+    recordsMarkup(gameId) +
     (today ? dailyCard(today) : '') + (today && arcadeSocial?.active() ? BOARD_SLOT : '') +
     '<div class="ar-actions">' + (today
       ? '<button class="btn btn-primary ar-go" type="button" data-ar="challenge">Today’s challenge</button><button class="btn" type="button" data-ar="play">Play as usual</button>'
@@ -412,17 +421,22 @@ function stop() {
 }
 
 /* ---------------- game over ---------------- */
+let scoreCard = null;
 function gameOver() {
   if (!run) return;
   const { id, game, socialUser, duel } = run, wasDaily = run.daily, stats = runStats(game);
   run.settled = true;
-  const result = finishRun(S, id, game.score, run.petId, Date.now(), Math.random, { daily: wasDaily });
+  const result = finishRun(S, id, game.score, run.petId, Date.now(), Math.random, { daily: wasDaily, stats });
   const submission = wasDaily ? queueDailyScore(id, result, socialUser) : null;
   const reduced = run.reduced, level = run.fx.level;
   stop();
   save();
   const g = ARCADE_BY_ID[id];
   const good = result.newBest || result.tier >= 2;
+  // Advice is for the ordinary game, where the rules are the ones it quotes.
+  const tip = !wasDaily && result.tier < 3 && result.score > 0 ? runTip(game) : '';
+  scoreCard = result.score > 0 ? { title: g.title, accent: g.accent, score: result.score, tier: result.tier, rank: result.tier ? g.ranks[result.tier - 1] : '',
+    newBest: result.newBest && !wasDaily, daily: wasDaily, stats: stats.map(([k, v]) => [k, v]), pet: pet(), name: pet()?.name || '' } : null;
   sheet.className = 'sheet sheet-arcade over ar-' + id;
   sheet.style.cssText = '--ar-accent:' + g.accent + ';' + themeVars(theme());
   sheet.innerHTML = head(g.title, wasDaily ? 'Today’s challenge · run over' : 'Run over') +
@@ -430,15 +444,16 @@ function gameOver() {
     '<div class="ar-final"><small>Score</small><span class="ar-final-num"><b>' + result.score + '</b><span class="ar-count-up" aria-hidden="true"></span>' + (result.newBest ? '<span class="ar-newbest">' + (wasDaily ? 'Best today' : 'New best') + '</span>' : '') + '</span>' + (result.newBest ? '' : '<em>' + (wasDaily ? 'Best today ' : 'Best ') + result.best + '</em>') + '</div>' +
     '<div class="ar-medalrow"><div class="ar-tier" aria-label="' + result.tier + ' of 3">' + skulls(result.tier, 3) + '</div>' +
     (result.tier ? '<p class="ar-rank">' + esc(g.ranks[result.tier - 1]) + (result.newMedal ? ' · new medal' : '') + '</p>' : '<p class="ar-rank dim">' + (g.tiers[0] - result.score) + ' short of ' + esc(g.ranks[0]) + '</p>') + '</div>' +
-    '<ul class="ar-stats">' + stats.map(([k, v]) => '<li><b>' + esc(v) + '</b><small>' + esc(k) + '</small></li>').join('') + '</ul>' +
+    '<ul class="ar-stats">' + stats.map(([k, v, key]) => { const rec = result.records.includes(key); return '<li' + (rec ? ' class="rec"' : '') + '><b>' + esc(v) + '</b><small>' + esc(k) + '</small>' + (rec ? '<em>Record</em>' : '') + '</li>'; }).join('') + '</ul>' +
     '<p class="ar-quip">' + esc(result.quip) + '</p>' + (result.bestLine ? '<p class="ar-bestline">' + esc(result.bestLine) + '</p>' : '') +
+    (tip ? '<p class="ar-tip"><b>Next time.</b> ' + esc(tip) + '</p>' : '') +
     '<ul class="mh-rewards">' + (result.souls ? '<li class="souls">' + arcadeGlyph('soul') + '+' + result.souls + ' souls</li>' : '<li>' + (result.score ? 'Today’s arcade purse is empty. Play for glory.' : 'No score, no souls.') + '</li>') +
     (result.daily?.bonus ? '<li class="souls">' + arcadeGlyph('soul') + '+' + result.daily.bonus + ' daily bonus' + (result.daily.streak > 1 ? ' · ' + result.daily.streak + ' days in a row' : '') + '</li>' : '') +
     (result.trust ? '<li class="good">' + esc(pet()?.name || '') + ' trusts you a little more</li>' : '') +
     result.unlocked.map(t => '<li class="good">Arena unlocked: ' + esc(t.title) + '</li>').join('') + '</ul>' +
     (wasDaily && result.daily && arcadeSocial?.active() ? BOARD_SLOT : '') +
     (escapadeView(S).active?.ready ? '<div class="ar-actions"><button class="btn btn-primary" type="button" data-escapade="open">Our story’s ending ↗</button></div>' : '') +
-    '<div class="ar-actions"><button class="btn btn-primary ar-again" type="button" data-ar="' + (wasDaily ? 'challenge' : 'play') + '" disabled>Again</button><button class="btn" type="button" data-ar="menu">Other games</button><button class="btn btn-ghost" type="button" data-ar="close">Back to the shelf</button></div></div>';
+    '<div class="ar-actions"><button class="btn btn-primary ar-again" type="button" data-ar="' + (wasDaily ? 'challenge' : 'play') + '" disabled>Again</button>' + (scoreCard ? '<button class="btn" type="button" data-ar="card">Share the score</button>' : '') + '<button class="btn" type="button" data-ar="menu">Other games</button><button class="btn btn-ghost" type="button" data-ar="close">Back to the shelf</button></div></div>';
   // The sound for the result: a record is a fanfare, a good run a bell for each skull.
   if (result.newBest) playAchievement(); else if (result.tier >= 1) playStar({ step: result.tier, priority: 'high' }); else playFeed();
   buzz(result.newBest ? 'best' : result.tier >= 1 ? 'skull' : 'tick', hapticsOn());
@@ -552,6 +567,7 @@ export function initArcade(state, onRefresh, { social } = {}) {
     else if (action === 'play') { if (e.target.closest('.ar-again')) again(false); else startRun(false); }
     else if (action === 'challenge') { if (e.target.closest('.ar-again')) again(true); else startRun(true); }
     else if (action === 'menu') showMenu();
+    else if (action === 'card') { const b = e.target.closest('[data-ar]'); if (scoreCard && !b.disabled) { b.disabled = true; shareScoreCard(scoreCard).finally(() => { if (b.isConnected) b.disabled = false; }); } }
     else if (action === 'pause') pause(true);
     else if (action === 'resume') pause(false);
     else if (action === 'drop') dropCoffin();
