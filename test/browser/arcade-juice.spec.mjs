@@ -181,6 +181,27 @@ test('the sky above the tower changes with its height', async ({ page }) => {
   expect(await page.locator('#arcadeSheet .ar-tower .ar-coffin').count()).toBeLessThan(20);
 });
 
+test('the tap that finishes a Séance round lights its candle before the next tune begins', async ({ page }) => {
+  await open(page);
+  await start(page, 'seance');
+  await expect(page.locator('#arcadeSheet [data-ar-status]')).toContainText('Your turn. 3 candles.', { timeout: 40000 });
+  const seq = await page.evaluate(() => [...document.getElementById('arcadeSheet').arcadeRun.game.seq]);
+  // Watch the last candle from the moment it is tapped: it must be seen lit for several frames.
+  const last = seq[seq.length - 1];
+  for (const pad of seq.slice(0, -1)) { await page.keyboard.press(String(pad + 1)); await page.waitForTimeout(120); }
+  const frames = await page.evaluate(pad => new Promise(resolve => {
+    const el = document.querySelectorAll('#arcadeSheet .ar-candle')[pad];
+    el.click();
+    let lit = 0, n = 0;
+    const tick = () => { if (el.classList.contains('lit')) lit++; if (++n < 8) requestAnimationFrame(tick); else resolve(lit); };
+    requestAnimationFrame(tick);
+  }), last);
+  expect(frames).toBeGreaterThanOrEqual(6);
+  expect(await page.evaluate(() => document.getElementById('arcadeSheet').arcadeRun.game.rounds)).toBe(1);
+  // And the next tune still plays.
+  await expect(page.locator('#arcadeSheet [data-ar-status]')).toContainText('Your turn. 4 candles.', { timeout: 40000 });
+});
+
 test('The Séance speaks, waits for its turn, and forgives the first wrong candle', async ({ page }) => {
   await open(page);
   await start(page, 'seance');

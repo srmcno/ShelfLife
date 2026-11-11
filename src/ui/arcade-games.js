@@ -238,7 +238,8 @@ export function stackView() {
 
 /* ---------- The Séance ---------- */
 export function seanceView() {
-  let circle, candles, sched = null, lit = -2, showAt = 0, mediumEl, wasShowing = false, pendingSay = '', hinted = false;
+  let circle, candles, sched = null, lit = -2, showAt = 0, mediumEl, wasShowing = false, pendingSay = '', hinted = false, glowUntil = 0;
+  const GLOW_MS = 220;
   const lightCandle = (pad, on) => { candles.forEach((el, i) => el.classList.toggle('lit', on && i === pad)); };
   return {
     controls: () => '',
@@ -247,11 +248,14 @@ export function seanceView() {
       A.world.innerHTML = '<div class="ar-circle">' + [0, 1, 2, 3].map(i => '<button class="ar-candle c' + i + '" type="button" data-pad="' + i + '" aria-label="' + SEANCE_NAMES[i] + ', key ' + (i + 1) + '"><span class="ar-flame"></span><span class="ar-wax"></span><small>' + (i + 1) + '</small></button>').join('') + '<div class="ar-medium"></div></div>';
       circle = A.world.querySelector('.ar-circle'); candles = [...A.world.querySelectorAll('.ar-candle')]; mediumEl = A.world.querySelector('.ar-medium');
       A.mkPet(mediumEl);
-      A.run.showAt = 0; sched = null; lit = -2; wasShowing = false;
+      A.run.showAt = 0; sched = null; lit = -2; wasShowing = false; glowUntil = 0;
     },
     frame(A, dt) {
       const g = A.g;
       if (g.phase !== 'show') { wasShowing = false; return; }
+      // The tap that ended a round keeps its light: the next show waits for the glow to finish
+      // before it clears the candles.
+      if (!wasShowing && performance.now() < glowUntil) return;
       if (!wasShowing) {
         wasShowing = true; showAt = 0; sched = seanceSchedule(g); lit = -2;
         A.field.classList.add('listening');
@@ -286,6 +290,7 @@ export function seanceView() {
       if (r.ignored) return null;
       const el = candles[pad];
       el.classList.add('lit'); setTimeout(() => el.classList.remove('lit'), 200);
+      glowUntil = performance.now() + GLOW_MS;
       const xs = [0.5, 0.83, 0.5, 0.17], ys = [0.16, 0.49, 0.82, 0.49];
       if (r.ok) {
         A.sfx('candle', pad, { hold: 0.28 }); A.haptic('tap');
