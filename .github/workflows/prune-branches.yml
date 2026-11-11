@@ -1,0 +1,25 @@
+name: Prune merged branches
+# Deletes branches whose every commit is already in main, so finished work
+# does not pile up. Runs after each release and on demand.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Delete branches fully merged into main
+        run: |
+          git fetch --prune origin
+          for ref in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin --merged origin/main); do
+            branch="${ref#origin/}"
+            case "$branch" in main|HEAD|origin) continue ;; esac
+            echo "Deleting $branch"
+            git push origin --delete "$branch" || echo "Could not delete $branch"
+          done
