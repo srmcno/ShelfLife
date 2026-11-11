@@ -3,8 +3,10 @@ import { householdFixture } from '../household-fixtures.mjs';
 
 const test = base.extend({ runtimeErrors: [async ({ page }, use) => {
   const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  // WebKit reports a request cancelled by a reload as '... due to access control checks.'; the page already treats it as offline.
+  const noise = text => /due to access control checks\.?$/.test(text);
+  page.on('pageerror', error => { if (!noise(error.message)) errors.push(error.message); });
+  page.on('console', message => { if (message.type() === 'error' && !noise(message.text())) errors.push(message.text()); });
   await use(errors);
   expect(errors, 'browser errors').toEqual([]);
 }, { auto: true }] });

@@ -14,11 +14,25 @@
 //            is one short title and one or two sentences in the game's voice.
 // No DOM and no imports: safe to load anywhere, including Node.
 
-export const VERSION = '1.1.0';
-export const BUILD = '2026-10-11';
+export const VERSION = '1.2.0';
+export const BUILD = '2026-11-11';
 export const COMMIT = '';
 
 export const CHANGES = [
+  {
+    version: '1.2.0',
+    date: '2026-11-11',
+    items: [
+      { title: 'Friends has its own door', text: 'Friends now sits in the bar at the bottom. Send one invitation link and a newcomer arrives already asking to be your friend.' },
+      { title: 'Signing in, without the paperwork', text: 'Type your email, then the code it sends. That keeps the shelf safe and opens it on any device. Friends also works without email, at your own risk.' },
+      { title: 'The Neighbourhood Gazette', text: 'A small newspaper about what your friends’ households have been up to. React with a sticker. “Print my news” switches your own headlines off.' },
+      { title: 'The case of the week', text: 'Every household hears the same Shelf Court case each week. Rule on it and the lobby and the Gazette show how the whole neighbourhood ruled.' },
+      { title: 'Share the verdict', text: 'After an episode, Share the verdict makes a picture of the case, both parties and your ruling. Send it to the losing side.' },
+      { title: 'Find players', text: 'List yourself to be found by name, or share a broad area to meet players nearby. Both are off until you choose, and exact locations are never sent.' },
+      { title: 'Parlour predictions', text: 'Answer a question, then seal it and send it to a friend. Neither answer is shown until both are in.' },
+      { title: 'Install, and word from friends', text: 'More → Install puts the game on your home screen. Then turn on notifications in Friends to hear about papers, trades and visitors. On an iPhone, install first.' }
+    ]
+  },
   {
     version: '1.1.0',
     date: '2026-10-11',

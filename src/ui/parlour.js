@@ -2,6 +2,13 @@
 import { registerFriendAction, registerPostboxSource, registerSocialView } from './social-registry.js';
 import { PARLOUR_CARDS } from '../content/parlour.js';
 import { CloudError } from '../cloud/client.js';
+import { refreshWeekly, weeklyServerReady } from './weekly-case.js';
+
+// A server that has not yet taken this release's schema accepts only the first
+// eighteen questions. Until it shows it has (the weekly count answers), a new
+// question is drawn from those; every card can still be read and answered.
+const CLASSIC = 18;
+const deck = () => weeklyServerReady() ? PARLOUR_CARDS.length : Math.min(CLASSIC, PARLOUR_CARDS.length);
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -63,14 +70,15 @@ registerFriendAction({
   available: (_friend,ctx) => ctx.online() ? true : 'Connect to invite a friend.',
   run(friend,ctx) {
     const saved = pending(ctx.me.userId,friend.userId);
-    const initial=(Math.floor(Date.now()/86400000)+[...friend.userId].reduce((n,c)=>n+c.charCodeAt(0),0))%PARLOUR_CARDS.length;
+    if (!weeklyServerReady()) void refreshWeekly();
+    const initial=(Math.floor(Date.now()/86400000)+[...friend.userId].reduce((n,c)=>n+c.charCodeAt(0),0))%deck();
     draft = { friend, prompt:saved?.prompt ?? initial, choice:saved?.choice ?? null, locked:!!saved };
     sendView(ctx,friend,draft);
   }
 });
 registerSocialView('parlour-send', { async onClick(action,el,ctx) {
   if (!draft || !ctx.friend(draft.friend.userId)) return;
-  if (action === 'parlour-next' && !draft.locked) { draft.prompt=(draft.prompt+1)%PARLOUR_CARDS.length; draft.choice=null; sendView(ctx,draft.friend,draft); return; }
+  if (action === 'parlour-next' && !draft.locked) { draft.prompt=(draft.prompt+1)%deck(); draft.choice=null; sendView(ctx,draft.friend,draft); return; }
   if (action === 'parlour-pick' && !draft.locked) { const n=Number(el.dataset.choice); if (choice(n)) { draft.choice=n; sendView(ctx,draft.friend,draft); } return; }
   if (action !== 'parlour-send' || !choice(draft.choice)) return;
   const user=ctx.me.userId, friend=draft.friend;

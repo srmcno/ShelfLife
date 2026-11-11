@@ -22,12 +22,18 @@ test('push presents a bounded notification and survives missing or malformed pay
   await sw.dispatch('push');
   assert.equal(sw.shown[2].options.body, 'Something arrived in your postbox.');
 });
-test('notification click closes it, navigates and focuses an existing app window', async () => {
-  const steps = [], target = 'https://example.test/game/?open=postbox';
-  const sw = worker([{ url: 'https://other.test/', navigate: () => { throw Error('wrong window'); } }, { url: 'https://example.test/game/index.html', async navigate(url) { steps.push(['navigate',url]); }, async focus() { steps.push(['focus']); } }]);
+test('notification click closes it, asks the open game for the postbox and focuses it without reloading', async () => {
+  const steps = [];
+  const game = { url: 'https://example.test/game/index.html', navigate() { steps.push(['navigate']); }, postMessage(data) { steps.push(['message', data.type]); }, async focus() { steps.push(['focus']); } };
+  const sw = worker([{ url: 'https://other.test/', postMessage() { throw Error('wrong window'); } }, { url: 'https://example.test/game/privacy.html', postMessage() { throw Error('not the game'); } }, game]);
   let closed = false;
   await sw.dispatch('notificationclick', { notification: { close() { closed = true; } } });
-  assert.equal(closed, true); assert.deepEqual(steps, [['navigate', target], ['focus']]); assert.deepEqual(sw.opened, []);
+  assert.equal(closed, true); assert.deepEqual(steps, [['message', 'shelflife-open-postbox'], ['focus']]); assert.deepEqual(sw.opened, []);
+});
+test('notification click opens a new window when the open game cannot be focused', async () => {
+  const sw = worker([{ url: 'https://example.test/game/', postMessage() {}, async focus() { throw new TypeError('not focusable'); } }]);
+  await sw.dispatch('notificationclick', { notification: { close() {} } });
+  assert.deepEqual(sw.opened, ['https://example.test/game/?open=postbox']);
 });
 test('notification click opens the scoped postbox when no app window exists', async () => {
   const sw = worker(); let closed = false;

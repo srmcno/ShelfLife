@@ -13,6 +13,8 @@ import { courtroomState } from '../court-state.js';
 import { save } from '../state.js';
 import { postedStars } from '../tester-state.js';
 import { renderPetSprite } from '../art/sprite.js';
+import { shareVerdictCard } from './verdict-card.js';
+import { initWeeklyCase, weeklyLobbyMarkup, weeklyRuled, weeklyCase } from './weekly-case.js';
 import { castSvg, COURT_PROPS } from '../art/court-cast.js';
 import { dressClasses, benchDressing, stageDressing, GALLERY_REGULARS, LAUREL, ROLE_ICONS } from '../art/court-dress.js';
 import { HALL_SET, HALL_PROPS } from '../art/court-hallway.js';
@@ -147,7 +149,7 @@ function showLobby() {
     '<div class="sc-titlecard"><div class="sc-logo"><small>Live from the shelf</small><b>SHELF COURT</b><em>Real residents. Real disputes. Real dead.</em></div><div class="sc-titlecard-judge ' + dressClasses(careerView(c).dress) + '">' + castSvg('judge') + '</div></div>' +
     (forUs ? '<p class="sc-adventure"><b>' + esc(adventure.episode.title) + '</b> · An episode starring our resident moves our adventure on.</p>' : '') +
     (backpay ? '<p class="sc-backpay">' + glyph('soul') + esc(backpay) + '</p>' : '') +
-    docketLine(docket, k) +
+    docketLine(docket, k) + weeklyLobbyMarkup(k.id) +
     (courtSocial?.active() ? '<div data-sc-summons>' + summonsMarkup() + '</div>' : '') +
     (bench?.active() ? '<div data-jc-lobby>' + bench.lobbyMarkup() + '</div>' : '') +
     careerPanel() +
@@ -843,10 +845,16 @@ function versionLine(res) {
   return '<li class="sc-ver-line' + (v.isNew && v.key !== BASE ? ' twist' : '') + '">' + (v.key === BASE ? 'The original telling.' : 'The twist: ' + esc(v.title) + '.') +
     ' Versions seen: ' + v.seen + ' of ' + v.of + (v.isNew ? ' (a new one)' : '') + '</li>';
 }
+let verdictCard = null;
 function finish() {
   const res = courtFinish(S, ep, Date.now()), heard = ep.guest ? hearing : null, judged = ep.joint ? joint : null;
   save();
   const k = episodeCase(ep);
+  const partyPet = who => who.kind === 'guest' ? (hearing?.pet ? guestPet(hearing.pet) : null) : who.kind === 'visitor' ? (who.resident ? guestPet(who.resident) : null) : who.kind === 'pet' ? S.pets.find(p => p.id === who.id) || null : null;
+  verdictCard = { title: k.title, stars: res.stars, ratings: res.ratings,
+    ruling: ep.ruling === 'both' ? 'Both declared idiots' : 'Judgment for ' + (ep.ruling === 'plaintiff' ? ep.p.name : ep.d.name),
+    line: res.correct ? 'Justice, allegedly, was served.' : 'The judge got it wrong, live on air.',
+    plaintiff: { name: ep.p.name, pet: partyPet(ep.p) }, defendant: { name: ep.d.name, pet: partyPet(ep.d) } };
   const truth = res.truth === 'plaintiff' ? ep.p.name + ' was right.' : res.truth === 'defendant' ? ep.d.name + ' was right.' : 'They were both idiots.';
   const controls = $('[data-sc-controls]');
   controls.hidden = false;
@@ -865,9 +873,10 @@ function finish() {
     promotionMarkup(res.promotion) + careerLine(res) +
     (escapadeView(S).active?.ready ? '<div class="sc-actions"><button class="btn btn-primary" type="button" data-escapade="open">Our story’s ending ↗</button></div>' : '') +
     (judged ? '<div class="sc-actions" data-jc-wrap></div>' : '') +
-    '<div class="sc-actions">' + (judged ? '' : '<button class="btn btn-primary sc-next" type="button" data-sc="next" disabled>Next episode</button>') + '<button class="btn" type="button" data-sc="lobby">Episode guide</button><button class="btn btn-ghost" type="button" data-sc="close">Back to the shelf</button></div></div>';
+    '<div class="sc-actions">' + (judged ? '' : '<button class="btn btn-primary sc-next" type="button" data-sc="next" disabled>Next episode</button>') + '<button class="btn" type="button" data-sc="card">Share the verdict</button><button class="btn" type="button" data-sc="lobby">Episode guide</button><button class="btn btn-ghost" type="button" data-sc="close">Back to the shelf</button></div></div>';
   (res.promotion || res.stars >= 3 ? playAchievement : res.correct ? playStar : playError)();
   if (res.promotion) { bubble('PROMOTED!', 'sc-bang'); applause(2600); }
+  void weeklyRuled(ep);
   if (heard) deliverVerdict(heard, res, ep.ruling);
   if (judged) bench.sealed(judged, ep, res);
   const next = controls.querySelector('.sc-next');
@@ -937,6 +946,8 @@ function courtStage() {
 
 export function initCourt(state, onRefresh, { social, cloud } = {}) {
   S = state; refresh = onRefresh || refresh; courtSocial = social || null;
+  // A fresh count repaints the lobby, and only the lobby.
+  initWeeklyCase({ cloud, changed: () => { if (veil.classList.contains('open') && sheet.classList.contains('sc-lobby') && !ep) showLobby(); window.dispatchEvent(new CustomEvent('shelflife:weekly')); } });
   scopePost();
   const accountChanged = () => {
     if ((courtSocial?.userId() || null) === postUser) return;
@@ -977,6 +988,8 @@ export function initCourt(state, onRefresh, { social, cloud } = {}) {
     else if (act === 'another') { pickCase(nextCaseId(S, Math.random, lobby.caseId)); showLobby(); }
     else if (act === 'swap') { [lobby.plaintiffId, lobby.defendantId] = [lobby.defendantId, lobby.plaintiffId]; showLobby(); }
     else if (act === 'lobby') { pickCase(nextCaseId(S, Math.random, ep?.caseId)); defaultLobby('', true); showLobby(); }
+    else if (act === 'card') { if (verdictCard && !action.disabled) { action.disabled = true; shareVerdictCard(verdictCard).finally(() => { if (action.isConnected) action.disabled = false; }); } }
+    else if (act === 'weekly') { const w = weeklyCase(); if (w) { pickCase(w.caseId); showLobby(); } }
     else if (act === 'lobby-back') showLobby();
     else if (act === 'notebook') showNotebook();
     else if (act === 'next') { pickCase(nextCaseId(S, Math.random, ep?.caseId)); defaultLobby('', true); roll(); }

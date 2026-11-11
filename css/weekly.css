@@ -1,0 +1,14 @@
+/* The Case of the Week: its lobby card, the count, and the notice in the Gazette. */
+.wk-case{margin:12px 0;padding:14px 16px;border:1px solid color-mix(in srgb,var(--candle,#F6C768) 55%,transparent);border-radius:var(--r-lg,16px);background:linear-gradient(180deg,#2a1b2e,#1a1120)}
+.wk-case h3{margin:4px 0 6px;font:400 22px/1.15 var(--display,Georgia,serif);color:#FFE7B0}
+.wk-case p{margin:6px 0;color:var(--ink-2,#d9cdbd);font-size:14px;line-height:1.45}
+.wk-count{font-weight:700}
+.wk-bars{list-style:none;margin:10px 0 4px;padding:0;display:grid;gap:6px}
+.wk-bars li{display:grid;grid-template-columns:minmax(74px,auto) 1fr 44px;align-items:center;gap:8px;font-size:13px}
+.wk-bars i{display:block;height:10px;border-radius:999px;background:#ffffff1f;overflow:hidden}
+.wk-bars b{display:block;height:100%;border-radius:999px;background:var(--candle,#F6C768)}
+.wk-bars em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums}
+.wk-notice{border:2px solid #30281f;padding:10px 12px;margin:12px 0}
+.wk-notice h4{font-family:Georgia,serif;font-size:1.15rem;margin:2px 0 4px}
+.wk-notice p{font-size:.82rem;margin:4px 0}
+.wk-notice .wk-bars i{background:#30281f26}.wk-notice .wk-bars b{background:#30281f}

@@ -49,6 +49,14 @@ async function load(ctx, { settings = false, focus } = {}) {
   }
 }
 function open(ctx) {
+  // A public directory is for email accounts: a free guest account could be
+  // made by the thousand to map or pester the people listed in it.
+  if (ctx.cloud.isAnonymous()) {
+    ctx.show({ id: 'discovery', kicker: 'Friends', title: 'Find players', back: 'main',
+      html: '<div class="di-directory"><section class="di-privacy"><h3>An email first</h3><p>Find players lists real people, so it needs an account with an email. Friend codes and invitation links work without one.</p>' +
+        '<button type="button" class="btn btn-primary" data-sx="discovery-email">Add my email</button></section></div>' });
+    return;
+  }
   const user = ctx.me.userId;
   if (owner !== user) { owner = user; state = fresh(); }
   state.notice = ''; state.offset = 0;
@@ -66,6 +74,7 @@ registerSocialView('discovery', {
     await load(ctx, { focus: '#diQuery' });
   },
   async onClick(action, el, ctx) {
+    if (action === 'discovery-email') { ctx.close(); document.getElementById('cloudBtn')?.click(); return; }
     const user = owner, token = serial;
     if (action === 'discovery-next' || action === 'discovery-prev') {
       state.offset = Math.max(0, Math.min(1000, state.offset + (action === 'discovery-next' ? PAGE : -PAGE))); state.notice = '';

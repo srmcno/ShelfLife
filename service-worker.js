@@ -1,5 +1,5 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v68';
+const CACHE_VERSION = 'shelflife-v70';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./move.html",
@@ -13,10 +13,15 @@ const SHELL = [
   "./src/ui/discovery.js",
   "./src/ui/parlour.js",
   "./src/content/parlour.js",
+  "./src/content/gazette.js",
+  "./src/ui/verdict-card.js",
+  "./src/ui/weekly-case.js",
+  "./src/engine/weekly.js",
   "./src/cloud/push.js",
   "./src/ui/push.js",
   "./css/signin.css",
   "./css/gazette.css",
+  "./css/weekly.css",
   "./css/discovery.css",
   "./css/parlour.css",
   "./css/push.css",
@@ -363,11 +368,13 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil((async () => {
     const target = new URL('./?open=postbox', self.registration.scope).href;
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const existing = windows.find(client => client.url.startsWith(self.registration.scope));
-    if (existing) {
-      await existing.navigate(target);
+    // Only the game itself, never the privacy, account or moving pages.
+    const existing = windows.find(client => { const path = new URL(client.url).pathname; return client.url.startsWith(self.registration.scope) && (path.endsWith('/') || path.endsWith('/index.html')); });
+    try {
+      if (!existing) throw new Error('no open game');
+      existing.postMessage({ type: 'shelflife-open-postbox' });
       await existing.focus();
-    } else {
+    } catch {
       await self.clients.openWindow(target);
     }
   })());

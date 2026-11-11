@@ -60,9 +60,9 @@ const tryHearing = () => attempt(call(A, 'public.open_hearing($1, $2, $3, $4, $5
 const QUIET = /\bdnd\b|do_not_disturb/;
 
 test('every migration loads twice in order on top of the others', () => {
-  assert.equal(MIGRATIONS.length, 14, MIGRATIONS.join(', '));
+  assert.equal(MIGRATIONS.length, 16, MIGRATIONS.join(', '));
   assert.equal(MIGRATIONS[0], '0001_accounts_and_saves.sql');
-  assert.deepEqual(MIGRATIONS.slice(-5), ['0010_kin.sql', '0011_gazette.sql', '0012_push.sql', '0013_discovery.sql', '0014_parlour.sql']);
+  assert.deepEqual(MIGRATIONS.slice(-5), ['0012_push.sql', '0013_discovery.sql', '0014_parlour.sql', '0015_hardening.sql', '0016_weekly_case.sql']);
 });
 
 test('Do not disturb from the postbox stops trades, baskets and new hearings, and lifts when switched off', async () => {

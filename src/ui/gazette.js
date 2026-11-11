@@ -6,17 +6,16 @@ import { state } from '../state.js';
 import { createGazetteJournal } from '../gazette-state.js';
 import { guestPortrait, esc } from './friends.js';
 import { timeAgo } from './cloud.js';
+import { GAZETTE_HEADLINES, GAZETTE_STICKERS, gazetteDetail } from '../content/gazette.js';
+import { CURIO_BY_ID } from '../engine/mayhem.js';
+import { COURT_BY_ID } from '../engine/court.js';
+import { SET_BY_ID } from '../content/collections.js';
+import { ARCADE_BY_ID } from '../content/arcade.js';
+import { weeklyGazetteMarkup } from './weekly-case.js';
 
 const STICKERS = [['candle','Candle'],['skull','Skull'],['lily','Sympathy lily'],['popcorn','Popcorn'],['rude','Rude'],['moth','Moth']];
-const HEADLINES = {
-  adopted: ['New resident moves in', 'Shelf gains a new tenant', 'Local household expands', 'An arrival has been reported'],
-  coffin: ['Notable object found in coffin', 'Cabinet receives unusual item', 'Coffin yields evidence', 'A rare find changes hands'],
-  verdict: ['Shelf Court reaches a verdict', 'Judgement delivered locally', 'Court adjourns with opinions', 'The bench has spoken'],
-  arcade_best: ['Local sets a new arcade best', 'Arcade record under investigation', 'New score entered in the books', 'Player surprises arcade staff'],
-  collection: ['Collection completed', 'Collector closes another case', 'Set finally accounted for', 'Cabinet reaches a milestone'],
-  almanac: ['Almanac reaches a new tier', 'More progress recorded', 'Another tier enters the register', 'Almanac staff approve progress'],
-  bond: ['Resident grows closer to household', 'A bond reaches new heights', 'Household trust rises', 'Resident admits to fondness']
-};
+const HEADLINES = GAZETTE_HEADLINES;
+if (typeof window !== 'undefined') window.addEventListener('shelflife:weekly', () => repaint());
 const journal = typeof window !== 'undefined' ? createGazetteJournal({ cloud, getState: () => state }) : null;
 let owner = null, epoch = 0, events = null, sharing = true, loading = false, problem = '', lastCtx = null, unread = 0, hasMore = false;
 let refreshRequested = false, stale = false;
@@ -45,23 +44,23 @@ function refreshFeed() {
   void load(lastCtx);
 }
 const title = event => { const list = HEADLINES[event.kind] || ['News from the neighbourhood']; const seed = [...String(event.id)].reduce((n, c) => n + c.charCodeAt(0), 0); return list[seed % list.length]; };
-function description(e) {
-  const d = e.data || {};
-  if (e.kind === 'arcade_best') return 'New ' + String(d.game || '') + ' best: ' + String(d.score || 0) + '.';
-  if (e.kind === 'bond') return 'Bond milestone: ' + String(d.level || 0) + '.';
-  if (e.kind === 'almanac') return 'Tier ' + String(d.tier || 0) + ' reached.';
-  return '';
+// Names come from this edition's own tables, or from the friend's published shelf: never from the event.
+function description(e, resident) {
+  const d = e.data || {}, item = String(d.item || '');
+  const who = e.kind === 'coffin' ? CURIO_BY_ID[item]?.name : e.kind === 'verdict' ? COURT_BY_ID[item]?.title : e.kind === 'collection' ? SET_BY_ID[item]?.name || SET_BY_ID[item]?.title
+    : e.kind === 'arcade_best' ? ARCADE_BY_ID[String(d.game || '')]?.name || ARCADE_BY_ID[String(d.game || '')]?.title : ['adopted', 'bond'].includes(e.kind) ? resident?.name : '';
+  return gazetteDetail(e.kind, { who: typeof who === 'string' ? who.slice(0, 60) : '', level: Number(d.level) || 0, tier: Number(d.tier) || 0, score: Number(d.score) || 0 });
 }
 function article(e) {
   const name = String(e.name || 'A neighbour').slice(0, 24), id = String(e.id || '');
   const counts = e.counts && typeof e.counts === 'object' ? e.counts : {};
-  const shelf = portraitCache.get(e.actor), resident = shelf?.residents?.find(r => r.id === e.data?.resident) || shelf?.residents?.[0];
+  const shelf = portraitCache.get(e.actor), named = shelf?.residents?.find(r => r.id === e.data?.resident), resident = named || shelf?.residents?.[0];
   const portrait = resident ? guestPortrait(resident) : '';
   return '<article class="gz-story"><div class="gz-story-head">' + (portrait ? '<span class="gz-portrait" aria-hidden="true">' + portrait + '</span>' : '') +
     '<div><h4>' + esc(title(e)) + '</h4><p>' + esc(name) + ' · ' + esc(timeAgo(Date.parse(e.created_at) || 0)) + '</p></div></div>' +
-    (description(e) ? '<p>' + esc(description(e)) + '</p>' : '') + '<div class="gz-stickers" aria-label="Reactions">' + STICKERS.map(([key,label]) => {
+    (description(e, named) ? '<p>' + esc(description(e, named)) + '</p>' : '') + '<div class="gz-stickers" aria-label="Reactions">' + STICKERS.map(([key,label]) => {
       const n = Number.isFinite(Number(counts[key])) ? Math.max(0, Math.floor(Number(counts[key]))) : 0;
-      return '<button type="button" data-sx="gazette-react" data-sx-id="' + esc(id) + '" data-sticker="' + key + '" aria-pressed="' + (e.my_reaction === key) + '" aria-label="' + esc(label + (n ? ', ' + n : '')) + '">' + esc(label) + (n ? ' ' + n : '') + '</button>';
+      return '<button type="button" data-sx="gazette-react" data-sx-id="' + esc(id) + '" data-sticker="' + key + '" aria-pressed="' + (e.my_reaction === key) + '" aria-label="' + esc(label + (n ? ', ' + n : '')) + '" title="' + esc(label) + '">' + (GAZETTE_STICKERS[key] || esc(label)) + (n ? '<b>' + n + '</b>' : '') + '</button>';
     }).join('') + '</div></article>';
 }
 function home(ctx) {
@@ -70,6 +69,7 @@ function home(ctx) {
   if ((events === null || stale) && !loading && !problem && !document.hidden && document.querySelector('#friendsVeil.open')) void load(ctx);
   return '<div class="gz-paper"><p class="gz-kicker">The neighbourhood</p><h3>The Gazette</h3><p class="gz-subtitle">All the news that fits.</p>' +
     '<div class="gz-setting"><span>Print my news</span><button class="fr-switch" type="button" role="switch" data-sx="gazette-sharing" aria-label="Print my news" aria-checked="' + sharing + '"><i></i></button></div>' +
+    weeklyGazetteMarkup() +
     (problem ? '<p role="status">The paper could not be delivered. <button type="button" class="btn btn-sm" data-sx="gazette-retry">Try again</button></p>' : '') +
     (loading && !events ? '<p>Checking the presses.</p>' : events?.length ? events.map(article).join('') : '<p class="gz-empty">No news. The neighbours insist this is normal.</p>') +
     (hasMore ? '<button class="btn btn-sm" type="button" data-sx="gazette-older">Older news</button>' : '') + '</div>';
