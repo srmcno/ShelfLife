@@ -10,16 +10,20 @@ function memory() {
   return { getItem: k => items.get(k) ?? null, setItem: (k, v) => items.set(k, String(v)), removeItem: k => items.delete(k) };
 }
 
-export async function socialPlayer(fake, name, shelf = { pets: [] }, { social: optIn = true, now = Date.now } = {}) {
+export async function socialPlayer(fake, name, shelf = { pets: [] }, { social: optIn = true, now = Date.now, email = false } = {}) {
   const cloud = createCloud({ config: fake.config, fetch: fake.fetch, storage: memory(), now });
   await cloud.signInAnonymously();
+  // An email account, as the server sees it and as the page will read its session.
+  const address = email ? 'player-' + cloud.userId().slice(-6) + '@example.com' : '';
+  if (email) Object.assign(fake.users.get(cloud.userId()), { email: address, is_anonymous: false });
+  const sessionOf = () => email ? { ...cloud.session(), user: { ...cloud.session().user, email: address, is_anonymous: false } } : cloud.session();
   const social = createSocial({ cloud, getState: () => shelf, now });
   // A player the page will become has not opened Friends anywhere yet.
-  if (!optIn) return { cloud, social, shelf, name, code: '', id: cloud.userId(), session: cloud.session() };
+  if (!optIn) return { cloud, social, shelf, name, code: '', id: cloud.userId(), session: sessionOf() };
   social.optIn();
   if (name) await social.setName(name);
   const { code } = await social.profile();
-  return { cloud, social, shelf, name, code, id: cloud.userId(), session: cloud.session() };
+  return { cloud, social, shelf, name, code, id: cloud.userId(), session: sessionOf() };
 }
 
 // What the page keeps under shelflife.cloud once signed in.

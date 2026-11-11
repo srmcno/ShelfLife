@@ -46,11 +46,11 @@ try {
     let fake, session;
     if (mode !== 'local') {
       fake = createFakeSupabase();
-      const ada = await socialPlayer(fake, 'Ada');
+      const ada = await socialPlayer(fake, 'Ada', undefined, { email: true });
       const portrait = seed => ({ id: seed, name: seed, traits: ['damp'], needs: { food: 80, fuss: 80, clean: 80 }, bond: 4, art: { body: '', stamps: [], creature: generateCreature({ seed }) } });
       const bea = await socialPlayer(fake, 'Bea', { pets: [portrait('Gladys')] });
       const cat = await socialPlayer(fake, 'Cat', { pets: [portrait('Snag')] });
-      const dorothy = await socialPlayer(fake, 'Dorothy');
+      const dorothy = await socialPlayer(fake, 'Dorothy', undefined, { email: true });
       await dorothy.cloud.rpc('discovery_set', { p_on: true });
       await ada.cloud.rpc('discovery_set', { p_on: true });
       await Promise.all([ada, dorothy].map(player => player.cloud.rpc('discovery_location_set', { p_lat_band: 126, p_lon_band: 67 })));

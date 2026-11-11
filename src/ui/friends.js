@@ -682,12 +682,25 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
       if (!arrival.requestDone) {
         let requestStatus = 'pending';
         try { requestStatus = (await social.addFriend(arrival.code)).status; }
-        catch (error) { if (!['already_friends', 'already_asked'].includes(error.code)) throw error; if (error.code === 'already_friends') requestStatus = 'accepted'; }
+        catch (error) {
+          // A link to yourself, a deleted or blocking player, or a mangled code will never work: stop asking.
+          if (['self', 'not_found', 'blocked', 'bad_code'].includes(error.code)) {
+            if (current()) {
+              cloud.setMeta({ inviteArrival: undefined });
+              if (covenState(state).invite.code === arrival.code) { covenState(state).invite.code = ''; save(); }
+              message = error.code === 'self' ? 'That invitation was your own. Send it to someone else.' : 'That invitation no longer works. Ask your friend for a new one.';
+              render();
+            }
+            return;
+          }
+          if (!['already_friends', 'already_asked'].includes(error.code)) throw error;
+          if (error.code === 'already_friends') requestStatus = 'accepted';
+        }
         if (!current()) return; arrival = { ...arrival, requestDone: true, requestStatus }; cloud.setMeta({ inviteArrival: arrival });
       }
       if (!arrival.referralDone) {
         try { await coven.registerReferral(arrival.code); }
-        catch (error) { if (!['already_referred', 'not_new', 'too_many'].includes(error.code)) throw error; }
+        catch (error) { if (!['already_referred', 'not_new', 'too_many', 'self', 'not_found', 'blocked', 'bad_code', 'cap_reached'].includes(error.code)) throw error; }
         if (!current()) return; arrival = { ...arrival, referralDone: true }; cloud.setMeta({ inviteArrival: arrival });
       }
       if (current()) {
@@ -707,7 +720,7 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
   function close() { veil.classList.remove('open'); view = 'main'; visiting = serving = profile = custom = null; confirm = null; drafts = {}; mailSafety = ''; syncTray(); }
 
   async function openPostbox() {
-    if (!social.signedIn()) { cloud.setMeta({ openPostbox: true }); await open(); return; }
+    if (!social.signedIn()) { cloud.setMeta({ openPostbox: undefined }); await open(); return; }
     cloud.setMeta({ openPostbox: undefined });
     if (!isOpen()) { await open(); if (!isOpen()) return; }
     view = 'postbox'; custom = null; confirm = null; mailSafety = ''; mailShown = MAIL_PAGE; message = '';
@@ -769,6 +782,8 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
   button.addEventListener('click', open);
   veil.addEventListener('click', e => { if (e.target === veil) close(); });
   window.addEventListener('shelflife:postbox', () => openPostbox());
+  // A tapped notification asks the open game to show the post (service-worker.js).
+  navigator.serviceWorker?.addEventListener?.('message', event => { if (event.data?.type === 'shelflife-open-postbox') openPostbox(); });
   window.addEventListener('shelflife:gazette-unread', event => { gazetteUnread = Math.max(0, Math.floor(Number(event.detail) || 0)); syncTray(); });
   sheet.addEventListener('submit', e => {
     e.preventDefault();
@@ -923,7 +938,7 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
       if (isNative()) await shareText({ ...note, dialogTitle: 'Send an invitation' });
       else if (typeof navigator.share === 'function') await navigator.share(note);
       else { await navigator.clipboard.writeText(url); message = 'Invitation copied.'; render('[data-fr="invite-friend"]'); }
-    } catch { message = 'Could not share the invitation. Try copying your friend code.'; render(); }
+    } catch (error) { if (error?.name === 'AbortError') return; message = 'Could not share the invitation. Try copying your friend code.'; render(); }
   }
   async function shareCode() {
     const note = { title: 'Shelf Life', text: 'Add me on Shelf Life. My friend code is ' + formatCode(me.code) + '.', url: PLAY_URL };
@@ -941,7 +956,7 @@ export function initFriends({ state, cloud, sync, social, coven = null, postbox 
     if (isOpen() && view === 'main') loadSent();
   });
   postbox?.subscribe(() => { syncTray(); if (isOpen() && (view === 'main' || view === 'friend')) render(); });
-  cloud.subscribe(() => { if (scopeSent() && isOpen() && view !== 'guest') close(); });
+  cloud.subscribe(() => { if (scopeSent() && isOpen() && view !== 'guest') close(); else if (isOpen() && view === 'guest' && social.signedIn()) open(); });
   sync.subscribe(() => { syncTray(); if (isOpen() && !social.signedIn() && view !== 'guest') close(); });
   syncTray();
   tab.addEventListener('click', open);

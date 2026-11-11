@@ -18,8 +18,8 @@ async function boot(page, fake, player) {
 
 test('browse, search and request only opted-in players; listing remains optional',async({page},info)=>{
   test.skip(!['desktop-chromium','desktop-firefox'].includes(info.project.name),'One desktop project checks the phone layout.');
-  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader');
-  const publicPlayer=await socialPlayer(fake,'<img src=x onerror=y>'), hidden=await socialPlayer(fake,'Hidden Player');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader',undefined,{email:true});
+  const publicPlayer=await socialPlayer(fake,'<img src=x onerror=y>',undefined,{email:true}), hidden=await socialPlayer(fake,'Hidden Player',undefined,{email:true});
   await publicPlayer.cloud.rpc('discovery_set',{p_on:true});
   await boot(page,fake,reader);
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
@@ -57,7 +57,7 @@ test('browse, search and request only opted-in players; listing remains optional
 
 test('a delayed result cannot reopen the directory after an account change',async({page},info)=>{
   test.skip(info.project.name!=='desktop-chromium','One browser covers account switching.');
-  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader'), other=await socialPlayer(fake,'Neighbour');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader',undefined,{email:true}), other=await socialPlayer(fake,'Neighbour',undefined,{email:true});
   await other.cloud.rpc('discovery_set',{p_on:true});
   await boot(page,fake,reader);
   let release, started; const held=new Promise(resolve=>release=resolve), seen=new Promise(resolve=>started=resolve);
@@ -73,10 +73,10 @@ test('a delayed result cannot reopen the directory after an account change',asyn
 
 test('browsing is paginated and blocks hide listed players in both directions',async({page},info)=>{
   test.skip(info.project.name!=='desktop-chromium','One browser covers directory pagination.');
-  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader',undefined,{email:true});
   const players=[];
   for(let i=0;i<25;i++) {
-    const player=await socialPlayer(fake,'Neighbour '+String(i).padStart(2,'0'));
+    const player=await socialPlayer(fake,'Neighbour '+String(i).padStart(2,'0'),undefined,{email:true});
     await player.cloud.rpc('discovery_set',{p_on:true}); players.push(player);
   }
   await players[0].social.block(reader.id);
@@ -97,14 +97,14 @@ test('browsing is paginated and blocks hide listed players in both directions',a
 
 for (const mode of ['all','nearby']) test(`sending a request in ${mode} discovery refills the page without skipping players`,async({page},info)=>{
   test.skip(info.project.name!=='desktop-chromium','One browser checks both directory pagination modes.');
-  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader',undefined,{email:true});
   if(mode==='nearby') {
     await reader.cloud.rpc('discovery_set',{p_on:true});
     await reader.cloud.rpc('discovery_location_set',{p_lat_band:131,p_lon_band:140});
   }
   const players=[];
   for(let i=0;i<22;i++) {
-    const player=await socialPlayer(fake,'Neighbour '+String(i).padStart(2,'0'));
+    const player=await socialPlayer(fake,'Neighbour '+String(i).padStart(2,'0'),undefined,{email:true});
     await player.cloud.rpc('discovery_set',{p_on:true});
     if(mode==='nearby') await player.cloud.rpc('discovery_location_set',{p_lat_band:131,p_lon_band:140});
     players.push(player);
@@ -128,9 +128,9 @@ for (const mode of ['all','nearby']) test(`sending a request in ${mode} discover
 
 test('a failed directory refill can retry without skipping players or resending the request',async({page},info)=>{
   test.skip(info.project.name!=='desktop-chromium','One browser checks failed pagination recovery.');
-  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader',undefined,{email:true});
   for(let i=0;i<22;i++) {
-    const player=await socialPlayer(fake,'Neighbour '+String(i).padStart(2,'0'));
+    const player=await socialPlayer(fake,'Neighbour '+String(i).padStart(2,'0'),undefined,{email:true});
     await player.cloud.rpc('discovery_set',{p_on:true});
   }
   await boot(page,fake,reader); await page.locator('[data-sx="discovery-open"]').click();
@@ -156,7 +156,7 @@ test('a failed directory refill can retry without skipping players or resending 
 
 test('nearby sharing sends only a broad area and can be removed',async({page,context},info)=>{
   test.skip(info.project.name!=='desktop-chromium','One browser covers the location workflow.');
-  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader'), nearby=await socialPlayer(fake,'<img src=x onerror=y>');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader',undefined,{email:true}), nearby=await socialPlayer(fake,'<img src=x onerror=y>',undefined,{email:true});
   await nearby.cloud.rpc('discovery_set',{p_on:true});
   const lat=41.8781, lon=-87.6298, latBand=Math.floor(lat+90), columns=Math.floor(360*Math.cos((latBand-89.5)*Math.PI/180));
   const lonBand=Math.floor((lon+180)/360*columns);
@@ -195,7 +195,7 @@ test('nearby sharing sends only a broad area and can be removed',async({page,con
 
 test('a location permission callback after account change cannot share an area',async({page},info)=>{
   test.skip(info.project.name!=='desktop-chromium','One browser covers location account switching.');
-  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader',undefined,{email:true});
   await reader.cloud.rpc('discovery_set',{p_on:true});
   await boot(page,fake,reader); await page.locator('[data-sx="discovery-open"]').click();
   const directory=page.locator('[data-fr-view="discovery"]');
@@ -211,7 +211,7 @@ test('a location permission callback after account change cannot share an area',
 
 test('location denial is recoverable and Android requests only coarse permission',async({page},info)=>{
   test.skip(info.project.name!=='desktop-chromium','One browser covers permission handling.');
-  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader',undefined,{email:true});
   await reader.cloud.rpc('discovery_set',{p_on:true});
   await boot(page,fake,reader); await page.locator('[data-sx="discovery-open"]').click();
   const directory=page.locator('[data-fr-view="discovery"]');
@@ -236,7 +236,7 @@ test('location denial is recoverable and Android requests only coarse permission
 
 test('offline and unavailable location have clear recovery states',async({page,context},info)=>{
   test.skip(info.project.name!=='desktop-chromium','One browser covers unavailable location.');
-  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader',undefined,{email:true});
   await reader.cloud.rpc('discovery_set',{p_on:true});
   await boot(page,fake,reader); await page.locator('[data-sx="discovery-open"]').click();
   const directory=page.locator('[data-fr-view="discovery"]');
@@ -253,7 +253,7 @@ test('offline and unavailable location have clear recovery states',async({page,c
 
 test('an Android permission result after account change does not read location',async({page},info)=>{
   test.skip(info.project.name!=='desktop-chromium','One browser covers the Android account fence.');
-  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader');
+  const fake=createFakeSupabase(), reader=await socialPlayer(fake,'Reader',undefined,{email:true});
   await reader.cloud.rpc('discovery_set',{p_on:true}); await boot(page,fake,reader);
   await page.locator('[data-sx="discovery-open"]').click();
   await expect(page.locator('[data-sx="discovery-location"]')).toBeEnabled();
@@ -269,4 +269,17 @@ test('an Android permission result after account change does not read location',
   await page.evaluate(async()=>{const {cloud}=await import('/src/cloud/index.js'); await cloud.signOut(); await cloud.signInAnonymously(); window.releasePermission();});
   await page.waitForTimeout(200);
   expect(await page.evaluate(()=>window.positionReads)).toBe(0);
+});
+
+test('a guest account is asked for an email before Find players, and nothing is sent',async({page},info)=>{
+  test.skip(info.project.name!=='desktop-chromium','The account rule is checked once.');
+  const fake=createFakeSupabase(), guest=await socialPlayer(fake,'Guest');
+  await boot(page,fake,guest);
+  fake.requests.length=0;
+  await page.locator('#friendsSheet [data-sx="discovery-open"]').click();
+  await expect(page.locator('#friendsSheet [data-fr-view="discovery"]')).toContainText('Find players lists real people');
+  expect(fake.requests.filter(r=>r.path.includes('discovery_'))).toEqual([]);
+  await page.locator('#friendsSheet [data-sx="discovery-email"]').click();
+  await expect(page.locator('#cloudVeil')).toBeVisible();
+  await expect(page.locator('#friendsVeil')).toBeHidden();
 });

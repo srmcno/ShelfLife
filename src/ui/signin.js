@@ -47,7 +47,7 @@ export function initSignIn({ root, prefix, cloud, sync, actionText, onMessage = 
     clearInterval(ticker); ticker = setInterval(render, 1000); render();
     if (!isNative() && !globalThis.location?.hostname?.endsWith('.github.io')) {
       const generation = ++settingsGeneration;
-      cloud.authSettings().then(settings => { if (generation === settingsGeneration) $('Google').hidden = settings?.external?.google !== true; }, () => { if (generation === settingsGeneration) $('Google').hidden = true; });
+      cloud.authSettings().then(settings => { if (generation === settingsGeneration) $('Google').hidden = settings?.external?.google !== true || !!sync.info().anonymous; }, () => { if (generation === settingsGeneration) $('Google').hidden = true; });
     }
   }
   async function run(work, context = {}) {

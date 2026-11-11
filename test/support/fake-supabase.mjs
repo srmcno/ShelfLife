@@ -114,7 +114,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   const social = createFakeSocial({ users, profiles, now, json, rest, uuid,
     ensureProfile: user => RPC.ensure_profile(user, {}) });
   Object.assign(RPC, social.RPC);
-  const discovery = createFakeDiscovery({ social, profiles, now, json, rest });
+  const discovery = createFakeDiscovery({ social, profiles, now, json, rest, users });
   Object.assign(RPC, discovery.RPC);
   RPC.list_friends = discovery.listFriends;
   const gazette = createFakeGazette({ social, profiles, now, json, rest, uuid });

@@ -363,11 +363,13 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil((async () => {
     const target = new URL('./?open=postbox', self.registration.scope).href;
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const existing = windows.find(client => client.url.startsWith(self.registration.scope));
-    if (existing) {
-      await existing.navigate(target);
+    // Only the game itself, never the privacy, account or moving pages.
+    const existing = windows.find(client => { const path = new URL(client.url).pathname; return client.url.startsWith(self.registration.scope) && (path.endsWith('/') || path.endsWith('/index.html')); });
+    try {
+      if (!existing) throw new Error('no open game');
+      existing.postMessage({ type: 'shelflife-open-postbox' });
       await existing.focus();
-    } else {
+    } catch {
       await self.clients.openWindow(target);
     }
   })());
