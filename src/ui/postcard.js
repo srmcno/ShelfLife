@@ -91,13 +91,13 @@ function creatureSvg(creature, size) {
   return { svg: '<svg xmlns="' + XMLNS + '" viewBox="-72 -72 144 144" width="' + size + '" height="' + size + '">' + renderCreatureSVG(c, { inner: true }) + '</svg>', foot: footY(c) };
 }
 
-function roundRect(ctx, x, y, w, h, r) {
+export function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
 
-function wrap(ctx, text, maxWidth, maxLines) {
+export function wrap(ctx, text, maxWidth, maxLines) {
   const out = [];
   text.split('\n').forEach(par => {
     let line = '';
@@ -111,13 +111,13 @@ function wrap(ctx, text, maxWidth, maxLines) {
   return out;
 }
 
-async function loadFonts() {
+export async function loadFonts() {
   if (!document.fonts || !document.fonts.load) return;
   await Promise.all(['600 34px Caveat', '400 72px Gloock', '700 15px Karla', 'italic 400 22px Karla', '600 24px Karla']
     .map(f => document.fonts.load(f).catch(() => null)));
 }
 
-async function drawPet(ctx, pet, cx, plankY, size) {
+export async function drawPet(ctx, pet, cx, plankY, size) {
   if (pet.art && pet.art.creature) {
     const { svg, foot } = creatureSvg(pet.art.creature, size);
     const image = await loadSvgCached(svg);
@@ -357,7 +357,7 @@ function fileName() {
   return 'shelf-life-day-' + days + '.png';
 }
 
-function canShareFiles() {
+export function canShareFiles() {
   if (isNative()) return true;
   try {
     if (!navigator.share || !navigator.canShare) return false;

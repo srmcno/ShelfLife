@@ -20,6 +20,7 @@ import { createFakePostbox } from './fake-postbox.mjs';
 import { createFakeGazette } from './fake-gazette.mjs';
 import { createFakePush } from './fake-push.mjs';
 import { createFakeDiscovery } from './fake-discovery.mjs';
+import { createFakeWeekly } from './fake-weekly.mjs';
 import { createFakeParlour } from './fake-parlour.mjs';
 
 export const FAKE_URL = 'https://fake.supabase.test';
@@ -121,6 +122,8 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   Object.assign(RPC, gazette.RPC);
   const push = createFakePush({ json, rest });
   Object.assign(RPC, push.RPC);
+  const weekly = createFakeWeekly({ now, json, rest });
+  Object.assign(RPC, weekly.RPC);
   // The postbox wraps the social functions first; every later feature wraps the live chain.
   const postbox = createFakePostbox({ social, users, profiles, now, json, rest, uuid });
   Object.assign(RPC, postbox.RPC, postbox.wrap({ ...RPC }));
@@ -291,7 +294,7 @@ export function createFakeSupabase({ url = FAKE_URL, anonKey = FAKE_KEY, code = 
   }
 
   return {
-    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, social, postbox, feedback, kin, mischief, coop, gazette, push,
+    url, anonKey, code, config: { url, anonKey }, users, saves, profiles, requests, sent, weekly, social, postbox, feedback, kin, mischief, coop, gazette, push,
     fetch: fakeFetch, route, handle,
     issueProviderCode(userId, challenge) { const code = uuid(); pkceCodes.set(code, { userId, challenge }); return code; },
     setOffline(value = true) { offline = !!value; },
