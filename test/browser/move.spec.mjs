@@ -137,6 +137,8 @@ test('offline, the old address just plays; a broken new address leaves the old o
 });
 
 test('each production alias moves its stored shelf to the canonical host', async ({ browser }) => {
+  // Three whole moves, one after another: three times the usual budget, so a slow runner still finishes.
+  test.slow();
   const aliases = ['shelf-life-five-ebon.vercel.app', 'shelf-life-srmcnos-projects.vercel.app', 'shelf-life-git-main-srmcnos-projects.vercel.app'];
   const canonical = 'shelflife-game.vercel.app';
   const dir = path.join(ROOT, 'test-results', 'move-new');
