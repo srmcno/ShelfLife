@@ -26,7 +26,7 @@ for (let n = 0; n < 100; n++) {
   await new Promise(resolve => setTimeout(resolve, 100));
 }
 const report = { generatedAt: new Date().toISOString(), base, runs: [] };
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, executablePath: process.env.QA_CHROMIUM || undefined });
 try {
   for (const width of [320, 390, 768, 1440]) for (const mode of ['local', 'cloud', 'guest']) {
     const run = { width, mode, console: [], pageErrors: [], failedRequests: [], outsideRequests: [], httpErrors: [], policyViolations: [], navigationErrors: [], checks: [] };
