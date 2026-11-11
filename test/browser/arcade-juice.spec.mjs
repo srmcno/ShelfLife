@@ -185,7 +185,8 @@ test('the tap that finishes a Séance round lights its candle before the next tu
   await open(page);
   await start(page, 'seance');
   await expect(page.locator('#arcadeSheet [data-ar-status]')).toContainText('Your turn. 3 candles.', { timeout: 40000 });
-  const seq = await page.evaluate(() => [...document.getElementById('arcadeSheet').arcadeRun.game.seq]);
+  // The hardest case: the last candle is the same one as the tap before it.
+  const seq = await page.evaluate(() => { const g = document.getElementById('arcadeSheet').arcadeRun.game; g.seq[g.seq.length - 1] = g.seq[g.seq.length - 2]; return [...g.seq]; });
   // Watch the last candle from the moment it is tapped: it must be seen lit for several frames.
   const last = seq[seq.length - 1];
   for (const pad of seq.slice(0, -1)) { await page.keyboard.press(String(pad + 1)); await page.waitForTimeout(120); }

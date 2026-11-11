@@ -240,6 +240,7 @@ export function stackView() {
 export function seanceView() {
   let circle, candles, sched = null, lit = -2, showAt = 0, mediumEl, wasShowing = false, pendingSay = '', hinted = false, glowUntil = 0;
   const GLOW_MS = 220;
+  const glowTimers = [];
   const lightCandle = (pad, on) => { candles.forEach((el, i) => el.classList.toggle('lit', on && i === pad)); };
   return {
     controls: () => '',
@@ -289,7 +290,9 @@ export function seanceView() {
       const r = seanceInput(g, pad, at);
       if (r.ignored) return null;
       const el = candles[pad];
-      el.classList.add('lit'); setTimeout(() => el.classList.remove('lit'), 200);
+      // One timer a candle: a second tap on the same candle restarts its glow instead of being cut short by the first.
+      clearTimeout(glowTimers[pad]);
+      el.classList.add('lit'); glowTimers[pad] = setTimeout(() => el.classList.remove('lit'), 200);
       glowUntil = performance.now() + GLOW_MS;
       const xs = [0.5, 0.83, 0.5, 0.17], ys = [0.16, 0.49, 0.82, 0.49];
       if (r.ok) {
