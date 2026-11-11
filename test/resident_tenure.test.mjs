@@ -29,14 +29,17 @@ test('residency days are elapsed full days and never become negative', () => {
 });
 
 test('older saves receive only their latest overdue marker, once', () => {
-  const legacy = shelf([resident('a', now - 50 * DAY)]);
+  // normalizeState measures tenure against the real clock, so this resident is dated from it too.
+  const today = Date.now();
+  const legacy = shelf([resident('a', today - 50 * DAY)]);
+  legacy.started = legacy.lastTick = today - 50 * DAY;
   delete legacy.pets[0].lifeMilestones;
   const state = normalizeState(legacy);
   assert.deepEqual(state.pets[0].lifeMilestones, [1, 7]);
-  assert.deepEqual(recordResidentTenure(state, now), { petId: 'a', days: 30, title: 'A month in residence' });
+  assert.deepEqual(recordResidentTenure(state, today), { petId: 'a', days: 30, title: 'A month in residence' });
   assert.deepEqual(state.pets[0].lifeMilestones, [1, 7, 30]);
   assert.deepEqual(state.pets[0].lifeKeepsakes, [30]);
-  assert.equal(recordResidentTenure(state, now), null);
+  assert.equal(recordResidentTenure(state, today), null);
   assert.equal(state.life.scenes[0].stage.key, 'resident-tenure');
   assert.equal(state.life.scenes[0].stage.branch, '30');
   assert.equal(state.paperwork.entries[0].title, 'Resident milestone · A month in residence');
