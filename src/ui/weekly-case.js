@@ -7,7 +7,10 @@ import { weekNumber, weeklyCaseId, daysLeftInWeek, readTally, tallyLine } from '
 
 const KEY = 'shelflife.weekly';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-let cloud = null, tally = null, loadingFor = '', onChange = () => {};
+let cloud = null, tally = null, loadingFor = '', onChange = () => {}, answered = false;
+
+// True once the server has answered a weekly call: the mark of a server that carries this release's schema.
+export const weeklyServerReady = () => answered;
 
 function mine(week) {
   try { const m = JSON.parse(localStorage.getItem(KEY) || 'null'); return m && m.week === week && ['plaintiff', 'defendant', 'both'].includes(m.verdict) ? m.verdict : ''; }
@@ -33,6 +36,7 @@ export async function refreshWeekly() {
   loadingFor = tag;
   try {
     const read = readTally(await cloud.rpc('weekly_tally', { p_week: info.week, p_case: info.caseId }), info.week, info.caseId);
+    answered = true;
     if (read && cloud.userId() + ':' + info.week === tag) { tally = read; if (read.mine) remember(info.week, read.mine); onChange(); }
   } catch { /* numbers are a courtesy */ }
   finally { if (loadingFor === tag) loadingFor = ''; }
@@ -49,6 +53,7 @@ export async function weeklyRuled(ep) {
   const user = cloud.userId();
   try {
     const read = readTally(await cloud.rpc('weekly_rule', { p_week: info.week, p_case: info.caseId, p_verdict: ep.ruling }), info.week, info.caseId);
+    answered = true;
     if (read && cloud.userId() === user) tally = read;
   } catch { /* it is counted the next time the lobby asks, if the server kept it */ }
   onChange();

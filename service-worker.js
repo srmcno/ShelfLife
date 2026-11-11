@@ -1,5 +1,5 @@
 // Bump for every release that changes the application shell.
-const CACHE_VERSION = 'shelflife-v69';
+const CACHE_VERSION = 'shelflife-v70';
 const CACHE_PREFIX = 'shelflife-';
 const SHELL = [
   "./move.html",
