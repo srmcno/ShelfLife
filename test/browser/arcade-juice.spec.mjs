@@ -189,14 +189,20 @@ test('the tap that finishes a Séance round lights its candle before the next tu
   // Watch the last candle from the moment it is tapped: it must be seen lit for several frames.
   const last = seq[seq.length - 1];
   for (const pad of seq.slice(0, -1)) { await page.keyboard.press(String(pad + 1)); await page.waitForTimeout(120); }
-  const frames = await page.evaluate(pad => new Promise(resolve => {
-    const el = document.querySelectorAll('#arcadeSheet .ar-candle')[pad];
+  // Sampled by the clock, not by frame count, so a slow machine measures the same thing.
+  const seen = await page.evaluate(pad => new Promise(resolve => {
+    const el = document.querySelectorAll('#arcadeSheet .ar-candle')[pad], from = performance.now();
     el.click();
-    let lit = 0, n = 0;
-    const tick = () => { if (el.classList.contains('lit')) lit++; if (++n < 8) requestAnimationFrame(tick); else resolve(lit); };
-    requestAnimationFrame(tick);
+    let lit = 0, dark = 0;
+    const tick = () => {
+      if (performance.now() - from > 150) return resolve({ lit, dark });
+      if (el.classList.contains('lit')) lit++; else dark++;
+      requestAnimationFrame(tick);
+    };
+    tick();
   }), last);
-  expect(frames).toBeGreaterThanOrEqual(6);
+  expect(seen.lit).toBeGreaterThanOrEqual(1);
+  expect(seen.dark).toBe(0);
   expect(await page.evaluate(() => document.getElementById('arcadeSheet').arcadeRun.game.rounds)).toBe(1);
   // And the next tune still plays.
   await expect(page.locator('#arcadeSheet [data-ar-status]')).toContainText('Your turn. 4 candles.', { timeout: 40000 });
